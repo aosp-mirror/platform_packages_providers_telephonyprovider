@@ -892,15 +892,24 @@ public class MmsSmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Context context = getContext();
         int affectedRows = 0;
-
+        
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
+                long threadId;
+                try {
+                    threadId = Long.parseLong(uri.getLastPathSegment());
+                } catch (NumberFormatException e) {
+                    Log.e(LOG_TAG, "Thread ID must be a long.");
+                    break;
+                }
                 affectedRows = deleteConversation(uri, selection, selectionArgs);
+                MmsSmsDatabaseHelper.updateThread(db, threadId);
                 break;
             case URI_CONVERSATIONS:
                 affectedRows = MmsProvider.deleteMessages(context, db,
                                         selection, selectionArgs, uri)
                         + db.delete("sms", selection, selectionArgs);
+                MmsSmsDatabaseHelper.updateAllThreads(db);
                 break;
             case URI_OBSOLETE_THREADS:
                 affectedRows = db.delete("threads",
@@ -922,12 +931,6 @@ public class MmsSmsProvider extends ContentProvider {
      */
     private int deleteConversation(Uri uri, String selection, String[] selectionArgs) {
         String threadId = uri.getLastPathSegment();
-        try {
-            Long.parseLong(threadId);
-        } catch (NumberFormatException e) {
-            Log.e(LOG_TAG, "Thread ID must be a Long.", e);
-            return 0;
-        }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         String finalSelection = concatSelections(selection, "thread_id = " + threadId);

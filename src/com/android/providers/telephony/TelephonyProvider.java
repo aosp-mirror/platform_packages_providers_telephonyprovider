@@ -273,8 +273,6 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT: {
                 qb.appendWhere("current IS NOT NULL");
-                // ignore the selection
-                selection = null;
                 break;
             }
 

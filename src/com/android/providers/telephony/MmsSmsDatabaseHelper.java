@@ -62,14 +62,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "      ON threads._id = " + Mms.THREAD_ID +
                         "      WHERE " + Mms.THREAD_ID + " = new.thread_id" +
                         "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
-                        "        AND " + Mms.MESSAGE_BOX + " != 3" +
-                        "        AND pdu.m_id is NULL) + " +
-                        "     (SELECT COUNT(DISTINCT pdu.m_id) FROM pdu LEFT JOIN threads " +
-                        "      ON threads._id = " + Mms.THREAD_ID +
-                        "      WHERE " + Mms.THREAD_ID + " = new.thread_id" +
-                        "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
-                        "        AND " + Mms.MESSAGE_BOX + " != 3" +
-                        "        AND pdu.m_id is not NULL) " +
+                        "        AND " + Mms.MESSAGE_BOX + " != 3) " +
                         "  WHERE threads._id = new.thread_id; ";
 
     private static final String UPDATE_THREAD_COUNT_ON_OLD =
@@ -155,6 +148,103 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             mInstance = new MmsSmsDatabaseHelper(context);
         }
         return mInstance;
+    }
+
+    public static void updateThread(SQLiteDatabase db, long thread_id) {
+        if (thread_id < 0) {
+            updateAllThreads(db);
+            return;
+        }
+        
+        // Delete the row for this thread in the threads table if
+        // there are no more messages attached to it in either
+        // the sms or pdu tables.
+        int rows = db.delete("threads",
+                  "_id = ? AND _id NOT IN" +
+                  "          (SELECT thread_id FROM sms " +
+                  "           UNION SELECT thread_id FROM pdu)",
+                  new String[] { String.valueOf(thread_id) });
+        if (rows > 0) {
+            // If this deleted a row, we have no more work to do.
+            return;
+        }
+        // Update the message count in the threads table as the sum
+        // of all messages in both the sms and pdu tables.
+        db.execSQL(
+            "  UPDATE threads SET message_count = " +
+            "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
+            "      ON threads._id = " + Sms.THREAD_ID +
+            "      WHERE " + Sms.THREAD_ID + " = " + thread_id +
+            "        AND sms." + Sms.TYPE + " != 3) + " +
+            "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
+            "      ON threads._id = " + Mms.THREAD_ID +
+            "      WHERE " + Mms.THREAD_ID + " = " + thread_id +
+            "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
+            "        AND " + Mms.MESSAGE_BOX + " != 3) " +
+            "  WHERE threads._id = " + thread_id + ";");
+
+        // Update the date and the snippet (and its character set) in
+        // the threads table to be that of the most recent message in
+        // the thread.
+        db.execSQL(
+            "  UPDATE threads" + 
+            "  SET" + 
+            "  date =" + 
+            "    (SELECT date FROM" + 
+            "        (SELECT date * 1000 AS date, thread_id FROM pdu" + 
+            "         UNION SELECT date, thread_id FROM sms)" + 
+            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," + 
+            "  snippet =" + 
+            "    (SELECT snippet FROM" + 
+            "        (SELECT date * 1000 AS date, sub AS snippet, thread_id FROM pdu" + 
+            "         UNION SELECT date, body AS snippet, thread_id FROM sms)" + 
+            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," + 
+            "  snippet_cs =" + 
+            "    (SELECT snippet_cs FROM" + 
+            "        (SELECT date * 1000 AS date, sub_cs AS snippet_cs, thread_id FROM pdu" + 
+            "         UNION SELECT date, 0 AS snippet_cs, thread_id FROM sms)" + 
+            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)" + 
+            "  WHERE threads._id = " + thread_id + ";"); 
+
+        // Update the error column of the thread to indicate if there
+        // are any messages in it that have failed to send.
+        db.execSQL(
+            "UPDATE threads SET error =" +
+            "       (SELECT COUNT(*) FROM sms WHERE type=5" +
+            "        AND thread_id = " + thread_id + " LIMIT 1)" +
+            "   WHERE threads._id = " + thread_id + ";");
+    }
+    
+    public static void updateAllThreads(SQLiteDatabase db) {
+        Cursor c = db.query("threads", new String[] { "_id" },
+                            null, null, null, null, null);
+        if (c != null) {
+            while (c.moveToNext()) {
+                updateThread(db, c.getInt(0));
+            }
+            c.close();
+        }
+    }
+    
+    public static int deleteOneSms(SQLiteDatabase db, int message_id) {
+        int thread_id = -1;
+        // Find the thread ID that the specified SMS belongs to.
+        Cursor c = db.query("sms", new String[] { "thread_id" },
+                            "_id=" + message_id, null, null, null, null);
+        if (c != null) {
+            if (c.moveToFirst()) {
+                thread_id = c.getInt(0);
+            }
+            c.close();
+        }
+
+        // Delete the specified message.
+        int rows = db.delete("sms", "_id=" + message_id, null);
+        if (thread_id > 0) {
+            // Update its thread.
+            updateThread(db, thread_id);
+        }
+        return rows;
     }
 
     @Override
@@ -402,18 +492,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    SMS_UPDATE_THREAD_READ_BODY +
                    "END;");
 
-        // Update threads table whenever a message in sms is deleted
-        // (Usually an abandoned draft.)
-        db.execSQL("CREATE TRIGGER sms_update_thread_on_delete " +
-                   "AFTER DELETE ON sms " +
-                   "BEGIN " +
-                   "  UPDATE threads SET " +
-                   "     date = (strftime('%s','now') * 1000) " +
-                   "  WHERE threads._id = old." + Sms.THREAD_ID + "; " +
-                   UPDATE_THREAD_COUNT_ON_OLD +
-                   UPDATE_THREAD_SNIPPET_SNIPPET_CS_ON_DELETE +
-                   "END;");
-
         // Update threads table whenever a message in pdu is deleted
         db.execSQL("CREATE TRIGGER pdu_update_thread_on_delete " +
                    "AFTER DELETE ON pdu " +
@@ -438,19 +516,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "    (SELECT thread_id FROM sms " +
                    "     UNION SELECT thread_id from pdu); " +
                    "END;");
+
         db.execSQL("CREATE TRIGGER delete_obsolete_threads_when_update_pdu " +
                    "AFTER UPDATE OF " + Mms.THREAD_ID + " ON pdu " +
                    "WHEN old." + Mms.THREAD_ID + " != new." + Mms.THREAD_ID + " " +
-                   "BEGIN " +
-                   "  DELETE FROM threads " +
-                   "  WHERE " +
-                   "    _id = old.thread_id " +
-                   "    AND _id NOT IN " +
-                   "    (SELECT thread_id FROM sms " +
-                   "     UNION SELECT thread_id from pdu); " +
-                   "END;");
-        db.execSQL("CREATE TRIGGER delete_obsolete_threads_sms " +
-                   "AFTER DELETE ON sms " +
                    "BEGIN " +
                    "  DELETE FROM threads " +
                    "  WHERE " +
@@ -576,15 +645,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "      ELSE error - 1" +
                    "    END " +
                    "  WHERE _id = NEW.thread_id; " +
-                   "END;");
-
-        // Update the error flag of threads when delete a text message.
-        db.execSQL("CREATE TRIGGER update_threads_error_on_delete_sms " +
-                   "  AFTER DELETE ON sms" +
-                   "  WHEN (OLD.type = 5) " +
-                   "BEGIN " +
-                   "  UPDATE threads SET error = error - 1" +
-                   "  WHERE _id = OLD.thread_id; " +
                    "END;");
     }
 
@@ -890,6 +950,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 } finally {
                     db.endTransaction();
                 }
+                // fall-through
+            case 41:
+                if (currentVersion <= 41) {
+                    return;
+                }
+                db.beginTransaction();
+                try {
+                    upgradeDatabaseToVersion42(db);
+                    db.setTransactionSuccessful();
+                } catch (Throwable ex) {
+                    Log.e(TAG, ex.getMessage(), ex);
+                    break;
+                } finally {
+                    db.endTransaction();
+                }
                 return;
         }
 
@@ -911,14 +986,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private void dropCommonTriggers(SQLiteDatabase db) {
         db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_pdu");
         db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_when_update_pdu");
-        db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_sms");
         db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_on_insert");
         db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_on_insert");
         db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_date_subject_on_update");
         db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_date_subject_on_update");
         db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_read_on_update");
         db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_read_on_update");
-        db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_on_delete");
         db.execSQL("DROP TRIGGER IF EXISTS insert_mms_pending_on_insert");
         db.execSQL("DROP TRIGGER IF EXISTS insert_mms_pending_on_update");
         db.execSQL("DROP TRIGGER IF EXISTS delete_mms_pending_on_update");
@@ -927,7 +1000,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_delete_mms");
         db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_move_mms");
         db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_update_sms");
-        db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_delete_sms");
     }
 
     private void dropSmsTables(SQLiteDatabase db) {
@@ -1808,6 +1880,130 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void upgradeDatabaseToVersion40(SQLiteDatabase db) {
+        db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_on_insert");
+        db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_date_subject_on_update");
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_on_insert");
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_date_subject_on_update");
+
+        db.execSQL("CREATE TRIGGER sms_update_thread_on_insert AFTER INSERT ON sms " +
+                "BEGIN" +
+                "  UPDATE threads SET" +
+                "    date = (strftime('%s','now') * 1000), " +
+                "    snippet = new.body," +
+                "    snippet_cs = 0" +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET message_count = " +
+                "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND sms.type != 3) + " +
+                "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
+                "        AND msg_box != 3) " +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET read = " +
+                "    CASE (SELECT COUNT(*)" +
+                "          FROM sms" +
+                "          WHERE read = 0" +
+                "            AND thread_id = threads._id)" +
+                "      WHEN 0 THEN 1" +
+                "      ELSE 0" +
+                "    END" +
+                "  WHERE threads._id = new.thread_id; " +
+                "END;");
+
+        db.execSQL("CREATE TRIGGER sms_update_thread_date_subject_on_update AFTER" +
+                "  UPDATE OF date, body, type" +
+                "  ON sms " +
+                "BEGIN" +
+                "  UPDATE threads SET" +
+                "    date = (strftime('%s','now') * 1000), " +
+                "    snippet = new.body," +
+                "    snippet_cs = 0" +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET message_count = " +
+                "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND sms.type != 3) + " +
+                "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
+                "        AND msg_box != 3) " +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET read = " +
+                "    CASE (SELECT COUNT(*)" +
+                "          FROM sms" +
+                "          WHERE read = 0" +
+                "            AND thread_id = threads._id)" +
+                "      WHEN 0 THEN 1" +
+                "      ELSE 0" +
+                "    END" +
+                "  WHERE threads._id = new.thread_id; " +
+                "END;");
+
+        db.execSQL("CREATE TRIGGER pdu_update_thread_on_insert AFTER INSERT ON pdu " +
+                "  WHEN new.m_type=132 OR new.m_type=130 OR new.m_type=128 " +
+                "BEGIN" +
+                "  UPDATE threads SET" +
+                "    date = (strftime('%s','now') * 1000), " +
+                "    snippet = new.sub, " +
+                "    snippet_cs = new.sub_cs" +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET message_count = " +
+                "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND sms.type != 3) + " +
+                "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
+                "        AND msg_box != 3) " +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET read = " +
+                "    CASE (SELECT COUNT(*)" +
+                "          FROM pdu" +
+                "          WHERE read = 0 AND thread_id = threads._id)" +
+                "      WHEN 0 THEN 1 ELSE 0" +
+                "    END" +
+                "  WHERE threads._id = new.thread_id; " +
+                "END;");
+
+        db.execSQL("CREATE TRIGGER pdu_update_thread_date_subject_on_update AFTER" +
+                "  UPDATE OF date, sub, msg_box ON pdu " +
+                "  WHEN new.m_type=132 OR new.m_type=130 OR new.m_type=128 " +
+                "BEGIN" +
+                "  UPDATE threads SET" +
+                "    date = (strftime('%s','now') * 1000), " +
+                "    snippet = new.sub, " +
+                "    snippet_cs = new.sub_cs" +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET message_count = " +
+                "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND sms.type != 3) + " +
+                "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
+                "      ON threads._id = thread_id" +
+                "      WHERE thread_id = new.thread_id" +
+                "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
+                "        AND msg_box != 3) " +
+                "  WHERE threads._id = new.thread_id; " +
+                "  UPDATE threads SET read = " +
+                "    CASE (SELECT COUNT(*)" +
+                "          FROM pdu" +
+                "          WHERE read = 0 AND thread_id = threads._id)" +
+                "      WHEN 0 THEN 1 ELSE 0" +
+                "    END" +
+                "  WHERE threads._id = new.thread_id; " +
+                "END;");
+    }
+
+    private void upgradeDatabaseToVersion41(SQLiteDatabase db) {
         db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_move_mms");
         db.execSQL("CREATE TRIGGER update_threads_error_on_move_mms " +
                    "  BEFORE UPDATE OF msg_box ON pdu " +
@@ -1820,8 +2016,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "  WHERE _id = OLD.thread_id; " +
                    "END;");
     }
-
-    private void upgradeDatabaseToVersion41(SQLiteDatabase db) {
-        // To align the database version on mainline and TC3 branch.
+    
+    private void upgradeDatabaseToVersion42(SQLiteDatabase db) {
+        db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_on_delete");
+        db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_sms");
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_delete_sms");
     }
 }

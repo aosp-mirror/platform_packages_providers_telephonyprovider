@@ -22,11 +22,13 @@ import android.content.ContentValues;
 import android.content.UriMatcher;
 import com.android.internal.database.ArrayListCursor;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.provider.Contacts;
+import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Sms;
 import android.provider.Telephony.TextBasedSmsColumns;
@@ -419,7 +421,8 @@ public class SmsProvider extends ContentProvider {
 
             if (type == Sms.MESSAGE_TYPE_INBOX) {
                 // Look up the person if not already filled in.
-                if ((values.getAsLong(Sms.PERSON) == null) && (address != null)) {
+                if ((values.getAsLong(Sms.PERSON) == null)
+                        && (!TextUtils.isEmpty(address))) {
                     Cursor cursor = getContext().getContentResolver().query(
                             Uri.withAppendedPath(
                                     Contacts.Phones.CONTENT_FILTER_URL, address),
@@ -468,12 +471,17 @@ public class SmsProvider extends ContentProvider {
         switch (match) {
             case SMS_ALL:
                 count = db.delete(TABLE_SMS, where, whereArgs);
+                MmsSmsDatabaseHelper.updateAllThreads(db);
                 break;
              
             case SMS_ALL_ID:
-                count = db.delete(
-                        TABLE_SMS,
-                        "_id=" + url.getPathSegments().get(0), null);
+                try {
+                    int message_id = Integer.parseInt(url.getPathSegments().get(0));
+                    count = MmsSmsDatabaseHelper.deleteOneSms(db, message_id);
+                } catch (Exception e) {
+                    throw new IllegalArgumentException(
+                        "Bad message id: " + url.getPathSegments().get(0));
+                }
                 break;
 
             case SMS_CONVERSATIONS_ID:
@@ -488,9 +496,9 @@ public class SmsProvider extends ContentProvider {
                 }
 
                 // delete the messages from the sms table
-                count = db.delete(
-                        TABLE_SMS, "thread_id = " + threadID, null);
-
+                where = DatabaseUtils.concatenateWhere("thread_id=" + threadID, where);
+                count = db.delete(TABLE_SMS, where, whereArgs);
+                MmsSmsDatabaseHelper.updateThread(db, threadID);
                 break;
 
             case SMS_RAW_MESSAGE:
