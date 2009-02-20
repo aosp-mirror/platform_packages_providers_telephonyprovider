@@ -471,7 +471,10 @@ public class SmsProvider extends ContentProvider {
         switch (match) {
             case SMS_ALL:
                 count = db.delete(TABLE_SMS, where, whereArgs);
-                MmsSmsDatabaseHelper.updateAllThreads(db);
+                if (count != 0) {
+                    // Don't update threads unless something changed.
+                    MmsSmsDatabaseHelper.updateAllThreads(db, where, whereArgs);
+                }
                 break;
              
             case SMS_ALL_ID:

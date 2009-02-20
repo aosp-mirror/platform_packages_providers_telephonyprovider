@@ -152,7 +152,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     public static void updateThread(SQLiteDatabase db, long thread_id) {
         if (thread_id < 0) {
-            updateAllThreads(db);
+            updateAllThreads(db, null, null);
             return;
         }
         
@@ -215,9 +215,15 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             "   WHERE threads._id = " + thread_id + ";");
     }
     
-    public static void updateAllThreads(SQLiteDatabase db) {
-        Cursor c = db.query("threads", new String[] { "_id" },
-                            null, null, null, null, null);
+    public static void updateAllThreads(SQLiteDatabase db, String where, String[] whereArgs) {
+        if (where == null) {
+            where = "";
+        } else {
+            where = "WHERE (" + where + ")";
+        }
+        String query = "SELECT _id FROM threads WHERE _id IN " +
+                       "(SELECT DISTINCT thread_id FROM sms " + where + ")";
+        Cursor c = db.rawQuery(query, whereArgs);
         if (c != null) {
             while (c.moveToNext()) {
                 updateThread(db, c.getInt(0));
