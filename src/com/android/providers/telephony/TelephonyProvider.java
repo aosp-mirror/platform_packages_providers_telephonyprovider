@@ -48,6 +48,7 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
     private static final int URL_ID = 3;
+    private static final int URL_RESTOREAPN = 4;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -62,6 +63,7 @@ public class TelephonyProvider extends ContentProvider
         s_urlMatcher.addURI("telephony", "carriers", URL_TELEPHONY);
         s_urlMatcher.addURI("telephony", "carriers/current", URL_CURRENT);
         s_urlMatcher.addURI("telephony", "carriers/#", URL_ID);
+        s_urlMatcher.addURI("telephony", "carriers/restore", URL_RESTOREAPN);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put("current", (Long) null);
@@ -122,6 +124,10 @@ public class TelephonyProvider extends ContentProvider
                     "type TEXT," +
                     "current INTEGER);");
 
+            initDatabase(db);
+        }
+
+        private void initDatabase(SQLiteDatabase db) {
             // Read internal APNS data
             Resources r = mContext.getResources();
             XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
@@ -429,6 +435,12 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
+            case URL_RESTOREAPN: {
+                count = 1;
+                restoreDefaultAPN();
+                break;
+            }
+
             default: {
                 throw new UnsupportedOperationException("Cannot delete that URL: " + url);
             }
@@ -474,7 +486,7 @@ public class TelephonyProvider extends ContentProvider
                         new String[] { url.getLastPathSegment() });
                 break;
             }
-            
+
             default: {
                 throw new UnsupportedOperationException("Cannot update that URL: " + url);
             }
@@ -494,4 +506,11 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private SQLiteOpenHelper mOpenHelper;
+
+    private void restoreDefaultAPN() {
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+
+        db.delete(CARRIERS_TABLE, null, null);
+        ((DatabaseHelper) mOpenHelper).initDatabase(db);
+    }
 }

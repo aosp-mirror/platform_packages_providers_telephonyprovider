@@ -230,6 +230,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             }
             c.close();
         }
+        // remove orphaned threads
+        db.delete("threads",
+                "_id NOT IN (SELECT DISTINCT thread_id FROM sms " +
+                "UNION SELECT DISTINCT thread_id FROM pdu)", null);
     }
     
     public static int deleteOneSms(SQLiteDatabase db, int message_id) {
