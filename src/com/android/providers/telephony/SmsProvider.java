@@ -46,9 +46,7 @@ public class SmsProvider extends ContentProvider {
     private static final Uri NOTIFICATION_URI = Uri.parse("content://sms");
     private static final Uri SIM_URI = Uri.parse("content://sms/sim");
     static final String TABLE_SMS = "sms";
-    private static final String TABLE_RAW = "raw";
-    private static final String TABLE_SR_PENDING = "sr_pending";
-    
+
     private static final Integer ONE = Integer.valueOf(1);
 
     /**
@@ -246,12 +244,7 @@ public class SmsProvider extends ContentProvider {
             ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromSim();
             ArrayList<ArrayList> singleRow = new ArrayList<ArrayList>();
 
-            SmsMessage message = messages.get(messageIndex);
-            if (message == null) {
-                throw new IllegalArgumentException(
-                        "Message not retrieved. ID: " + messageIndexString);
-            }
-            singleRow.add(convertSimToSms(message));
+            singleRow.add(convertSimToSms(messages.get(messageIndex)));
             return withSimNotificationUri(
                     new ArrayListCursor(SIM_COLUMNS, singleRow));
         } catch (NumberFormatException exception) {
@@ -269,10 +262,7 @@ public class SmsProvider extends ContentProvider {
         ArrayList<ArrayList> rows = new ArrayList<ArrayList>();
 
         for (int count = messages.size(), i = 0; i < count; i++) {
-            SmsMessage message = messages.get(i);
-            if (message != null) {
-                rows.add(convertSimToSms(message));
-            }
+            rows.add(convertSimToSms(messages.get(i)));
         }
         return withSimNotificationUri(new ArrayListCursor(SIM_COLUMNS, rows));
     }
@@ -562,17 +552,14 @@ public class SmsProvider extends ContentProvider {
     public int update(
             Uri url, ContentValues values, String where, String[] whereArgs) {
         int count = 0;
-        String table = TABLE_SMS;
-        String extraWhere = null;
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
-
         switch (sURLMatcher.match(url)) {
             case SMS_RAW_MESSAGE:
-                table = TABLE_RAW;
+                count = db.update("raw", values, where, whereArgs);
                 break;
 
             case SMS_STATUS_PENDING:
-                table = TABLE_SR_PENDING;
+                count = db.update("sr_pending", values, where, whereArgs);
                 break;
 
             case SMS_ALL:
@@ -583,10 +570,17 @@ public class SmsProvider extends ContentProvider {
             case SMS_DRAFT:
             case SMS_OUTBOX:
             case SMS_CONVERSATIONS:
+                count = db.update(
+                        TABLE_SMS, values, where, whereArgs);
                 break;
 
             case SMS_ALL_ID:
-                extraWhere = "_id=" + url.getPathSegments().get(0);
+                if (where != null) {
+                    throw new UnsupportedOperationException(
+                            "WHERE not supported");
+                }
+                count = db.update(TABLE_SMS, values, "_id="
+                        + url.getPathSegments().get(0), null);
                 break;
 
             case SMS_INBOX_ID:
@@ -594,34 +588,46 @@ public class SmsProvider extends ContentProvider {
             case SMS_SENT_ID:
             case SMS_DRAFT_ID:
             case SMS_OUTBOX_ID:
-                extraWhere = "_id=" + url.getPathSegments().get(1);
+                if (where != null) {
+                    throw new UnsupportedOperationException(
+                            "WHERE not supported for this URI");
+                }
+                count = db.update(TABLE_SMS, values, "_id="
+                        + url.getPathSegments().get(1), null);
                 break;
 
             case SMS_CONVERSATIONS_ID: {
-                String threadId = url.getPathSegments().get(1);
+                int threadId;
 
                 try {
-                    Integer.parseInt(threadId);
+                    threadId = Integer.parseInt(url.getPathSegments().get(1));
                 } catch (Exception ex) {
-                    Log.e(TAG, "Bad conversation thread id: " + threadId);
+                    Log.e(TAG, "Bad conversation thread id: "
+                            + url.getPathSegments().get(1));
+                    count = 0;
                     break;
                 }
 
-                extraWhere = "thread_id=" + threadId;
+                if (where != null) {
+                    throw new UnsupportedOperationException(
+                            "WHERE not supported for this URI");
+                }
+                count = db.update(
+                        TABLE_SMS, values, "thread_id = " + threadId,
+                        null);
                 break;
             }
 
             case SMS_STATUS_ID:
-                extraWhere = "_id=" + url.getPathSegments().get(1);
+                String idString = url.getPathSegments().get(1); 
+
+                count = db.update(TABLE_SMS, values, "_id=" + idString, null);
                 break;  
                     
             default:
                 throw new UnsupportedOperationException(
                         "URI " + url + " not supported");
         }
-
-        where = DatabaseUtils.concatenateWhere(where, extraWhere);
-        count = db.update(table, values, where, whereArgs);
 
         if (count > 0) {
             notifyChange(url);
