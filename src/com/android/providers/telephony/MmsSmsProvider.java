@@ -909,7 +909,7 @@ public class MmsSmsProvider extends ContentProvider {
                 affectedRows = MmsProvider.deleteMessages(context, db,
                                         selection, selectionArgs, uri)
                         + db.delete("sms", selection, selectionArgs);
-                MmsSmsDatabaseHelper.updateAllThreads(db);
+                MmsSmsDatabaseHelper.updateAllThreads(db, selection, selectionArgs);
                 break;
             case URI_OBSOLETE_THREADS:
                 affectedRows = db.delete("threads",

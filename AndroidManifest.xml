@@ -29,7 +29,9 @@
             android:writePermission="android.permission.WRITE_SMS" />
         <provider android:name="MmsProvider" android:authorities="mms" android:multiprocess="true" 
             android:readPermission="android.permission.READ_SMS"
-            android:writePermission="android.permission.WRITE_SMS" />
+            android:writePermission="android.permission.WRITE_SMS">
+            <grant-uri-permission android:pathPrefix="/part/" />
+        </provider>
         <provider android:name="MmsSmsProvider" android:authorities="mms-sms" android:multiprocess="true" 
             android:readPermission="android.permission.READ_SMS"
             android:writePermission="android.permission.WRITE_SMS" />
