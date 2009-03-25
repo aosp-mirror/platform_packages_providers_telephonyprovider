@@ -26,6 +26,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Environment;
+import android.preference.PreferenceManager;
 import android.provider.Telephony;
 import android.util.Config;
 import android.util.Log;
@@ -49,9 +50,14 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_CURRENT = 2;
     private static final int URL_ID = 3;
     private static final int URL_RESTOREAPN = 4;
+    private static final int URL_PREFERAPN = 5;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
+
+    private static final String PREF_FILE = "preferred-apn";
+    private static final String COLUMN_APN_ID = "apn_id";
+
     private static final String PARTNER_APNS_PATH = "etc/apns-conf.xml";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -64,6 +70,7 @@ public class TelephonyProvider extends ContentProvider
         s_urlMatcher.addURI("telephony", "carriers/current", URL_CURRENT);
         s_urlMatcher.addURI("telephony", "carriers/#", URL_ID);
         s_urlMatcher.addURI("telephony", "carriers/restore", URL_RESTOREAPN);
+        s_urlMatcher.addURI("telephony", "carriers/preferapn", URL_PREFERAPN);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put("current", (Long) null);
@@ -137,7 +144,7 @@ public class TelephonyProvider extends ContentProvider
                 publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
                 loadApns(db, parser);
             } catch (Exception e) {
-                Log.e(TAG, "Got execption while loading APN database.", e);
+                Log.e(TAG, "Got exception while loading APN database.", e);
             } finally {
                 parser.close();
             }
@@ -263,6 +270,18 @@ public class TelephonyProvider extends ContentProvider
         return true;
     }
 
+    private void setPreferredApnId(Long id) {
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putLong(COLUMN_APN_ID, id != null ? id.longValue() : -1);        
+        editor.commit();
+    }
+
+    private long getPreferredApnId() {
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        return sp.getLong(COLUMN_APN_ID, -1);
+    }
+
     @Override
     public Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
@@ -279,11 +298,18 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT: {
                 qb.appendWhere("current IS NOT NULL");
+                // ignore the selection
+                selection = null;
                 break;
             }
 
             case URL_ID: {
                 qb.appendWhere("_id = " + url.getPathSegments().get(1));
+                break;
+            }
+
+            case URL_PREFERAPN: {
+                qb.appendWhere("_id = " + getPreferredApnId());
                 break;
             }
 
@@ -306,6 +332,9 @@ public class TelephonyProvider extends ContentProvider
             return "vnd.android.cursor.dir/telephony-carrier";
 
         case URL_ID:
+            return "vnd.android.cursor.item/telephony-carrier";
+
+        case URL_PREFERAPN:
             return "vnd.android.cursor.item/telephony-carrier";
 
         default:
@@ -396,6 +425,16 @@ public class TelephonyProvider extends ContentProvider
                 }
                 break;
             }
+
+            case URL_PREFERAPN:
+            {
+                if (initialValues != null) {
+                    if(initialValues.containsKey(COLUMN_APN_ID)) {
+                        setPreferredApnId(initialValues.getAsLong(COLUMN_APN_ID));
+                    }
+                }
+                break;
+            }
         }
 
         if (notify) {
@@ -441,6 +480,13 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
+            case URL_PREFERAPN:
+            {
+                setPreferredApnId((long)-1);
+                count = 1;
+                break;
+            }
+
             default: {
                 throw new UnsupportedOperationException("Cannot delete that URL: " + url);
             }
@@ -456,7 +502,7 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public int update(Uri url, ContentValues values, String where, String[] whereArgs)
     {
-        int count;
+        int count = 0;
 
         checkPermission();
 
@@ -487,6 +533,17 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
+            case URL_PREFERAPN:
+            {
+                if (values != null) {
+                    if (values.containsKey(COLUMN_APN_ID)) {
+                        setPreferredApnId(values.getAsLong(COLUMN_APN_ID));
+                        count = 1;
+                    }
+                }
+                break;
+            }
+
             default: {
                 throw new UnsupportedOperationException("Cannot update that URL: " + url);
             }
@@ -511,6 +568,7 @@ public class TelephonyProvider extends ContentProvider
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
         db.delete(CARRIERS_TABLE, null, null);
+        setPreferredApnId((long)-1);
         ((DatabaseHelper) mOpenHelper).initDatabase(db);
     }
 }
