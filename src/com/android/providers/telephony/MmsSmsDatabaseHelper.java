@@ -143,7 +143,20 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "   (SELECT pdu.thread_id FROM part JOIN pdu ON pdu._id=part.mid " +
                         "     WHERE part._id=new._id LIMIT 1); " +
                         " END";
-    
+
+    // When the 'mid' column in the part table is updated, we need to run the trigger to update
+    // the threads table's has_attachment column, if the part is an attachment.
+    private static final String PART_UPDATE_THREADS_ON_UPDATE_TRIGGER =
+                        "CREATE TRIGGER update_threads_on_update_part " +
+                        " AFTER UPDATE of " + Part.MSG_ID + " ON part " +
+                        " WHEN new.ct != 'text/plain' AND new.ct != 'application/smil' " +
+                        " BEGIN " +
+                        "  UPDATE threads SET has_attachment=1 WHERE _id IN " +
+                        "   (SELECT pdu.thread_id FROM part JOIN pdu ON pdu._id=part.mid " +
+                        "     WHERE part._id=new._id LIMIT 1); " +
+                        " END";
+
+
     // When a part is deleted (with the same non-text/SMIL constraint as when
     // we set has_attachment), update the threads table for all threads.
     // Unfortunately we cannot update only the thread that the part was
@@ -167,7 +180,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 43;
+    static final int DATABASE_VERSION = 44;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -395,6 +408,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Update threads table to indicate whether attachments exist when
         // parts are inserted or deleted.
         db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
+        db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
         db.execSQL(PART_UPDATE_THREADS_ON_DELETE_TRIGGER);
     }
 
@@ -751,6 +765,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 43:
+            if (currentVersion <= 43) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion44(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -812,5 +842,17 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Add insert and delete triggers for keeping it up to date.
         db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
         db.execSQL(PART_UPDATE_THREADS_ON_DELETE_TRIGGER);
+    }
+
+    private void upgradeDatabaseToVersion44(SQLiteDatabase db) {
+        // Set the values of that column correctly based on the current
+        // contents of the database.
+        db.execSQL("UPDATE threads SET has_attachment=1 WHERE _id IN " +
+                   "  (SELECT DISTINCT pdu.thread_id FROM part " +
+                   "   JOIN pdu ON pdu._id=part.mid " +
+                   "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
+
+        // add the update trigger for keeping the threads up to date.
+        db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
     }
 }
