@@ -20,7 +20,7 @@ import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.UriMatcher;
-import com.android.internal.database.ArrayListCursor;
+
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
@@ -33,18 +33,20 @@ import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Sms;
 import android.provider.Telephony.TextBasedSmsColumns;
 import android.provider.Telephony.Threads;
-import android.telephony.gsm.SmsManager;
-import android.telephony.gsm.SmsMessage;
+import android.telephony.SmsManager;
+import android.telephony.SmsMessage;
 import android.text.TextUtils;
 import android.util.Config;
 import android.util.Log;
+
+import com.android.internal.database.ArrayListCursor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 
 public class SmsProvider extends ContentProvider {
     private static final Uri NOTIFICATION_URI = Uri.parse("content://sms");
-    private static final Uri SIM_URI = Uri.parse("content://sms/sim");
+    private static final Uri ICC_URI = Uri.parse("content://sms/icc");
     static final String TABLE_SMS = "sms";
     private static final String TABLE_RAW = "raw";
     private static final String TABLE_SR_PENDING = "sr_pending";
@@ -53,19 +55,19 @@ public class SmsProvider extends ContentProvider {
 
     /**
      * These are the columns that are available when reading SMS
-     * messages from the SIM.  Columns whose names begin with "is_"
+     * messages from the ICC.  Columns whose names begin with "is_"
      * have either "true" or "false" as their values.
      */
-    private final static String[] SIM_COLUMNS = new String[] {
+    private final static String[] ICC_COLUMNS = new String[] {
         // N.B.: These columns must appear in the same order as the
-        // calls to add appear in convertSimToSms.
+        // calls to add appear in convertIccToSms.
         "service_center_address",       // getServiceCenterAddress
         "address",                      // getDisplayOriginatingAddress
         "message_class",                // getMessageClass
         "body",                         // getDisplayMessageBody
         "date",                         // getTimestampMillis
-        "status",                       // getStatusOnSim
-        "index_on_sim",                 // getIndexOnSim
+        "status",                       // getStatusOnIcc
+        "index_on_icc",                 // getIndexOnIcc
         "is_status_report",             // isStatusReportMessage
         "transport_type",               // Always "sms".
         "type"                          // Always MESSAGE_TYPE_ALL.
@@ -152,8 +154,10 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_CONVERSATIONS:
-                qb.setTables("sms, (SELECT thread_id AS group_thread_id, MAX(date) AS group_date, COUNT(*) AS msg_count FROM sms GROUP BY thread_id) AS groups");
-                qb.appendWhere("sms.thread_id = groups.group_thread_id AND sms.date = groups.group_date");
+                qb.setTables("sms, (SELECT thread_id AS group_thread_id, MAX(date)AS group_date,"
+                       + "COUNT(*) AS msg_count FROM sms GROUP BY thread_id) AS groups");
+                qb.appendWhere("sms.thread_id = groups.group_thread_id AND sms.date ="
+                       + "groups.group_date");
                 qb.setProjectionMap(sConversationProjectionMap);
                 break;
 
@@ -187,13 +191,13 @@ public class SmsProvider extends ContentProvider {
                 qb.appendWhere("(_id = " + url.getPathSegments().get(1) + ")");
                 break;
 
-            case SMS_ALL_SIM:
-                return getAllMessagesFromSim();
+            case SMS_ALL_ICC:
+                return getAllMessagesFromIcc();
 
-            case SMS_SIM:
+            case SMS_ICC:
                 String messageIndexString = url.getPathSegments().get(1);
 
-                return getSingleMessageFromSim(messageIndexString);
+                return getSingleMessageFromIcc(messageIndexString);
 
             default:
                 Log.e(TAG, "Invalid request: " + url);
@@ -218,18 +222,18 @@ public class SmsProvider extends ContentProvider {
         return ret;
     }
 
-    private ArrayList<String> convertSimToSms(SmsMessage message) {
+    private ArrayList<String> convertIccToSms(SmsMessage message) {
         ArrayList result = new ArrayList();
 
         // N.B.: These calls must appear in the same order as the
-        // columns appear in SIM_COLUMNS.
+        // columns appear in ICC_COLUMNS.
         result.add(message.getServiceCenterAddress());
         result.add(message.getDisplayOriginatingAddress());
-        result.add(message.getMessageClass().toString());
+        result.add(String.valueOf(message.getMessageClass()));
         result.add(message.getDisplayMessageBody());
         result.add(message.getTimestampMillis());
         result.add(Sms.STATUS_NONE);
-        result.add(message.getIndexOnSim());
+        result.add(message.getIndexOnIcc());
         result.add(message.isStatusReportMessage());
         result.add("sms");
         result.add(TextBasedSmsColumns.MESSAGE_TYPE_ALL);
@@ -237,13 +241,13 @@ public class SmsProvider extends ContentProvider {
     }
 
     /**
-     * Return a Cursor containing just one message from the SIM.
+     * Return a Cursor containing just one message from the ICC.
      */
-    private Cursor getSingleMessageFromSim(String messageIndexString) {
+    private Cursor getSingleMessageFromIcc(String messageIndexString) {
         try {
             int messageIndex = Integer.parseInt(messageIndexString);
             SmsManager smsManager = SmsManager.getDefault();
-            ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromSim();
+            ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromIcc();
             ArrayList<ArrayList> singleRow = new ArrayList<ArrayList>();
 
             SmsMessage message = messages.get(messageIndex);
@@ -251,35 +255,34 @@ public class SmsProvider extends ContentProvider {
                 throw new IllegalArgumentException(
                         "Message not retrieved. ID: " + messageIndexString);
             }
-            singleRow.add(convertSimToSms(message));
-            return withSimNotificationUri(
-                    new ArrayListCursor(SIM_COLUMNS, singleRow));
+            singleRow.add(convertIccToSms(message));
+            return withIccNotificationUri(
+                    new ArrayListCursor(ICC_COLUMNS, singleRow));
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(
-                    "Bad SMS SIM ID: " + messageIndexString);
+                    "Bad SMS ICC ID: " + messageIndexString);
         }
     }
 
     /**
-     * Return a Cursor listing all the messages stored on the SIM.
+     * Return a Cursor listing all the messages stored on the ICC.
      */
-    private Cursor getAllMessagesFromSim() {
+    private Cursor getAllMessagesFromIcc() {
         SmsManager smsManager = SmsManager.getDefault();
-        ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromSim();
+        ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromIcc();
         ArrayList<ArrayList> rows = new ArrayList<ArrayList>();
 
         for (int count = messages.size(), i = 0; i < count; i++) {
             SmsMessage message = messages.get(i);
             if (message != null) {
-                rows.add(convertSimToSms(message));
+                rows.add(convertIccToSms(message));
             }
         }
-        return withSimNotificationUri(new ArrayListCursor(SIM_COLUMNS, rows));
+        return withIccNotificationUri(new ArrayListCursor(ICC_COLUMNS, rows));
     }
 
-    private Cursor withSimNotificationUri(Cursor cursor) {
-        cursor.setNotificationUri(getContext().getContentResolver(),
-                                  SIM_URI);
+    private Cursor withIccNotificationUri(Cursor cursor) {
+        cursor.setNotificationUri(getContext().getContentResolver(), ICC_URI);
         return cursor;
     }
 
@@ -522,10 +525,10 @@ public class SmsProvider extends ContentProvider {
                 count = db.delete("sr_pending", where, whereArgs);
                 break;
 
-            case SMS_SIM:
+            case SMS_ICC:
                 String messageIndexString = url.getPathSegments().get(1);
 
-                return deleteMessageFromSim(messageIndexString);
+                return deleteMessageFromIcc(messageIndexString);
 
             default:
                 throw new IllegalArgumentException("Unknown URL");
@@ -538,23 +541,23 @@ public class SmsProvider extends ContentProvider {
     }
 
     /**
-     * Delete the message at index from SIM.  Return true iff
+     * Delete the message at index from ICC.  Return true iff
      * successful.
      */
-    private int deleteMessageFromSim(String messageIndexString) {
+    private int deleteMessageFromIcc(String messageIndexString) {
         SmsManager smsManager = SmsManager.getDefault();
 
         try {
-            return smsManager.deleteMessageFromSim(
+            return smsManager.deleteMessageFromIcc(
                     Integer.parseInt(messageIndexString))
                     ? 1 : 0;
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(
-                    "Bad SMS SIM ID: " + messageIndexString);
+                    "Bad SMS ICC ID: " + messageIndexString);
         } finally {
             ContentResolver cr = getContext().getContentResolver();
 
-            cr.notifyChange(SIM_URI, null);
+            cr.notifyChange(ICC_URI, null);
         }
     }
 
@@ -668,8 +671,8 @@ public class SmsProvider extends ContentProvider {
     private static final int SMS_QUERY_THREAD_ID = 19;
     private static final int SMS_STATUS_ID = 20;
     private static final int SMS_STATUS_PENDING = 21;
-    private static final int SMS_ALL_SIM = 22;
-    private static final int SMS_SIM = 23;
+    private static final int SMS_ALL_ICC = 22;
+    private static final int SMS_ICC = 23;
     private static final int SMS_FAILED = 24;
     private static final int SMS_FAILED_ID = 25;
     private static final int SMS_QUEUED = 26;
@@ -702,9 +705,12 @@ public class SmsProvider extends ContentProvider {
         sURLMatcher.addURI("sms", "threadID/*", SMS_QUERY_THREAD_ID);
         sURLMatcher.addURI("sms", "status/#", SMS_STATUS_ID);
         sURLMatcher.addURI("sms", "sr_pending", SMS_STATUS_PENDING);
-        sURLMatcher.addURI("sms", "sim", SMS_ALL_SIM);
-        sURLMatcher.addURI("sms", "sim/#", SMS_SIM);
-
+        sURLMatcher.addURI("sms", "icc", SMS_ALL_ICC);
+        sURLMatcher.addURI("sms", "icc/#", SMS_ICC);
+        //we keep these for not breaking old applications
+        sURLMatcher.addURI("sms", "sim", SMS_ALL_ICC);
+        sURLMatcher.addURI("sms", "sim/#", SMS_ICC);
+        
         sConversationProjectionMap.put(Sms.Conversations.SNIPPET,
                 "body AS snippet");
         sConversationProjectionMap.put("delta", null);
