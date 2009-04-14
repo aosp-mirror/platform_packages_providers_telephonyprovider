@@ -394,6 +394,8 @@ public class SmsProvider extends ContentProvider {
                 return null;
         }
 
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+
         if (table.equals(TABLE_SMS)) {
             boolean addDate = false;
             boolean addType = false;
@@ -432,6 +434,17 @@ public class SmsProvider extends ContentProvider {
                                    getContext(), address));
             }
 
+            // If this message is going in as a draft, it should replace any
+            // other draft messages in the thread.  Just delete all draft
+            // messages with this thread ID.  We could add an OR REPLACE to
+            // the insert below, but we'd have to query to find the old _id
+            // to produce a conflict anyway.
+            if (values.getAsInteger(Sms.TYPE) == Sms.MESSAGE_TYPE_DRAFT) {
+                db.delete(TABLE_SMS, "thread_id=? AND type=?",
+                        new String[] { values.getAsString(Sms.THREAD_ID),
+                                       Integer.toString(Sms.MESSAGE_TYPE_DRAFT) });
+            }
+
             if (type == Sms.MESSAGE_TYPE_INBOX) {
                 // Look up the person if not already filled in.
                 if ((values.getAsLong(Sms.PERSON) == null)
@@ -462,7 +475,6 @@ public class SmsProvider extends ContentProvider {
             }
         }
 
-        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         rowID = db.insert(table, "body", values);
         if (rowID > 0) {
             Uri uri = Uri.parse("content://" + table + "/" + rowID);
