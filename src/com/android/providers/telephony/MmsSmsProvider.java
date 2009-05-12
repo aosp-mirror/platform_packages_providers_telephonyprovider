@@ -86,6 +86,7 @@ public class MmsSmsProvider extends ContentProvider {
     private static final int URI_NOTIFICATIONS              = 10;
     private static final int URI_OBSOLETE_THREADS           = 11;
     private static final int URI_DRAFT                      = 12;
+    private static final int URI_CANONICAL_ADDRESSES        = 13;
 
     /**
      * the name of the table that is used to store the queue of
@@ -187,6 +188,9 @@ public class MmsSmsProvider extends ContentProvider {
         // Use this pattern to query the canonical address by given ID.
         URI_MATCHER.addURI(AUTHORITY, "canonical-address/#", URI_CANONICAL_ADDRESS);
 
+        // Use this pattern to query all canonical addresses.
+        URI_MATCHER.addURI(AUTHORITY, "canonical-addresses", URI_CANONICAL_ADDRESSES);
+
         // In this pattern, two query parameters may be supplied:
         // "protocol" and "message." For example:
         //   content://mms-sms/pending?
@@ -277,6 +281,11 @@ public class MmsSmsProvider extends ContentProvider {
                         null, null, sortOrder);
                 break;
             }
+            case URI_CANONICAL_ADDRESSES:
+                cursor = db.query("canonical_addresses",
+                        new String[] {"_id", "address"}, selection, selectionArgs,
+                        null, null, sortOrder);
+                break;
             case URI_PENDING_MSG: {
                 String protoName = uri.getQueryParameter("protocol");
                 String msgId = uri.getQueryParameter("message");
