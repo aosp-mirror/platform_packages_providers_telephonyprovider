@@ -724,7 +724,11 @@ public class SmsProvider extends ContentProvider {
         sURLMatcher.addURI("sms", "sim/#", SMS_ICC);
         
         sConversationProjectionMap.put(Sms.Conversations.SNIPPET,
-                "body AS snippet");
+            "sms.body AS snippet");
+        sConversationProjectionMap.put(Sms.Conversations.THREAD_ID,
+            "sms.thread_id AS thread_id");
+        sConversationProjectionMap.put(Sms.Conversations.MESSAGE_COUNT,
+            "groups.msg_count AS msg_count");
         sConversationProjectionMap.put("delta", null);
     }
 }

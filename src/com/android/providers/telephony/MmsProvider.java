@@ -176,6 +176,9 @@ public class MmsProvider extends ContentProvider {
                 qb.setTables(TABLE_DRM);
                 qb.appendWhere(BaseColumns._ID + "=" + uri.getLastPathSegment());
                 break;
+            case MMS_THREADS:
+                qb.setTables("pdu group by thread_id");
+                break;
             default:
                 Log.e(TAG, "Invalid request: " + uri);
                 return null;
@@ -751,10 +754,11 @@ public class MmsProvider extends ContentProvider {
     private static final int MMS_PART_ID                  = 12;
     private static final int MMS_MSG_ADDR                 = 13;
     private static final int MMS_SENDING_RATE             = 14;
-    private static final int MMS_REPORT_STATUS          = 15;
-    private static final int MMS_REPORT_REQUEST = 16;
+    private static final int MMS_REPORT_STATUS            = 15;
+    private static final int MMS_REPORT_REQUEST           = 16;
     private static final int MMS_DRM_STORAGE              = 17;
     private static final int MMS_DRM_STORAGE_ID           = 18;
+    private static final int MMS_THREADS                  = 19;
 
     private static final UriMatcher
             sURLMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -779,6 +783,7 @@ public class MmsProvider extends ContentProvider {
         sURLMatcher.addURI("mms", "report-request/#", MMS_REPORT_REQUEST);
         sURLMatcher.addURI("mms", "drm",        MMS_DRM_STORAGE);
         sURLMatcher.addURI("mms", "drm/#",      MMS_DRM_STORAGE_ID);
+        sURLMatcher.addURI("mms", "threads",    MMS_THREADS);
     }
 
     private SQLiteOpenHelper mOpenHelper;
