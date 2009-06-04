@@ -180,7 +180,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 44;
+    static final int DATABASE_VERSION = 45;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -345,7 +345,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.CONTENT_CLASS + " INTEGER," +
                    Mms.RESPONSE_TEXT + " TEXT," +
                    Mms.DELIVERY_TIME + " INTEGER," +
-                   Mms.DELIVERY_REPORT + " INTEGER);");
+                   Mms.DELIVERY_REPORT + " INTEGER," +
+                   Mms.LOCKED + " INTEGER DEFAULT 0," +
+                   ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
                    Addr._ID + " INTEGER PRIMARY KEY," +
@@ -431,7 +433,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "reply_path_present INTEGER," +
                    "subject TEXT," +
                    "body TEXT," +
-                   "service_center TEXT);");
+                   "service_center TEXT," +
+                   "locked INTEGER DEFAULT 0" +
+                   ");");
 
         /**
          * This table is used by the SMS dispatcher to hold
@@ -782,6 +786,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.endTransaction();
             }
             return;
+        case 44:
+            if (currentVersion <= 44) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion45(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+            return;
         }
 
         Log.e(TAG, "Destroying all old data.");
@@ -855,4 +875,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // add the update trigger for keeping the threads up to date.
         db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
     }
+
+    private void upgradeDatabaseToVersion45(SQLiteDatabase db) {
+        // Add 'locked' column to sms table.
+        db.execSQL("ALTER TABLE sms ADD COLUMN locked INTEGER DEFAULT 0");
+
+        // Add 'locked' column to pdu table.
+        db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.LOCKED + " INTEGER DEFAULT 0");
+    }
+
 }

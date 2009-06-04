@@ -637,7 +637,7 @@ public class SmsProvider extends ContentProvider {
 
         where = DatabaseUtils.concatenateWhere(where, extraWhere);
         count = db.update(table, values, where, whereArgs);
-
+        
         if (count > 0) {
             notifyChange(url);
         }
