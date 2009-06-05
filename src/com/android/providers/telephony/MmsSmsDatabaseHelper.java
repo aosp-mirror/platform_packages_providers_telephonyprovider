@@ -346,7 +346,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.RESPONSE_TEXT + " TEXT," +
                    Mms.DELIVERY_TIME + " INTEGER," +
                    Mms.DELIVERY_REPORT + " INTEGER," +
-                   Mms.LOCKED + " INTEGER DEFAULT 0," +
+                   Mms.LOCKED + " INTEGER DEFAULT 0" +
                    ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
