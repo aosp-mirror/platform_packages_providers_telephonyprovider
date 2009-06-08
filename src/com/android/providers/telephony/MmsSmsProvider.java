@@ -16,7 +16,11 @@
 
 package com.android.providers.telephony;
 
-import com.google.android.mms.pdu.PduHeaders;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -40,10 +44,7 @@ import android.provider.Telephony.Sms.Conversations;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.google.android.mms.pdu.PduHeaders;
 
 /**
  * This class provides the ability to query the MMS and SMS databases
@@ -87,6 +88,7 @@ public class MmsSmsProvider extends ContentProvider {
     private static final int URI_OBSOLETE_THREADS           = 11;
     private static final int URI_DRAFT                      = 12;
     private static final int URI_CANONICAL_ADDRESSES        = 13;
+    private static final int URI_SEARCH                     = 14;
 
     /**
      * the name of the table that is used to store the queue of
@@ -190,6 +192,8 @@ public class MmsSmsProvider extends ContentProvider {
 
         // Use this pattern to query all canonical addresses.
         URI_MATCHER.addURI(AUTHORITY, "canonical-addresses", URI_CANONICAL_ADDRESSES);
+        
+        URI_MATCHER.addURI(AUTHORITY, "search", URI_SEARCH);
 
         // In this pattern, two query parameters may be supplied:
         // "protocol" and "message." For example:
@@ -285,6 +289,30 @@ public class MmsSmsProvider extends ContentProvider {
                 cursor = db.query("canonical_addresses",
                         new String[] {"_id", "address"}, selection, selectionArgs,
                         null, null, sortOrder);
+                break;
+            case URI_SEARCH:
+                if (sortOrder != null || selection != null || selectionArgs != null) {
+                    throw new IllegalArgumentException("do not specify sortOrder, selection, selectionArgs with this query");
+                }
+                
+                String searchString = "%" + uri.getQueryParameter("pattern") + "%";
+                
+                // compute the projection as a merge of the passed in projection
+                // and the required projection
+                ArrayList<String> projectionToUse = new ArrayList<String>();
+                projectionToUse.addAll(Arrays.asList(projection));
+
+                for (String r : new String[] {"_id","thread_id","address","body","subject","date"}) {
+                    if (!projectionToUse.contains(r)) {
+                        projectionToUse.add(r);
+                    }
+                }
+
+                String rawQuery = String.format(
+                        "select %s from sms where (body like ? or subject like ?) " + 
+                        "group by thread_id order by thread_id ASC,date DESC", 
+                        TextUtils.join(",", projectionToUse));
+                cursor = db.rawQuery(rawQuery, new String[] { searchString, searchString });
                 break;
             case URI_PENDING_MSG: {
                 String protoName = uri.getQueryParameter("protocol");
