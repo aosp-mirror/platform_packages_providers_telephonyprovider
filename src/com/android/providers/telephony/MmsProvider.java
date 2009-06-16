@@ -30,6 +30,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
+import android.provider.Telephony.CanonicalAddressesColumns;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Mms.Addr;
@@ -42,6 +43,7 @@ import android.util.Log;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import android.provider.Telephony.Threads;
 
 /**
  * The class to provide base facility to access MMS related content,
@@ -340,6 +342,14 @@ public class MmsProvider extends ContentProvider {
             if (msgBox != Mms.MESSAGE_BOX_INBOX) {
                 // Mark all non-inbox messages read.
                 finalValues.put(Mms.READ, 1);
+            }
+
+            // thread_id
+            Long threadId = values.getAsLong(Mms.THREAD_ID);
+            String address = values.getAsString(CanonicalAddressesColumns.ADDRESS);
+
+            if (((threadId == null) || (threadId == 0)) && (address != null)) {
+                finalValues.put(Mms.THREAD_ID, Threads.getOrCreateThreadId(getContext(), address));
             }
 
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
