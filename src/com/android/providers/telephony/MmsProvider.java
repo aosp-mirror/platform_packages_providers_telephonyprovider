@@ -366,24 +366,30 @@ public class MmsProvider extends ContentProvider {
                 finalValues.put(Part.MSG_ID, uri.getPathSegments().get(0));
             }
 
-            // Generate the '_data' field of the part with default
-            // permission settings.
-            String path = getContext().getDir("parts", 0).getPath()
-                    + "/PART_" + System.currentTimeMillis();
+            String contentType = values.getAsString("ct");
+            
+            // text/plain and app application/smil store their "data" inline in the
+            // table so there's no need to create the file
+            if (!"text/plain".equals(contentType) && !"application/smil".equals(contentType)) {
+                // Generate the '_data' field of the part with default
+                // permission settings.
+                String path = getContext().getDir("parts", 0).getPath()
+                + "/PART_" + System.currentTimeMillis();
 
-            finalValues.put(Part._DATA, path);
+                finalValues.put(Part._DATA, path);
 
-            File partFile = new File(path);
-            if (!partFile.exists()) {
-                try {
-                    if (!partFile.createNewFile()) {
+                File partFile = new File(path);
+                if (!partFile.exists()) {
+                    try {
+                        if (!partFile.createNewFile()) {
+                            throw new IllegalStateException(
+                                    "Unable to create new partFile: " + path);
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "createNewFile", e);
                         throw new IllegalStateException(
                                 "Unable to create new partFile: " + path);
                     }
-                } catch (IOException e) {
-                    Log.e(TAG, "createNewFile", e);
-                    throw new IllegalStateException(
-                            "Unable to create new partFile: " + path);
                 }
             }
 
@@ -591,7 +597,10 @@ public class MmsProvider extends ContentProvider {
             while (cursor.moveToNext()) {
                 try {
                     // Delete the associated files saved on file-system.
-                    new File(cursor.getString(0)).delete();
+                    String path = cursor.getString(0);
+                    if (path != null) {
+                        new File(path).delete();
+                    }
                 } catch (Throwable ex) {
                     Log.e(TAG, ex.getMessage(), ex);
                 }

@@ -192,7 +192,7 @@ public class MmsSmsProvider extends ContentProvider {
 
         // Use this pattern to query all canonical addresses.
         URI_MATCHER.addURI(AUTHORITY, "canonical-addresses", URI_CANONICAL_ADDRESSES);
-        
+
         URI_MATCHER.addURI(AUTHORITY, "search", URI_SEARCH);
 
         // In this pattern, two query parameters may be supplied:
@@ -291,27 +291,48 @@ public class MmsSmsProvider extends ContentProvider {
                         null, null, sortOrder);
                 break;
             case URI_SEARCH:
-                if (sortOrder != null || selection != null || selectionArgs != null) {
-                    throw new IllegalArgumentException("do not specify sortOrder, selection, selectionArgs with this query");
+                if (       sortOrder != null 
+                        || selection != null 
+                        || selectionArgs != null 
+                        || projection != null) {
+                    throw new IllegalArgumentException(
+                            "do not specify sortOrder, selection, selectionArgs, or projection" +
+                            "with this query");
                 }
                 
-                String searchString = "%" + uri.getQueryParameter("pattern") + "%";
-                
-                // compute the projection as a merge of the passed in projection
-                // and the required projection
-                ArrayList<String> projectionToUse = new ArrayList<String>();
-                projectionToUse.addAll(Arrays.asList(projection));
+                // This code queries the sms and mms tables and returns a unified result set
+                // of text matches.  We query the sms table which is pretty simple.  We also
+                // query the pdu, part and addr table to get the mms result.  Note that we're
+                // using a UNION so we have to have the same number of result columns from
+                // both queries.  
 
-                for (String r : new String[] {"_id","thread_id","address","body","subject","date"}) {
-                    if (!projectionToUse.contains(r)) {
-                        projectionToUse.add(r);
-                    }
-                }
+                String searchString = "%" + uri.getQueryParameter("pattern") + "%";
+                String smsProjection = "_id,thread_id,address,body,date";
+                String mmsProjection = "pdu._id,thread_id,addr.address,part.text as body,pdu.date";
+
+                String smsQuery = String.format(
+                        "SELECT %s FROM sms WHERE (body LIKE ?) ",
+                        smsProjection);
+
+                // TODO consider whether we're really getting the right addr here (for example, if
+                // I send a message to a given phone number do I want the search result to
+                // show a match on "me" or on that phone number.  I suspect the latter.
+                String mmsQuery = String.format(
+                        "SELECT %s FROM pdu,part,addr WHERE ((part.mid=pdu._id) AND " +
+                        "(addr.msg_id=pdu._id) AND " +
+                        "(addr.type=%d) AND " +
+                        "(part.ct='text/plain') AND " +
+                        "(body like ?))",
+                        mmsProjection,
+                        PduHeaders.TO);
 
                 String rawQuery = String.format(
-                        "select %s from sms where (body like ? or subject like ?) " + 
-                        "group by thread_id order by thread_id ASC,date DESC", 
-                        TextUtils.join(",", projectionToUse));
+                        "%s UNION %s GROUP BY %s ORDER BY %s",
+                        smsQuery,
+                        mmsQuery,
+                        "thread_id",
+                        "thread_id ASC, date DESC");
+
                 cursor = db.rawQuery(rawQuery, new String[] { searchString, searchString });
                 break;
             case URI_PENDING_MSG: {
@@ -929,7 +950,7 @@ public class MmsSmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Context context = getContext();
         int affectedRows = 0;
-        
+
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
                 long threadId;
