@@ -71,6 +71,7 @@ public class MmsSmsProvider extends ContentProvider {
     private static final UriMatcher URI_MATCHER =
             new UriMatcher(UriMatcher.NO_MATCH);
     private static final String LOG_TAG = "MmsSmsProvider";
+    private static final boolean DEBUG = true;
 
     private static final String NO_DELETES_INSERTS_OR_UPDATES =
             "MmsSmsProvider does not support deletes, inserts, or updates for this URI.";
@@ -502,6 +503,10 @@ public class MmsSmsProvider extends ContentProvider {
             insertThread(recipientIds, recipients.size());
             db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
             cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
+        }
+        if (DEBUG && cursor.getCount() == 0) {
+            Log.e(LOG_TAG, "getThreadId couldn't return a threadId, recipientIds: " +
+                    recipientIds);
         }
 
         return cursor;
