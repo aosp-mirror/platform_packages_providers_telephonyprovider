@@ -495,18 +495,23 @@ public class MmsSmsProvider extends ContentProvider {
         String THREAD_QUERY = "SELECT _id FROM threads " +
                 "WHERE recipient_ids = ?";
 
+        if (DEBUG) {
+            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY);
+        }
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
 
         if (cursor.getCount() == 0) {
             cursor.close();
+            if (DEBUG) {
+                Log.v(LOG_TAG, "getThreadId cursor zero, creating new threadid");
+            }
             insertThread(recipientIds, recipients.size());
             db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
             cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
         }
-        if (DEBUG && cursor.getCount() == 0) {
-            Log.e(LOG_TAG, "getThreadId couldn't return a threadId, recipientIds: " +
-                    recipientIds);
+        if (DEBUG) {
+            Log.v(LOG_TAG, "getThreadId cursor count: " + cursor.getCount());
         }
 
         return cursor;
