@@ -21,7 +21,7 @@
 
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
-                 android:label="Dialer Storage"
+                 android:label="@string/app_label"
                  android:icon="@drawable/ic_launcher_phone">
         <provider android:name="TelephonyProvider" android:authorities="telephony" android:multiprocess="true" />
         <provider android:name="SmsProvider" android:authorities="sms" android:multiprocess="true" 
