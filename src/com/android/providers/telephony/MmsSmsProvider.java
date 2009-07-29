@@ -70,6 +70,7 @@ public class MmsSmsProvider extends ContentProvider {
     private static final UriMatcher URI_MATCHER =
             new UriMatcher(UriMatcher.NO_MATCH);
     private static final String LOG_TAG = "MmsSmsProvider";
+    private static final boolean DEBUG = true;
 
     private static final String NO_DELETES_INSERTS_OR_UPDATES =
             "MmsSmsProvider does not support deletes, inserts, or updates for this URI.";
@@ -436,14 +437,23 @@ public class MmsSmsProvider extends ContentProvider {
         String THREAD_QUERY = "SELECT _id FROM threads " +
                 "WHERE recipient_ids = ?";
 
+        if (DEBUG) {
+            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY);
+        }
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
 
         if (cursor.getCount() == 0) {
             cursor.close();
+            if (DEBUG) {
+                Log.v(LOG_TAG, "getThreadId cursor zero, creating new threadid");
+            }
             insertThread(recipientIds, recipients.size());
             db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
             cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
+        }
+        if (DEBUG) {
+            Log.v(LOG_TAG, "getThreadId cursor count: " + cursor.getCount());
         }
 
         return cursor;
@@ -892,7 +902,7 @@ public class MmsSmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Context context = getContext();
         int affectedRows = 0;
-        
+
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
                 long threadId;
