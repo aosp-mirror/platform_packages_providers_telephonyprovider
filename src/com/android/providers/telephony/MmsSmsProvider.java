@@ -292,20 +292,20 @@ public class MmsSmsProvider extends ContentProvider {
                         null, null, sortOrder);
                 break;
             case URI_SEARCH:
-                if (       sortOrder != null 
-                        || selection != null 
-                        || selectionArgs != null 
+                if (       sortOrder != null
+                        || selection != null
+                        || selectionArgs != null
                         || projection != null) {
                     throw new IllegalArgumentException(
                             "do not specify sortOrder, selection, selectionArgs, or projection" +
                             "with this query");
                 }
-                
+
                 // This code queries the sms and mms tables and returns a unified result set
                 // of text matches.  We query the sms table which is pretty simple.  We also
                 // query the pdu, part and addr table to get the mms result.  Note that we're
                 // using a UNION so we have to have the same number of result columns from
-                // both queries.  
+                // both queries.
 
                 String searchString = "%" + uri.getQueryParameter("pattern") + "%";
                 String smsProjection = "_id,thread_id,address,body,date";
@@ -977,7 +977,10 @@ public class MmsSmsProvider extends ContentProvider {
                 affectedRows = MmsProvider.deleteMessages(context, db,
                                         selection, selectionArgs, uri)
                         + db.delete("sms", selection, selectionArgs);
-                MmsSmsDatabaseHelper.updateAllThreads(db, selection, selectionArgs);
+                // Intentionally don't pass the selection variable to updateAllThreads.
+                // When we pass in "locked=0" there, the thread will get excluded from
+                // the selection and not get updated.
+                MmsSmsDatabaseHelper.updateAllThreads(db, null, null);
                 break;
             case URI_OBSOLETE_THREADS:
                 affectedRows = db.delete("threads",
