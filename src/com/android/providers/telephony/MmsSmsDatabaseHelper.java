@@ -794,7 +794,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-            return;
+            // fall through 
         case 44:
             if (currentVersion <= 44) {
                 return;
@@ -810,8 +810,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-            return;
-
+            // fall through 
         case 45:
             if (currentVersion <= 45) {
                 return;
