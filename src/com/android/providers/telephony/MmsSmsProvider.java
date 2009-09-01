@@ -75,21 +75,23 @@ public class MmsSmsProvider extends ContentProvider {
 
     private static final String NO_DELETES_INSERTS_OR_UPDATES =
             "MmsSmsProvider does not support deletes, inserts, or updates for this URI.";
-    private static final int URI_CONVERSATIONS              = 0;
-    private static final int URI_CONVERSATIONS_MESSAGES     = 1;
-    private static final int URI_CONVERSATIONS_RECIPIENTS   = 2;
-    private static final int URI_MESSAGES_BY_PHONE          = 3;
-    private static final int URI_THREAD_ID                  = 4;
-    private static final int URI_CANONICAL_ADDRESS          = 5;
-    private static final int URI_PENDING_MSG                = 6;
-    private static final int URI_COMPLETE_CONVERSATIONS     = 7;
-    private static final int URI_UNDELIVERED_MSG            = 8;
-    private static final int URI_CONVERSATIONS_SUBJECT      = 9;
-    private static final int URI_NOTIFICATIONS              = 10;
-    private static final int URI_OBSOLETE_THREADS           = 11;
-    private static final int URI_DRAFT                      = 12;
-    private static final int URI_CANONICAL_ADDRESSES        = 13;
-    private static final int URI_SEARCH                     = 14;
+    private static final int URI_CONVERSATIONS                     = 0;
+    private static final int URI_CONVERSATIONS_MESSAGES            = 1;
+    private static final int URI_CONVERSATIONS_RECIPIENTS          = 2;
+    private static final int URI_MESSAGES_BY_PHONE                 = 3;
+    private static final int URI_THREAD_ID                         = 4;
+    private static final int URI_CANONICAL_ADDRESS                 = 5;
+    private static final int URI_PENDING_MSG                       = 6;
+    private static final int URI_COMPLETE_CONVERSATIONS            = 7;
+    private static final int URI_UNDELIVERED_MSG                   = 8;
+    private static final int URI_CONVERSATIONS_SUBJECT             = 9;
+    private static final int URI_NOTIFICATIONS                     = 10;
+    private static final int URI_OBSOLETE_THREADS                  = 11;
+    private static final int URI_DRAFT                             = 12;
+    private static final int URI_CANONICAL_ADDRESSES               = 13;
+    private static final int URI_SEARCH                            = 14;
+    private static final int URI_FIRST_LOCKED_MESSAGE_ALL          = 15;
+    private static final int URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID = 16;
 
     /**
      * the name of the table that is used to store the queue of
@@ -215,6 +217,11 @@ public class MmsSmsProvider extends ContentProvider {
         URI_MATCHER.addURI(AUTHORITY, "notifications", URI_NOTIFICATIONS);
 
         URI_MATCHER.addURI(AUTHORITY, "draft", URI_DRAFT);
+
+        URI_MATCHER.addURI(AUTHORITY, "locked", URI_FIRST_LOCKED_MESSAGE_ALL);
+
+        URI_MATCHER.addURI(AUTHORITY, "locked/#", URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID);
+
         initializeColumnSets();
     }
 
@@ -363,6 +370,23 @@ public class MmsSmsProvider extends ContentProvider {
             }
             case URI_DRAFT: {
                 cursor = getDraftThread(projection, selection, selectionArgs, sortOrder);
+                break;
+            }
+            case URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID: {
+                long threadId;
+                try {
+                    threadId = Long.parseLong(uri.getLastPathSegment());
+                } catch (NumberFormatException e) {
+                    Log.e(LOG_TAG, "Thread ID must be a long.");
+                    break;
+                }
+                cursor = getFirstLockedMessage(projection, "thread_id=" + Long.toString(threadId),
+                        null, sortOrder);
+                break;
+            }
+            case URI_FIRST_LOCKED_MESSAGE_ALL: {
+                cursor = getFirstLockedMessage(projection, selection,
+                        selectionArgs, sortOrder);
                 break;
             }
             default:
@@ -677,6 +701,72 @@ public class MmsSmsProvider extends ContentProvider {
                 columns, null, null, "tid",
                 "normalized_date = MAX(normalized_date)", sortOrder, null);
 
+        return mOpenHelper.getReadableDatabase().rawQuery(outerQuery, EMPTY_STRING_ARRAY);
+    }
+
+    /**
+     * Return the first locked message found in the union of MMS
+     * and SMS messages.
+     *
+     * Use this query:
+     *
+     *  SELECT *
+     *      FROM (SELECT thread_id AS tid, date * 1000 AS normalized_date, ...
+     *              FROM pdu
+     *              WHERE ((msg_box != 3 AND ...
+     *              GROUP BY thread_id
+     *              HAVING locked=1
+     *      UNION SELECT thread_id AS tid, date * 1 AS normalized_date, ...
+     *              FROM sms
+     *              WHERE ((type != 3))
+     *              GROUP BY thread_id
+     *              HAVING locked=1)
+     *      GROUP BY tid ORDER BY date DESC LIMIT 1
+     *
+     * The msg_box != 3 comparisons ensure that we don't include draft
+     * messages. We limit by 1 because we're only interested in knowing if
+     * there is *any* locked message, not the actual messages themselves.
+     */
+    private Cursor getFirstLockedMessage(String[] projection, String selection,
+            String[] selectionArgs, String sortOrder) {
+        SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
+        SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
+
+        mmsQueryBuilder.setTables(MmsProvider.TABLE_PDU);
+        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+
+        String[] innerMmsProjection = makeProjectionWithDateAndThreadId(
+                UNION_COLUMNS, 1000);
+        String[] innerSmsProjection = makeProjectionWithDateAndThreadId(
+                UNION_COLUMNS, 1);
+        String mmsSubQuery = mmsQueryBuilder.buildUnionSubQuery(
+                MmsSms.TYPE_DISCRIMINATOR_COLUMN, innerMmsProjection,
+                MMS_COLUMNS, 1, "mms",
+                concatSelections(selection, MMS_CONVERSATION_CONSTRAINT), selectionArgs,
+                "thread_id", "locked=1");
+        String smsSubQuery = smsQueryBuilder.buildUnionSubQuery(
+                MmsSms.TYPE_DISCRIMINATOR_COLUMN, innerSmsProjection,
+                SMS_COLUMNS, 1, "sms",
+                concatSelections(selection, SMS_CONVERSATION_CONSTRAINT), selectionArgs,
+                "thread_id", "locked=1");
+        SQLiteQueryBuilder unionQueryBuilder = new SQLiteQueryBuilder();
+
+        unionQueryBuilder.setDistinct(true);
+
+        String unionQuery = unionQueryBuilder.buildUnionQuery(
+                new String[] { mmsSubQuery, smsSubQuery }, null, null);
+
+        SQLiteQueryBuilder outerQueryBuilder = new SQLiteQueryBuilder();
+
+        outerQueryBuilder.setTables("(" + unionQuery + ")");
+
+        String outerQuery = outerQueryBuilder.buildQuery(
+                null, null, null, "tid",
+                null, sortOrder, "1");
+
+        if (DEBUG) {
+            Log.v("MmsSmsProvider", "getFirstLockedMessage query: " + outerQuery);
+        }
         return mOpenHelper.getReadableDatabase().rawQuery(outerQuery, EMPTY_STRING_ARRAY);
     }
 
