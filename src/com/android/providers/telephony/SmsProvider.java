@@ -138,7 +138,7 @@ public class SmsProvider extends ContentProvider {
 
                 try {
                     threadID = Integer.parseInt(url.getPathSegments().get(1));
-                    if (Config.LOGD) {
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
                         Log.d(TAG, "query conversations: threadID=" + threadID);
                     }
                 }
@@ -332,10 +332,6 @@ public class SmsProvider extends ContentProvider {
         int type = Sms.MESSAGE_TYPE_ALL;
 
         int match = sURLMatcher.match(url);
-        if (Config.LOGD) {
-            Log.d(TAG, "insert url=" + url + ", match=" + match);
-        }
-
         String table = TABLE_SMS;
 
         switch (match) {
@@ -478,11 +474,14 @@ public class SmsProvider extends ContentProvider {
         rowID = db.insert(table, "body", values);
         if (rowID > 0) {
             Uri uri = Uri.parse("content://" + table + "/" + rowID);
+
+            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                Log.d(TAG, "insert " + uri + " succeeded");
+            }
             notifyChange(uri);
             return uri;
         } else {
-            Log.e(TAG,
-                  "SmsProvider.insert: failed! " + values.toString());
+            Log.e(TAG,"insert: failed! " + values.toString());
         }
 
         return null;
@@ -574,8 +573,7 @@ public class SmsProvider extends ContentProvider {
     }
 
     @Override
-    public int update(
-            Uri url, ContentValues values, String where, String[] whereArgs) {
+    public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
         int count = 0;
         String table = TABLE_SMS;
         String extraWhere = null;
@@ -639,6 +637,9 @@ public class SmsProvider extends ContentProvider {
         count = db.update(table, values, where, whereArgs);
         
         if (count > 0) {
+            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                Log.d(TAG, "update " + url + " succeeded");
+            }
             notifyChange(url);
         }
         return count;
