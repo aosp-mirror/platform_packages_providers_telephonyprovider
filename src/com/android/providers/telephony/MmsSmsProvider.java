@@ -71,7 +71,7 @@ public class MmsSmsProvider extends ContentProvider {
     private static final UriMatcher URI_MATCHER =
             new UriMatcher(UriMatcher.NO_MATCH);
     private static final String LOG_TAG = "MmsSmsProvider";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private static final String NO_DELETES_INSERTS_OR_UPDATES =
             "MmsSmsProvider does not support deletes, inserts, or updates for this URI.";
@@ -710,21 +710,10 @@ public class MmsSmsProvider extends ContentProvider {
      *
      * Use this query:
      *
-     *  SELECT *
-     *      FROM (SELECT thread_id AS tid, date * 1000 AS normalized_date, ...
-     *              FROM pdu
-     *              WHERE ((msg_box != 3 AND ...
-     *              GROUP BY thread_id
-     *              HAVING locked=1
-     *      UNION SELECT thread_id AS tid, date * 1 AS normalized_date, ...
-     *              FROM sms
-     *              WHERE ((type != 3))
-     *              GROUP BY thread_id
-     *              HAVING locked=1)
-     *      GROUP BY tid ORDER BY date DESC LIMIT 1
+     *  SELECT _id FROM pdu GROUP BY _id HAVING locked=1 UNION SELECT _id FROM sms GROUP
+     *      BY _id HAVING locked=1 LIMIT 1
      *
-     * The msg_box != 3 comparisons ensure that we don't include draft
-     * messages. We limit by 1 because we're only interested in knowing if
+     * We limit by 1 because we're only interested in knowing if
      * there is *any* locked message, not the actual messages themselves.
      */
     private Cursor getFirstLockedMessage(String[] projection, String selection,
@@ -735,39 +724,34 @@ public class MmsSmsProvider extends ContentProvider {
         mmsQueryBuilder.setTables(MmsProvider.TABLE_PDU);
         smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
 
-        String[] innerMmsProjection = makeProjectionWithDateAndThreadId(
-                UNION_COLUMNS, 1000);
-        String[] innerSmsProjection = makeProjectionWithDateAndThreadId(
-                UNION_COLUMNS, 1);
+        String[] idColumn = new String[] { BaseColumns._ID };
+
         String mmsSubQuery = mmsQueryBuilder.buildUnionSubQuery(
-                MmsSms.TYPE_DISCRIMINATOR_COLUMN, innerMmsProjection,
-                MMS_COLUMNS, 1, "mms",
-                concatSelections(selection, MMS_CONVERSATION_CONSTRAINT), selectionArgs,
-                "thread_id", "locked=1");
+                MmsSms.TYPE_DISCRIMINATOR_COLUMN, idColumn,
+                null, 1, "mms",
+                selection, selectionArgs,
+                BaseColumns._ID, "locked=1");
+
         String smsSubQuery = smsQueryBuilder.buildUnionSubQuery(
-                MmsSms.TYPE_DISCRIMINATOR_COLUMN, innerSmsProjection,
-                SMS_COLUMNS, 1, "sms",
-                concatSelections(selection, SMS_CONVERSATION_CONSTRAINT), selectionArgs,
-                "thread_id", "locked=1");
+                MmsSms.TYPE_DISCRIMINATOR_COLUMN, idColumn,
+                null, 1, "sms",
+                selection, selectionArgs,
+                BaseColumns._ID, "locked=1");
+
         SQLiteQueryBuilder unionQueryBuilder = new SQLiteQueryBuilder();
 
         unionQueryBuilder.setDistinct(true);
 
         String unionQuery = unionQueryBuilder.buildUnionQuery(
-                new String[] { mmsSubQuery, smsSubQuery }, null, null);
+                new String[] { mmsSubQuery, smsSubQuery }, null, "1");
 
-        SQLiteQueryBuilder outerQueryBuilder = new SQLiteQueryBuilder();
-
-        outerQueryBuilder.setTables("(" + unionQuery + ")");
-
-        String outerQuery = outerQueryBuilder.buildQuery(
-                null, null, null, "tid",
-                null, sortOrder, "1");
+        Cursor cursor = mOpenHelper.getReadableDatabase().rawQuery(unionQuery, EMPTY_STRING_ARRAY);
 
         if (DEBUG) {
-            Log.v("MmsSmsProvider", "getFirstLockedMessage query: " + outerQuery);
+            Log.v("MmsSmsProvider", "getFirstLockedMessage query: " + unionQuery);
+            Log.v("MmsSmsProvider", "cursor count: " + cursor.getCount());
         }
-        return mOpenHelper.getReadableDatabase().rawQuery(outerQuery, EMPTY_STRING_ARRAY);
+        return cursor;
     }
 
     /**
