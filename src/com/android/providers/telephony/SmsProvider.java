@@ -53,6 +53,10 @@ public class SmsProvider extends ContentProvider {
     
     private static final Integer ONE = Integer.valueOf(1);
 
+    private static final String[] CONTACT_QUERY_PROJECTION =
+            new String[] { Contacts.Phones.PERSON_ID };
+    private static final int PERSON_ID_COLUMN = 0;
+
     /**
      * These are the columns that are available when reading SMS
      * messages from the ICC.  Columns whose names begin with "is_"
@@ -443,20 +447,26 @@ public class SmsProvider extends ContentProvider {
 
             if (type == Sms.MESSAGE_TYPE_INBOX) {
                 // Look up the person if not already filled in.
-                if ((values.getAsLong(Sms.PERSON) == null)
-                        && (!TextUtils.isEmpty(address))) {
-                    Cursor cursor = getContext().getContentResolver().query(
-                            Uri.withAppendedPath(
-                                    Contacts.Phones.CONTENT_FILTER_URL, address),
-                            new String[] { Contacts.Phones.PERSON_ID },
-                            null, null, null);
-                    if (cursor != null) {
-                        if (cursor.getCount() > 0) {
-                            cursor.moveToFirst();
-                            Long id = Long.valueOf(cursor.getLong(0));
-                                values.put(Sms.PERSON, id);
+                if ((values.getAsLong(Sms.PERSON) == null) && (!TextUtils.isEmpty(address))) {
+                    Cursor cursor = null;
+                    Uri uri = Uri.withAppendedPath(Contacts.Phones.CONTENT_FILTER_URL,
+                            Uri.encode(address));
+                    try {
+                        cursor = getContext().getContentResolver().query(
+                                uri,
+                                CONTACT_QUERY_PROJECTION,
+                                null, null, null);
+
+                        if (cursor.moveToFirst()) {
+                            Long id = Long.valueOf(cursor.getLong(PERSON_ID_COLUMN));
+                            values.put(Sms.PERSON, id);
                         }
-                        cursor.deactivate();
+                    } catch (Exception ex) {
+                        Log.e(TAG, "insert: query contact uri " + uri + " caught ", ex);
+                    } finally {
+                        if (cursor != null) {
+                            cursor.close();
+                        }
                     }
                 }
             } else {
