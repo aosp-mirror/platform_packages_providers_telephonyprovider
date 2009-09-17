@@ -319,7 +319,7 @@ public class MmsSmsProvider extends ContentProvider {
                 String mmsProjection = "pdu._id,thread_id,addr.address,part.text as body,pdu.date";
 
                 String smsQuery = String.format(
-                        "SELECT %s FROM sms WHERE (body LIKE ?) ",
+                        "SELECT %s FROM sms WHERE (address NOTNULL AND body LIKE ?) ",
                         smsProjection);
 
                 // TODO consider whether we're really getting the right addr here (for example, if
