@@ -227,9 +227,14 @@ public class MmsSmsProvider extends ContentProvider {
 
     private SQLiteOpenHelper mOpenHelper;
 
+    private boolean mUseStrictPhoneNumberComparation;
+
     @Override
     public boolean onCreate() {
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
+        mUseStrictPhoneNumberComparation =
+            getContext().getResources().getBoolean(
+                    com.android.internal.R.bool.config_use_strict_phone_number_comparation);
         return true;
     }
 
@@ -406,7 +411,8 @@ public class MmsSmsProvider extends ContentProvider {
         String selection =
                 isEmail
                 ? "address = ?"
-                : "PHONE_NUMBERS_EQUAL(address, ?)";
+                : String.format("PHONE_NUMBERS_EQUAL(address, ?, %d)",
+                        (mUseStrictPhoneNumberComparation ? 1 : 0));
         String[] selectionArgs = new String[] { refinedAddress };
         Cursor cursor = null;
 
@@ -835,7 +841,8 @@ public class MmsSmsProvider extends ContentProvider {
                 concatSelections(
                         selection,
                         "PHONE_NUMBERS_EQUAL(address, " +
-                        escapedPhoneNumber + ")");
+                        escapedPhoneNumber +
+                        (mUseStrictPhoneNumberComparation ? ", 1)" : ", 0)"));
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
@@ -845,7 +852,8 @@ public class MmsSmsProvider extends ContentProvider {
                 MmsProvider.TABLE_PDU +
                 ", (SELECT _id AS address_id " +
                 "FROM addr WHERE PHONE_NUMBERS_EQUAL(addr.address, " +
-                escapedPhoneNumber + ")) " +
+                escapedPhoneNumber +
+                (mUseStrictPhoneNumberComparation ? ", 1)) " : ", 0)) ") +
                 "AS matching_addresses");
         smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
 
