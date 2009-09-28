@@ -408,12 +408,17 @@ public class MmsSmsProvider extends ContentProvider {
     private long getSingleAddressId(String address) {
         boolean isEmail = Mms.isEmailAddress(address);
         String refinedAddress = isEmail ? address.toLowerCase() : address;
-        String selection =
-                isEmail
-                ? "address = ?"
-                : String.format("PHONE_NUMBERS_EQUAL(address, ?, %d)",
+        String selection = "address=?";
+        String[] selectionArgs;
+
+        if (isEmail) {
+            selectionArgs = new String[] { refinedAddress };
+        } else {
+            selection += " OR " + String.format("PHONE_NUMBERS_EQUAL(address, ?, %d)",
                         (mUseStrictPhoneNumberComparation ? 1 : 0));
-        String[] selectionArgs = new String[] { refinedAddress };
+            selectionArgs = new String[] { refinedAddress, refinedAddress };
+        }
+
         Cursor cursor = null;
 
         try {
@@ -522,11 +527,12 @@ public class MmsSmsProvider extends ContentProvider {
         String recipientIds =
                 getSpaceSeparatedNumbers(
                         getSortedSet(getAddressIds(recipients)));
-        String THREAD_QUERY = "SELECT _id FROM threads " +
-                "WHERE recipient_ids = ?";
+
+        String THREAD_QUERY = "SELECT _id FROM threads " + "WHERE recipient_ids = ?";
 
         if (DEBUG) {
-            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY);
+            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY +
+                    ", recipientIds=" + recipientIds);
         }
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
@@ -821,13 +827,14 @@ public class MmsSmsProvider extends ContentProvider {
      * SELECT ...
      *   FROM pdu, (SELECT _id AS address_id
      *              FROM addr
-     *              WHERE PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>'))
+     *              WHERE (address='<phoneNumber>' OR
+     *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0)))
      *             AS matching_addresses
      *   WHERE pdu._id = matching_addresses.address_id
      * UNION
      * SELECT ...
      *   FROM sms
-     *   WHERE PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>');
+     *   WHERE (address='<phoneNumber>' OR PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>', 1/0));
      */
     private Cursor getMessagesByPhoneNumber(
             String phoneNumber, String[] projection, String selection,
@@ -840,9 +847,9 @@ public class MmsSmsProvider extends ContentProvider {
         String finalSmsSelection =
                 concatSelections(
                         selection,
-                        "PHONE_NUMBERS_EQUAL(address, " +
+                        "(address=" + escapedPhoneNumber + " OR PHONE_NUMBERS_EQUAL(address, " +
                         escapedPhoneNumber +
-                        (mUseStrictPhoneNumberComparation ? ", 1)" : ", 0)"));
+                        (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0))"));
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
@@ -851,9 +858,10 @@ public class MmsSmsProvider extends ContentProvider {
         mmsQueryBuilder.setTables(
                 MmsProvider.TABLE_PDU +
                 ", (SELECT _id AS address_id " +
-                "FROM addr WHERE PHONE_NUMBERS_EQUAL(addr.address, " +
+                "FROM addr WHERE (address=" + escapedPhoneNumber +
+                " OR PHONE_NUMBERS_EQUAL(addr.address, " +
                 escapedPhoneNumber +
-                (mUseStrictPhoneNumberComparation ? ", 1)) " : ", 0)) ") +
+                (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0))) ") +
                 "AS matching_addresses");
         smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
 
