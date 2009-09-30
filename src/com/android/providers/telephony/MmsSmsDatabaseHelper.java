@@ -185,10 +185,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "   END; " +
                         " END";
 
+    // When the 'thread_id' column in the pdu table is updated, we need to run the trigger to update
+    // the threads table's has_attachment column, if the message has an attachment in 'part' table
+    private static final String PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER =
+                        "CREATE TRIGGER update_threads_on_update_pdu " +
+                        " AFTER UPDATE of thread_id ON pdu " +
+                        " BEGIN " +
+                        "  UPDATE threads SET has_attachment=1 WHERE _id IN " +
+                        "   (SELECT pdu.thread_id FROM part JOIN pdu ON new._id=part.mid " +
+                        "     WHERE part.ct != 'text/plain' AND part.ct != 'application/smil'); " +
+                        " END";
+
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 46;
+    static final int DATABASE_VERSION = 47;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -421,6 +432,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
         db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
         db.execSQL(PART_UPDATE_THREADS_ON_DELETE_TRIGGER);
+        db.execSQL(PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER);
     }
 
     private void createSmsTables(SQLiteDatabase db) {
@@ -825,6 +837,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 46:
+            if (currentVersion <= 46) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion47(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -877,12 +905,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Add 'has_attachment' column to threads table.
         db.execSQL("ALTER TABLE threads ADD COLUMN has_attachment INTEGER DEFAULT 0");
 
-        // Set the values of that column correctly based on the current
-        // contents of the database.
-        db.execSQL("UPDATE threads SET has_attachment=1 WHERE _id IN " +
-                   "  (SELECT DISTINCT pdu.thread_id FROM part " +
-                   "   JOIN pdu ON pdu._id=part.mid " +
-                   "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
+        updateThreadsAttachmentColumn(db);
 
         // Add insert and delete triggers for keeping it up to date.
         db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
@@ -890,12 +913,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void upgradeDatabaseToVersion44(SQLiteDatabase db) {
-        // Set the values of that column correctly based on the current
-        // contents of the database.
-        db.execSQL("UPDATE threads SET has_attachment=1 WHERE _id IN " +
-                   "  (SELECT DISTINCT pdu.thread_id FROM part " +
-                   "   JOIN pdu ON pdu._id=part.mid " +
-                   "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
+        updateThreadsAttachmentColumn(db);
 
         // add the update trigger for keeping the threads up to date.
         db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
@@ -965,5 +983,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 textRows.close();
             }
         }
+    }
+
+    private void upgradeDatabaseToVersion47(SQLiteDatabase db) {
+        updateThreadsAttachmentColumn(db);
+
+        // add the update trigger for keeping the threads up to date.
+        db.execSQL(PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER);
+    }
+
+    private void updateThreadsAttachmentColumn(SQLiteDatabase db) {
+        // Set the values of that column correctly based on the current
+        // contents of the database.
+        db.execSQL("UPDATE threads SET has_attachment=1 WHERE _id IN " +
+                   "  (SELECT DISTINCT pdu.thread_id FROM part " +
+                   "   JOIN pdu ON pdu._id=part.mid " +
+                   "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
     }
 }
