@@ -18,6 +18,8 @@
         package="com.android.providers.telephony"
         android:sharedUserId="android.uid.phone">
 
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
                  android:label="@string/app_label"
