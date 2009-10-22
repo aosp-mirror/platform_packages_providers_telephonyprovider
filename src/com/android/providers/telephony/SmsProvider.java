@@ -50,7 +50,7 @@ public class SmsProvider extends ContentProvider {
     static final String TABLE_SMS = "sms";
     private static final String TABLE_RAW = "raw";
     private static final String TABLE_SR_PENDING = "sr_pending";
-    
+
     private static final Integer ONE = Integer.valueOf(1);
 
     private static final String[] CONTACT_QUERY_PROJECTION =
@@ -74,7 +74,8 @@ public class SmsProvider extends ContentProvider {
         "index_on_icc",                 // getIndexOnIcc
         "is_status_report",             // isStatusReportMessage
         "transport_type",               // Always "sms".
-        "type"                          // Always MESSAGE_TYPE_ALL.
+        "type",                         // Always MESSAGE_TYPE_ALL.
+        "locked"                        // Always 0 (false).
     };
 
     @Override
@@ -98,7 +99,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_UNDELIVERED:
                 constructQueryForUndelivered(qb);
                 break;
-                
+
             case SMS_FAILED:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_FAILED);
                 break;
@@ -106,7 +107,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_QUEUED:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_QUEUED);
                 break;
-                
+
             case SMS_INBOX:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_INBOX);
                 break;
@@ -241,6 +242,7 @@ public class SmsProvider extends ContentProvider {
         result.add(message.isStatusReportMessage());
         result.add("sms");
         result.add(TextBasedSmsColumns.MESSAGE_TYPE_ALL);
+        result.add(0);      // locked
         return result;
     }
 
@@ -305,7 +307,7 @@ public class SmsProvider extends ContentProvider {
                        " OR type=" + Sms.MESSAGE_TYPE_FAILED +
                        " OR type=" + Sms.MESSAGE_TYPE_QUEUED + ")");
     }
-    
+
     @Override
     public String getType(Uri url) {
         switch (url.getPathSegments().size()) {
@@ -360,7 +362,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_QUEUED:
                 type = Sms.MESSAGE_TYPE_QUEUED;
                 break;
-                
+
             case SMS_SENT:
                 type = Sms.MESSAGE_TYPE_SENT;
                 break;
@@ -510,7 +512,7 @@ public class SmsProvider extends ContentProvider {
                     MmsSmsDatabaseHelper.updateAllThreads(db, where, whereArgs);
                 }
                 break;
-             
+
             case SMS_ALL_ID:
                 try {
                     int message_id = Integer.parseInt(url.getPathSegments().get(0));
@@ -636,8 +638,8 @@ public class SmsProvider extends ContentProvider {
 
             case SMS_STATUS_ID:
                 extraWhere = "_id=" + url.getPathSegments().get(1);
-                break;  
-                    
+                break;
+
             default:
                 throw new UnsupportedOperationException(
                         "URI " + url + " not supported");
@@ -645,7 +647,7 @@ public class SmsProvider extends ContentProvider {
 
         where = DatabaseUtils.concatenateWhere(where, extraWhere);
         count = db.update(table, values, where, whereArgs);
-        
+
         if (count > 0) {
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "update " + url + " succeeded");
@@ -700,7 +702,7 @@ public class SmsProvider extends ContentProvider {
     private static final int SMS_FAILED_ID = 25;
     private static final int SMS_QUEUED = 26;
     private static final int SMS_UNDELIVERED = 27;
-    
+
     private static final UriMatcher sURLMatcher =
             new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -715,7 +717,7 @@ public class SmsProvider extends ContentProvider {
         sURLMatcher.addURI("sms", "draft/#", SMS_DRAFT_ID);
         sURLMatcher.addURI("sms", "outbox", SMS_OUTBOX);
         sURLMatcher.addURI("sms", "outbox/#", SMS_OUTBOX_ID);
-        sURLMatcher.addURI("sms", "undelivered", SMS_UNDELIVERED);        
+        sURLMatcher.addURI("sms", "undelivered", SMS_UNDELIVERED);
         sURLMatcher.addURI("sms", "failed", SMS_FAILED);
         sURLMatcher.addURI("sms", "failed/#", SMS_FAILED_ID);
         sURLMatcher.addURI("sms", "queued", SMS_QUEUED);
@@ -733,7 +735,7 @@ public class SmsProvider extends ContentProvider {
         //we keep these for not breaking old applications
         sURLMatcher.addURI("sms", "sim", SMS_ALL_ICC);
         sURLMatcher.addURI("sms", "sim/#", SMS_ICC);
-        
+
         sConversationProjectionMap.put(Sms.Conversations.SNIPPET,
             "sms.body AS snippet");
         sConversationProjectionMap.put(Sms.Conversations.THREAD_ID,
