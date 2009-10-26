@@ -17,7 +17,12 @@
 
 package com.android.providers.telephony;
 
-import android.content.*;
+import android.content.ContentProvider;
+import android.content.ContentUris;
+import android.content.ContentValues;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.content.UriMatcher;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.database.Cursor;
@@ -26,11 +31,11 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Environment;
-import android.preference.PreferenceManager;
 import android.provider.Telephony;
 import android.util.Config;
 import android.util.Log;
 import android.util.Xml;
+
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -44,8 +49,8 @@ import java.io.IOException;
 public class TelephonyProvider extends ContentProvider
 {
     private static final String DATABASE_NAME = "telephony.db";
-    // DATABASE_VERSION needs to be in-sync with version in apns.xml.
-    private static final int DATABASE_VERSION = 4 << 16;
+
+    private static final int DATABASE_VERSION = 5 << 16;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
     private static final int URL_ID = 3;
@@ -128,6 +133,7 @@ public class TelephonyProvider extends ContentProvider
                     "mmsproxy TEXT," +
                     "mmsport TEXT," +
                     "mmsc TEXT," +
+                    "authtype INTEGER," +
                     "type TEXT," +
                     "current INTEGER);");
 
@@ -149,7 +155,7 @@ public class TelephonyProvider extends ContentProvider
                 parser.close();
             }
 
-            // Read external APNS data (partner-provided)
+           // Read external APNS data (partner-provided)
             XmlPullParser confparser = null;
             // Environment.getRootDirectory() is a fancy way of saying ANDROID_ROOT or "/system".
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
@@ -180,8 +186,24 @@ public class TelephonyProvider extends ContentProvider
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE + ";");
-            onCreate(db);
+            if (oldVersion < (5 << 16 | 6)) {
+                // 5 << 16 is the Database version and 6 in the xml version.
+
+                // This change adds a new authtype column to the database.
+                // The auth type column can have 4 values: 0 (None), 1 (PAP), 2 (CHAP)
+                // 3 (PAP or CHAP). To avoid breaking compatibility, with already working
+                // APNs, the unset value (-1) will be used. If the value is -1.
+                // the authentication will default to 0 (if no user / password) is specified
+                // or to 3. Currently, there have been no reported problems with
+                // pre-configured APNs and hence it is set to -1 for them. Similarly,
+                // if the user, has added a new APN, we set the authentication type
+                // to -1.
+
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
+                        " ADD COLUMN authtype INTEGER DEFAULT -1;");
+
+                oldVersion = 5 << 16 | 6;
+            }
         }
 
         /**
@@ -233,6 +255,11 @@ public class TelephonyProvider extends ContentProvider
                 map.put(Telephony.Carriers.TYPE, type);
             }
 
+            String auth = parser.getAttributeValue(null, "authtype");
+            if (auth != null) {
+                map.put(Telephony.Carriers.AUTH_TYPE, Integer.parseInt(auth));
+            }
+
             return map;
         }
 
@@ -250,7 +277,7 @@ public class TelephonyProvider extends ContentProvider
                         XmlUtils.nextElement(parser);
                         ContentValues row = getRow(parser);
                         if (row != null) {
-                            db.insert(CARRIERS_TABLE, null, row);
+                            insertAddingDefaults(db, CARRIERS_TABLE, row);
                         } else {
                             break;  // do we really want to skip the rest of the file?
                         }
@@ -261,6 +288,14 @@ public class TelephonyProvider extends ContentProvider
                     Log.e(TAG, "Got execption while getting perferred time zone.", e);
                 }
             }
+        }
+
+        private void insertAddingDefaults(SQLiteDatabase db, String table, ContentValues row) {
+            // Initialize defaults if any
+            if (row.containsKey(Telephony.Carriers.AUTH_TYPE) == false) {
+                row.put(Telephony.Carriers.AUTH_TYPE, -1);
+            }
+            db.insert(CARRIERS_TABLE, null, row);
         }
     }
 
@@ -273,7 +308,7 @@ public class TelephonyProvider extends ContentProvider
     private void setPreferredApnId(Long id) {
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
-        editor.putLong(COLUMN_APN_ID, id != null ? id.longValue() : -1);        
+        editor.putLong(COLUMN_APN_ID, id != null ? id.longValue() : -1);
         editor.commit();
     }
 
@@ -392,6 +427,10 @@ public class TelephonyProvider extends ContentProvider
                 if (values.containsKey(Telephony.Carriers.MMSPROXY) == false) {
                     values.put(Telephony.Carriers.MMSPROXY, "");
                 }
+                if (values.containsKey(Telephony.Carriers.AUTH_TYPE) == false) {
+                    values.put(Telephony.Carriers.AUTH_TYPE, -1);
+                }
+
 
                 long rowID = db.insert(CARRIERS_TABLE, null, values);
                 if (rowID > 0)
@@ -450,7 +489,7 @@ public class TelephonyProvider extends ContentProvider
         int count;
 
         checkPermission();
-        
+
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int match = s_urlMatcher.match(url);
         switch (match)
@@ -466,7 +505,7 @@ public class TelephonyProvider extends ContentProvider
                 count = db.delete(CARRIERS_TABLE, where, whereArgs);
                 break;
             }
-            
+
             case URL_ID:
             {
                 count = db.delete(CARRIERS_TABLE, Telephony.Carriers._ID + "=?",
