@@ -75,7 +75,8 @@ public class SmsProvider extends ContentProvider {
         "is_status_report",             // isStatusReportMessage
         "transport_type",               // Always "sms".
         "type",                         // Always MESSAGE_TYPE_ALL.
-        "locked"                        // Always 0 (false).
+        "locked",                       // Always 0 (false).
+        "error_code"                    // Always 0
     };
 
     @Override
@@ -243,6 +244,7 @@ public class SmsProvider extends ContentProvider {
         result.add("sms");
         result.add(TextBasedSmsColumns.MESSAGE_TYPE_ALL);
         result.add(0);      // locked
+        result.add(0);      // error_code
         return result;
     }
 

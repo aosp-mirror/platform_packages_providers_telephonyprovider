@@ -122,7 +122,7 @@ public class MmsSmsProvider extends ContentProvider {
     // table.
     private static final String[] SMS_ONLY_COLUMNS =
             { "address", "body", "person", "reply_path_present",
-              "service_center", "status", "subject", "type" };
+              "service_center", "status", "subject", "type", "error_code" };
 
     // These are all the columns that appear in the "threads" table.
     private static final String[] THREADS_COLUMNS = {
