@@ -99,6 +99,11 @@ public class MmsSmsProvider extends ContentProvider {
      */
     public static final String TABLE_PENDING_MSG = "pending_msgs";
 
+    /**
+     * the name of the table that is used to store the canonical addresses for both SMS and MMS.
+     */
+    private static final String TABLE_CANONICAL_ADDRESSES = "canonical_addresses";
+
     // These constants are used to construct union queries across the
     // MMS and SMS base tables.
 
@@ -131,6 +136,13 @@ public class MmsSmsProvider extends ContentProvider {
         ThreadsColumns.RECIPIENT_IDS,
         ThreadsColumns.MESSAGE_COUNT
     };
+
+    private static final String[] CANONICAL_ADDRESSES_COLUMNS_1 =
+            new String[] { CanonicalAddressesColumns.ADDRESS };
+
+    private static final String[] CANONICAL_ADDRESSES_COLUMNS_2 =
+            new String[] { CanonicalAddressesColumns._ID,
+                    CanonicalAddressesColumns.ADDRESS };
 
     // These are all the columns that appear in the MMS and SMS
     // message tables.
@@ -293,15 +305,21 @@ public class MmsSmsProvider extends ContentProvider {
                 String extraSelection = "_id=" + uri.getPathSegments().get(1);
                 String finalSelection = TextUtils.isEmpty(selection)
                         ? extraSelection : extraSelection + " AND " + selection;
-                cursor = db.query("canonical_addresses",
-                        new String[] {"address"}, finalSelection, selectionArgs,
-                        null, null, sortOrder);
+                cursor = db.query(TABLE_CANONICAL_ADDRESSES,
+                        CANONICAL_ADDRESSES_COLUMNS_1,
+                        finalSelection,
+                        selectionArgs,
+                        null, null,
+                        sortOrder);
                 break;
             }
             case URI_CANONICAL_ADDRESSES:
-                cursor = db.query("canonical_addresses",
-                        new String[] {"_id", "address"}, selection, selectionArgs,
-                        null, null, sortOrder);
+                cursor = db.query(TABLE_CANONICAL_ADDRESSES,
+                        CANONICAL_ADDRESSES_COLUMNS_2,
+                        selection,
+                        selectionArgs,
+                        null, null,
+                        sortOrder);
                 break;
             case URI_SEARCH:
                 if (       sortOrder != null
@@ -1116,9 +1134,20 @@ public class MmsSmsProvider extends ContentProvider {
                 affectedRows = updateConversation(threadIdString, values,
                         selection, selectionArgs);
                 break;
+
             case URI_PENDING_MSG:
                 affectedRows = db.update(TABLE_PENDING_MSG, values, selection, null);
                 break;
+
+            case URI_CANONICAL_ADDRESS: {
+                String extraSelection = "_id=" + uri.getPathSegments().get(1);
+                String finalSelection = TextUtils.isEmpty(selection)
+                        ? extraSelection : extraSelection + " AND " + selection;
+
+                affectedRows = db.update(TABLE_CANONICAL_ADDRESSES, values, finalSelection, null);
+                break;
+            }
+
             default:
                 throw new UnsupportedOperationException(
                         NO_DELETES_INSERTS_OR_UPDATES);
