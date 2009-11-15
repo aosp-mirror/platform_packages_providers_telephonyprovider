@@ -23,6 +23,14 @@ import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_READ_REC_IND;
 import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_RETRIEVE_CONF;
 import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_SEND_REQ;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.FileInputStream;
+import java.io.File;
+import java.util.ArrayList;
+
+import com.google.android.mms.pdu.EncodedStringValue;
+
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -176,11 +184,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "   ELSE 1 " +
                         "   END; " +
                         " END";
-    
+
+    // When the 'thread_id' column in the pdu table is updated, we need to run the trigger to update
+    // the threads table's has_attachment column, if the message has an attachment in 'part' table
+    private static final String PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER =
+                        "CREATE TRIGGER update_threads_on_update_pdu " +
+                        " AFTER UPDATE of thread_id ON pdu " +
+                        " BEGIN " +
+                        "  UPDATE threads SET has_attachment=1 WHERE _id IN " +
+                        "   (SELECT pdu.thread_id FROM part JOIN pdu ON new._id=part.mid " +
+                        "     WHERE part.ct != 'text/plain' AND part.ct != 'application/smil'); " +
+                        " END";
+
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 44;
+    static final int DATABASE_VERSION = 47;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -202,7 +221,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             updateAllThreads(db, null, null);
             return;
         }
-        
+
         // Delete the row for this thread in the threads table if
         // there are no more messages attached to it in either
         // the sms or pdu tables.
@@ -234,24 +253,24 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // the threads table to be that of the most recent message in
         // the thread.
         db.execSQL(
-            "  UPDATE threads" + 
-            "  SET" + 
-            "  date =" + 
-            "    (SELECT date FROM" + 
-            "        (SELECT date * 1000 AS date, thread_id FROM pdu" + 
-            "         UNION SELECT date, thread_id FROM sms)" + 
-            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," + 
-            "  snippet =" + 
-            "    (SELECT snippet FROM" + 
-            "        (SELECT date * 1000 AS date, sub AS snippet, thread_id FROM pdu" + 
-            "         UNION SELECT date, body AS snippet, thread_id FROM sms)" + 
-            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," + 
-            "  snippet_cs =" + 
-            "    (SELECT snippet_cs FROM" + 
-            "        (SELECT date * 1000 AS date, sub_cs AS snippet_cs, thread_id FROM pdu" + 
-            "         UNION SELECT date, 0 AS snippet_cs, thread_id FROM sms)" + 
-            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)" + 
-            "  WHERE threads._id = " + thread_id + ";"); 
+            "  UPDATE threads" +
+            "  SET" +
+            "  date =" +
+            "    (SELECT date FROM" +
+            "        (SELECT date * 1000 AS date, thread_id FROM pdu" +
+            "         UNION SELECT date, thread_id FROM sms)" +
+            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," +
+            "  snippet =" +
+            "    (SELECT snippet FROM" +
+            "        (SELECT date * 1000 AS date, sub AS snippet, thread_id FROM pdu" +
+            "         UNION SELECT date, body AS snippet, thread_id FROM sms)" +
+            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," +
+            "  snippet_cs =" +
+            "    (SELECT snippet_cs FROM" +
+            "        (SELECT date * 1000 AS date, sub_cs AS snippet_cs, thread_id FROM pdu" +
+            "         UNION SELECT date, 0 AS snippet_cs, thread_id FROM sms)" +
+            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)" +
+            "  WHERE threads._id = " + thread_id + ";");
 
         // Update the error column of the thread to indicate if there
         // are any messages in it that have failed to send.
@@ -261,7 +280,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             "        AND thread_id = " + thread_id + " LIMIT 1)" +
             "   WHERE threads._id = " + thread_id + ";");
     }
-    
+
     public static void updateAllThreads(SQLiteDatabase db, String where, String[] whereArgs) {
         if (where == null) {
             where = "";
@@ -282,7 +301,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 "_id NOT IN (SELECT DISTINCT thread_id FROM sms " +
                 "UNION SELECT DISTINCT thread_id FROM pdu)", null);
     }
-    
+
     public static int deleteOneSms(SQLiteDatabase db, int message_id) {
         int thread_id = -1;
         // Find the thread ID that the specified SMS belongs to.
@@ -345,7 +364,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.CONTENT_CLASS + " INTEGER," +
                    Mms.RESPONSE_TEXT + " TEXT," +
                    Mms.DELIVERY_TIME + " INTEGER," +
-                   Mms.DELIVERY_REPORT + " INTEGER);");
+                   Mms.DELIVERY_REPORT + " INTEGER," +
+                   Mms.LOCKED + " INTEGER DEFAULT 0" +
+                   ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
                    Addr._ID + " INTEGER PRIMARY KEY," +
@@ -368,7 +389,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Part.CONTENT_LOCATION + " TEXT," +
                    Part.CT_START + " INTEGER," +
                    Part.CT_TYPE + " TEXT," +
-                   Part._DATA + " TEXT);");
+                   Part._DATA + " TEXT," +
+                   Part.TEXT + " TEXT);");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_RATE + " (" +
                    Rate.SENT_TIME + " INTEGER);");
@@ -404,12 +426,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "    OR " + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_READ_ORIG_IND + ")" +
                    "    AND " + Mms.MESSAGE_ID + "=old." + Mms.MESSAGE_ID + "; " +
                    "END;");
-        
+
         // Update threads table to indicate whether attachments exist when
         // parts are inserted or deleted.
         db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
         db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
         db.execSQL(PART_UPDATE_THREADS_ON_DELETE_TRIGGER);
+        db.execSQL(PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER);
     }
 
     private void createSmsTables(SQLiteDatabase db) {
@@ -431,7 +454,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "reply_path_present INTEGER," +
                    "subject TEXT," +
                    "body TEXT," +
-                   "service_center TEXT);");
+                   "service_center TEXT," +
+                   "locked INTEGER DEFAULT 0" +
+                   ");");
 
         /**
          * This table is used by the SMS dispatcher to hold
@@ -738,7 +763,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             if (currentVersion <= 41) {
                 return;
             }
-            
+
             db.beginTransaction();
             try {
                 upgradeDatabaseToVersion42(db);
@@ -754,7 +779,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             if (currentVersion <= 42) {
                 return;
             }
-            
+
             db.beginTransaction();
             try {
                 upgradeDatabaseToVersion43(db);
@@ -781,8 +806,56 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through 
+        case 44:
+            if (currentVersion <= 44) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion45(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+            // fall through 
+        case 45:
+            if (currentVersion <= 45) {
+                return;
+            }
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion46(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+            // fall through
+        case 46:
+            if (currentVersion <= 46) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion47(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
+
 
         Log.e(TAG, "Destroying all old data.");
         dropAll(db);
@@ -821,23 +894,18 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "  WHERE _id = OLD.thread_id; " +
                    "END;");
     }
-    
+
     private void upgradeDatabaseToVersion42(SQLiteDatabase db) {
         db.execSQL("DROP TRIGGER IF EXISTS sms_update_thread_on_delete");
         db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_sms");
         db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_delete_sms");
     }
-    
+
     private void upgradeDatabaseToVersion43(SQLiteDatabase db) {
         // Add 'has_attachment' column to threads table.
         db.execSQL("ALTER TABLE threads ADD COLUMN has_attachment INTEGER DEFAULT 0");
 
-        // Set the values of that column correctly based on the current
-        // contents of the database.
-        db.execSQL("UPDATE threads SET has_attachment=1 WHERE _id IN " +
-                   "  (SELECT DISTINCT pdu.thread_id FROM part " +
-                   "   JOIN pdu ON pdu._id=part.mid " +
-                   "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
+        updateThreadsAttachmentColumn(db);
 
         // Add insert and delete triggers for keeping it up to date.
         db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
@@ -845,14 +913,91 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void upgradeDatabaseToVersion44(SQLiteDatabase db) {
+        updateThreadsAttachmentColumn(db);
+
+        // add the update trigger for keeping the threads up to date.
+        db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
+    }
+
+    private void upgradeDatabaseToVersion45(SQLiteDatabase db) {
+        // Add 'locked' column to sms table.
+        db.execSQL("ALTER TABLE sms ADD COLUMN locked INTEGER DEFAULT 0");
+
+        // Add 'locked' column to pdu table.
+        db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.LOCKED + " INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion46(SQLiteDatabase db) {
+        // add the "text" column for caching inline text (e.g. strings) instead of
+        // putting them in an external file
+        db.execSQL("ALTER TABLE part ADD COLUMN " + Part.TEXT + " TEXT");
+
+        Cursor textRows = db.query(
+                "part",
+                new String[] { Part._ID, Part._DATA, Part.TEXT},
+                "ct = 'text/plain' OR ct == 'application/smil'",
+                null,
+                null,
+                null,
+                null);
+        ArrayList<String> filesToDelete = new ArrayList<String>();
+        try {
+            if (textRows != null) {
+                int partIdColumn = textRows.getColumnIndex(Part._ID);
+                int partDataColumn = textRows.getColumnIndex(Part._DATA);
+                int partTextColumn = textRows.getColumnIndex(Part.TEXT);
+
+                // This code is imperfect in that we can't guarantee that all the
+                // backing files get deleted.  For example if the system aborts after
+                // the database is updated but before we complete the process of
+                // deleting files.
+                while (textRows.moveToNext()) {
+                    String path = textRows.getString(partDataColumn);
+                    if (path != null) {
+                        try {
+                            InputStream is = new FileInputStream(path);
+                            byte [] data = new byte[is.available()];
+                            is.read(data);
+                            EncodedStringValue v = new EncodedStringValue(data);
+                            textRows.updateString(partTextColumn, v.getString());
+                            textRows.updateToNull(partDataColumn);
+                            is.close();
+                            filesToDelete.add(path);
+                        } catch (IOException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
+                }
+            }
+        } finally {
+            textRows.commitUpdates();
+            for (String pathToDelete : filesToDelete) {
+                try {
+                    (new File(pathToDelete)).delete();
+                } catch (SecurityException ex) {
+                    Log.e(TAG, "unable to clean up old mms file for " + pathToDelete, ex);
+                }
+            }
+            if (textRows != null) {
+                textRows.close();
+            }
+        }
+    }
+
+    private void upgradeDatabaseToVersion47(SQLiteDatabase db) {
+        updateThreadsAttachmentColumn(db);
+
+        // add the update trigger for keeping the threads up to date.
+        db.execSQL(PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER);
+    }
+
+    private void updateThreadsAttachmentColumn(SQLiteDatabase db) {
         // Set the values of that column correctly based on the current
         // contents of the database.
         db.execSQL("UPDATE threads SET has_attachment=1 WHERE _id IN " +
                    "  (SELECT DISTINCT pdu.thread_id FROM part " +
                    "   JOIN pdu ON pdu._id=part.mid " +
                    "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
-
-        // add the update trigger for keeping the threads up to date.
-        db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
     }
 }

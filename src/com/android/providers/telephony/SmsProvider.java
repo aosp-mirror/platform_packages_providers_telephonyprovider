@@ -50,8 +50,12 @@ public class SmsProvider extends ContentProvider {
     static final String TABLE_SMS = "sms";
     private static final String TABLE_RAW = "raw";
     private static final String TABLE_SR_PENDING = "sr_pending";
-    
+
     private static final Integer ONE = Integer.valueOf(1);
+
+    private static final String[] CONTACT_QUERY_PROJECTION =
+            new String[] { Contacts.Phones.PERSON_ID };
+    private static final int PERSON_ID_COLUMN = 0;
 
     /**
      * These are the columns that are available when reading SMS
@@ -70,7 +74,8 @@ public class SmsProvider extends ContentProvider {
         "index_on_icc",                 // getIndexOnIcc
         "is_status_report",             // isStatusReportMessage
         "transport_type",               // Always "sms".
-        "type"                          // Always MESSAGE_TYPE_ALL.
+        "type",                         // Always MESSAGE_TYPE_ALL.
+        "locked"                        // Always 0 (false).
     };
 
     @Override
@@ -94,7 +99,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_UNDELIVERED:
                 constructQueryForUndelivered(qb);
                 break;
-                
+
             case SMS_FAILED:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_FAILED);
                 break;
@@ -102,7 +107,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_QUEUED:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_QUEUED);
                 break;
-                
+
             case SMS_INBOX:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_INBOX);
                 break;
@@ -138,7 +143,7 @@ public class SmsProvider extends ContentProvider {
 
                 try {
                     threadID = Integer.parseInt(url.getPathSegments().get(1));
-                    if (Config.LOGD) {
+                    if (Log.isLoggable(TAG, Log.VERBOSE)) {
                         Log.d(TAG, "query conversations: threadID=" + threadID);
                     }
                 }
@@ -237,6 +242,7 @@ public class SmsProvider extends ContentProvider {
         result.add(message.isStatusReportMessage());
         result.add("sms");
         result.add(TextBasedSmsColumns.MESSAGE_TYPE_ALL);
+        result.add(0);      // locked
         return result;
     }
 
@@ -301,7 +307,7 @@ public class SmsProvider extends ContentProvider {
                        " OR type=" + Sms.MESSAGE_TYPE_FAILED +
                        " OR type=" + Sms.MESSAGE_TYPE_QUEUED + ")");
     }
-    
+
     @Override
     public String getType(Uri url) {
         switch (url.getPathSegments().size()) {
@@ -332,10 +338,6 @@ public class SmsProvider extends ContentProvider {
         int type = Sms.MESSAGE_TYPE_ALL;
 
         int match = sURLMatcher.match(url);
-        if (Config.LOGD) {
-            Log.d(TAG, "insert url=" + url + ", match=" + match);
-        }
-
         String table = TABLE_SMS;
 
         switch (match) {
@@ -360,7 +362,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_QUEUED:
                 type = Sms.MESSAGE_TYPE_QUEUED;
                 break;
-                
+
             case SMS_SENT:
                 type = Sms.MESSAGE_TYPE_SENT;
                 break;
@@ -393,6 +395,8 @@ public class SmsProvider extends ContentProvider {
                 Log.e(TAG, "Invalid request: " + url);
                 return null;
         }
+
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
         if (table.equals(TABLE_SMS)) {
             boolean addDate = false;
@@ -432,22 +436,39 @@ public class SmsProvider extends ContentProvider {
                                    getContext(), address));
             }
 
+            // If this message is going in as a draft, it should replace any
+            // other draft messages in the thread.  Just delete all draft
+            // messages with this thread ID.  We could add an OR REPLACE to
+            // the insert below, but we'd have to query to find the old _id
+            // to produce a conflict anyway.
+            if (values.getAsInteger(Sms.TYPE) == Sms.MESSAGE_TYPE_DRAFT) {
+                db.delete(TABLE_SMS, "thread_id=? AND type=?",
+                        new String[] { values.getAsString(Sms.THREAD_ID),
+                                       Integer.toString(Sms.MESSAGE_TYPE_DRAFT) });
+            }
+
             if (type == Sms.MESSAGE_TYPE_INBOX) {
                 // Look up the person if not already filled in.
-                if ((values.getAsLong(Sms.PERSON) == null)
-                        && (!TextUtils.isEmpty(address))) {
-                    Cursor cursor = getContext().getContentResolver().query(
-                            Uri.withAppendedPath(
-                                    Contacts.Phones.CONTENT_FILTER_URL, address),
-                            new String[] { Contacts.Phones.PERSON_ID },
-                            null, null, null);
-                    if (cursor != null) {
-                        if (cursor.getCount() > 0) {
-                            cursor.moveToFirst();
-                            Long id = Long.valueOf(cursor.getLong(0));
-                                values.put(Sms.PERSON, id);
+                if ((values.getAsLong(Sms.PERSON) == null) && (!TextUtils.isEmpty(address))) {
+                    Cursor cursor = null;
+                    Uri uri = Uri.withAppendedPath(Contacts.Phones.CONTENT_FILTER_URL,
+                            Uri.encode(address));
+                    try {
+                        cursor = getContext().getContentResolver().query(
+                                uri,
+                                CONTACT_QUERY_PROJECTION,
+                                null, null, null);
+
+                        if (cursor.moveToFirst()) {
+                            Long id = Long.valueOf(cursor.getLong(PERSON_ID_COLUMN));
+                            values.put(Sms.PERSON, id);
                         }
-                        cursor.deactivate();
+                    } catch (Exception ex) {
+                        Log.e(TAG, "insert: query contact uri " + uri + " caught ", ex);
+                    } finally {
+                        if (cursor != null) {
+                            cursor.close();
+                        }
                     }
                 }
             } else {
@@ -462,15 +483,17 @@ public class SmsProvider extends ContentProvider {
             }
         }
 
-        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         rowID = db.insert(table, "body", values);
         if (rowID > 0) {
             Uri uri = Uri.parse("content://" + table + "/" + rowID);
+
+            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                Log.d(TAG, "insert " + uri + " succeeded");
+            }
             notifyChange(uri);
             return uri;
         } else {
-            Log.e(TAG,
-                  "SmsProvider.insert: failed! " + values.toString());
+            Log.e(TAG,"insert: failed! " + values.toString());
         }
 
         return null;
@@ -489,7 +512,7 @@ public class SmsProvider extends ContentProvider {
                     MmsSmsDatabaseHelper.updateAllThreads(db, where, whereArgs);
                 }
                 break;
-             
+
             case SMS_ALL_ID:
                 try {
                     int message_id = Integer.parseInt(url.getPathSegments().get(0));
@@ -562,8 +585,7 @@ public class SmsProvider extends ContentProvider {
     }
 
     @Override
-    public int update(
-            Uri url, ContentValues values, String where, String[] whereArgs) {
+    public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
         int count = 0;
         String table = TABLE_SMS;
         String extraWhere = null;
@@ -616,8 +638,8 @@ public class SmsProvider extends ContentProvider {
 
             case SMS_STATUS_ID:
                 extraWhere = "_id=" + url.getPathSegments().get(1);
-                break;  
-                    
+                break;
+
             default:
                 throw new UnsupportedOperationException(
                         "URI " + url + " not supported");
@@ -627,6 +649,9 @@ public class SmsProvider extends ContentProvider {
         count = db.update(table, values, where, whereArgs);
 
         if (count > 0) {
+            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                Log.d(TAG, "update " + url + " succeeded");
+            }
             notifyChange(url);
         }
         return count;
@@ -677,7 +702,7 @@ public class SmsProvider extends ContentProvider {
     private static final int SMS_FAILED_ID = 25;
     private static final int SMS_QUEUED = 26;
     private static final int SMS_UNDELIVERED = 27;
-    
+
     private static final UriMatcher sURLMatcher =
             new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -692,7 +717,7 @@ public class SmsProvider extends ContentProvider {
         sURLMatcher.addURI("sms", "draft/#", SMS_DRAFT_ID);
         sURLMatcher.addURI("sms", "outbox", SMS_OUTBOX);
         sURLMatcher.addURI("sms", "outbox/#", SMS_OUTBOX_ID);
-        sURLMatcher.addURI("sms", "undelivered", SMS_UNDELIVERED);        
+        sURLMatcher.addURI("sms", "undelivered", SMS_UNDELIVERED);
         sURLMatcher.addURI("sms", "failed", SMS_FAILED);
         sURLMatcher.addURI("sms", "failed/#", SMS_FAILED_ID);
         sURLMatcher.addURI("sms", "queued", SMS_QUEUED);
@@ -710,9 +735,13 @@ public class SmsProvider extends ContentProvider {
         //we keep these for not breaking old applications
         sURLMatcher.addURI("sms", "sim", SMS_ALL_ICC);
         sURLMatcher.addURI("sms", "sim/#", SMS_ICC);
-        
+
         sConversationProjectionMap.put(Sms.Conversations.SNIPPET,
-                "body AS snippet");
+            "sms.body AS snippet");
+        sConversationProjectionMap.put(Sms.Conversations.THREAD_ID,
+            "sms.thread_id AS thread_id");
+        sConversationProjectionMap.put(Sms.Conversations.MESSAGE_COUNT,
+            "groups.msg_count AS msg_count");
         sConversationProjectionMap.put("delta", null);
     }
 }

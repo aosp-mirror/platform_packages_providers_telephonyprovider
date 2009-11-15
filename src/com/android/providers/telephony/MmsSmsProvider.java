@@ -16,7 +16,11 @@
 
 package com.android.providers.telephony;
 
-import com.google.android.mms.pdu.PduHeaders;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -40,10 +44,7 @@ import android.provider.Telephony.Sms.Conversations;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import com.google.android.mms.pdu.PduHeaders;
 
 /**
  * This class provides the ability to query the MMS and SMS databases
@@ -70,23 +71,27 @@ public class MmsSmsProvider extends ContentProvider {
     private static final UriMatcher URI_MATCHER =
             new UriMatcher(UriMatcher.NO_MATCH);
     private static final String LOG_TAG = "MmsSmsProvider";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     private static final String NO_DELETES_INSERTS_OR_UPDATES =
             "MmsSmsProvider does not support deletes, inserts, or updates for this URI.";
-    private static final int URI_CONVERSATIONS              = 0;
-    private static final int URI_CONVERSATIONS_MESSAGES     = 1;
-    private static final int URI_CONVERSATIONS_RECIPIENTS   = 2;
-    private static final int URI_MESSAGES_BY_PHONE          = 3;
-    private static final int URI_THREAD_ID                  = 4;
-    private static final int URI_CANONICAL_ADDRESS          = 5;
-    private static final int URI_PENDING_MSG                = 6;
-    private static final int URI_COMPLETE_CONVERSATIONS     = 7;
-    private static final int URI_UNDELIVERED_MSG            = 8;
-    private static final int URI_CONVERSATIONS_SUBJECT      = 9;
-    private static final int URI_NOTIFICATIONS              = 10;
-    private static final int URI_OBSOLETE_THREADS           = 11;
-    private static final int URI_DRAFT                      = 12;
+    private static final int URI_CONVERSATIONS                     = 0;
+    private static final int URI_CONVERSATIONS_MESSAGES            = 1;
+    private static final int URI_CONVERSATIONS_RECIPIENTS          = 2;
+    private static final int URI_MESSAGES_BY_PHONE                 = 3;
+    private static final int URI_THREAD_ID                         = 4;
+    private static final int URI_CANONICAL_ADDRESS                 = 5;
+    private static final int URI_PENDING_MSG                       = 6;
+    private static final int URI_COMPLETE_CONVERSATIONS            = 7;
+    private static final int URI_UNDELIVERED_MSG                   = 8;
+    private static final int URI_CONVERSATIONS_SUBJECT             = 9;
+    private static final int URI_NOTIFICATIONS                     = 10;
+    private static final int URI_OBSOLETE_THREADS                  = 11;
+    private static final int URI_DRAFT                             = 12;
+    private static final int URI_CANONICAL_ADDRESSES               = 13;
+    private static final int URI_SEARCH                            = 14;
+    private static final int URI_FIRST_LOCKED_MESSAGE_ALL          = 15;
+    private static final int URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID = 16;
 
     /**
      * the name of the table that is used to store the queue of
@@ -94,13 +99,18 @@ public class MmsSmsProvider extends ContentProvider {
      */
     public static final String TABLE_PENDING_MSG = "pending_msgs";
 
+    /**
+     * the name of the table that is used to store the canonical addresses for both SMS and MMS.
+     */
+    private static final String TABLE_CANONICAL_ADDRESSES = "canonical_addresses";
+
     // These constants are used to construct union queries across the
     // MMS and SMS base tables.
 
     // These are the columns that appear in both the MMS ("pdu") and
     // SMS ("sms") message tables.
     private static final String[] MMS_SMS_COLUMNS =
-            { BaseColumns._ID, Mms.DATE, Mms.READ, Mms.THREAD_ID };
+            { BaseColumns._ID, Mms.DATE, Mms.READ, Mms.THREAD_ID, Mms.LOCKED };
 
     // These are the columns that appear only in the MMS message
     // table.
@@ -126,6 +136,13 @@ public class MmsSmsProvider extends ContentProvider {
         ThreadsColumns.RECIPIENT_IDS,
         ThreadsColumns.MESSAGE_COUNT
     };
+
+    private static final String[] CANONICAL_ADDRESSES_COLUMNS_1 =
+            new String[] { CanonicalAddressesColumns.ADDRESS };
+
+    private static final String[] CANONICAL_ADDRESSES_COLUMNS_2 =
+            new String[] { CanonicalAddressesColumns._ID,
+                    CanonicalAddressesColumns.ADDRESS };
 
     // These are all the columns that appear in the MMS and SMS
     // message tables.
@@ -188,6 +205,11 @@ public class MmsSmsProvider extends ContentProvider {
         // Use this pattern to query the canonical address by given ID.
         URI_MATCHER.addURI(AUTHORITY, "canonical-address/#", URI_CANONICAL_ADDRESS);
 
+        // Use this pattern to query all canonical addresses.
+        URI_MATCHER.addURI(AUTHORITY, "canonical-addresses", URI_CANONICAL_ADDRESSES);
+
+        URI_MATCHER.addURI(AUTHORITY, "search", URI_SEARCH);
+
         // In this pattern, two query parameters may be supplied:
         // "protocol" and "message." For example:
         //   content://mms-sms/pending?
@@ -207,14 +229,24 @@ public class MmsSmsProvider extends ContentProvider {
         URI_MATCHER.addURI(AUTHORITY, "notifications", URI_NOTIFICATIONS);
 
         URI_MATCHER.addURI(AUTHORITY, "draft", URI_DRAFT);
+
+        URI_MATCHER.addURI(AUTHORITY, "locked", URI_FIRST_LOCKED_MESSAGE_ALL);
+
+        URI_MATCHER.addURI(AUTHORITY, "locked/#", URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID);
+
         initializeColumnSets();
     }
 
     private SQLiteOpenHelper mOpenHelper;
 
+    private boolean mUseStrictPhoneNumberComparation;
+
     @Override
     public boolean onCreate() {
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
+        mUseStrictPhoneNumberComparation =
+            getContext().getResources().getBoolean(
+                    com.android.internal.R.bool.config_use_strict_phone_number_comparation);
         return true;
     }
 
@@ -273,11 +305,67 @@ public class MmsSmsProvider extends ContentProvider {
                 String extraSelection = "_id=" + uri.getPathSegments().get(1);
                 String finalSelection = TextUtils.isEmpty(selection)
                         ? extraSelection : extraSelection + " AND " + selection;
-                cursor = db.query("canonical_addresses",
-                        new String[] {"address"}, finalSelection, selectionArgs,
-                        null, null, sortOrder);
+                cursor = db.query(TABLE_CANONICAL_ADDRESSES,
+                        CANONICAL_ADDRESSES_COLUMNS_1,
+                        finalSelection,
+                        selectionArgs,
+                        null, null,
+                        sortOrder);
                 break;
             }
+            case URI_CANONICAL_ADDRESSES:
+                cursor = db.query(TABLE_CANONICAL_ADDRESSES,
+                        CANONICAL_ADDRESSES_COLUMNS_2,
+                        selection,
+                        selectionArgs,
+                        null, null,
+                        sortOrder);
+                break;
+            case URI_SEARCH:
+                if (       sortOrder != null
+                        || selection != null
+                        || selectionArgs != null
+                        || projection != null) {
+                    throw new IllegalArgumentException(
+                            "do not specify sortOrder, selection, selectionArgs, or projection" +
+                            "with this query");
+                }
+
+                // This code queries the sms and mms tables and returns a unified result set
+                // of text matches.  We query the sms table which is pretty simple.  We also
+                // query the pdu, part and addr table to get the mms result.  Note that we're
+                // using a UNION so we have to have the same number of result columns from
+                // both queries.
+
+                String searchString = "%" + uri.getQueryParameter("pattern") + "%";
+                String smsProjection = "_id,thread_id,address,body,date";
+                String mmsProjection = "pdu._id,thread_id,addr.address,part.text as body,pdu.date";
+
+                String smsQuery = String.format(
+                        "SELECT %s FROM sms WHERE (address NOTNULL AND body LIKE ?) ",
+                        smsProjection);
+
+                // TODO consider whether we're really getting the right addr here (for example, if
+                // I send a message to a given phone number do I want the search result to
+                // show a match on "me" or on that phone number.  I suspect the latter.
+                String mmsQuery = String.format(
+                        "SELECT %s FROM pdu,part,addr WHERE ((part.mid=pdu._id) AND " +
+                        "(addr.msg_id=pdu._id) AND " +
+                        "(addr.type=%d) AND " +
+                        "(part.ct='text/plain') AND " +
+                        "(body like ?))",
+                        mmsProjection,
+                        PduHeaders.TO);
+
+                String rawQuery = String.format(
+                        "%s UNION %s GROUP BY %s ORDER BY %s",
+                        smsQuery,
+                        mmsQuery,
+                        "thread_id",
+                        "thread_id ASC, date DESC");
+
+                cursor = db.rawQuery(rawQuery, new String[] { searchString, searchString });
+                break;
             case URI_PENDING_MSG: {
                 String protoName = uri.getQueryParameter("protocol");
                 String msgId = uri.getQueryParameter("message");
@@ -307,6 +395,23 @@ public class MmsSmsProvider extends ContentProvider {
                 cursor = getDraftThread(projection, selection, selectionArgs, sortOrder);
                 break;
             }
+            case URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID: {
+                long threadId;
+                try {
+                    threadId = Long.parseLong(uri.getLastPathSegment());
+                } catch (NumberFormatException e) {
+                    Log.e(LOG_TAG, "Thread ID must be a long.");
+                    break;
+                }
+                cursor = getFirstLockedMessage(projection, "thread_id=" + Long.toString(threadId),
+                        null, sortOrder);
+                break;
+            }
+            case URI_FIRST_LOCKED_MESSAGE_ALL: {
+                cursor = getFirstLockedMessage(projection, selection,
+                        selectionArgs, sortOrder);
+                break;
+            }
             default:
                 throw new IllegalStateException("Unrecognized URI:" + uri);
         }
@@ -321,11 +426,17 @@ public class MmsSmsProvider extends ContentProvider {
     private long getSingleAddressId(String address) {
         boolean isEmail = Mms.isEmailAddress(address);
         String refinedAddress = isEmail ? address.toLowerCase() : address;
-        String selection =
-                isEmail
-                ? "address = ?"
-                : "PHONE_NUMBERS_EQUAL(address, ?)";
-        String[] selectionArgs = new String[] { refinedAddress };
+        String selection = "address=?";
+        String[] selectionArgs;
+
+        if (isEmail) {
+            selectionArgs = new String[] { refinedAddress };
+        } else {
+            selection += " OR " + String.format("PHONE_NUMBERS_EQUAL(address, ?, %d)",
+                        (mUseStrictPhoneNumberComparation ? 1 : 0));
+            selectionArgs = new String[] { refinedAddress, refinedAddress };
+        }
+
         Cursor cursor = null;
 
         try {
@@ -434,11 +545,12 @@ public class MmsSmsProvider extends ContentProvider {
         String recipientIds =
                 getSpaceSeparatedNumbers(
                         getSortedSet(getAddressIds(recipients)));
-        String THREAD_QUERY = "SELECT _id FROM threads " +
-                "WHERE recipient_ids = ?";
+
+        String THREAD_QUERY = "SELECT _id FROM threads " + "WHERE recipient_ids = ?";
 
         if (DEBUG) {
-            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY);
+            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY +
+                    ", recipientIds=" + recipientIds);
         }
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
@@ -623,6 +735,56 @@ public class MmsSmsProvider extends ContentProvider {
     }
 
     /**
+     * Return the first locked message found in the union of MMS
+     * and SMS messages.
+     *
+     * Use this query:
+     *
+     *  SELECT _id FROM pdu GROUP BY _id HAVING locked=1 UNION SELECT _id FROM sms GROUP
+     *      BY _id HAVING locked=1 LIMIT 1
+     *
+     * We limit by 1 because we're only interested in knowing if
+     * there is *any* locked message, not the actual messages themselves.
+     */
+    private Cursor getFirstLockedMessage(String[] projection, String selection,
+            String[] selectionArgs, String sortOrder) {
+        SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
+        SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
+
+        mmsQueryBuilder.setTables(MmsProvider.TABLE_PDU);
+        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+
+        String[] idColumn = new String[] { BaseColumns._ID };
+
+        String mmsSubQuery = mmsQueryBuilder.buildUnionSubQuery(
+                MmsSms.TYPE_DISCRIMINATOR_COLUMN, idColumn,
+                null, 1, "mms",
+                selection, selectionArgs,
+                BaseColumns._ID, "locked=1");
+
+        String smsSubQuery = smsQueryBuilder.buildUnionSubQuery(
+                MmsSms.TYPE_DISCRIMINATOR_COLUMN, idColumn,
+                null, 1, "sms",
+                selection, selectionArgs,
+                BaseColumns._ID, "locked=1");
+
+        SQLiteQueryBuilder unionQueryBuilder = new SQLiteQueryBuilder();
+
+        unionQueryBuilder.setDistinct(true);
+
+        String unionQuery = unionQueryBuilder.buildUnionQuery(
+                new String[] { mmsSubQuery, smsSubQuery }, null, "1");
+
+        Cursor cursor = mOpenHelper.getReadableDatabase().rawQuery(unionQuery, EMPTY_STRING_ARRAY);
+
+        if (DEBUG) {
+            Log.v("MmsSmsProvider", "getFirstLockedMessage query: " + unionQuery);
+            Log.v("MmsSmsProvider", "cursor count: " + cursor.getCount());
+        }
+        return cursor;
+    }
+
+    /**
      * Return every message in each conversation in both MMS
      * and SMS.
      */
@@ -683,13 +845,14 @@ public class MmsSmsProvider extends ContentProvider {
      * SELECT ...
      *   FROM pdu, (SELECT _id AS address_id
      *              FROM addr
-     *              WHERE PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>'))
+     *              WHERE (address='<phoneNumber>' OR
+     *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0)))
      *             AS matching_addresses
      *   WHERE pdu._id = matching_addresses.address_id
      * UNION
      * SELECT ...
      *   FROM sms
-     *   WHERE PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>');
+     *   WHERE (address='<phoneNumber>' OR PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>', 1/0));
      */
     private Cursor getMessagesByPhoneNumber(
             String phoneNumber, String[] projection, String selection,
@@ -702,8 +865,9 @@ public class MmsSmsProvider extends ContentProvider {
         String finalSmsSelection =
                 concatSelections(
                         selection,
-                        "PHONE_NUMBERS_EQUAL(address, " +
-                        escapedPhoneNumber + ")");
+                        "(address=" + escapedPhoneNumber + " OR PHONE_NUMBERS_EQUAL(address, " +
+                        escapedPhoneNumber +
+                        (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0))"));
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
@@ -712,8 +876,10 @@ public class MmsSmsProvider extends ContentProvider {
         mmsQueryBuilder.setTables(
                 MmsProvider.TABLE_PDU +
                 ", (SELECT _id AS address_id " +
-                "FROM addr WHERE PHONE_NUMBERS_EQUAL(addr.address, " +
-                escapedPhoneNumber + ")) " +
+                "FROM addr WHERE (address=" + escapedPhoneNumber +
+                " OR PHONE_NUMBERS_EQUAL(addr.address, " +
+                escapedPhoneNumber +
+                (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0))) ") +
                 "AS matching_addresses");
         smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
 
@@ -919,7 +1085,10 @@ public class MmsSmsProvider extends ContentProvider {
                 affectedRows = MmsProvider.deleteMessages(context, db,
                                         selection, selectionArgs, uri)
                         + db.delete("sms", selection, selectionArgs);
-                MmsSmsDatabaseHelper.updateAllThreads(db, selection, selectionArgs);
+                // Intentionally don't pass the selection variable to updateAllThreads.
+                // When we pass in "locked=0" there, the thread will get excluded from
+                // the selection and not get updated.
+                MmsSmsDatabaseHelper.updateAllThreads(db, null, null);
                 break;
             case URI_OBSOLETE_THREADS:
                 affectedRows = db.delete("threads",
@@ -965,9 +1134,20 @@ public class MmsSmsProvider extends ContentProvider {
                 affectedRows = updateConversation(threadIdString, values,
                         selection, selectionArgs);
                 break;
+
             case URI_PENDING_MSG:
                 affectedRows = db.update(TABLE_PENDING_MSG, values, selection, null);
                 break;
+
+            case URI_CANONICAL_ADDRESS: {
+                String extraSelection = "_id=" + uri.getPathSegments().get(1);
+                String finalSelection = TextUtils.isEmpty(selection)
+                        ? extraSelection : extraSelection + " AND " + selection;
+
+                affectedRows = db.update(TABLE_CANONICAL_ADDRESSES, values, finalSelection, null);
+                break;
+            }
+
             default:
                 throw new UnsupportedOperationException(
                         NO_DELETES_INSERTS_OR_UPDATES);
