@@ -39,7 +39,7 @@ import android.text.TextUtils;
 import android.util.Config;
 import android.util.Log;
 
-import com.android.internal.database.ArrayListCursor;
+import com.android.common.ArrayListCursor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
