@@ -31,11 +31,13 @@ import java.util.ArrayList;
 
 import com.google.android.mms.pdu.EncodedStringValue;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
+import android.provider.Telephony;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Sms;
@@ -330,6 +332,106 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createCommonTables(db);
         createCommonTriggers(db);
         createMmsTriggers(db);
+        createWordsTables(db);
+    }
+
+    // When upgrading the database we need to populate the words
+    // table with the rows out of sms and part.
+    private void populateWordsTable(SQLiteDatabase db) {
+        final String TABLE_WORDS = "words";
+        {
+            Cursor smsRows = db.query(
+                    "sms",
+                    new String[] { Sms._ID, Sms.BODY },
+                    null,
+                    null,
+                    null,
+                    null,
+                    null);
+            try {
+                if (smsRows != null) {
+                    smsRows.moveToPosition(-1);
+                    ContentValues cv = new ContentValues();
+                    while (smsRows.moveToNext()) {
+                        cv.clear();
+
+                        long id = smsRows.getLong(0);        // 0 for Sms._ID
+                        String body = smsRows.getString(1);  // 1 for Sms.BODY
+
+                        cv.put(Telephony.MmsSms.WordsTable.ID, id);
+                        cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, body);
+                        cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, id);
+                        cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+                        db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
+                    }
+                }
+            } finally {
+                if (smsRows != null) {
+                    smsRows.close();
+                }
+            }
+        }
+
+        {
+            Cursor mmsRows = db.query(
+                    "part",
+                    new String[] { Part._ID, Part.TEXT },
+                    "ct = 'text/plain'",
+                    null,
+                    null,
+                    null,
+                    null);
+            try {
+                if (mmsRows != null) {
+                    mmsRows.moveToPosition(-1);
+                    ContentValues cv = new ContentValues();
+                    while (mmsRows.moveToNext()) {
+                        cv.clear();
+
+                        long id = mmsRows.getLong(0);         // 0 for Part._ID
+                        String body = mmsRows.getString(1);   // 1 for Part.TEXT
+
+                        cv.put(Telephony.MmsSms.WordsTable.ID, id);
+                        cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, body);
+                        cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, id);
+                        cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+                        db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
+                    }
+                }
+            } finally {
+                if (mmsRows != null) {
+                    mmsRows.close();
+                }
+            }
+        }
+    }
+
+    private void createWordsTables(SQLiteDatabase db) {
+        try {
+            db.execSQL("CREATE VIRTUAL TABLE words USING FTS3 (_id INTEGER PRIMARY KEY, index_text TEXT, source_id INTEGER, table_to_use INTEGER);");
+
+            // monitor the sms table
+            // NOTE don't handle inserts using a trigger because it has an unwanted
+            // side effect:  the value returned for the last row ends up being the
+            // id of one of the trigger insert not the original row insert.
+            // Handle inserts manually in the provider.
+            db.execSQL("CREATE TRIGGER sms_words_update AFTER UPDATE ON sms BEGIN UPDATE words " +
+                    " SET index_text = NEW.body WHERE (source_id=NEW._id AND table_to_use=1); " +
+                    " END;");
+            db.execSQL("CREATE TRIGGER sms_words_delete AFTER DELETE ON sms BEGIN DELETE FROM " +
+                    "  words WHERE source_id = OLD._id AND table_to_use = 1; END;");
+
+            // monitor the mms table
+            db.execSQL("CREATE TRIGGER mms_words_update AFTER UPDATE ON part BEGIN UPDATE words " +
+            		" SET index_text = NEW.text WHERE (source_id=NEW._id AND table_to_use=2); " +
+            		" END;");
+            db.execSQL("CREATE TRIGGER mms_words_delete AFTER DELETE ON part BEGIN DELETE FROM " +
+                    " words WHERE source_id = OLD._id AND table_to_use = 2; END;");
+
+            populateWordsTable(db);
+        } catch (Exception ex) {
+            Log.e(TAG, "got exception creating words table: " + ex.toString());
+        }
     }
 
     private void createMmsTables(SQLiteDatabase db) {
@@ -870,6 +972,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+        case 48:
+            if (currentVersion <= 48) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                populateWordsTable(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+
             return;
         }
 

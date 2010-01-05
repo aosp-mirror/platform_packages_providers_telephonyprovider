@@ -30,6 +30,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
+import android.provider.Telephony;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Mms.Addr;
@@ -53,6 +54,7 @@ public class MmsProvider extends ContentProvider {
     static final String TABLE_PART = "part";
     static final String TABLE_RATE = "rate";
     static final String TABLE_DRM  = "drm";
+    static final String TABLE_WORDS = "words";
 
     @Override
     public boolean onCreate() {
@@ -367,10 +369,12 @@ public class MmsProvider extends ContentProvider {
             }
 
             String contentType = values.getAsString("ct");
-            
+
             // text/plain and app application/smil store their "data" inline in the
             // table so there's no need to create the file
-            if (!"text/plain".equals(contentType) && !"application/smil".equals(contentType)) {
+            boolean plainText = "text/plain".equals(contentType);
+            boolean smilText = "application/smil".equals(contentType);
+            if (!plainText && !smilText) {
                 // Generate the '_data' field of the part with default
                 // permission settings.
                 String path = getContext().getDir("parts", 0).getPath()
@@ -399,6 +403,26 @@ public class MmsProvider extends ContentProvider {
             }
 
             res = Uri.parse(res + "/part/" + rowId);
+
+            // Don't use a trigger for updating the words table because of a bug
+            // in FTS3.  The bug is such that the call to get the last inserted
+            // row is incorrect.
+            if (plainText) {
+                // Update the words table with a corresponding row.  The words table
+                // allows us to search for words quickly, without scanning the whole
+                // table;
+                ContentValues cv = new ContentValues();
+
+                // we're using the row id of the part table row but we're also using ids
+                // from the sms table so this divides the space into two large chunks.
+                // The row ids from the part table start at 2 << 32.
+                cv.put(Telephony.MmsSms.WordsTable.ID, (2 << 32) + rowId);
+                cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, values.getAsString("text"));
+                cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, rowId);
+                cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 2);
+                db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
+            }
+
         } else if (table.equals(TABLE_RATE)) {
             long now = values.getAsLong(Rate.SENT_TIME);
             long oneHourAgo = now - 1000 * 60 * 60;

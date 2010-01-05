@@ -28,6 +28,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.provider.Contacts;
+import android.provider.Telephony;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Sms;
@@ -50,6 +51,7 @@ public class SmsProvider extends ContentProvider {
     static final String TABLE_SMS = "sms";
     private static final String TABLE_RAW = "raw";
     private static final String TABLE_SR_PENDING = "sr_pending";
+    private static final String TABLE_WORDS = "words";
 
     private static final Integer ONE = Integer.valueOf(1);
 
@@ -486,6 +488,21 @@ public class SmsProvider extends ContentProvider {
         }
 
         rowID = db.insert(table, "body", values);
+
+        // Don't use a trigger for updating the words table because of a bug
+        // in FTS3.  The bug is such that the call to get the last inserted
+        // row is incorrect.
+        if (table == TABLE_SMS) {
+            // Update the words table with a corresponding row.  The words table
+            // allows us to search for words quickly, without scanning the whole
+            // table;
+            ContentValues cv = new ContentValues();
+            cv.put(Telephony.MmsSms.WordsTable.ID, rowID);
+            cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, values.getAsString("body"));
+            cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, rowID);
+            cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+            db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
+        }
         if (rowID > 0) {
             Uri uri = Uri.parse("content://" + table + "/" + rowID);
 

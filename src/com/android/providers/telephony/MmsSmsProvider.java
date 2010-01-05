@@ -22,6 +22,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import android.app.SearchManager;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
@@ -90,8 +91,9 @@ public class MmsSmsProvider extends ContentProvider {
     private static final int URI_DRAFT                             = 12;
     private static final int URI_CANONICAL_ADDRESSES               = 13;
     private static final int URI_SEARCH                            = 14;
-    private static final int URI_FIRST_LOCKED_MESSAGE_ALL          = 15;
-    private static final int URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID = 16;
+    private static final int URI_SEARCH_SUGGEST                    = 15;
+    private static final int URI_FIRST_LOCKED_MESSAGE_ALL          = 16;
+    private static final int URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID = 17;
 
     /**
      * the name of the table that is used to store the queue of
@@ -209,6 +211,7 @@ public class MmsSmsProvider extends ContentProvider {
         URI_MATCHER.addURI(AUTHORITY, "canonical-addresses", URI_CANONICAL_ADDRESSES);
 
         URI_MATCHER.addURI(AUTHORITY, "search", URI_SEARCH);
+        URI_MATCHER.addURI(AUTHORITY, "searchSuggest", URI_SEARCH_SUGGEST);
 
         // In this pattern, two query parameters may be supplied:
         // "protocol" and "message." For example:
@@ -321,7 +324,22 @@ public class MmsSmsProvider extends ContentProvider {
                         null, null,
                         sortOrder);
                 break;
-            case URI_SEARCH:
+            case URI_SEARCH_SUGGEST: {
+                String searchString = uri.getQueryParameter("pattern");
+                String query = String.format("SELECT _id, index_text, source_id, table_to_use, offsets(words) FROM words WHERE words MATCH '%s*' LIMIT 50;", searchString);
+                if (       sortOrder != null
+                        || selection != null
+                        || selectionArgs != null
+                        || projection != null) {
+                    throw new IllegalArgumentException(
+                            "do not specify sortOrder, selection, selectionArgs, or projection" +
+                            "with this query");
+                }
+
+                cursor = db.rawQuery(query, null);
+                break;
+            }
+            case URI_SEARCH: {
                 if (       sortOrder != null
                         || selection != null
                         || selectionArgs != null
@@ -337,35 +355,45 @@ public class MmsSmsProvider extends ContentProvider {
                 // using a UNION so we have to have the same number of result columns from
                 // both queries.
 
-                String searchString = "%" + uri.getQueryParameter("pattern") + "%";
-                String smsProjection = "_id,thread_id,address,body,date";
-                String mmsProjection = "pdu._id,thread_id,addr.address,part.text as body,pdu.date";
+                String searchString = uri.getQueryParameter("pattern") + "*";
 
+                String smsProjection = "sms._id as _id,thread_id,address,body,date," +
+                "index_text,words._id";
+                String mmsProjection = "pdu._id,thread_id,addr.address,part.text as " + "" +
+                		"body,pdu.date,index_text,words._id";
+
+                // search on the words table but return the rows from the corresponding sms table
                 String smsQuery = String.format(
-                        "SELECT %s FROM sms WHERE (address NOTNULL AND body LIKE ?) ",
+                        "SELECT %s FROM sms,words WHERE (address NOTNULL AND words MATCH ? " +
+                        " AND sms._id=words.source_id AND words.table_to_use=1) ",
                         smsProjection);
 
-                // TODO consider whether we're really getting the right addr here (for example, if
-                // I send a message to a given phone number do I want the search result to
-                // show a match on "me" or on that phone number.  I suspect the latter.
+                // search on the words table but return the rows from the corresponding parts table
                 String mmsQuery = String.format(
-                        "SELECT %s FROM pdu,part,addr WHERE ((part.mid=pdu._id) AND " +
+                        "SELECT %s FROM pdu,part,addr,words WHERE ((part.mid=pdu._id) AND " +
                         "(addr.msg_id=pdu._id) AND " +
                         "(addr.type=%d) AND " +
                         "(part.ct='text/plain') AND " +
-                        "(body like ?))",
+                        "(words MATCH ?) AND " +
+                        "(part._id = words.source_id) AND " +
+                        "(words.table_to_use=2))",
                         mmsProjection,
                         PduHeaders.TO);
 
+                // join the results from sms and part (mms)
                 String rawQuery = String.format(
                         "%s UNION %s GROUP BY %s ORDER BY %s",
                         smsQuery,
                         mmsQuery,
                         "thread_id",
                         "thread_id ASC, date DESC");
-
-                cursor = db.rawQuery(rawQuery, new String[] { searchString, searchString });
+                try {
+                    cursor = db.rawQuery(rawQuery, new String[] { searchString, searchString });
+                } catch (Exception ex) {
+                    Log.e(LOG_TAG, "got exception: " + ex.toString());
+                }
                 break;
+            }
             case URI_PENDING_MSG: {
                 String protoName = uri.getQueryParameter("protocol");
                 String msgId = uri.getQueryParameter("message");
