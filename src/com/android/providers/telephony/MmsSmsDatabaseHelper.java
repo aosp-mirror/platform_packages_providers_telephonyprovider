@@ -201,7 +201,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 48;
+    static final int DATABASE_VERSION = 49;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -979,7 +979,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             db.beginTransaction();
             try {
-                populateWordsTable(db);
+                createWordsTables(db);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
