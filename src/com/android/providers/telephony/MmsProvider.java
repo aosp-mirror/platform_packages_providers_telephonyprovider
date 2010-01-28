@@ -16,8 +16,6 @@
 
 package com.android.providers.telephony;
 
-import com.google.android.mms.pdu.PduHeaders;
-
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
@@ -39,6 +37,8 @@ import android.provider.Telephony.Mms.Rate;
 import android.text.TextUtils;
 import android.util.Config;
 import android.util.Log;
+
+import com.android.mmscommon.PduHeaders;
 
 import java.io.File;
 import java.io.FileNotFoundException;

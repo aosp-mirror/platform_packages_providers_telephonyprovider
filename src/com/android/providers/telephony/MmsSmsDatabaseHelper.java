@@ -16,20 +16,11 @@
 
 package com.android.providers.telephony;
 
-import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_DELIVERY_IND;
-import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND;
-import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_READ_ORIG_IND;
-import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_READ_REC_IND;
-import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_RETRIEVE_CONF;
-import static com.google.android.mms.pdu.PduHeaders.MESSAGE_TYPE_SEND_REQ;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.File;
 import java.util.ArrayList;
-
-import com.google.android.mms.pdu.EncodedStringValue;
 
 import android.content.ContentValues;
 import android.content.Context;
@@ -47,6 +38,9 @@ import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms.PendingMessages;
 import android.util.Log;
+
+import com.android.mmscommon.EncodedStringValue;
+import com.android.mmscommon.PduHeaders;
 
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";
@@ -100,9 +94,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "END;";
 
     private static final String PDU_UPDATE_THREAD_CONSTRAINTS =
-                        "  WHEN new." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_RETRIEVE_CONF +
-                        "    OR new." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_NOTIFICATION_IND +
-                        "    OR new." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_SEND_REQ + " ";
+                        "  WHEN new." + Mms.MESSAGE_TYPE + "=" +
+                        PduHeaders.MESSAGE_TYPE_RETRIEVE_CONF +
+                        "    OR new." + Mms.MESSAGE_TYPE + "=" +
+                        PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND +
+                        "    OR new." + Mms.MESSAGE_TYPE + "=" +
+                        PduHeaders.MESSAGE_TYPE_SEND_REQ + " ";
 
     private static final String PDU_UPDATE_THREAD_READ_BODY =
                         "  UPDATE threads SET read = " +
@@ -521,11 +518,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // associated Send.req.
         db.execSQL("CREATE TRIGGER cleanup_delivery_and_read_report " +
                    "AFTER DELETE ON " + MmsProvider.TABLE_PDU + " " +
-                   "WHEN old." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_SEND_REQ + " " +
+                   "WHEN old." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_SEND_REQ + " " +
                    "BEGIN " +
                    "  DELETE FROM " + MmsProvider.TABLE_PDU +
-                   "  WHERE (" + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_DELIVERY_IND +
-                   "    OR " + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_READ_ORIG_IND + ")" +
+                   "  WHERE (" + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_DELIVERY_IND +
+                   "    OR " + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_READ_ORIG_IND +
+                   ")" +
                    "    AND " + Mms.MESSAGE_ID + "=old." + Mms.MESSAGE_ID + "; " +
                    "END;");
 
@@ -724,8 +722,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // when they are inserted into Inbox/Outbox.
         db.execSQL("CREATE TRIGGER insert_mms_pending_on_insert " +
                    "AFTER INSERT ON pdu " +
-                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_NOTIFICATION_IND +
-                   "  OR new." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_READ_REC_IND + " " +
+                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND +
+                   "  OR new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_READ_REC_IND +
+                   " " +
                    "BEGIN " +
                    "  INSERT INTO " + MmsSmsProvider.TABLE_PENDING_MSG +
                    "    (" + PendingMessages.PROTO_TYPE + "," +
@@ -744,7 +743,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Insert pending status for M-Send.req when it is moved into Outbox.
         db.execSQL("CREATE TRIGGER insert_mms_pending_on_update " +
                    "AFTER UPDATE ON pdu " +
-                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + MESSAGE_TYPE_SEND_REQ +
+                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_SEND_REQ +
                    "  AND new." + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_OUTBOX +
                    "  AND old." + Mms.MESSAGE_BOX + "!=" + Mms.MESSAGE_BOX_OUTBOX + " " +
                    "BEGIN " +

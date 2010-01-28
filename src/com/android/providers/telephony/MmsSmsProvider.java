@@ -45,7 +45,7 @@ import android.provider.Telephony.Sms.Conversations;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.google.android.mms.pdu.PduHeaders;
+import com.android.mmscommon.PduHeaders;
 
 /**
  * This class provides the ability to query the MMS and SMS databases
