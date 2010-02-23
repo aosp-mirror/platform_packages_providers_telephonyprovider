@@ -176,9 +176,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         " BEGIN " +
                         "  UPDATE threads SET has_attachment = " +
                         "   CASE " +
-                        "    (SELECT COUNT(*) FROM part JOIN pdu ON pdu._id=part.mid " +
+                        "    (SELECT COUNT(*) FROM part JOIN pdu " +
                         "     WHERE pdu.thread_id = threads._id " +
-                        "     AND part.ct != 'text/plain' AND part.ct != 'application/smil')" +
+                        "     AND part.ct != 'text/plain' AND part.ct != 'application/smil' " +
+                        "     AND part.mid = pdu._id)" +
                         "   WHEN 0 THEN 0 " +
                         "   ELSE 1 " +
                         "   END; " +
@@ -191,8 +192,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         " AFTER UPDATE of thread_id ON pdu " +
                         " BEGIN " +
                         "  UPDATE threads SET has_attachment=1 WHERE _id IN " +
-                        "   (SELECT pdu.thread_id FROM part JOIN pdu ON new._id=part.mid " +
-                        "     WHERE part.ct != 'text/plain' AND part.ct != 'application/smil'); " +
+                        "   (SELECT pdu.thread_id FROM part JOIN pdu " +
+                        "     WHERE part.ct != 'text/plain' AND part.ct != 'application/smil' " +
+                        "     AND part.mid = pdu._id);" +
                         " END";
 
     private static MmsSmsDatabaseHelper mInstance = null;
