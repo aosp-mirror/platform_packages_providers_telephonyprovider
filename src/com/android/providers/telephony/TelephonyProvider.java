@@ -36,7 +36,7 @@ import android.util.Config;
 import android.util.Log;
 import android.util.Xml;
 
-import com.android.common.XmlUtils;
+import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
