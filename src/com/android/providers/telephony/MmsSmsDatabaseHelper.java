@@ -200,7 +200,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 50;
+    static final int DATABASE_VERSION = 51;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -480,7 +480,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.RESPONSE_TEXT + " TEXT," +
                    Mms.DELIVERY_TIME + " INTEGER," +
                    Mms.DELIVERY_REPORT + " INTEGER," +
-                   Mms.LOCKED + " INTEGER DEFAULT 0" +
+                   Mms.LOCKED + " INTEGER DEFAULT 0," +
+                   Mms.SEEN + " INTEGER DEFAULT 0" +
                    ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
@@ -572,7 +573,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "body TEXT," +
                    "service_center TEXT," +
                    "locked INTEGER DEFAULT 0," +
-                   "error_code INTEGER DEFAULT 0" +
+                   "error_code INTEGER DEFAULT 0," +
+                   "seen INTEGER DEFAULT 0" +
                    ");");
 
         /**
@@ -987,6 +989,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
         case 48:
             if (currentVersion <= 48) {
                 return;
@@ -1002,6 +1005,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
         case 49:
             if (currentVersion <= 49) {
                 return;
@@ -1016,8 +1020,24 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-            return;
+            // fall through
+        case 50:
+            if (currentVersion <= 50) {
+                return;
+            }
 
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion51(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+
+            return;
         }
 
         Log.e(TAG, "Destroying all old data.");
@@ -1158,6 +1178,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private void upgradeDatabaseToVersion48(SQLiteDatabase db) {
         // Add 'error_code' column to sms table.
         db.execSQL("ALTER TABLE sms ADD COLUMN error_code INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion51(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE sms add COLUMN seen INTEGER DEFAULT 0");
+        db.execSQL("ALTER TABLE pdu add COLUMN seen INTEGER DEFAULT 0");
     }
 
     private void updateThreadsAttachmentColumn(SQLiteDatabase db) {
