@@ -200,7 +200,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 49;
+    static final int DATABASE_VERSION = 50;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -332,6 +332,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createCommonTriggers(db);
         createMmsTriggers(db);
         createWordsTables(db);
+        createIndices(db);
     }
 
     // When upgrading the database we need to populate the words
@@ -422,14 +423,27 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             // monitor the mms table
             db.execSQL("CREATE TRIGGER mms_words_update AFTER UPDATE ON part BEGIN UPDATE words " +
-            		" SET index_text = NEW.text WHERE (source_id=NEW._id AND table_to_use=2); " +
-            		" END;");
+                    " SET index_text = NEW.text WHERE (source_id=NEW._id AND table_to_use=2); " +
+                    " END;");
             db.execSQL("CREATE TRIGGER mms_words_delete AFTER DELETE ON part BEGIN DELETE FROM " +
                     " words WHERE source_id = OLD._id AND table_to_use = 2; END;");
 
             populateWordsTable(db);
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating words table: " + ex.toString());
+        }
+    }
+
+    private void createIndices(SQLiteDatabase db) {
+        createThreadIdIndex(db);
+    }
+
+    private void createThreadIdIndex(SQLiteDatabase db) {
+        try {
+            db.execSQL("CREATE INDEX IF NOT EXISTS typeThreadIdIndex ON sms" +
+            " (type, thread_id);");
+        } catch (Exception ex) {
+            Log.e(TAG, "got exception creating indices: " + ex.toString());
         }
     }
 
@@ -988,10 +1002,23 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-
+        case 49:
+            if (currentVersion <= 49) {
+                return;
+            }
+            db.beginTransaction();
+            try {
+                createThreadIdIndex(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break; // force to destroy all old data;
+            } finally {
+                db.endTransaction();
+            }
             return;
-        }
 
+        }
 
         Log.e(TAG, "Destroying all old data.");
         dropAll(db);
