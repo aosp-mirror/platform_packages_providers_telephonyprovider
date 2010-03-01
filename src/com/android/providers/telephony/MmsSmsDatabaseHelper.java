@@ -275,11 +275,37 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         // Update the error column of the thread to indicate if there
         // are any messages in it that have failed to send.
-        db.execSQL(
-            "UPDATE threads SET error =" +
-            "       (SELECT COUNT(*) FROM sms WHERE type=5" +
-            "        AND thread_id = " + thread_id + " LIMIT 1)" +
-            "   WHERE threads._id = " + thread_id + ";");
+        // First check to see if there are any messages with errors in this thread.
+        String query = "SELECT thread_id FROM sms WHERE type=" +
+            Telephony.TextBasedSmsColumns.MESSAGE_TYPE_FAILED +
+            " AND thread_id = " + thread_id +
+                                " LIMIT 1";
+        int setError = 0;
+        Cursor c = db.rawQuery(query, null);
+        if (c != null) {
+            try {
+                setError = c.getCount();    // Because of the LIMIT 1, count will be 1 or 0.
+            } finally {
+                c.close();
+            }
+        }
+        // What's the current state of the error flag in the threads table?
+        String errorQuery = "SELECT error FROM threads WHERE _id = " + thread_id;
+        c = db.rawQuery(errorQuery, null);
+        if (c != null) {
+            try {
+                if (c.moveToNext()) {
+                    int curError = c.getInt(0);
+                    if (curError != setError) {
+                        // The current thread error column differs, update it.
+                        db.execSQL("UPDATE threads SET error=" + setError +
+                                " WHERE _id = " + thread_id);
+                    }
+                }
+            } finally {
+                c.close();
+            }
+        }
     }
 
     public static void updateAllThreads(SQLiteDatabase db, String where, String[] whereArgs) {
@@ -292,10 +318,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                        "(SELECT DISTINCT thread_id FROM sms " + where + ")";
         Cursor c = db.rawQuery(query, whereArgs);
         if (c != null) {
-            while (c.moveToNext()) {
-                updateThread(db, c.getInt(0));
+            try {
+                while (c.moveToNext()) {
+                    updateThread(db, c.getInt(0));
+                }
+            } finally {
+                c.close();
             }
-            c.close();
         }
         // remove orphaned threads
         db.delete("threads",
