@@ -39,8 +39,8 @@ import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms.PendingMessages;
 import android.util.Log;
 
-import com.android.mmscommon.EncodedStringValue;
-import com.android.mmscommon.PduHeaders;
+import com.google.android.mms.pdu.EncodedStringValue;
+import com.google.android.mms.pdu.PduHeaders;
 
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";

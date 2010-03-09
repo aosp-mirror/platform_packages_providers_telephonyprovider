@@ -5,9 +5,9 @@ LOCAL_MODULE_TAGS := optional
 
 LOCAL_SRC_FILES := $(call all-subdir-java-files)
 
-LOCAL_STATIC_JAVA_LIBRARIES += mms-common
-
 LOCAL_PACKAGE_NAME := TelephonyProvider
 LOCAL_CERTIFICATE := platform
+
+LOCAL_STATIC_JAVA_LIBRARIES += android-common
 
 include $(BUILD_PACKAGE)

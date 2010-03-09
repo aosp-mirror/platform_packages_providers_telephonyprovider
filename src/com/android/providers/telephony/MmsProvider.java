@@ -38,7 +38,7 @@ import android.text.TextUtils;
 import android.util.Config;
 import android.util.Log;
 
-import com.android.mmscommon.PduHeaders;
+import com.google.android.mms.pdu.PduHeaders;
 
 import java.io.File;
 import java.io.FileNotFoundException;
