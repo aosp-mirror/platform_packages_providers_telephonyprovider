@@ -200,7 +200,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 51;
+    static final int DATABASE_VERSION = 52;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -510,7 +510,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.DELIVERY_TIME + " INTEGER," +
                    Mms.DELIVERY_REPORT + " INTEGER," +
                    Mms.LOCKED + " INTEGER DEFAULT 0," +
-                   Mms.SEEN + " INTEGER DEFAULT 0" +
+                   Mms.SEEN + " INTEGER DEFAULT 0," +
+                   Mms.META_DATA + " TEXT" +
                    ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
@@ -603,7 +604,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "service_center TEXT," +
                    "locked INTEGER DEFAULT 0," +
                    "error_code INTEGER DEFAULT 0," +
-                   "seen INTEGER DEFAULT 0" +
+                   "seen INTEGER DEFAULT 0," +
+                   "meta_data TEXT" +
                    ");");
 
         /**
@@ -1065,6 +1067,23 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 51:
+            if (currentVersion <= 51) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion52(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+            // fall through
 
             return;
         }
@@ -1133,10 +1152,18 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private void upgradeDatabaseToVersion45(SQLiteDatabase db) {
         // Add 'locked' column to sms table.
-        db.execSQL("ALTER TABLE sms ADD COLUMN locked INTEGER DEFAULT 0");
+        db.execSQL("ALTER TABLE sms ADD COLUMN " + Sms.LOCKED + " INTEGER DEFAULT 0");
 
         // Add 'locked' column to pdu table.
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.LOCKED + " INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion52(SQLiteDatabase db) {
+        // Add 'meta_data' column to sms table.
+        db.execSQL("ALTER TABLE sms ADD COLUMN " + Sms.META_DATA + " TEXT");
+
+        // Add 'meta_data' column to pdu table.
+        db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.META_DATA + " TEXT");
     }
 
     private void upgradeDatabaseToVersion46(SQLiteDatabase db) {
