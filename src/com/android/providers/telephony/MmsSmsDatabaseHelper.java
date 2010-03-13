@@ -101,12 +101,20 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "    OR new." + Mms.MESSAGE_TYPE + "=" +
                         PduHeaders.MESSAGE_TYPE_SEND_REQ + " ";
 
+    // When looking in the pdu table for unread messages, only count messages that
+    // are displayed to the user. The constants are defined in PduHeaders and could be used
+    // here, but the string "(m_type=132 OR m_type=130 OR m_type=128)" is used throughout this
+    // file and so it is used here to be consistent.
+    //     m_type=128   = MESSAGE_TYPE_SEND_REQ
+    //     m_type=130   = MESSAGE_TYPE_NOTIFICATION_IND
+    //     m_type=132   = MESSAGE_TYPE_RETRIEVE_CONF
     private static final String PDU_UPDATE_THREAD_READ_BODY =
                         "  UPDATE threads SET read = " +
                         "    CASE (SELECT COUNT(*)" +
                         "          FROM " + MmsProvider.TABLE_PDU +
                         "          WHERE " + Mms.READ + " = 0" +
-                        "            AND " + Mms.THREAD_ID + " = threads._id)" +
+                        "            AND " + Mms.THREAD_ID + " = threads._id " +
+                        "            AND (m_type=132 OR m_type=130 OR m_type=128)) " +
                         "      WHEN 0 THEN 1" +
                         "      ELSE 0" +
                         "    END" +
@@ -200,7 +208,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 52;
+    static final int DATABASE_VERSION = 53;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -1084,7 +1092,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.endTransaction();
             }
             // fall through
+        case 52:
+            if (currentVersion <= 52) {
+                return;
+            }
 
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion53(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1164,6 +1186,19 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         // Add 'meta_data' column to pdu table.
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.META_DATA + " TEXT");
+    }
+
+    private void upgradeDatabaseToVersion53(SQLiteDatabase db) {
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_read_on_update");
+
+        // Updates threads table whenever a message in pdu is updated.
+        db.execSQL("CREATE TRIGGER pdu_update_thread_read_on_update AFTER" +
+                   "  UPDATE OF " + Mms.READ +
+                   "  ON " + MmsProvider.TABLE_PDU + " " +
+                   PDU_UPDATE_THREAD_CONSTRAINTS +
+                   "BEGIN " +
+                   PDU_UPDATE_THREAD_READ_BODY +
+                   "END;");
     }
 
     private void upgradeDatabaseToVersion46(SQLiteDatabase db) {
