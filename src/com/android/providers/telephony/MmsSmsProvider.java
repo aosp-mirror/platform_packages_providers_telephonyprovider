@@ -364,7 +364,7 @@ public class MmsSmsProvider extends ContentProvider {
 
                 // search on the words table but return the rows from the corresponding sms table
                 String smsQuery = String.format(
-                        "SELECT %s FROM sms,words WHERE (address NOTNULL AND words MATCH ? " +
+                        "SELECT %s FROM sms,words WHERE (words MATCH ? " +
                         " AND sms._id=words.source_id AND words.table_to_use=1) ",
                         smsProjection);
 
