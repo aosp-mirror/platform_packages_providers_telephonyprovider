@@ -518,8 +518,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.DELIVERY_TIME + " INTEGER," +
                    Mms.DELIVERY_REPORT + " INTEGER," +
                    Mms.LOCKED + " INTEGER DEFAULT 0," +
-                   Mms.SEEN + " INTEGER DEFAULT 0," +
-                   Mms.META_DATA + " TEXT" +
+                   Mms.SEEN + " INTEGER DEFAULT 0" +
                    ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
@@ -612,8 +611,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "service_center TEXT," +
                    "locked INTEGER DEFAULT 0," +
                    "error_code INTEGER DEFAULT 0," +
-                   "seen INTEGER DEFAULT 0," +
-                   "meta_data TEXT" +
+                   "seen INTEGER DEFAULT 0" +
                    ");");
 
         /**
@@ -1080,17 +1078,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             if (currentVersion <= 51) {
                 return;
             }
-
-            db.beginTransaction();
-            try {
-                upgradeDatabaseToVersion52(db);
-                db.setTransactionSuccessful();
-            } catch (Throwable ex) {
-                Log.e(TAG, ex.getMessage(), ex);
-                break;
-            } finally {
-                db.endTransaction();
-            }
+            // 52 was adding a new meta_data column, but that was removed.
             // fall through
         case 52:
             if (currentVersion <= 52) {
@@ -1178,14 +1166,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         // Add 'locked' column to pdu table.
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.LOCKED + " INTEGER DEFAULT 0");
-    }
-
-    private void upgradeDatabaseToVersion52(SQLiteDatabase db) {
-        // Add 'meta_data' column to sms table.
-        db.execSQL("ALTER TABLE sms ADD COLUMN " + Sms.META_DATA + " TEXT");
-
-        // Add 'meta_data' column to pdu table.
-        db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.META_DATA + " TEXT");
     }
 
     private void upgradeDatabaseToVersion53(SQLiteDatabase db) {
