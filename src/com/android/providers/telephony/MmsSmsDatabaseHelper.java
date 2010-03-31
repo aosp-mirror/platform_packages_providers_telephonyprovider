@@ -1254,6 +1254,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private void upgradeDatabaseToVersion51(SQLiteDatabase db) {
         db.execSQL("ALTER TABLE sms add COLUMN seen INTEGER DEFAULT 0");
         db.execSQL("ALTER TABLE pdu add COLUMN seen INTEGER DEFAULT 0");
+
+        try {
+            // update the existing sms and pdu tables so the new "seen" column is the same as
+            // the "read" column for each row.
+            ContentValues contentValues = new ContentValues();
+            contentValues.put("seen", 1);
+            int count = db.update("sms", contentValues, "read=1", null);
+            Log.d(TAG, "[MmsSmsDb] upgradeDatabaseToVersion51: updated " + count +
+                    " rows in sms table to have READ=1");
+            count = db.update("pdu", contentValues, "read=1", null);
+            Log.d(TAG, "[MmsSmsDb] upgradeDatabaseToVersion51: updated " + count +
+                    " rows in pdu table to have READ=1");
+        } catch (Exception ex) {
+            Log.e(TAG, "[MmsSmsDb] upgradeDatabaseToVersion51 caught ", ex);
+        }
     }
 
     private void updateThreadsAttachmentColumn(SQLiteDatabase db) {
