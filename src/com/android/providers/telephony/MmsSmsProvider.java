@@ -456,6 +456,7 @@ public class MmsSmsProvider extends ContentProvider {
         String refinedAddress = isEmail ? address.toLowerCase() : address;
         String selection = "address=?";
         String[] selectionArgs;
+        long retVal = -1L;
 
         if (isEmail) {
             selectionArgs = new String[] { refinedAddress };
@@ -478,12 +479,17 @@ public class MmsSmsProvider extends ContentProvider {
                 contentValues.put(CanonicalAddressesColumns.ADDRESS, refinedAddress);
 
                 db = mOpenHelper.getWritableDatabase();
-                return db.insert("canonical_addresses",
+                retVal = db.insert("canonical_addresses",
                         CanonicalAddressesColumns.ADDRESS, contentValues);
+
+                Log.d(LOG_TAG, "getSingleAddressId: insert new canonical_address for " + address +
+                        ", _id=" + retVal);
+
+                return retVal;
             }
 
             if (cursor.moveToFirst()) {
-                return cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID));
+                retVal = cursor.getLong(cursor.getColumnIndexOrThrow(BaseColumns._ID));
             }
         } finally {
             if (cursor != null) {
@@ -491,7 +497,7 @@ public class MmsSmsProvider extends ContentProvider {
             }
         }
 
-        return -1L;
+        return retVal;
     }
 
     /**
@@ -506,7 +512,7 @@ public class MmsSmsProvider extends ContentProvider {
                 if (id != -1L) {
                     result.add(id);
                 } else {
-                    Log.e(LOG_TAG, "Address ID not found for: " + address);
+                    Log.e(LOG_TAG, "getAddressIds: address ID not found for " + address);
                 }
             }
         }
@@ -524,7 +530,11 @@ public class MmsSmsProvider extends ContentProvider {
         for (Long number : numbers) {
             result[i++] = number;
         }
-        Arrays.sort(result);
+
+        if (size > 1) {
+            Arrays.sort(result);
+        }
+
         return result;
     }
 
@@ -559,9 +569,15 @@ public class MmsSmsProvider extends ContentProvider {
         }
         values.put(ThreadsColumns.MESSAGE_COUNT, 0);
 
-        mOpenHelper.getWritableDatabase().insert("threads", null, values);
+        long result = mOpenHelper.getWritableDatabase().insert("threads", null, values);
+        Log.d(LOG_TAG, "insertThread: created new thread_id " + result +
+                " for recipientIds " + recipientIds);
+
         getContext().getContentResolver().notifyChange(MmsSms.CONTENT_URI, null);
     }
+
+    private static final String THREAD_QUERY =
+            "SELECT _id FROM threads " + "WHERE recipient_ids=?";
 
     /**
      * Return the thread ID for this list of
@@ -570,30 +586,38 @@ public class MmsSmsProvider extends ContentProvider {
      * Threads.getThreadId to access this information.
      */
     private synchronized Cursor getThreadId(List<String> recipients) {
-        String recipientIds =
-                getSpaceSeparatedNumbers(
-                        getSortedSet(getAddressIds(recipients)));
+        Set<Long> addressIds = getAddressIds(recipients);
+        String recipientIds = "";
 
-        String THREAD_QUERY = "SELECT _id FROM threads " + "WHERE recipient_ids = ?";
-
-        if (DEBUG) {
-            Log.v(LOG_TAG, "getThreadId THREAD_QUERY: " + THREAD_QUERY +
-                    ", recipientIds=" + recipientIds);
+        // optimize for size==1, which should be most of the cases
+        if (addressIds.size() == 1) {
+            for (Long addressId : addressIds) {
+                recipientIds = Long.toString(addressId);
+            }
+        } else {
+            recipientIds = getSpaceSeparatedNumbers(getSortedSet(addressIds));
         }
+
+        if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
+            Log.d(LOG_TAG, "getThreadId: recipientIds (selectionArgs) =" + recipientIds);
+        }
+
+        String[] selectionArgs = new String[] { recipientIds };
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
+        Cursor cursor = db.rawQuery(THREAD_QUERY, selectionArgs);
 
         if (cursor.getCount() == 0) {
             cursor.close();
-            if (DEBUG) {
-                Log.v(LOG_TAG, "getThreadId cursor zero, creating new threadid");
-            }
+
+            Log.d(LOG_TAG, "getThreadId: create new thread_id for recipients " + recipients);
             insertThread(recipientIds, recipients.size());
+
             db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
-            cursor = db.rawQuery(THREAD_QUERY, new String[] { recipientIds });
+            cursor = db.rawQuery(THREAD_QUERY, selectionArgs);
         }
-        if (DEBUG) {
-            Log.v(LOG_TAG, "getThreadId cursor count: " + cursor.getCount());
+        
+        if (cursor.getCount() > 1) {
+            Log.w(LOG_TAG, "getThreadId: why is cursorCount=" + cursor.getCount());
         }
 
         return cursor;
