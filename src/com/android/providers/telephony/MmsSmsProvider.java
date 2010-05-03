@@ -94,6 +94,7 @@ public class MmsSmsProvider extends ContentProvider {
     private static final int URI_SEARCH_SUGGEST                    = 15;
     private static final int URI_FIRST_LOCKED_MESSAGE_ALL          = 16;
     private static final int URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID = 17;
+    private static final int URI_MESSAGE_ID_TO_THREAD              = 18;
 
     /**
      * the name of the table that is used to store the queue of
@@ -237,6 +238,7 @@ public class MmsSmsProvider extends ContentProvider {
 
         URI_MATCHER.addURI(AUTHORITY, "locked/#", URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID);
 
+        URI_MATCHER.addURI(AUTHORITY, "messageIdToThread", URI_MESSAGE_ID_TO_THREAD);
         initializeColumnSets();
     }
 
@@ -258,7 +260,6 @@ public class MmsSmsProvider extends ContentProvider {
             String selection, String[] selectionArgs, String sortOrder) {
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = null;
-
         switch(URI_MATCHER.match(uri)) {
             case URI_COMPLETE_CONVERSATIONS:
                 cursor = getCompleteConversations(
@@ -339,6 +340,34 @@ public class MmsSmsProvider extends ContentProvider {
                 cursor = db.rawQuery(query, null);
                 break;
             }
+            case URI_MESSAGE_ID_TO_THREAD: {
+                // Given a message ID and an indicator for SMS vs. MMS return
+                // the thread id of the corresponding thread.
+                try {
+                    long id = Long.parseLong(uri.getQueryParameter("row_id"));
+                    switch (Integer.parseInt(uri.getQueryParameter("table_to_use"))) {
+                        case 1:  // sms
+                            cursor = db.query(
+                                "sms",
+                                new String[] { "thread_id" },
+                                "_id=?",
+                                new String[] { String.valueOf(id) },
+                                null,
+                                null,
+                                null);
+                            break;
+                        case 2:  // mms
+                            String mmsQuery =
+                                "SELECT thread_id FROM pdu,part WHERE ((part.mid=pdu._id) AND " +
+                                "(part._id=?))";
+                            cursor = db.rawQuery(mmsQuery, new String[] { String.valueOf(id) });
+                            break;
+                    }
+                } catch (NumberFormatException ex) {
+                    // ignore... return empty cursor
+                }
+                break;
+            }
             case URI_SEARCH: {
                 if (       sortOrder != null
                         || selection != null
@@ -351,7 +380,7 @@ public class MmsSmsProvider extends ContentProvider {
 
                 // This code queries the sms and mms tables and returns a unified result set
                 // of text matches.  We query the sms table which is pretty simple.  We also
-                // query the pdu, part and addr table to get the mms result.  Note that we're
+                // query the pdu, part and addr table to get the mms result.  Notet we're
                 // using a UNION so we have to have the same number of result columns from
                 // both queries.
 
@@ -615,7 +644,7 @@ public class MmsSmsProvider extends ContentProvider {
             db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
             cursor = db.rawQuery(THREAD_QUERY, selectionArgs);
         }
-        
+
         if (cursor.getCount() > 1) {
             Log.w(LOG_TAG, "getThreadId: why is cursorCount=" + cursor.getCount());
         }
