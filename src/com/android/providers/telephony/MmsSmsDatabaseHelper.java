@@ -1196,10 +1196,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 null);
         ArrayList<String> filesToDelete = new ArrayList<String>();
         try {
+            db.beginTransaction();
             if (textRows != null) {
-                int partIdColumn = textRows.getColumnIndex(Part._ID);
                 int partDataColumn = textRows.getColumnIndex(Part._DATA);
-                int partTextColumn = textRows.getColumnIndex(Part.TEXT);
 
                 // This code is imperfect in that we can't guarantee that all the
                 // backing files get deleted.  For example if the system aborts after
@@ -1213,8 +1212,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                             byte [] data = new byte[is.available()];
                             is.read(data);
                             EncodedStringValue v = new EncodedStringValue(data);
-                            textRows.updateString(partTextColumn, v.getString());
-                            textRows.updateToNull(partDataColumn);
+                            db.execSQL("UPDATE part SET " + Part._DATA + " = NULL, " +
+                                    Part.TEXT + " = ?", new String[] { v.getString() });
                             is.close();
                             filesToDelete.add(path);
                         } catch (IOException e) {
@@ -1224,8 +1223,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                     }
                 }
             }
+            db.setTransactionSuccessful();
         } finally {
-            textRows.commitUpdates();
+            db.endTransaction();
             for (String pathToDelete : filesToDelete) {
                 try {
                     (new File(pathToDelete)).delete();
