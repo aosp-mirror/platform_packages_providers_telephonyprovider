@@ -309,7 +309,7 @@ public class TelephonyProvider extends ContentProvider
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
         editor.putLong(COLUMN_APN_ID, id != null ? id.longValue() : -1);
-        editor.commit();
+        editor.startCommit();
     }
 
     private long getPreferredApnId() {
