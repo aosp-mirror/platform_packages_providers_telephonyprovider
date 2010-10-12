@@ -482,8 +482,8 @@ public class MmsSmsProvider extends ContentProvider {
                 retVal = db.insert("canonical_addresses",
                         CanonicalAddressesColumns.ADDRESS, contentValues);
 
-                Log.d(LOG_TAG, "getSingleAddressId: insert new canonical_address for " + address +
-                        ", _id=" + retVal);
+                Log.d(LOG_TAG, "getSingleAddressId: insert new canonical_address for " +
+                        /*address*/ "xxxxxx" + ", _id=" + retVal);
 
                 return retVal;
             }
@@ -571,7 +571,7 @@ public class MmsSmsProvider extends ContentProvider {
 
         long result = mOpenHelper.getWritableDatabase().insert("threads", null, values);
         Log.d(LOG_TAG, "insertThread: created new thread_id " + result +
-                " for recipientIds " + recipientIds);
+                " for recipientIds " + /*recipientIds*/ "xxxxxxx");
 
         getContext().getContentResolver().notifyChange(MmsSms.CONTENT_URI, null);
     }
@@ -599,7 +599,8 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         if (Log.isLoggable(LOG_TAG, Log.VERBOSE)) {
-            Log.d(LOG_TAG, "getThreadId: recipientIds (selectionArgs) =" + recipientIds);
+            Log.d(LOG_TAG, "getThreadId: recipientIds (selectionArgs) =" +
+                    /*recipientIds*/ "xxxxxxx");
         }
 
         String[] selectionArgs = new String[] { recipientIds };
@@ -609,7 +610,8 @@ public class MmsSmsProvider extends ContentProvider {
         if (cursor.getCount() == 0) {
             cursor.close();
 
-            Log.d(LOG_TAG, "getThreadId: create new thread_id for recipients " + recipients);
+            Log.d(LOG_TAG, "getThreadId: create new thread_id for recipients " +
+                    /*recipients*/ "xxxxxxxx");
             insertThread(recipientIds, recipients.size());
 
             db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
