@@ -208,7 +208,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static MmsSmsDatabaseHelper mInstance = null;
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 53;
+    static final int DATABASE_VERSION = 54;
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -491,6 +491,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms._ID + " INTEGER PRIMARY KEY," +
                    Mms.THREAD_ID + " INTEGER," +
                    Mms.DATE + " INTEGER," +
+                   Mms.DATE_SENT + " INTEGER DEFAULT 0," +
                    Mms.MESSAGE_BOX + " INTEGER," +
                    Mms.READ + " INTEGER DEFAULT 0," +
                    Mms.MESSAGE_ID + " TEXT," +
@@ -598,6 +599,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "address TEXT," +
                    "person INTEGER," +
                    "date INTEGER," +
+                   "date_sent INTEGER DEFAULT 0," +
                    "protocol INTEGER," +
                    "read INTEGER DEFAULT 0," +
                    "status INTEGER DEFAULT -1," + // a TP-Status value
@@ -1095,6 +1097,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 53:
+            if (currentVersion <= 53) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion54(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1166,19 +1184,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         // Add 'locked' column to pdu table.
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.LOCKED + " INTEGER DEFAULT 0");
-    }
-
-    private void upgradeDatabaseToVersion53(SQLiteDatabase db) {
-        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_read_on_update");
-
-        // Updates threads table whenever a message in pdu is updated.
-        db.execSQL("CREATE TRIGGER pdu_update_thread_read_on_update AFTER" +
-                   "  UPDATE OF " + Mms.READ +
-                   "  ON " + MmsProvider.TABLE_PDU + " " +
-                   PDU_UPDATE_THREAD_CONSTRAINTS +
-                   "BEGIN " +
-                   PDU_UPDATE_THREAD_READ_BODY +
-                   "END;");
     }
 
     private void upgradeDatabaseToVersion46(SQLiteDatabase db) {
@@ -1269,6 +1274,27 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         } catch (Exception ex) {
             Log.e(TAG, "[MmsSmsDb] upgradeDatabaseToVersion51 caught ", ex);
         }
+    }
+
+    private void upgradeDatabaseToVersion53(SQLiteDatabase db) {
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_read_on_update");
+
+        // Updates threads table whenever a message in pdu is updated.
+        db.execSQL("CREATE TRIGGER pdu_update_thread_read_on_update AFTER" +
+                   "  UPDATE OF " + Mms.READ +
+                   "  ON " + MmsProvider.TABLE_PDU + " " +
+                   PDU_UPDATE_THREAD_CONSTRAINTS +
+                   "BEGIN " +
+                   PDU_UPDATE_THREAD_READ_BODY +
+                   "END;");
+    }
+
+    private void upgradeDatabaseToVersion54(SQLiteDatabase db) {
+        // Add 'date_sent' column to sms table.
+        db.execSQL("ALTER TABLE sms ADD COLUMN " + Sms.DATE_SENT + " INTEGER DEFAULT 0");
+
+        // Add 'date_sent' column to pdu table.
+        db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.DATE_SENT + " INTEGER DEFAULT 0");
     }
 
     private void updateThreadsAttachmentColumn(SQLiteDatabase db) {

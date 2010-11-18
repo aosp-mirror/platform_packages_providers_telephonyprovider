@@ -113,7 +113,7 @@ public class MmsSmsProvider extends ContentProvider {
     // These are the columns that appear in both the MMS ("pdu") and
     // SMS ("sms") message tables.
     private static final String[] MMS_SMS_COLUMNS =
-            { BaseColumns._ID, Mms.DATE, Mms.READ, Mms.THREAD_ID, Mms.LOCKED };
+            { BaseColumns._ID, Mms.DATE, Mms.DATE_SENT, Mms.READ, Mms.THREAD_ID, Mms.LOCKED };
 
     // These are the columns that appear only in the MMS message
     // table.
@@ -178,14 +178,14 @@ public class MmsSmsProvider extends ContentProvider {
 
     // Search on the words table but return the rows from the corresponding sms table
     private static final String SMS_QUERY =
-            "SELECT sms._id AS _id,thread_id,address,body,date,index_text,words._id " +
+            "SELECT sms._id AS _id,thread_id,address,body,date,date_sent,index_text,words._id " +
             "FROM sms,words WHERE (words MATCH ? " +
             "AND sms._id=words.source_id AND words.table_to_use=1)";
 
     // Search on the words table but return the rows from the corresponding parts table
     private static final String MMS_QUERY =
             "SELECT pdu._id,thread_id,addr.address,part.text " +
-            "AS body,pdu.date,index_text,words._id " +
+            "AS body,pdu.date,pdu.date_sent,index_text,words._id " +
             "FROM pdu,part,addr,words WHERE ((part.mid=pdu._id) AND " +
             "(addr.msg_id=pdu._id) AND " +
             "(addr.type=" + PduHeaders.TO + ") AND " +
