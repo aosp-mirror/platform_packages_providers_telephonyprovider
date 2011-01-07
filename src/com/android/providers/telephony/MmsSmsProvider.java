@@ -453,12 +453,18 @@ public class MmsSmsProvider extends ContentProvider {
      */
     private long getSingleAddressId(String address) {
         boolean isEmail = Mms.isEmailAddress(address);
+        boolean isPhoneNumber = Mms.isPhoneNumber(address);
+
+        // We lowercase all email addresses, but not addresses that aren't numbers, because
+        // that would incorrectly turn an address such as "My Vodafone" into "my vodafone"
+        // and the thread title would be incorrect when displayed in the UI.
         String refinedAddress = isEmail ? address.toLowerCase() : address;
+
         String selection = "address=?";
         String[] selectionArgs;
         long retVal = -1L;
 
-        if (isEmail) {
+        if (!isPhoneNumber) {
             selectionArgs = new String[] { refinedAddress };
         } else {
             selection += " OR " + String.format("PHONE_NUMBERS_EQUAL(address, ?, %d)",
