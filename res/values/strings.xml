@@ -16,8 +16,16 @@
 
 <resources xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
 
-    <!-- This is the label for the application that stores phone data -->
-    <string name="app_label">Dialer Storage</string>
+    <!-- Official label of the TelephonyProvider, as seen in the "Manage
+         Applications" UI.  This is the version of the label for tablet
+         devices, where the TelephonyProvider stores configuration info
+         about the mobile data network. [CHAR LIMIT=40] -->
+    <string name="app_label" product="tablet">Mobile Network Configuration</string>
+
+    <!-- Official label of the TelephonyProvider, as seen in the "Manage
+         Applications" UI.  The TelephonyProvider stores configuration
+         info about the carrier and cell network, and also provides
+         storage for SMS and MMS messages. [CHAR LIMIT=25] -->
+    <string name="app_label" product="default">Phone/Messaging Storage</string>
 
 </resources>
-
