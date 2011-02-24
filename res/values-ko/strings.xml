@@ -16,6 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <!-- outdated translation 4846406803456361049 -->     <string name="app_label" product="tablet" msgid="9194799012395299737">"다이얼러 저장소"</string>
-    <!-- outdated translation 4846406803456361049 -->     <string name="app_label" product="default" msgid="4282451239358791628">"다이얼러 저장소"</string>
+    <string name="app_label" product="tablet" msgid="9194799012395299737">"모바일 네트워크 구성"</string>
+    <string name="app_label" product="default" msgid="4282451239358791628">"휴대전화/메시지 저장공간"</string>
 </resources>
