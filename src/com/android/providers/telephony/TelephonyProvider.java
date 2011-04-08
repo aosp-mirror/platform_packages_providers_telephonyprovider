@@ -32,7 +32,6 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.Telephony;
-import android.util.Config;
 import android.util.Log;
 import android.util.Xml;
 
@@ -471,7 +470,7 @@ public class TelephonyProvider extends ContentProvider
                     notify = true;
                 }
 
-                if (Config.LOGD) Log.d(TAG, "inserted " + values.toString() + " rowID = " + rowID);
+                if (false) Log.d(TAG, "inserted " + values.toString() + " rowID = " + rowID);
                 break;
             }
 
@@ -486,7 +485,7 @@ public class TelephonyProvider extends ContentProvider
 
                 if (updated > 0)
                 {
-                    if (Config.LOGD) {
+                    if (false) {
                         Log.d(TAG, "Setting numeric '" + numeric + "' to be the current operator");
                     }
                 }

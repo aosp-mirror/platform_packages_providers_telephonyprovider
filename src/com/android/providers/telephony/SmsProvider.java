@@ -37,7 +37,6 @@ import android.provider.Telephony.Threads;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.text.TextUtils;
-import android.util.Config;
 import android.util.Log;
 
 import com.android.common.ArrayListCursor;

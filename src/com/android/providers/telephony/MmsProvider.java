@@ -36,7 +36,6 @@ import android.provider.Telephony.Mms.Addr;
 import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.Mms.Rate;
 import android.text.TextUtils;
-import android.util.Config;
 import android.util.Log;
 
 import com.google.android.mms.pdu.PduHeaders;
@@ -823,7 +822,7 @@ public class MmsProvider extends ContentProvider {
     private final static String VND_ANDROID_MMS = "vnd.android/mms";
     private final static String VND_ANDROID_DIR_MMS = "vnd.android-dir/mms";
     private final static boolean DEBUG = false;
-    private final static boolean LOCAL_LOGV = DEBUG ? Config.LOGD : Config.LOGV;
+    private final static boolean LOCAL_LOGV = false;
 
     private static final int MMS_ALL                      = 0;
     private static final int MMS_ALL_ID                   = 1;
