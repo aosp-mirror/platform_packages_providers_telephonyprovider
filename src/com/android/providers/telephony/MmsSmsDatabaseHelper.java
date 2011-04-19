@@ -209,6 +209,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "mmssms.db";
     static final int DATABASE_VERSION = 54;
+    private static boolean mTriedAutoIncrement = false;
+
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -670,7 +672,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
          * and the same set of recipients.
          */
         db.execSQL("CREATE TABLE threads (" +
-                   Threads._ID + " INTEGER PRIMARY KEY," +
+                   Threads._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                    Threads.DATE + " INTEGER DEFAULT 0," +
                    Threads.MESSAGE_COUNT + " INTEGER DEFAULT 0," +
                    Threads.RECIPIENT_IDS + " TEXT," +
@@ -1295,6 +1297,77 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         // Add 'date_sent' column to pdu table.
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.DATE_SENT + " INTEGER DEFAULT 0");
+    }
+
+    @Override
+    public synchronized SQLiteDatabase getWritableDatabase() {
+        SQLiteDatabase db = super.getWritableDatabase();
+
+        if (!mTriedAutoIncrement) {
+            mTriedAutoIncrement = true;
+            boolean hasAutoIncrement = hasAutoIncrement(db);
+            if (!hasAutoIncrement) {
+                db.beginTransaction();
+                try {
+                    upgradeThreadsTableToAutoIncrement(db);
+                    db.setTransactionSuccessful();
+                } catch (Throwable ex) {
+                    Log.e(TAG, ex.getMessage(), ex);
+                } finally {
+                    db.endTransaction();
+                }
+            }
+        }
+        return db;
+    }
+
+    private boolean hasAutoIncrement(SQLiteDatabase db) {
+        boolean result = false;
+        String query = "SELECT sql FROM sqlite_master WHERE type='table' AND name='threads'";
+        Cursor c = db.rawQuery(query, null);
+        if (c != null) {
+            try {
+                if (c.moveToFirst()) {
+                    String schema = c.getString(0);
+                    result = schema != null ? schema.contains("AUTOINCREMENT") : false;
+                    Log.d(TAG, "[MmsSmsDb] hasAutoIncrement: " + schema + " result: " + result);
+                }
+            } finally {
+                c.close();
+            }
+        }
+        return result;
+    }
+
+    // upgradeThreadsTableToAutoIncrement() is called to add the AUTOINCREMENT keyword to
+    // the threads table. This could fail if the user has a lot of conversations and not enough
+    // storage to make a copy of the threads table. That's ok. This upgrade is optional. It'll
+    // be called again next time the device is rebooted.
+    private void upgradeThreadsTableToAutoIncrement(SQLiteDatabase db) {
+        if (hasAutoIncrement(db)) {
+            Log.d(TAG, "[MmsSmsDb] upgradeThreadsTableToAutoIncrement: already upgraded");
+            return;
+        }
+        Log.d(TAG, "[MmsSmsDb] upgradeThreadsTableToAutoIncrement: upgrading");
+
+        // Make the _id of the threads table autoincrement so we never re-use thread ids
+        // Have to create a new temp threads table. Copy all the info from the old table.
+        // Drop the old table and rename the new table to that of the old.
+        db.execSQL("CREATE TABLE threads_temp (" +
+                Threads._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                Threads.DATE + " INTEGER DEFAULT 0," +
+                Threads.MESSAGE_COUNT + " INTEGER DEFAULT 0," +
+                Threads.RECIPIENT_IDS + " TEXT," +
+                Threads.SNIPPET + " TEXT," +
+                Threads.SNIPPET_CHARSET + " INTEGER DEFAULT 0," +
+                Threads.READ + " INTEGER DEFAULT 1," +
+                Threads.TYPE + " INTEGER DEFAULT 0," +
+                Threads.ERROR + " INTEGER DEFAULT 0," +
+                Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0);");
+
+        db.execSQL("INSERT INTO threads_temp SELECT * from threads;");
+        db.execSQL("DROP TABLE threads;");
+        db.execSQL("ALTER TABLE threads_temp RENAME TO threads;");
     }
 
     private void updateThreadsAttachmentColumn(SQLiteDatabase db) {
