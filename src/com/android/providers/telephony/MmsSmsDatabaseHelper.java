@@ -22,8 +22,11 @@ import java.io.FileInputStream;
 import java.io.File;
 import java.util.ArrayList;
 
+import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -205,15 +208,20 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "     AND part.mid = pdu._id);" +
                         " END";
 
-    private static MmsSmsDatabaseHelper mInstance = null;
+    private static MmsSmsDatabaseHelper sInstance = null;
+    private static boolean sTriedAutoIncrement = false;
+    private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
     static final int DATABASE_VERSION = 54;
-    private static boolean mTriedAutoIncrement = false;
+    private final Context mContext;
+    private LowStorageMonitor mLowStorageMonitor;
 
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+
+        mContext = context;
     }
 
     /**
@@ -221,10 +229,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      * database.
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstance(Context context) {
-        if (mInstance == null) {
-            mInstance = new MmsSmsDatabaseHelper(context);
+        if (sInstance == null) {
+            sInstance = new MmsSmsDatabaseHelper(context);
         }
-        return mInstance;
+        return sInstance;
     }
 
     public static void updateThread(SQLiteDatabase db, long thread_id) {
@@ -1303,16 +1311,44 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     public synchronized SQLiteDatabase getWritableDatabase() {
         SQLiteDatabase db = super.getWritableDatabase();
 
-        if (!mTriedAutoIncrement) {
-            mTriedAutoIncrement = true;
+        if (!sTriedAutoIncrement) {
+            sTriedAutoIncrement = true;
             boolean hasAutoIncrement = hasAutoIncrement(db);
+            Log.d(TAG, "[getWritableDatabase] hasAutoIncrement: " + hasAutoIncrement);
             if (!hasAutoIncrement) {
                 db.beginTransaction();
                 try {
+                    if (false && sFakeLowStorageTest) {
+                        Log.d(TAG, "[getWritableDatabase] mFakeLowStorageTest is true " +
+                                " - fake exception");
+                        throw new Exception("FakeLowStorageTest");
+                    }
                     upgradeThreadsTableToAutoIncrement(db);
                     db.setTransactionSuccessful();
+
+                    if (mLowStorageMonitor != null) {
+                        // We've already updated the database. This receiver is no longer necessary.
+                        Log.d(TAG, "Unregistering mLowStorageMonitor - we've upgraded");
+                        mContext.unregisterReceiver(mLowStorageMonitor);
+                        mLowStorageMonitor = null;
+                    }
                 } catch (Throwable ex) {
-                    Log.e(TAG, ex.getMessage(), ex);
+                    Log.e(TAG, "Failed to add autoIncrement: " + ex.getMessage(), ex);
+
+                    if (sFakeLowStorageTest) {
+                        sFakeLowStorageTest = false;
+                    }
+
+                    // We failed, perhaps because of low storage. Turn on a receiver to watch for
+                    // storage space.
+                    if (mLowStorageMonitor == null) {
+                        Log.d(TAG, "[getWritableDatabase] turning on storage monitor");
+                        mLowStorageMonitor = new LowStorageMonitor();
+                        IntentFilter intentFilter = new IntentFilter();
+                        intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW);
+                        intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK);
+                        mContext.registerReceiver(mLowStorageMonitor, intentFilter);
+                    }
                 } finally {
                     db.endTransaction();
                 }
@@ -1368,6 +1404,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("INSERT INTO threads_temp SELECT * from threads;");
         db.execSQL("DROP TABLE threads;");
         db.execSQL("ALTER TABLE threads_temp RENAME TO threads;");
+    }
+
+    private class LowStorageMonitor extends BroadcastReceiver {
+
+        public LowStorageMonitor() {
+        }
+
+        public void onReceive(Context context, Intent intent) {
+            String action = intent.getAction();
+
+            Log.d(TAG, "[LowStorageMonitor] onReceive intent " + action);
+
+            if (Intent.ACTION_DEVICE_STORAGE_OK.equals(action)) {
+                sTriedAutoIncrement = false;    // try to upgrade on the next getWriteableDatabase
+            }
+        }
     }
 
     private void updateThreadsAttachmentColumn(SQLiteDatabase db) {
