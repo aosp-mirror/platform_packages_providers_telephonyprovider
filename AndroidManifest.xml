@@ -22,6 +22,7 @@
 
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
+                 android:allowBackup="false"
                  android:label="@string/app_label"
                  android:icon="@drawable/ic_launcher_phone">
 
