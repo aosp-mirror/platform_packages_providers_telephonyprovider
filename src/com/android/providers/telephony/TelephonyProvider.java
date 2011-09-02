@@ -54,7 +54,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String DATABASE_NAME = "telephony.db";
     private static final boolean DBG = true;
 
-    private static final int DATABASE_VERSION = 6 << 16;
+    private static final int DATABASE_VERSION = 7 << 16;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
     private static final int URL_ID = 3;
@@ -141,7 +141,9 @@ public class TelephonyProvider extends ContentProvider
                     "type TEXT," +
                     "current INTEGER," +
                     "protocol TEXT," +
-                    "roaming_protocol TEXT);");
+                    "roaming_protocol TEXT," +
+                    "carrier_enabled BOOLEAN," +
+                    "bearer INTEGER);");
 
             initDatabase(db);
         }
@@ -218,6 +220,14 @@ public class TelephonyProvider extends ContentProvider
                         " ADD COLUMN roaming_protocol TEXT DEFAULT IP;");
                 oldVersion = 6 << 16 | 6;
             }
+            if (oldVersion < (7 << 16 | 6)) {
+                // Add protcol fields to the APN. The XML file does not change.
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
+                        " ADD COLUMN carrier_enabled BOOLEAN DEFAULT 1;");
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
+                        " ADD COLUMN bearer INTEGER DEFAULT 0;");
+                oldVersion = 7 << 16 | 6;
+            }
         }
 
         /**
@@ -284,6 +294,15 @@ public class TelephonyProvider extends ContentProvider
                 map.put(Telephony.Carriers.ROAMING_PROTOCOL, roamingProtocol);
             }
 
+            String carrierEnabled = parser.getAttributeValue(null, "carrier_enabled");
+            if (carrierEnabled != null) {
+                map.put(Telephony.Carriers.CARRIER_ENABLED, Boolean.parseBoolean(carrierEnabled));
+            }
+
+            String bearer = parser.getAttributeValue(null, "bearer");
+            if (bearer != null) {
+                map.put(Telephony.Carriers.BEARER, Integer.parseInt(bearer));
+            }
             return map;
         }
 
@@ -324,6 +343,12 @@ public class TelephonyProvider extends ContentProvider
             }
             if (row.containsKey(Telephony.Carriers.ROAMING_PROTOCOL) == false) {
                 row.put(Telephony.Carriers.ROAMING_PROTOCOL, "IP");
+            }
+            if (row.containsKey(Telephony.Carriers.CARRIER_ENABLED) == false) {
+                row.put(Telephony.Carriers.CARRIER_ENABLED, true);
+            }
+            if (row.containsKey(Telephony.Carriers.BEARER) == false) {
+                row.put(Telephony.Carriers.BEARER, 0);
             }
             db.insert(CARRIERS_TABLE, null, row);
         }
@@ -512,7 +537,12 @@ public class TelephonyProvider extends ContentProvider
                 if (!values.containsKey(Telephony.Carriers.ROAMING_PROTOCOL)) {
                     values.put(Telephony.Carriers.ROAMING_PROTOCOL, "IP");
                 }
-
+                if (!values.containsKey(Telephony.Carriers.CARRIER_ENABLED)) {
+                    values.put(Telephony.Carriers.CARRIER_ENABLED, true);
+                }
+                if (!values.containsKey(Telephony.Carriers.BEARER)) {
+                    values.put(Telephony.Carriers.BEARER, 0);
+                }
 
                 long rowID = db.insert(CARRIERS_TABLE, null, values);
                 if (rowID > 0)
