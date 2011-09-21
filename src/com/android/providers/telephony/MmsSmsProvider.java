@@ -177,7 +177,7 @@ public class MmsSmsProvider extends ContentProvider {
     // Search on the words table but return the rows from the corresponding sms table
     private static final String SMS_QUERY =
             "SELECT sms._id AS _id,thread_id,address,body,date,date_sent,index_text,words._id " +
-            "FROM sms,words WHERE (words MATCH ? " +
+            "FROM sms,words WHERE (index_text MATCH ? " +
             "AND sms._id=words.source_id AND words.table_to_use=1)";
 
     // Search on the words table but return the rows from the corresponding parts table
@@ -188,7 +188,7 @@ public class MmsSmsProvider extends ContentProvider {
             "(addr.msg_id=pdu._id) AND " +
             "(addr.type=" + PduHeaders.TO + ") AND " +
             "(part.ct='text/plain') AND " +
-            "(words MATCH ?) AND " +
+            "(index_text MATCH ?) AND " +
             "(part._id = words.source_id) AND " +
             "(words.table_to_use=2))";
 
@@ -349,7 +349,7 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
             case URI_SEARCH_SUGGEST: {
                 String searchString = uri.getQueryParameter("pattern");
-                String query = String.format("SELECT _id, index_text, source_id, table_to_use, offsets(words) FROM words WHERE words MATCH '%s*' LIMIT 50;", searchString);
+                String query = String.format("SELECT _id, index_text, source_id, table_to_use, offsets(words) FROM words WHERE index_text MATCH '%s*' LIMIT 50;", searchString);
                 if (       sortOrder != null
                         || selection != null
                         || selectionArgs != null
