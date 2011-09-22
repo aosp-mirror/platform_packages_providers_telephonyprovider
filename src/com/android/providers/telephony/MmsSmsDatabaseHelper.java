@@ -213,7 +213,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 54;
+    static final int DATABASE_VERSION = 55;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -760,31 +760,37 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    UPDATE_THREAD_SNIPPET_SNIPPET_CS_ON_DELETE +
                    "END;");
 
-        // When the last message in a thread is deleted, these
-        // triggers ensure that the entry for its thread ID is removed
-        // from the threads table.
-        db.execSQL("CREATE TRIGGER delete_obsolete_threads_pdu " +
-                   "AFTER DELETE ON pdu " +
-                   "BEGIN " +
-                   "  DELETE FROM threads " +
-                   "  WHERE " +
-                   "    _id = old.thread_id " +
-                   "    AND _id NOT IN " +
-                   "    (SELECT thread_id FROM sms " +
-                   "     UNION SELECT thread_id from pdu); " +
-                   "END;");
+        // As of DATABASE_VERSION 55, we've removed these triggers that delete empty threads.
+        // These triggers interfere with saving drafts on brand new threads. Instead of
+        // triggers cleaning up empty threads, the empty threads should be cleaned up by
+        // an explicit call to delete with Threads.OBSOLETE_THREADS_URI.
 
-        db.execSQL("CREATE TRIGGER delete_obsolete_threads_when_update_pdu " +
-                   "AFTER UPDATE OF " + Mms.THREAD_ID + " ON pdu " +
-                   "WHEN old." + Mms.THREAD_ID + " != new." + Mms.THREAD_ID + " " +
-                   "BEGIN " +
-                   "  DELETE FROM threads " +
-                   "  WHERE " +
-                   "    _id = old.thread_id " +
-                   "    AND _id NOT IN " +
-                   "    (SELECT thread_id FROM sms " +
-                   "     UNION SELECT thread_id from pdu); " +
-                   "END;");
+//        // When the last message in a thread is deleted, these
+//        // triggers ensure that the entry for its thread ID is removed
+//        // from the threads table.
+//        db.execSQL("CREATE TRIGGER delete_obsolete_threads_pdu " +
+//                   "AFTER DELETE ON pdu " +
+//                   "BEGIN " +
+//                   "  DELETE FROM threads " +
+//                   "  WHERE " +
+//                   "    _id = old.thread_id " +
+//                   "    AND _id NOT IN " +
+//                   "    (SELECT thread_id FROM sms " +
+//                   "     UNION SELECT thread_id from pdu); " +
+//                   "END;");
+//
+//        db.execSQL("CREATE TRIGGER delete_obsolete_threads_when_update_pdu " +
+//                   "AFTER UPDATE OF " + Mms.THREAD_ID + " ON pdu " +
+//                   "WHEN old." + Mms.THREAD_ID + " != new." + Mms.THREAD_ID + " " +
+//                   "BEGIN " +
+//                   "  DELETE FROM threads " +
+//                   "  WHERE " +
+//                   "    _id = old.thread_id " +
+//                   "    AND _id NOT IN " +
+//                   "    (SELECT thread_id FROM sms " +
+//                   "     UNION SELECT thread_id from pdu); " +
+//                   "END;");
+
         // Insert pending status for M-Notification.ind or M-ReadRec.ind
         // when they are inserted into Inbox/Outbox.
         db.execSQL("CREATE TRIGGER insert_mms_pending_on_insert " +
@@ -1123,6 +1129,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 54:
+            if (currentVersion <= 54) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion55(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1305,6 +1327,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         // Add 'date_sent' column to pdu table.
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.DATE_SENT + " INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion55(SQLiteDatabase db) {
+        // Drop removed triggers
+        db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_pdu");
+        db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_when_update_pdu");
     }
 
     @Override
