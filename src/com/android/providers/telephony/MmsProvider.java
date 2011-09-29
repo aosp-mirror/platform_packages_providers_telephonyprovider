@@ -718,36 +718,9 @@ public class MmsProvider extends ContentProvider {
         return count;
     }
 
-    private ParcelFileDescriptor getTempStoreFd() {
-        String fileName = Mms.ScrapSpace.SCRAP_FILE_PATH;
-        ParcelFileDescriptor pfd = null;
-
-        try {
-            File file = new File(fileName);
-
-            // make sure the path is valid and directories created for this file.
-            File parentFile = file.getParentFile();
-            if (!parentFile.exists() && !parentFile.mkdirs()) {
-                Log.e(TAG, "[MmsProvider] getTempStoreFd: " + parentFile.getPath() +
-                        "does not exist!");
-                return null;
-            }
-
-            pfd = ParcelFileDescriptor.open(file,
-                    ParcelFileDescriptor.MODE_READ_WRITE
-                            | android.os.ParcelFileDescriptor.MODE_CREATE);
-        } catch (Exception ex) {
-            Log.e(TAG, "getTempStoreFd: error creating pfd for " + fileName, ex);
-        }
-
-        return pfd;
-    }
-
     @Override
     public ParcelFileDescriptor openFile(Uri uri, String mode) throws FileNotFoundException {
-        // if the url is "content://mms/takePictureTempStore", then it means the requester
-        // wants a file descriptor to write image data to.
-
+        // TODO do we even need this anymore?
         ParcelFileDescriptor fd;
         int match = sURLMatcher.match(uri);
 
@@ -756,10 +729,6 @@ public class MmsProvider extends ContentProvider {
         }
 
         switch (match) {
-            case MMS_SCRAP_SPACE:
-                fd = getTempStoreFd();
-                break;
-
             default:
                 fd = openFileHelper(uri, mode);
         }
@@ -844,7 +813,6 @@ public class MmsProvider extends ContentProvider {
     private static final int MMS_DRM_STORAGE              = 17;
     private static final int MMS_DRM_STORAGE_ID           = 18;
     private static final int MMS_THREADS                  = 19;
-    private static final int MMS_SCRAP_SPACE              = 20;
 
     private static final UriMatcher
             sURLMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -870,7 +838,6 @@ public class MmsProvider extends ContentProvider {
         sURLMatcher.addURI("mms", "drm",        MMS_DRM_STORAGE);
         sURLMatcher.addURI("mms", "drm/#",      MMS_DRM_STORAGE_ID);
         sURLMatcher.addURI("mms", "threads",    MMS_THREADS);
-        sURLMatcher.addURI("mms", "scrapSpace", MMS_SCRAP_SPACE);
     }
 
     private SQLiteOpenHelper mOpenHelper;
