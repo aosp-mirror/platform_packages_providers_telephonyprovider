@@ -349,7 +349,11 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
             case URI_SEARCH_SUGGEST: {
                 String searchString = uri.getQueryParameter("pattern");
-                String query = String.format("SELECT _id, index_text, source_id, table_to_use, offsets(words) FROM words WHERE index_text MATCH '%s*' LIMIT 50;", searchString);
+
+                // find the words which match the pattern using the snippet function.  The
+                // snippet function parameters mainly describe how to format the result.
+                // See http://www.sqlite.org/fts3.html#section_4_2 for details.
+                String query = String.format("SELECT snippet(words, '', ' ', '', 1, 1) as snippet FROM words WHERE index_text MATCH '%s*' ORDER BY snippet LIMIT 50;", searchString);
                 if (       sortOrder != null
                         || selection != null
                         || selectionArgs != null
