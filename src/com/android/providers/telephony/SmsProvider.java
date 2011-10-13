@@ -23,6 +23,7 @@ import android.content.UriMatcher;
 
 import android.database.Cursor;
 import android.database.DatabaseUtils;
+import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -38,8 +39,6 @@ import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.text.TextUtils;
 import android.util.Log;
-
-import com.android.common.ArrayListCursor;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -77,7 +76,8 @@ public class SmsProvider extends ContentProvider {
         "transport_type",               // Always "sms".
         "type",                         // Always MESSAGE_TYPE_ALL.
         "locked",                       // Always 0 (false).
-        "error_code"                    // Always 0
+        "error_code",                   // Always 0
+        "_id"
     };
 
     @Override
@@ -229,24 +229,24 @@ public class SmsProvider extends ContentProvider {
         return ret;
     }
 
-    private ArrayList<String> convertIccToSms(SmsMessage message) {
-        ArrayList result = new ArrayList();
-
+    private Object[] convertIccToSms(SmsMessage message, int id) {
         // N.B.: These calls must appear in the same order as the
         // columns appear in ICC_COLUMNS.
-        result.add(message.getServiceCenterAddress());
-        result.add(message.getDisplayOriginatingAddress());
-        result.add(String.valueOf(message.getMessageClass()));
-        result.add(message.getDisplayMessageBody());
-        result.add(message.getTimestampMillis());
-        result.add(Sms.STATUS_NONE);
-        result.add(message.getIndexOnIcc());
-        result.add(message.isStatusReportMessage());
-        result.add("sms");
-        result.add(TextBasedSmsColumns.MESSAGE_TYPE_ALL);
-        result.add(0);      // locked
-        result.add(0);      // error_code
-        return result;
+        Object[] row = new Object[13];
+        row[0] = message.getServiceCenterAddress();
+        row[1] = message.getDisplayOriginatingAddress();
+        row[2] = String.valueOf(message.getMessageClass());
+        row[3] = message.getDisplayMessageBody();
+        row[4] = message.getTimestampMillis();
+        row[5] = Sms.STATUS_NONE;
+        row[6] = message.getIndexOnIcc();
+        row[7] = message.isStatusReportMessage();
+        row[8] = "sms";
+        row[9] = TextBasedSmsColumns.MESSAGE_TYPE_ALL;
+        row[10] = 0;      // locked
+        row[11] = 0;      // error_code
+        row[12] = id;
+        return row;
     }
 
     /**
@@ -257,16 +257,15 @@ public class SmsProvider extends ContentProvider {
             int messageIndex = Integer.parseInt(messageIndexString);
             SmsManager smsManager = SmsManager.getDefault();
             ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromIcc();
-            ArrayList<ArrayList> singleRow = new ArrayList<ArrayList>();
 
             SmsMessage message = messages.get(messageIndex);
             if (message == null) {
                 throw new IllegalArgumentException(
                         "Message not retrieved. ID: " + messageIndexString);
             }
-            singleRow.add(convertIccToSms(message));
-            return withIccNotificationUri(
-                    new ArrayListCursor(ICC_COLUMNS, singleRow));
+            MatrixCursor cursor = new MatrixCursor(ICC_COLUMNS, 1);
+            cursor.addRow(convertIccToSms(message, 0));
+            return withIccNotificationUri(cursor);
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException(
                     "Bad SMS ICC ID: " + messageIndexString);
@@ -279,15 +278,16 @@ public class SmsProvider extends ContentProvider {
     private Cursor getAllMessagesFromIcc() {
         SmsManager smsManager = SmsManager.getDefault();
         ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromIcc();
-        ArrayList<ArrayList> rows = new ArrayList<ArrayList>();
 
-        for (int count = messages.size(), i = 0; i < count; i++) {
+        final int count = messages.size();
+        MatrixCursor cursor = new MatrixCursor(ICC_COLUMNS, count);
+        for (int i = 0; i < count; i++) {
             SmsMessage message = messages.get(i);
             if (message != null) {
-                rows.add(convertIccToSms(message));
+                cursor.addRow(convertIccToSms(message, 0));
             }
         }
-        return withIccNotificationUri(new ArrayListCursor(ICC_COLUMNS, rows));
+        return withIccNotificationUri(cursor);
     }
 
     private Cursor withIccNotificationUri(Cursor cursor) {
