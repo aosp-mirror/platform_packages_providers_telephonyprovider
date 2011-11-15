@@ -284,7 +284,7 @@ public class SmsProvider extends ContentProvider {
         for (int i = 0; i < count; i++) {
             SmsMessage message = messages.get(i);
             if (message != null) {
-                cursor.addRow(convertIccToSms(message, 0));
+                cursor.addRow(convertIccToSms(message, i));
             }
         }
         return withIccNotificationUri(cursor);
