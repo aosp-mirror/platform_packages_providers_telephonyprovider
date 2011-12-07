@@ -673,10 +673,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
          * canonical representation.  If the same address or an
          * equivalent address (as determined by our Sqlite
          * PHONE_NUMBERS_EQUAL extension) is seen later, this same ID
-         * will be used.
+         * will be used. The _id is created with AUTOINCREMENT so it
+         * will never be reused again if a recipient is deleted.
          */
         db.execSQL("CREATE TABLE canonical_addresses (" +
-                   "_id INTEGER PRIMARY KEY," +
+                   "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
                    "address TEXT);");
 
         /**
@@ -1349,9 +1350,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         if (!sTriedAutoIncrement) {
             sTriedAutoIncrement = true;
-            boolean hasAutoIncrement = hasAutoIncrement(db);
-            Log.d(TAG, "[getWritableDatabase] hasAutoIncrement: " + hasAutoIncrement);
-            if (!hasAutoIncrement) {
+            boolean hasAutoIncrementThreads = hasAutoIncrement(db, "threads");
+            boolean hasAutoIncrementAddresses = hasAutoIncrement(db, "canonical_addresses");
+            Log.d(TAG, "[getWritableDatabase] hasAutoIncrementThreads: " + hasAutoIncrementThreads +
+                    " hasAutoIncrementAddresses: " + hasAutoIncrementAddresses);
+            boolean autoIncrementThreadsSuccess = true;
+            boolean autoIncrementAddressesSuccess = true;
+            if (!hasAutoIncrementThreads) {
                 db.beginTransaction();
                 try {
                     if (false && sFakeLowStorageTest) {
@@ -1359,50 +1364,73 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                                 " - fake exception");
                         throw new Exception("FakeLowStorageTest");
                     }
-                    upgradeThreadsTableToAutoIncrement(db);
+                    upgradeThreadsTableToAutoIncrement(db);     // a no-op if already upgraded
                     db.setTransactionSuccessful();
-
-                    if (mLowStorageMonitor != null) {
-                        // We've already updated the database. This receiver is no longer necessary.
-                        Log.d(TAG, "Unregistering mLowStorageMonitor - we've upgraded");
-                        mContext.unregisterReceiver(mLowStorageMonitor);
-                        mLowStorageMonitor = null;
-                    }
                 } catch (Throwable ex) {
-                    Log.e(TAG, "Failed to add autoIncrement: " + ex.getMessage(), ex);
-
-                    if (sFakeLowStorageTest) {
-                        sFakeLowStorageTest = false;
-                    }
-
-                    // We failed, perhaps because of low storage. Turn on a receiver to watch for
-                    // storage space.
-                    if (mLowStorageMonitor == null) {
-                        Log.d(TAG, "[getWritableDatabase] turning on storage monitor");
-                        mLowStorageMonitor = new LowStorageMonitor();
-                        IntentFilter intentFilter = new IntentFilter();
-                        intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW);
-                        intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK);
-                        mContext.registerReceiver(mLowStorageMonitor, intentFilter);
-                    }
+                    Log.e(TAG, "Failed to add autoIncrement to threads;: " + ex.getMessage(), ex);
+                    autoIncrementThreadsSuccess = false;
                 } finally {
                     db.endTransaction();
+                }
+            }
+            if (!hasAutoIncrementAddresses) {
+                db.beginTransaction();
+                try {
+                    if (false && sFakeLowStorageTest) {
+                        Log.d(TAG, "[getWritableDatabase] mFakeLowStorageTest is true " +
+                        " - fake exception");
+                        throw new Exception("FakeLowStorageTest");
+                    }
+                    upgradeAddressTableToAutoIncrement(db);     // a no-op if already upgraded
+                    db.setTransactionSuccessful();
+                } catch (Throwable ex) {
+                    Log.e(TAG, "Failed to add autoIncrement to canonical_addresses: " +
+                            ex.getMessage(), ex);
+                    autoIncrementAddressesSuccess = false;
+                } finally {
+                    db.endTransaction();
+                }
+            }
+            if (autoIncrementThreadsSuccess && autoIncrementAddressesSuccess) {
+                if (mLowStorageMonitor != null) {
+                    // We've already updated the database. This receiver is no longer necessary.
+                    Log.d(TAG, "Unregistering mLowStorageMonitor - we've upgraded");
+                    mContext.unregisterReceiver(mLowStorageMonitor);
+                    mLowStorageMonitor = null;
+                }
+            } else {
+                if (sFakeLowStorageTest) {
+                    sFakeLowStorageTest = false;
+                }
+
+                // We failed, perhaps because of low storage. Turn on a receiver to watch for
+                // storage space.
+                if (mLowStorageMonitor == null) {
+                    Log.d(TAG, "[getWritableDatabase] turning on storage monitor");
+                    mLowStorageMonitor = new LowStorageMonitor();
+                    IntentFilter intentFilter = new IntentFilter();
+                    intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_LOW);
+                    intentFilter.addAction(Intent.ACTION_DEVICE_STORAGE_OK);
+                    mContext.registerReceiver(mLowStorageMonitor, intentFilter);
                 }
             }
         }
         return db;
     }
 
-    private boolean hasAutoIncrement(SQLiteDatabase db) {
+    // Determine whether a particular table has AUTOINCREMENT in its schema.
+    private boolean hasAutoIncrement(SQLiteDatabase db, String tableName) {
         boolean result = false;
-        String query = "SELECT sql FROM sqlite_master WHERE type='table' AND name='threads'";
+        String query = "SELECT sql FROM sqlite_master WHERE type='table' AND name='" +
+                        tableName + "'";
         Cursor c = db.rawQuery(query, null);
         if (c != null) {
             try {
                 if (c.moveToFirst()) {
                     String schema = c.getString(0);
                     result = schema != null ? schema.contains("AUTOINCREMENT") : false;
-                    Log.d(TAG, "[MmsSmsDb] hasAutoIncrement: " + schema + " result: " + result);
+                    Log.d(TAG, "[MmsSmsDb] tableName: " + tableName + " hasAutoIncrement: " +
+                            schema + " result: " + result);
                 }
             } finally {
                 c.close();
@@ -1416,7 +1444,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // storage to make a copy of the threads table. That's ok. This upgrade is optional. It'll
     // be called again next time the device is rebooted.
     private void upgradeThreadsTableToAutoIncrement(SQLiteDatabase db) {
-        if (hasAutoIncrement(db)) {
+        if (hasAutoIncrement(db, "threads")) {
             Log.d(TAG, "[MmsSmsDb] upgradeThreadsTableToAutoIncrement: already upgraded");
             return;
         }
@@ -1440,6 +1468,28 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("INSERT INTO threads_temp SELECT * from threads;");
         db.execSQL("DROP TABLE threads;");
         db.execSQL("ALTER TABLE threads_temp RENAME TO threads;");
+    }
+
+    // upgradeAddressTableToAutoIncrement() is called to add the AUTOINCREMENT keyword to
+    // the canonical_addresses table. This could fail if the user has a lot of people they've
+    // messaged with and not enough storage to make a copy of the canonical_addresses table.
+    // That's ok. This upgrade is optional. It'll be called again next time the device is rebooted.
+    private void upgradeAddressTableToAutoIncrement(SQLiteDatabase db) {
+        if (hasAutoIncrement(db, "canonical_addresses")) {
+            Log.d(TAG, "[MmsSmsDb] upgradeAddressTableToAutoIncrement: already upgraded");
+            return;
+        }
+        Log.d(TAG, "[MmsSmsDb] upgradeAddressTableToAutoIncrement: upgrading");
+
+        // Make the _id of the canonical_addresses table autoincrement so we never re-use ids
+        // Have to create a new temp canonical_addresses table. Copy all the info from the old
+        // table. Drop the old table and rename the new table to that of the old.
+        db.execSQL("CREATE TABLE canonical_addresses_temp (_id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                "address TEXT);");
+
+        db.execSQL("INSERT INTO canonical_addresses_temp SELECT * from canonical_addresses;");
+        db.execSQL("DROP TABLE canonical_addresses;");
+        db.execSQL("ALTER TABLE canonical_addresses_temp RENAME TO canonical_addresses;");
     }
 
     private class LowStorageMonitor extends BroadcastReceiver {
