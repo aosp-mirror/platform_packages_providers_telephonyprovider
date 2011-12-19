@@ -21,6 +21,8 @@ import java.io.InputStream;
 import java.io.FileInputStream;
 import java.io.File;
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
@@ -235,6 +237,51 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         return sInstance;
     }
 
+    /**
+     * Look through all the recipientIds referenced by the threads and then delete any
+     * unreferenced rows from the canonical_addresses table.
+     */
+    private static void removeUnferencedCanonicalAddresses(SQLiteDatabase db) {
+        Cursor c = db.query("threads", new String[] { "recipient_ids" },
+                null, null, null, null, null);
+        if (c != null) {
+            try {
+                if (c.getCount() == 0) {
+                    // no threads, delete all addresses
+                    int rows = db.delete("canonical_addresses", null, null);
+                } else {
+                    // Find all the referenced recipient_ids from the threads. recipientIds is
+                    // a space-separated list of recipient ids: "1 14 21"
+                    HashSet<Integer> recipientIds = new HashSet<Integer>();
+                    while (c.moveToNext()) {
+                        String[] recips = c.getString(0).split(" ");
+                        for (String recip : recips) {
+                            try {
+                                int recipientId = Integer.parseInt(recip);
+                                recipientIds.add(recipientId);
+                            } catch (Exception e) {
+                            }
+                        }
+                    }
+                    // Now build a selection string of all the unique recipient ids
+                    StringBuilder sb = new StringBuilder();
+                    Iterator<Integer> iter = recipientIds.iterator();
+                    while (iter.hasNext()) {
+                        sb.append("_id != " + iter.next());
+                        if (iter.hasNext()) {
+                            sb.append(" AND ");
+                        }
+                    }
+                    if (sb.length() > 0) {
+                        int rows = db.delete("canonical_addresses", sb.toString(), null);
+                    }
+                }
+            } finally {
+                c.close();
+            }
+        }
+    }
+
     public static void updateThread(SQLiteDatabase db, long thread_id) {
         if (thread_id < 0) {
             updateAllThreads(db, null, null);
@@ -251,8 +298,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                   new String[] { String.valueOf(thread_id) });
         if (rows > 0) {
             // If this deleted a row, let's remove orphaned canonical_addresses and get outta here
-            db.delete("canonical_addresses",
-                    "_id NOT IN (SELECT DISTINCT recipient_ids FROM threads)", null);
+            removeUnferencedCanonicalAddresses(db);
             return;
         }
         // Update the message count in the threads table as the sum
@@ -354,8 +400,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 "UNION SELECT DISTINCT thread_id FROM pdu)", null);
 
         // remove orphaned canonical_addresses
-        db.delete("canonical_addresses",
-                "_id NOT IN (SELECT DISTINCT recipient_ids FROM threads)", null);
+        removeUnferencedCanonicalAddresses(db);
     }
 
     public static int deleteOneSms(SQLiteDatabase db, int message_id) {
