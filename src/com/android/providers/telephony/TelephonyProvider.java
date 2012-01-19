@@ -60,6 +60,7 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_ID = 3;
     private static final int URL_RESTOREAPN = 4;
     private static final int URL_PREFERAPN = 5;
+    private static final int URL_PREFERAPN_NO_UPDATE = 6;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -81,6 +82,7 @@ public class TelephonyProvider extends ContentProvider
         s_urlMatcher.addURI("telephony", "carriers/#", URL_ID);
         s_urlMatcher.addURI("telephony", "carriers/restore", URL_RESTOREAPN);
         s_urlMatcher.addURI("telephony", "carriers/preferapn", URL_PREFERAPN);
+        s_urlMatcher.addURI("telephony", "carriers/preferapn_no_update", URL_PREFERAPN_NO_UPDATE);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put("current", (Long) null);
@@ -444,7 +446,8 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
-            case URL_PREFERAPN: {
+            case URL_PREFERAPN:
+            case URL_PREFERAPN_NO_UPDATE: {
                 qb.appendWhere("_id = " + getPreferredApnId());
                 break;
             }
@@ -471,6 +474,7 @@ public class TelephonyProvider extends ContentProvider
             return "vnd.android.cursor.item/telephony-carrier";
 
         case URL_PREFERAPN:
+        case URL_PREFERAPN_NO_UPDATE:
             return "vnd.android.cursor.item/telephony-carrier";
 
         default:
@@ -578,6 +582,7 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_PREFERAPN:
+            case URL_PREFERAPN_NO_UPDATE:
             {
                 if (initialValues != null) {
                     if(initialValues.containsKey(COLUMN_APN_ID)) {
@@ -598,7 +603,7 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public int delete(Uri url, String where, String[] whereArgs)
     {
-        int count;
+        int count = 0;
 
         checkPermission();
 
@@ -632,9 +637,10 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_PREFERAPN:
+            case URL_PREFERAPN_NO_UPDATE:
             {
                 setPreferredApnId((long)-1);
-                count = 1;
+                if (match == URL_PREFERAPN) count = 1;
                 break;
             }
 
@@ -685,11 +691,12 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_PREFERAPN:
+            case URL_PREFERAPN_NO_UPDATE:
             {
                 if (values != null) {
                     if (values.containsKey(COLUMN_APN_ID)) {
                         setPreferredApnId(values.getAsLong(COLUMN_APN_ID));
-                        count = 1;
+                        if (match == URL_PREFERAPN) count = 1;
                     }
                 }
                 break;
