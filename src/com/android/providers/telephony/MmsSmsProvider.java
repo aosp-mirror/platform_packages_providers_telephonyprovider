@@ -1173,7 +1173,7 @@ public class MmsSmsProvider extends ContentProvider {
                         "UNION SELECT DISTINCT thread_id FROM pdu)", null);
                 break;
             default:
-                throw new UnsupportedOperationException(NO_DELETES_INSERTS_OR_UPDATES);
+                throw new UnsupportedOperationException(NO_DELETES_INSERTS_OR_UPDATES + uri);
         }
 
         if (affectedRows > 0) {
@@ -1197,7 +1197,12 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        throw new UnsupportedOperationException(NO_DELETES_INSERTS_OR_UPDATES);
+        if (URI_MATCHER.match(uri) == URI_PENDING_MSG) {
+            SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+            long rowId = db.insert(TABLE_PENDING_MSG, null, values);
+            return Uri.parse(uri + "/" + rowId);
+        }
+        throw new UnsupportedOperationException(NO_DELETES_INSERTS_OR_UPDATES + uri);
     }
 
     @Override
@@ -1227,7 +1232,7 @@ public class MmsSmsProvider extends ContentProvider {
 
             default:
                 throw new UnsupportedOperationException(
-                        NO_DELETES_INSERTS_OR_UPDATES);
+                        NO_DELETES_INSERTS_OR_UPDATES + uri);
         }
 
         if (affectedRows > 0) {
