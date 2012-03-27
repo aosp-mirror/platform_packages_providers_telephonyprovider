@@ -26,6 +26,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.FileUtils;
 import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
@@ -38,7 +39,9 @@ import android.provider.Telephony.Mms.Rate;
 import android.text.TextUtils;
 import android.util.Log;
 
+
 import com.google.android.mms.pdu.PduHeaders;
+import com.google.android.mms.util.DownloadDrmHelper;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -56,6 +59,7 @@ public class MmsProvider extends ContentProvider {
     static final String TABLE_RATE = "rate";
     static final String TABLE_DRM  = "drm";
     static final String TABLE_WORDS = "words";
+
 
     @Override
     public boolean onCreate() {
@@ -381,13 +385,33 @@ public class MmsProvider extends ContentProvider {
 
             // text/plain and app application/smil store their "data" inline in the
             // table so there's no need to create the file
-            boolean plainText = "text/plain".equals(contentType);
-            boolean smilText = "application/smil".equals(contentType);
+            boolean plainText = false;
+            boolean smilText = false;
+            if ("text/plain".equals(contentType)) {
+                plainText = true;
+            } else if ("application/smil".equals(contentType)) {
+                smilText = true;
+            }
             if (!plainText && !smilText) {
+                // Use the filename if possible, otherwise use the current time as the name.
+                String contentLocation = values.getAsString("cl");
+                if (!TextUtils.isEmpty(contentLocation)) {
+                    File f = new File(contentLocation);
+                    contentLocation = "_" + f.getName();
+                } else {
+                    contentLocation = "";
+                }
+
                 // Generate the '_data' field of the part with default
                 // permission settings.
                 String path = getContext().getDir("parts", 0).getPath()
-                + "/PART_" + System.currentTimeMillis();
+                        + "/PART_" + System.currentTimeMillis() + contentLocation;
+
+                if (DownloadDrmHelper.isDrmConvertNeeded(contentType)) {
+                    // Adds the .fl extension to the filename if contentType is
+                    // "application/vnd.oma.drm.message"
+                    path = DownloadDrmHelper.modifyDrmFwLockFileExtension(path);
+                }
 
                 finalValues.put(Part._DATA, path);
 
@@ -397,6 +421,13 @@ public class MmsProvider extends ContentProvider {
                         if (!partFile.createNewFile()) {
                             throw new IllegalStateException(
                                     "Unable to create new partFile: " + path);
+                        }
+                        // Give everyone rw permission until we encrypt the file
+                        // (in PduPersister.persistData). Once the file is encrypted, the
+                        // permissions will be set to 0644.
+                        int result = FileUtils.setPermissions(path, 0666, -1, -1);
+                        if (LOCAL_LOGV) {
+                            Log.d(TAG, "MmsProvider.insert setPermissions result: " + result);
                         }
                     } catch (IOException e) {
                         Log.e(TAG, "createNewFile", e);
@@ -673,10 +704,23 @@ public class MmsProvider extends ContentProvider {
                 notify = true;
                 table = TABLE_PDU;
                 break;
+
             case MMS_MSG_PART:
             case MMS_PART_ID:
                 table = TABLE_PART;
                 break;
+
+            case MMS_PART_RESET_FILE_PERMISSION:
+                String path = getContext().getDir("parts", 0).getPath() + '/' +
+                        uri.getPathSegments().get(1);
+                // Reset the file permission back to read for everyone but me.
+                int result = FileUtils.setPermissions(path, 0644, -1, -1);
+                if (LOCAL_LOGV) {
+                    Log.d(TAG, "MmsProvider.update setPermissions result: " + result +
+                            " for path: " + path);
+                }
+                return 0;
+
             default:
                 Log.w(TAG, "Update operation for '" + uri + "' not implemented.");
                 return 0;
@@ -813,6 +857,7 @@ public class MmsProvider extends ContentProvider {
     private static final int MMS_DRM_STORAGE              = 17;
     private static final int MMS_DRM_STORAGE_ID           = 18;
     private static final int MMS_THREADS                  = 19;
+    private static final int MMS_PART_RESET_FILE_PERMISSION = 20;
 
     private static final UriMatcher
             sURLMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -838,6 +883,7 @@ public class MmsProvider extends ContentProvider {
         sURLMatcher.addURI("mms", "drm",        MMS_DRM_STORAGE);
         sURLMatcher.addURI("mms", "drm/#",      MMS_DRM_STORAGE_ID);
         sURLMatcher.addURI("mms", "threads",    MMS_THREADS);
+        sURLMatcher.addURI("mms", "resetFilePerm/*",    MMS_PART_RESET_FILE_PERMISSION);
     }
 
     private SQLiteOpenHelper mOpenHelper;
