@@ -434,7 +434,7 @@ public class SmsProvider extends ContentProvider {
             Long threadId = values.getAsLong(Sms.THREAD_ID);
             String address = values.getAsString(Sms.ADDRESS);
 
-            if (((threadId == null) || (threadId == 0)) && (address != null)) {
+            if (((threadId == null) || (threadId == 0)) && (!TextUtils.isEmpty(address))) {
                 values.put(Sms.THREAD_ID, Threads.getOrCreateThreadId(
                                    getContext(), address));
             }

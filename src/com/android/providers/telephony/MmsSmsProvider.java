@@ -462,7 +462,9 @@ public class MmsSmsProvider extends ContentProvider {
                 throw new IllegalStateException("Unrecognized URI:" + uri);
         }
 
-        cursor.setNotificationUri(getContext().getContentResolver(), MmsSms.CONTENT_URI);
+        if (cursor != null) {
+            cursor.setNotificationUri(getContext().getContentResolver(), MmsSms.CONTENT_URI);
+        }
         return cursor;
     }
 
@@ -613,8 +615,12 @@ public class MmsSmsProvider extends ContentProvider {
         Set<Long> addressIds = getAddressIds(recipients);
         String recipientIds = "";
 
-        // optimize for size==1, which should be most of the cases
-        if (addressIds.size() == 1) {
+        if (addressIds.size() == 0) {
+            Log.e(LOG_TAG, "getThreadId: NO receipients specified -- NOT creating thread",
+                    new Exception());
+            return null;
+        } else if (addressIds.size() == 1) {
+            // optimize for size==1, which should be most of the cases
             for (Long addressId : addressIds) {
                 recipientIds = Long.toString(addressId);
             }

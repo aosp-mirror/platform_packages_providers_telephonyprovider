@@ -353,7 +353,7 @@ public class MmsProvider extends ContentProvider {
             Long threadId = values.getAsLong(Mms.THREAD_ID);
             String address = values.getAsString(CanonicalAddressesColumns.ADDRESS);
 
-            if (((threadId == null) || (threadId == 0)) && (address != null)) {
+            if (((threadId == null) || (threadId == 0)) && (!TextUtils.isEmpty(address))) {
                 finalValues.put(Mms.THREAD_ID, Threads.getOrCreateThreadId(getContext(), address));
             }
 
