@@ -165,6 +165,10 @@ public class MmsSmsProvider extends ContentProvider {
 
     private static final String[] EMPTY_STRING_ARRAY = new String[0];
 
+    private static final String[] SEARCH_STRING = new String[1];
+    private static final String SEARCH_QUERY = "SELECT snippet(words, '', ' ', '', 1, 1) as " +
+            "snippet FROM words WHERE index_text MATCH ? ORDER BY snippet LIMIT 50;";
+
     private static final String SMS_CONVERSATION_CONSTRAINT = "(" +
             Sms.TYPE + " != " + Sms.MESSAGE_TYPE_DRAFT + ")";
 
@@ -348,12 +352,11 @@ public class MmsSmsProvider extends ContentProvider {
                         sortOrder);
                 break;
             case URI_SEARCH_SUGGEST: {
-                String searchString = uri.getQueryParameter("pattern");
+                SEARCH_STRING[0] = uri.getQueryParameter("pattern") + '*' ;
 
                 // find the words which match the pattern using the snippet function.  The
                 // snippet function parameters mainly describe how to format the result.
                 // See http://www.sqlite.org/fts3.html#section_4_2 for details.
-                String query = String.format("SELECT snippet(words, '', ' ', '', 1, 1) as snippet FROM words WHERE index_text MATCH '%s*' ORDER BY snippet LIMIT 50;", searchString);
                 if (       sortOrder != null
                         || selection != null
                         || selectionArgs != null
@@ -363,7 +366,7 @@ public class MmsSmsProvider extends ContentProvider {
                             "with this query");
                 }
 
-                cursor = db.rawQuery(query, null);
+                cursor = db.rawQuery(SEARCH_QUERY, SEARCH_STRING);
                 break;
             }
             case URI_MESSAGE_ID_TO_THREAD: {
