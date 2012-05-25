@@ -17,5 +17,5 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_label" product="tablet" msgid="9194799012395299737">"移动网络配置"</string>
-    <string name="app_label" product="default" msgid="4282451239358791628">"电话/信息存储"</string>
+    <string name="app_label" product="default" msgid="4282451239358791628">"电话/短信存储"</string>
 </resources>
