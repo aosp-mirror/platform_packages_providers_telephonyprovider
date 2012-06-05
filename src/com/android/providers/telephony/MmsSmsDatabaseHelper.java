@@ -396,7 +396,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // transaction to make it faster.
         // remove orphaned threads
         db.delete("threads",
-                "_id NOT IN (SELECT DISTINCT thread_id FROM sms where thread_id NOT NULL" +
+                "_id NOT IN (SELECT DISTINCT thread_id FROM sms where thread_id NOT NULL " +
                 "UNION SELECT DISTINCT thread_id FROM pdu where thread_id NOT NULL)", null);
 
         // remove orphaned canonical_addresses
