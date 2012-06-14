@@ -33,11 +33,13 @@ import android.net.Uri;
 import android.os.Environment;
 import android.os.FileUtils;
 import android.provider.Telephony;
+import android.telephony.TelephonyManager;
 import android.util.Log;
 import android.util.Xml;
 
 import com.android.internal.telephony.BaseCommands;
 import com.android.internal.telephony.Phone;
+import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -393,7 +395,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private boolean isLteOnCdma() {
-        return BaseCommands.getLteOnCdmaModeStatic() == Phone.LTE_ON_CDMA_TRUE;
+        return TelephonyManager.getLteOnCdmaModeStatic() == PhoneConstants.LTE_ON_CDMA_TRUE;
     }
 
     private void setPreferredApnId(Long id) {
