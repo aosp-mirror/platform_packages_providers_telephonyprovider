@@ -425,6 +425,9 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
+
+        checkPermission();
+
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setTables("carriers");
 
@@ -717,7 +720,6 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private void checkPermission() {
-        // Check the permissions
         getContext().enforceCallingOrSelfPermission("android.permission.WRITE_APN_SETTINGS",
                 "No permission to write APN settings");
     }
