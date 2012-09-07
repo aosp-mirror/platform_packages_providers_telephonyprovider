@@ -122,7 +122,7 @@ public class MmsSmsProvider extends ContentProvider {
         Mms.READ_STATUS, Mms.RESPONSE_STATUS, Mms.RESPONSE_TEXT,
         Mms.RETRIEVE_STATUS, Mms.RETRIEVE_TEXT_CHARSET, Mms.REPORT_ALLOWED,
         Mms.READ_REPORT, Mms.STATUS, Mms.SUBJECT, Mms.SUBJECT_CHARSET,
-        Mms.TRANSACTION_ID, Mms.MMS_VERSION };
+        Mms.TRANSACTION_ID, Mms.MMS_VERSION, Mms.TEXT_ONLY };
 
     // These are the columns that appear only in the SMS message
     // table.

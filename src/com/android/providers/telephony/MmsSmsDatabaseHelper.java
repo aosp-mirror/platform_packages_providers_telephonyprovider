@@ -215,7 +215,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 55;
+    static final int DATABASE_VERSION = 56;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -583,6 +583,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.DELIVERY_REPORT + " INTEGER," +
                    Mms.LOCKED + " INTEGER DEFAULT 0," +
                    Mms.SEEN + " INTEGER DEFAULT 0" +
+                   Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
                    ");");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
@@ -1199,6 +1200,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 55:
+            if (currentVersion <= 55) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion56(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1387,6 +1404,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Drop removed triggers
         db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_pdu");
         db.execSQL("DROP TRIGGER IF EXISTS delete_obsolete_threads_when_update_pdu");
+    }
+
+    private void upgradeDatabaseToVersion56(SQLiteDatabase db) {
+        // Add 'text_only' column to pdu table.
+        db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PDU + " ADD COLUMN " + Mms.TEXT_ONLY +
+                " INTEGER DEFAULT 0");
     }
 
     @Override
