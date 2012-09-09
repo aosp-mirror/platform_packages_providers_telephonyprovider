@@ -521,13 +521,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             db.execSQL("CREATE TRIGGER sms_words_delete AFTER DELETE ON sms BEGIN DELETE FROM " +
                     "  words WHERE source_id = OLD._id AND table_to_use = 1; END;");
 
-            // monitor the mms table
-            db.execSQL("CREATE TRIGGER mms_words_update AFTER UPDATE ON part BEGIN UPDATE words " +
-                    " SET index_text = NEW.text WHERE (source_id=NEW._id AND table_to_use=2); " +
-                    " END;");
-            db.execSQL("CREATE TRIGGER mms_words_delete AFTER DELETE ON part BEGIN DELETE FROM " +
-                    " words WHERE source_id = OLD._id AND table_to_use = 2; END;");
-
             populateWordsTable(db);
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating words table: " + ex.toString());
@@ -551,7 +544,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // N.B.: Whenever the columns here are changed, the columns in
         // {@ref MmsSmsProvider} must be changed to match.
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_PDU + " (" +
-                   Mms._ID + " INTEGER PRIMARY KEY," +
+                   Mms._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                    Mms.THREAD_ID + " INTEGER," +
                    Mms.DATE + " INTEGER," +
                    Mms.DATE_SENT + " INTEGER DEFAULT 0," +
@@ -582,7 +575,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.DELIVERY_TIME + " INTEGER," +
                    Mms.DELIVERY_REPORT + " INTEGER," +
                    Mms.LOCKED + " INTEGER DEFAULT 0," +
-                   Mms.SEEN + " INTEGER DEFAULT 0" +
+                   Mms.SEEN + " INTEGER DEFAULT 0," +
                    Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
                    ");");
 
@@ -595,7 +588,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Addr.CHARSET + " INTEGER);");
 
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_PART + " (" +
-                   Part._ID + " INTEGER PRIMARY KEY," +
+                   Part._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
                    Part.MSG_ID + " INTEGER," +
                    Part.SEQ + " INTEGER DEFAULT 0," +
                    Part.CONTENT_TYPE + " TEXT," +
@@ -618,40 +611,189 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "_data TEXT);");
     }
 
+    // Unlike the other trigger-creating functions, this function can be called multiple times
+    // without harm.
     private void createMmsTriggers(SQLiteDatabase db) {
         // Cleans up parts when a MM is deleted.
+        db.execSQL("DROP TRIGGER IF EXISTS part_cleanup");
         db.execSQL("CREATE TRIGGER part_cleanup DELETE ON " + MmsProvider.TABLE_PDU + " " +
-                   "BEGIN " +
-                   "  DELETE FROM " + MmsProvider.TABLE_PART +
-                   "  WHERE " + Part.MSG_ID + "=old._id;" +
-                   "END;");
+                "BEGIN " +
+                "  DELETE FROM " + MmsProvider.TABLE_PART +
+                "  WHERE " + Part.MSG_ID + "=old._id;" +
+                "END;");
 
         // Cleans up address info when a MM is deleted.
+        db.execSQL("DROP TRIGGER IF EXISTS addr_cleanup");
         db.execSQL("CREATE TRIGGER addr_cleanup DELETE ON " + MmsProvider.TABLE_PDU + " " +
-                   "BEGIN " +
-                   "  DELETE FROM " + MmsProvider.TABLE_ADDR +
-                   "  WHERE " + Addr.MSG_ID + "=old._id;" +
-                   "END;");
+                "BEGIN " +
+                "  DELETE FROM " + MmsProvider.TABLE_ADDR +
+                "  WHERE " + Addr.MSG_ID + "=old._id;" +
+                "END;");
 
         // Delete obsolete delivery-report, read-report while deleting their
         // associated Send.req.
+        db.execSQL("DROP TRIGGER IF EXISTS cleanup_delivery_and_read_report");
         db.execSQL("CREATE TRIGGER cleanup_delivery_and_read_report " +
+                "AFTER DELETE ON " + MmsProvider.TABLE_PDU + " " +
+                "WHEN old." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_SEND_REQ + " " +
+                "BEGIN " +
+                "  DELETE FROM " + MmsProvider.TABLE_PDU +
+                "  WHERE (" + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_DELIVERY_IND +
+                "    OR " + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_READ_ORIG_IND +
+                ")" +
+                "    AND " + Mms.MESSAGE_ID + "=old." + Mms.MESSAGE_ID + "; " +
+                "END;");
+
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_on_insert_part");
+        db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
+
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_on_update_part");
+        db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
+
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_on_delete_part");
+        db.execSQL(PART_UPDATE_THREADS_ON_DELETE_TRIGGER);
+
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_on_update_pdu");
+        db.execSQL(PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER);
+
+        // Delete pending status for a message when it is deleted.
+        db.execSQL("DROP TRIGGER IF EXISTS delete_mms_pending_on_delete");
+        db.execSQL("CREATE TRIGGER delete_mms_pending_on_delete " +
                    "AFTER DELETE ON " + MmsProvider.TABLE_PDU + " " +
-                   "WHEN old." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_SEND_REQ + " " +
                    "BEGIN " +
-                   "  DELETE FROM " + MmsProvider.TABLE_PDU +
-                   "  WHERE (" + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_DELIVERY_IND +
-                   "    OR " + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_READ_ORIG_IND +
-                   ")" +
-                   "    AND " + Mms.MESSAGE_ID + "=old." + Mms.MESSAGE_ID + "; " +
+                   "  DELETE FROM " + MmsSmsProvider.TABLE_PENDING_MSG +
+                   "  WHERE " + PendingMessages.MSG_ID + "=old._id; " +
                    "END;");
 
-        // Update threads table to indicate whether attachments exist when
-        // parts are inserted or deleted.
-        db.execSQL(PART_UPDATE_THREADS_ON_INSERT_TRIGGER);
-        db.execSQL(PART_UPDATE_THREADS_ON_UPDATE_TRIGGER);
-        db.execSQL(PART_UPDATE_THREADS_ON_DELETE_TRIGGER);
-        db.execSQL(PDU_UPDATE_THREADS_ON_UPDATE_TRIGGER);
+        // When a message is moved out of Outbox, delete its pending status.
+        db.execSQL("DROP TRIGGER IF EXISTS delete_mms_pending_on_update");
+        db.execSQL("CREATE TRIGGER delete_mms_pending_on_update " +
+                   "AFTER UPDATE ON " + MmsProvider.TABLE_PDU + " " +
+                   "WHEN old." + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_OUTBOX +
+                   "  AND new." + Mms.MESSAGE_BOX + "!=" + Mms.MESSAGE_BOX_OUTBOX + " " +
+                   "BEGIN " +
+                   "  DELETE FROM " + MmsSmsProvider.TABLE_PENDING_MSG +
+                   "  WHERE " + PendingMessages.MSG_ID + "=new._id; " +
+                   "END;");
+
+        // Insert pending status for M-Notification.ind or M-ReadRec.ind
+        // when they are inserted into Inbox/Outbox.
+        db.execSQL("DROP TRIGGER IF EXISTS insert_mms_pending_on_insert");
+        db.execSQL("CREATE TRIGGER insert_mms_pending_on_insert " +
+                   "AFTER INSERT ON pdu " +
+                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND +
+                   "  OR new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_READ_REC_IND +
+                   " " +
+                   "BEGIN " +
+                   "  INSERT INTO " + MmsSmsProvider.TABLE_PENDING_MSG +
+                   "    (" + PendingMessages.PROTO_TYPE + "," +
+                   "     " + PendingMessages.MSG_ID + "," +
+                   "     " + PendingMessages.MSG_TYPE + "," +
+                   "     " + PendingMessages.ERROR_TYPE + "," +
+                   "     " + PendingMessages.ERROR_CODE + "," +
+                   "     " + PendingMessages.RETRY_INDEX + "," +
+                   "     " + PendingMessages.DUE_TIME + ") " +
+                   "  VALUES " +
+                   "    (" + MmsSms.MMS_PROTO + "," +
+                   "      new." + BaseColumns._ID + "," +
+                   "      new." + Mms.MESSAGE_TYPE + ",0,0,0,0);" +
+                   "END;");
+
+
+        // Insert pending status for M-Send.req when it is moved into Outbox.
+        db.execSQL("DROP TRIGGER IF EXISTS insert_mms_pending_on_update");
+        db.execSQL("CREATE TRIGGER insert_mms_pending_on_update " +
+                   "AFTER UPDATE ON pdu " +
+                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_SEND_REQ +
+                   "  AND new." + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_OUTBOX +
+                   "  AND old." + Mms.MESSAGE_BOX + "!=" + Mms.MESSAGE_BOX_OUTBOX + " " +
+                   "BEGIN " +
+                   "  INSERT INTO " + MmsSmsProvider.TABLE_PENDING_MSG +
+                   "    (" + PendingMessages.PROTO_TYPE + "," +
+                   "     " + PendingMessages.MSG_ID + "," +
+                   "     " + PendingMessages.MSG_TYPE + "," +
+                   "     " + PendingMessages.ERROR_TYPE + "," +
+                   "     " + PendingMessages.ERROR_CODE + "," +
+                   "     " + PendingMessages.RETRY_INDEX + "," +
+                   "     " + PendingMessages.DUE_TIME + ") " +
+                   "  VALUES " +
+                   "    (" + MmsSms.MMS_PROTO + "," +
+                   "      new." + BaseColumns._ID + "," +
+                   "      new." + Mms.MESSAGE_TYPE + ",0,0,0,0);" +
+                   "END;");
+
+        // monitor the mms table
+        db.execSQL("DROP TRIGGER IF EXISTS mms_words_update");
+        db.execSQL("CREATE TRIGGER mms_words_update AFTER UPDATE ON part BEGIN UPDATE words " +
+                " SET index_text = NEW.text WHERE (source_id=NEW._id AND table_to_use=2); " +
+                " END;");
+
+        db.execSQL("DROP TRIGGER IF EXISTS mms_words_delete");
+        db.execSQL("CREATE TRIGGER mms_words_delete AFTER DELETE ON part BEGIN DELETE FROM " +
+                " words WHERE source_id = OLD._id AND table_to_use = 2; END;");
+
+        // Updates threads table whenever a message in pdu is updated.
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_date_subject_on_update");
+        db.execSQL("CREATE TRIGGER pdu_update_thread_date_subject_on_update AFTER" +
+                   "  UPDATE OF " + Mms.DATE + ", " + Mms.SUBJECT + ", " + Mms.MESSAGE_BOX +
+                   "  ON " + MmsProvider.TABLE_PDU + " " +
+                   PDU_UPDATE_THREAD_CONSTRAINTS +
+                   PDU_UPDATE_THREAD_DATE_SNIPPET_COUNT_ON_UPDATE);
+
+        // Update threads table whenever a message in pdu is deleted
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_on_delete");
+        db.execSQL("CREATE TRIGGER pdu_update_thread_on_delete " +
+                   "AFTER DELETE ON pdu " +
+                   "BEGIN " +
+                   "  UPDATE threads SET " +
+                   "     date = (strftime('%s','now') * 1000)" +
+                   "  WHERE threads._id = old." + Mms.THREAD_ID + "; " +
+                   UPDATE_THREAD_COUNT_ON_OLD +
+                   UPDATE_THREAD_SNIPPET_SNIPPET_CS_ON_DELETE +
+                   "END;");
+
+        // Updates threads table whenever a message is added to pdu.
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_on_insert");
+        db.execSQL("CREATE TRIGGER pdu_update_thread_on_insert AFTER INSERT ON " +
+                   MmsProvider.TABLE_PDU + " " +
+                   PDU_UPDATE_THREAD_CONSTRAINTS +
+                   PDU_UPDATE_THREAD_DATE_SNIPPET_COUNT_ON_UPDATE);
+
+        // Updates threads table whenever a message in pdu is updated.
+        db.execSQL("DROP TRIGGER IF EXISTS pdu_update_thread_read_on_update");
+        db.execSQL("CREATE TRIGGER pdu_update_thread_read_on_update AFTER" +
+                   "  UPDATE OF " + Mms.READ +
+                   "  ON " + MmsProvider.TABLE_PDU + " " +
+                   PDU_UPDATE_THREAD_CONSTRAINTS +
+                   "BEGIN " +
+                   PDU_UPDATE_THREAD_READ_BODY +
+                   "END;");
+
+        // Update the error flag of threads when delete pending message.
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_delete_mms");
+        db.execSQL("CREATE TRIGGER update_threads_error_on_delete_mms " +
+                   "  BEFORE DELETE ON pdu" +
+                   "  WHEN OLD._id IN (SELECT DISTINCT msg_id" +
+                   "                   FROM pending_msgs" +
+                   "                   WHERE err_type >= 10) " +
+                   "BEGIN " +
+                   "  UPDATE threads SET error = error - 1" +
+                   "  WHERE _id = OLD.thread_id; " +
+                   "END;");
+
+        // Update the error flag of threads while moving an MM out of Outbox,
+        // which was failed to be sent permanently.
+        db.execSQL("DROP TRIGGER IF EXISTS update_threads_error_on_move_mms");
+        db.execSQL("CREATE TRIGGER update_threads_error_on_move_mms " +
+                   "  BEFORE UPDATE OF msg_box ON pdu " +
+                   "  WHEN (OLD.msg_box = 4 AND NEW.msg_box != 4) " +
+                   "  AND (OLD._id IN (SELECT DISTINCT msg_id" +
+                   "                   FROM pending_msgs" +
+                   "                   WHERE err_type >= 10)) " +
+                   "BEGIN " +
+                   "  UPDATE threads SET error = error - 1" +
+                   "  WHERE _id = OLD.thread_id; " +
+                   "END;");
     }
 
     private void createSmsTables(SQLiteDatabase db) {
@@ -764,22 +906,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     // TODO Check the query plans for these triggers.
     private void createCommonTriggers(SQLiteDatabase db) {
-        // Updates threads table whenever a message is added to pdu.
-        db.execSQL("CREATE TRIGGER pdu_update_thread_on_insert AFTER INSERT ON " +
-                   MmsProvider.TABLE_PDU + " " +
-                   PDU_UPDATE_THREAD_CONSTRAINTS +
-                   PDU_UPDATE_THREAD_DATE_SNIPPET_COUNT_ON_UPDATE);
-
         // Updates threads table whenever a message is added to sms.
         db.execSQL("CREATE TRIGGER sms_update_thread_on_insert AFTER INSERT ON sms " +
                    SMS_UPDATE_THREAD_DATE_SNIPPET_COUNT_ON_UPDATE);
-
-        // Updates threads table whenever a message in pdu is updated.
-        db.execSQL("CREATE TRIGGER pdu_update_thread_date_subject_on_update AFTER" +
-                   "  UPDATE OF " + Mms.DATE + ", " + Mms.SUBJECT + ", " + Mms.MESSAGE_BOX +
-                   "  ON " + MmsProvider.TABLE_PDU + " " +
-                   PDU_UPDATE_THREAD_CONSTRAINTS +
-                   PDU_UPDATE_THREAD_DATE_SNIPPET_COUNT_ON_UPDATE);
 
         // Updates threads table whenever a message in sms is updated.
         db.execSQL("CREATE TRIGGER sms_update_thread_date_subject_on_update AFTER" +
@@ -787,32 +916,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "  ON sms " +
                    SMS_UPDATE_THREAD_DATE_SNIPPET_COUNT_ON_UPDATE);
 
-        // Updates threads table whenever a message in pdu is updated.
-        db.execSQL("CREATE TRIGGER pdu_update_thread_read_on_update AFTER" +
-                   "  UPDATE OF " + Mms.READ +
-                   "  ON " + MmsProvider.TABLE_PDU + " " +
-                   PDU_UPDATE_THREAD_CONSTRAINTS +
-                   "BEGIN " +
-                   PDU_UPDATE_THREAD_READ_BODY +
-                   "END;");
-
         // Updates threads table whenever a message in sms is updated.
         db.execSQL("CREATE TRIGGER sms_update_thread_read_on_update AFTER" +
                    "  UPDATE OF " + Sms.READ +
                    "  ON sms " +
                    "BEGIN " +
                    SMS_UPDATE_THREAD_READ_BODY +
-                   "END;");
-
-        // Update threads table whenever a message in pdu is deleted
-        db.execSQL("CREATE TRIGGER pdu_update_thread_on_delete " +
-                   "AFTER DELETE ON pdu " +
-                   "BEGIN " +
-                   "  UPDATE threads SET " +
-                   "     date = (strftime('%s','now') * 1000)" +
-                   "  WHERE threads._id = old." + Mms.THREAD_ID + "; " +
-                   UPDATE_THREAD_COUNT_ON_OLD +
-                   UPDATE_THREAD_SNIPPET_SNIPPET_CS_ON_DELETE +
                    "END;");
 
         // As of DATABASE_VERSION 55, we've removed these triggers that delete empty threads.
@@ -846,67 +955,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 //                   "     UNION SELECT thread_id from pdu); " +
 //                   "END;");
 
-        // Insert pending status for M-Notification.ind or M-ReadRec.ind
-        // when they are inserted into Inbox/Outbox.
-        db.execSQL("CREATE TRIGGER insert_mms_pending_on_insert " +
-                   "AFTER INSERT ON pdu " +
-                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND +
-                   "  OR new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_READ_REC_IND +
-                   " " +
-                   "BEGIN " +
-                   "  INSERT INTO " + MmsSmsProvider.TABLE_PENDING_MSG +
-                   "    (" + PendingMessages.PROTO_TYPE + "," +
-                   "     " + PendingMessages.MSG_ID + "," +
-                   "     " + PendingMessages.MSG_TYPE + "," +
-                   "     " + PendingMessages.ERROR_TYPE + "," +
-                   "     " + PendingMessages.ERROR_CODE + "," +
-                   "     " + PendingMessages.RETRY_INDEX + "," +
-                   "     " + PendingMessages.DUE_TIME + ") " +
-                   "  VALUES " +
-                   "    (" + MmsSms.MMS_PROTO + "," +
-                   "      new." + BaseColumns._ID + "," +
-                   "      new." + Mms.MESSAGE_TYPE + ",0,0,0,0);" +
-                   "END;");
-
-        // Insert pending status for M-Send.req when it is moved into Outbox.
-        db.execSQL("CREATE TRIGGER insert_mms_pending_on_update " +
-                   "AFTER UPDATE ON pdu " +
-                   "WHEN new." + Mms.MESSAGE_TYPE + "=" + PduHeaders.MESSAGE_TYPE_SEND_REQ +
-                   "  AND new." + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_OUTBOX +
-                   "  AND old." + Mms.MESSAGE_BOX + "!=" + Mms.MESSAGE_BOX_OUTBOX + " " +
-                   "BEGIN " +
-                   "  INSERT INTO " + MmsSmsProvider.TABLE_PENDING_MSG +
-                   "    (" + PendingMessages.PROTO_TYPE + "," +
-                   "     " + PendingMessages.MSG_ID + "," +
-                   "     " + PendingMessages.MSG_TYPE + "," +
-                   "     " + PendingMessages.ERROR_TYPE + "," +
-                   "     " + PendingMessages.ERROR_CODE + "," +
-                   "     " + PendingMessages.RETRY_INDEX + "," +
-                   "     " + PendingMessages.DUE_TIME + ") " +
-                   "  VALUES " +
-                   "    (" + MmsSms.MMS_PROTO + "," +
-                   "      new." + BaseColumns._ID + "," +
-                   "      new." + Mms.MESSAGE_TYPE + ",0,0,0,0);" +
-                   "END;");
-
-        // When a message is moved out of Outbox, delete its pending status.
-        db.execSQL("CREATE TRIGGER delete_mms_pending_on_update " +
-                   "AFTER UPDATE ON " + MmsProvider.TABLE_PDU + " " +
-                   "WHEN old." + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_OUTBOX +
-                   "  AND new." + Mms.MESSAGE_BOX + "!=" + Mms.MESSAGE_BOX_OUTBOX + " " +
-                   "BEGIN " +
-                   "  DELETE FROM " + MmsSmsProvider.TABLE_PENDING_MSG +
-                   "  WHERE " + PendingMessages.MSG_ID + "=new._id; " +
-                   "END;");
-
-        // Delete pending status for a message when it is deleted.
-        db.execSQL("CREATE TRIGGER delete_mms_pending_on_delete " +
-                   "AFTER DELETE ON " + MmsProvider.TABLE_PDU + " " +
-                   "BEGIN " +
-                   "  DELETE FROM " + MmsSmsProvider.TABLE_PENDING_MSG +
-                   "  WHERE " + PendingMessages.MSG_ID + "=old._id; " +
-                   "END;");
-
         // TODO Add triggers for SMS retry-status management.
 
         // Update the error flag of threads when the error type of
@@ -925,30 +973,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "   (SELECT DISTINCT thread_id" +
                    "    FROM pdu" +
                    "    WHERE _id = NEW.msg_id); " +
-                   "END;");
-
-        // Update the error flag of threads when delete pending message.
-        db.execSQL("CREATE TRIGGER update_threads_error_on_delete_mms " +
-                   "  BEFORE DELETE ON pdu" +
-                   "  WHEN OLD._id IN (SELECT DISTINCT msg_id" +
-                   "                   FROM pending_msgs" +
-                   "                   WHERE err_type >= 10) " +
-                   "BEGIN " +
-                   "  UPDATE threads SET error = error - 1" +
-                   "  WHERE _id = OLD.thread_id; " +
-                   "END;");
-
-        // Update the error flag of threads while moving an MM out of Outbox,
-        // which was failed to be sent permanently.
-        db.execSQL("CREATE TRIGGER update_threads_error_on_move_mms " +
-                   "  BEFORE UPDATE OF msg_box ON pdu " +
-                   "  WHEN (OLD.msg_box = 4 AND NEW.msg_box != 4) " +
-                   "  AND (OLD._id IN (SELECT DISTINCT msg_id" +
-                   "                   FROM pending_msgs" +
-                   "                   WHERE err_type >= 10)) " +
-                   "BEGIN " +
-                   "  UPDATE threads SET error = error - 1" +
-                   "  WHERE _id = OLD.thread_id; " +
                    "END;");
 
         // Update the error flag of threads after a text message was
@@ -1420,10 +1444,16 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             sTriedAutoIncrement = true;
             boolean hasAutoIncrementThreads = hasAutoIncrement(db, "threads");
             boolean hasAutoIncrementAddresses = hasAutoIncrement(db, "canonical_addresses");
+            boolean hasAutoIncrementPart = hasAutoIncrement(db, "part");
+            boolean hasAutoIncrementPdu = hasAutoIncrement(db, "pdu");
             Log.d(TAG, "[getWritableDatabase] hasAutoIncrementThreads: " + hasAutoIncrementThreads +
-                    " hasAutoIncrementAddresses: " + hasAutoIncrementAddresses);
+                    " hasAutoIncrementAddresses: " + hasAutoIncrementAddresses +
+                    " hasAutoIncrementPart: " + hasAutoIncrementPart +
+                    " hasAutoIncrementPdu: " + hasAutoIncrementPdu);
             boolean autoIncrementThreadsSuccess = true;
             boolean autoIncrementAddressesSuccess = true;
+            boolean autoIncrementPartSuccess = true;
+            boolean autoIncrementPduSuccess = true;
             if (!hasAutoIncrementThreads) {
                 db.beginTransaction();
                 try {
@@ -1459,7 +1489,46 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                     db.endTransaction();
                 }
             }
-            if (autoIncrementThreadsSuccess && autoIncrementAddressesSuccess) {
+            if (!hasAutoIncrementPart) {
+                db.beginTransaction();
+                try {
+                    if (false && sFakeLowStorageTest) {
+                        Log.d(TAG, "[getWritableDatabase] mFakeLowStorageTest is true " +
+                        " - fake exception");
+                        throw new Exception("FakeLowStorageTest");
+                    }
+                    upgradePartTableToAutoIncrement(db);     // a no-op if already upgraded
+                    db.setTransactionSuccessful();
+                } catch (Throwable ex) {
+                    Log.e(TAG, "Failed to add autoIncrement to part: " +
+                            ex.getMessage(), ex);
+                    autoIncrementPartSuccess = false;
+                } finally {
+                    db.endTransaction();
+                }
+            }
+            if (!hasAutoIncrementPdu) {
+                db.beginTransaction();
+                try {
+                    if (false && sFakeLowStorageTest) {
+                        Log.d(TAG, "[getWritableDatabase] mFakeLowStorageTest is true " +
+                        " - fake exception");
+                        throw new Exception("FakeLowStorageTest");
+                    }
+                    upgradePduTableToAutoIncrement(db);     // a no-op if already upgraded
+                    db.setTransactionSuccessful();
+                } catch (Throwable ex) {
+                    Log.e(TAG, "Failed to add autoIncrement to pdu: " +
+                            ex.getMessage(), ex);
+                    autoIncrementPduSuccess = false;
+                } finally {
+                    db.endTransaction();
+                }
+            }
+            if (autoIncrementThreadsSuccess &&
+                    autoIncrementAddressesSuccess &&
+                    autoIncrementPartSuccess &&
+                    autoIncrementPduSuccess) {
                 if (mLowStorageMonitor != null) {
                     // We've already updated the database. This receiver is no longer necessary.
                     Log.d(TAG, "Unregistering mLowStorageMonitor - we've upgraded");
@@ -1558,6 +1627,102 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("INSERT INTO canonical_addresses_temp SELECT * from canonical_addresses;");
         db.execSQL("DROP TABLE canonical_addresses;");
         db.execSQL("ALTER TABLE canonical_addresses_temp RENAME TO canonical_addresses;");
+    }
+
+    // upgradePartTableToAutoIncrement() is called to add the AUTOINCREMENT keyword to
+    // the part table. This could fail if the user has a lot of sound/video/picture attachments
+    // and not enough storage to make a copy of the part table.
+    // That's ok. This upgrade is optional. It'll be called again next time the device is rebooted.
+    private void upgradePartTableToAutoIncrement(SQLiteDatabase db) {
+        if (hasAutoIncrement(db, "part")) {
+            Log.d(TAG, "[MmsSmsDb] upgradePartTableToAutoIncrement: already upgraded");
+            return;
+        }
+        Log.d(TAG, "[MmsSmsDb] upgradePartTableToAutoIncrement: upgrading");
+
+        // Make the _id of the part table autoincrement so we never re-use ids
+        // Have to create a new temp part table. Copy all the info from the old
+        // table. Drop the old table and rename the new table to that of the old.
+        db.execSQL("CREATE TABLE part_temp (" +
+                Part._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                Part.MSG_ID + " INTEGER," +
+                Part.SEQ + " INTEGER DEFAULT 0," +
+                Part.CONTENT_TYPE + " TEXT," +
+                Part.NAME + " TEXT," +
+                Part.CHARSET + " INTEGER," +
+                Part.CONTENT_DISPOSITION + " TEXT," +
+                Part.FILENAME + " TEXT," +
+                Part.CONTENT_ID + " TEXT," +
+                Part.CONTENT_LOCATION + " TEXT," +
+                Part.CT_START + " INTEGER," +
+                Part.CT_TYPE + " TEXT," +
+                Part._DATA + " TEXT," +
+                Part.TEXT + " TEXT);");
+
+        db.execSQL("INSERT INTO part_temp SELECT * from part;");
+        db.execSQL("DROP TABLE part;");
+        db.execSQL("ALTER TABLE part_temp RENAME TO part;");
+
+        // part-related triggers get tossed when the part table is dropped -- rebuild them.
+        createMmsTriggers(db);
+    }
+
+    // upgradePduTableToAutoIncrement() is called to add the AUTOINCREMENT keyword to
+    // the pdu table. This could fail if the user has a lot of mms messages
+    // and not enough storage to make a copy of the pdu table.
+    // That's ok. This upgrade is optional. It'll be called again next time the device is rebooted.
+    private void upgradePduTableToAutoIncrement(SQLiteDatabase db) {
+        if (hasAutoIncrement(db, "pdu")) {
+            Log.d(TAG, "[MmsSmsDb] upgradePduTableToAutoIncrement: already upgraded");
+            return;
+        }
+        Log.d(TAG, "[MmsSmsDb] upgradePduTableToAutoIncrement: upgrading");
+
+        // Make the _id of the part table autoincrement so we never re-use ids
+        // Have to create a new temp part table. Copy all the info from the old
+        // table. Drop the old table and rename the new table to that of the old.
+        db.execSQL("CREATE TABLE pdu_temp (" +
+                Mms._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                Mms.THREAD_ID + " INTEGER," +
+                Mms.DATE + " INTEGER," +
+                Mms.DATE_SENT + " INTEGER DEFAULT 0," +
+                Mms.MESSAGE_BOX + " INTEGER," +
+                Mms.READ + " INTEGER DEFAULT 0," +
+                Mms.MESSAGE_ID + " TEXT," +
+                Mms.SUBJECT + " TEXT," +
+                Mms.SUBJECT_CHARSET + " INTEGER," +
+                Mms.CONTENT_TYPE + " TEXT," +
+                Mms.CONTENT_LOCATION + " TEXT," +
+                Mms.EXPIRY + " INTEGER," +
+                Mms.MESSAGE_CLASS + " TEXT," +
+                Mms.MESSAGE_TYPE + " INTEGER," +
+                Mms.MMS_VERSION + " INTEGER," +
+                Mms.MESSAGE_SIZE + " INTEGER," +
+                Mms.PRIORITY + " INTEGER," +
+                Mms.READ_REPORT + " INTEGER," +
+                Mms.REPORT_ALLOWED + " INTEGER," +
+                Mms.RESPONSE_STATUS + " INTEGER," +
+                Mms.STATUS + " INTEGER," +
+                Mms.TRANSACTION_ID + " TEXT," +
+                Mms.RETRIEVE_STATUS + " INTEGER," +
+                Mms.RETRIEVE_TEXT + " TEXT," +
+                Mms.RETRIEVE_TEXT_CHARSET + " INTEGER," +
+                Mms.READ_STATUS + " INTEGER," +
+                Mms.CONTENT_CLASS + " INTEGER," +
+                Mms.RESPONSE_TEXT + " TEXT," +
+                Mms.DELIVERY_TIME + " INTEGER," +
+                Mms.DELIVERY_REPORT + " INTEGER," +
+                Mms.LOCKED + " INTEGER DEFAULT 0," +
+                Mms.SEEN + " INTEGER DEFAULT 0," +
+                Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
+                ");");
+
+        db.execSQL("INSERT INTO pdu_temp SELECT * from pdu;");
+        db.execSQL("DROP TABLE pdu;");
+        db.execSQL("ALTER TABLE pdu_temp RENAME TO pdu;");
+
+        // pdu-related triggers get tossed when the part table is dropped -- rebuild them.
+        createMmsTriggers(db);
     }
 
     private class LowStorageMonitor extends BroadcastReceiver {
