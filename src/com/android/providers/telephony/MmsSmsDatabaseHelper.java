@@ -288,119 +288,136 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             return;
         }
 
-        // Delete the row for this thread in the threads table if
-        // there are no more messages attached to it in either
-        // the sms or pdu tables.
-        int rows = db.delete("threads",
-                  "_id = ? AND _id NOT IN" +
-                  "          (SELECT thread_id FROM sms " +
-                  "           UNION SELECT thread_id FROM pdu)",
-                  new String[] { String.valueOf(thread_id) });
-        if (rows > 0) {
-            // If this deleted a row, let's remove orphaned canonical_addresses and get outta here
-            removeUnferencedCanonicalAddresses(db);
-            return;
-        }
-        // Update the message count in the threads table as the sum
-        // of all messages in both the sms and pdu tables.
-        db.execSQL(
-            "  UPDATE threads SET message_count = " +
-            "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
-            "      ON threads._id = " + Sms.THREAD_ID +
-            "      WHERE " + Sms.THREAD_ID + " = " + thread_id +
-            "        AND sms." + Sms.TYPE + " != 3) + " +
-            "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
-            "      ON threads._id = " + Mms.THREAD_ID +
-            "      WHERE " + Mms.THREAD_ID + " = " + thread_id +
-            "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
-            "        AND " + Mms.MESSAGE_BOX + " != 3) " +
-            "  WHERE threads._id = " + thread_id + ";");
+        db.beginTransaction();
+        try {
+            // Delete the row for this thread in the threads table if
+            // there are no more messages attached to it in either
+            // the sms or pdu tables.
+            int rows = db.delete("threads",
+                      "_id = ? AND _id NOT IN" +
+                      "          (SELECT thread_id FROM sms " +
+                      "           UNION SELECT thread_id FROM pdu)",
+                      new String[] { String.valueOf(thread_id) });
+            if (rows > 0) {
+                // If this deleted a row, let's remove orphaned canonical_addresses and get outta here
+                removeUnferencedCanonicalAddresses(db);
+            } else {
+                // Update the message count in the threads table as the sum
+                // of all messages in both the sms and pdu tables.
+                db.execSQL(
+                        "  UPDATE threads SET message_count = " +
+                                "     (SELECT COUNT(sms._id) FROM sms LEFT JOIN threads " +
+                                "      ON threads._id = " + Sms.THREAD_ID +
+                                "      WHERE " + Sms.THREAD_ID + " = " + thread_id +
+                                "        AND sms." + Sms.TYPE + " != 3) + " +
+                                "     (SELECT COUNT(pdu._id) FROM pdu LEFT JOIN threads " +
+                                "      ON threads._id = " + Mms.THREAD_ID +
+                                "      WHERE " + Mms.THREAD_ID + " = " + thread_id +
+                                "        AND (m_type=132 OR m_type=130 OR m_type=128)" +
+                                "        AND " + Mms.MESSAGE_BOX + " != 3) " +
+                                "  WHERE threads._id = " + thread_id + ";");
 
-        // Update the date and the snippet (and its character set) in
-        // the threads table to be that of the most recent message in
-        // the thread.
-        db.execSQL(
-            "  UPDATE threads" +
-            "  SET" +
-            "  date =" +
-            "    (SELECT date FROM" +
-            "        (SELECT date * 1000 AS date, thread_id FROM pdu" +
-            "         UNION SELECT date, thread_id FROM sms)" +
-            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," +
-            "  snippet =" +
-            "    (SELECT snippet FROM" +
-            "        (SELECT date * 1000 AS date, sub AS snippet, thread_id FROM pdu" +
-            "         UNION SELECT date, body AS snippet, thread_id FROM sms)" +
-            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," +
-            "  snippet_cs =" +
-            "    (SELECT snippet_cs FROM" +
-            "        (SELECT date * 1000 AS date, sub_cs AS snippet_cs, thread_id FROM pdu" +
-            "         UNION SELECT date, 0 AS snippet_cs, thread_id FROM sms)" +
-            "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)" +
-            "  WHERE threads._id = " + thread_id + ";");
+                // Update the date and the snippet (and its character set) in
+                // the threads table to be that of the most recent message in
+                // the thread.
+                db.execSQL(
+                "  UPDATE threads" +
+                "  SET" +
+                "  date =" +
+                "    (SELECT date FROM" +
+                "        (SELECT date * 1000 AS date, thread_id FROM pdu" +
+                "         UNION SELECT date, thread_id FROM sms)" +
+                "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," +
+                "  snippet =" +
+                "    (SELECT snippet FROM" +
+                "        (SELECT date * 1000 AS date, sub AS snippet, thread_id FROM pdu" +
+                "         UNION SELECT date, body AS snippet, thread_id FROM sms)" +
+                "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)," +
+                "  snippet_cs =" +
+                "    (SELECT snippet_cs FROM" +
+                "        (SELECT date * 1000 AS date, sub_cs AS snippet_cs, thread_id FROM pdu" +
+                "         UNION SELECT date, 0 AS snippet_cs, thread_id FROM sms)" +
+                "     WHERE thread_id = " + thread_id + " ORDER BY date DESC LIMIT 1)" +
+                "  WHERE threads._id = " + thread_id + ";");
 
-        // Update the error column of the thread to indicate if there
-        // are any messages in it that have failed to send.
-        // First check to see if there are any messages with errors in this thread.
-        String query = "SELECT thread_id FROM sms WHERE type=" +
-            Telephony.TextBasedSmsColumns.MESSAGE_TYPE_FAILED +
-            " AND thread_id = " + thread_id +
-                                " LIMIT 1";
-        int setError = 0;
-        Cursor c = db.rawQuery(query, null);
-        if (c != null) {
-            try {
-                setError = c.getCount();    // Because of the LIMIT 1, count will be 1 or 0.
-            } finally {
-                c.close();
-            }
-        }
-        // What's the current state of the error flag in the threads table?
-        String errorQuery = "SELECT error FROM threads WHERE _id = " + thread_id;
-        c = db.rawQuery(errorQuery, null);
-        if (c != null) {
-            try {
-                if (c.moveToNext()) {
-                    int curError = c.getInt(0);
-                    if (curError != setError) {
-                        // The current thread error column differs, update it.
-                        db.execSQL("UPDATE threads SET error=" + setError +
-                                " WHERE _id = " + thread_id);
+                // Update the error column of the thread to indicate if there
+                // are any messages in it that have failed to send.
+                // First check to see if there are any messages with errors in this thread.
+                String query = "SELECT thread_id FROM sms WHERE type=" +
+                        Telephony.TextBasedSmsColumns.MESSAGE_TYPE_FAILED +
+                        " AND thread_id = " + thread_id +
+                        " LIMIT 1";
+                int setError = 0;
+                Cursor c = db.rawQuery(query, null);
+                if (c != null) {
+                    try {
+                        setError = c.getCount();    // Because of the LIMIT 1, count will be 1 or 0.
+                    } finally {
+                        c.close();
                     }
                 }
-            } finally {
-                c.close();
+                // What's the current state of the error flag in the threads table?
+                String errorQuery = "SELECT error FROM threads WHERE _id = " + thread_id;
+                c = db.rawQuery(errorQuery, null);
+                if (c != null) {
+                    try {
+                        if (c.moveToNext()) {
+                            int curError = c.getInt(0);
+                            if (curError != setError) {
+                                // The current thread error column differs, update it.
+                                db.execSQL("UPDATE threads SET error=" + setError +
+                                        " WHERE _id = " + thread_id);
+                            }
+                        }
+                    } finally {
+                        c.close();
+                    }
+                }
             }
+            db.setTransactionSuccessful();
+        } catch (Throwable ex) {
+            Log.e(TAG, ex.getMessage(), ex);
+        } finally {
+            db.endTransaction();
         }
     }
 
     public static void updateAllThreads(SQLiteDatabase db, String where, String[] whereArgs) {
-        if (where == null) {
-            where = "";
-        } else {
-            where = "WHERE (" + where + ")";
-        }
-        String query = "SELECT _id FROM threads WHERE _id IN " +
-                       "(SELECT DISTINCT thread_id FROM sms " + where + ")";
-        Cursor c = db.rawQuery(query, whereArgs);
-        if (c != null) {
-            try {
-                while (c.moveToNext()) {
-                    updateThread(db, c.getInt(0));
-                }
-            } finally {
-                c.close();
+        db.beginTransaction();
+        try {
+            if (where == null) {
+                where = "";
+            } else {
+                where = "WHERE (" + where + ")";
             }
-        }
-        // TODO: there are several db operations in this function. Lets wrap them in a
-        // transaction to make it faster.
-        // remove orphaned threads
-        db.delete("threads",
-                "_id NOT IN (SELECT DISTINCT thread_id FROM sms where thread_id NOT NULL " +
-                "UNION SELECT DISTINCT thread_id FROM pdu where thread_id NOT NULL)", null);
+            String query = "SELECT _id FROM threads WHERE _id IN " +
+                           "(SELECT DISTINCT thread_id FROM sms " + where + ")";
+            Cursor c = db.rawQuery(query, whereArgs);
+            if (c != null) {
+                try {
+                    while (c.moveToNext()) {
+                        updateThread(db, c.getInt(0));
+                    }
+                } finally {
+                    c.close();
+                }
+            }
+            // TODO: there are several db operations in this function. Lets wrap them in a
+            // transaction to make it faster.
+            // remove orphaned threads
+            db.delete("threads",
+                    "_id NOT IN (SELECT DISTINCT thread_id FROM sms where thread_id NOT NULL " +
+                    "UNION SELECT DISTINCT thread_id FROM pdu where thread_id NOT NULL)", null);
 
-        // remove orphaned canonical_addresses
-        removeUnferencedCanonicalAddresses(db);
+            // remove orphaned canonical_addresses
+            removeUnferencedCanonicalAddresses(db);
+
+            db.setTransactionSuccessful();
+        } catch (Throwable ex) {
+            Log.e(TAG, ex.getMessage(), ex);
+        } finally {
+            db.endTransaction();
+        }
     }
 
     public static int deleteOneSms(SQLiteDatabase db, int message_id) {
