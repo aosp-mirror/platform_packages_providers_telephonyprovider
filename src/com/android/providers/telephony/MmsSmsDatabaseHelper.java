@@ -215,7 +215,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 56;
+    static final int DATABASE_VERSION = 57;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -1257,6 +1257,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 56:
+            if (currentVersion <= 56) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion57(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1451,6 +1467,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Add 'text_only' column to pdu table.
         db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PDU + " ADD COLUMN " + Mms.TEXT_ONLY +
                 " INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion57(SQLiteDatabase db) {
+        // Clear out bad rows, those with empty threadIds, from the pdu table.
+        db.execSQL("DELETE FROM " + MmsProvider.TABLE_PDU + " WHERE " + Mms.THREAD_ID + " IS NULL");
     }
 
     @Override
