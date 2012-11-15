@@ -242,7 +242,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      * unreferenced rows from the canonical_addresses table.
      */
     private static void removeUnferencedCanonicalAddresses(SQLiteDatabase db) {
-        Cursor c = db.query("threads", new String[] { "recipient_ids" },
+        Cursor c = db.query(MmsSmsProvider.TABLE_THREADS, new String[] { "recipient_ids" },
                 null, null, null, null, null);
         if (c != null) {
             try {
@@ -293,7 +293,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             // Delete the row for this thread in the threads table if
             // there are no more messages attached to it in either
             // the sms or pdu tables.
-            int rows = db.delete("threads",
+            int rows = db.delete(MmsSmsProvider.TABLE_THREADS,
                       "_id = ? AND _id NOT IN" +
                       "          (SELECT thread_id FROM sms " +
                       "           UNION SELECT thread_id FROM pdu)",
@@ -405,7 +405,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             // TODO: there are several db operations in this function. Lets wrap them in a
             // transaction to make it faster.
             // remove orphaned threads
-            db.delete("threads",
+            db.delete(MmsSmsProvider.TABLE_THREADS,
                     "_id NOT IN (SELECT DISTINCT thread_id FROM sms where thread_id NOT NULL " +
                     "UNION SELECT DISTINCT thread_id FROM pdu where thread_id NOT NULL)", null);
 
@@ -1480,7 +1480,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
         if (!sTriedAutoIncrement) {
             sTriedAutoIncrement = true;
-            boolean hasAutoIncrementThreads = hasAutoIncrement(db, "threads");
+            boolean hasAutoIncrementThreads = hasAutoIncrement(db, MmsSmsProvider.TABLE_THREADS);
             boolean hasAutoIncrementAddresses = hasAutoIncrement(db, "canonical_addresses");
             boolean hasAutoIncrementPart = hasAutoIncrement(db, "part");
             boolean hasAutoIncrementPdu = hasAutoIncrement(db, "pdu");
@@ -1619,7 +1619,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // storage to make a copy of the threads table. That's ok. This upgrade is optional. It'll
     // be called again next time the device is rebooted.
     private void upgradeThreadsTableToAutoIncrement(SQLiteDatabase db) {
-        if (hasAutoIncrement(db, "threads")) {
+        if (hasAutoIncrement(db, MmsSmsProvider.TABLE_THREADS)) {
             Log.d(TAG, "[MmsSmsDb] upgradeThreadsTableToAutoIncrement: already upgraded");
             return;
         }

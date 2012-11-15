@@ -105,6 +105,11 @@ public class MmsSmsProvider extends ContentProvider {
      */
     private static final String TABLE_CANONICAL_ADDRESSES = "canonical_addresses";
 
+    /**
+     * the name of the table that is used to store the conversation threads.
+     */
+    static final String TABLE_THREADS = "threads";
+
     // These constants are used to construct union queries across the
     // MMS and SMS base tables.
 
@@ -598,7 +603,7 @@ public class MmsSmsProvider extends ContentProvider {
         }
         values.put(ThreadsColumns.MESSAGE_COUNT, 0);
 
-        long result = mOpenHelper.getWritableDatabase().insert("threads", null, values);
+        long result = mOpenHelper.getWritableDatabase().insert(TABLE_THREADS, null, values);
         Log.d(LOG_TAG, "insertThread: created new thread_id " + result +
                 " for recipientIds " + /*recipientIds*/ "xxxxxxx");
 
@@ -637,24 +642,35 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         String[] selectionArgs = new String[] { recipientIds };
+
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
-        Cursor cursor = db.rawQuery(THREAD_QUERY, selectionArgs);
-
-        if (cursor.getCount() == 0) {
-            cursor.close();
-
-            Log.d(LOG_TAG, "getThreadId: create new thread_id for recipients " +
-                    /*recipients*/ "xxxxxxxx");
-            insertThread(recipientIds, recipients.size());
-
-            db = mOpenHelper.getReadableDatabase();  // In case insertThread closed it
+        db.beginTransaction();
+        Cursor cursor = null;
+        try {
+            // Find the thread with the given recipients
             cursor = db.rawQuery(THREAD_QUERY, selectionArgs);
+
+            if (cursor.getCount() == 0) {
+                // No thread with those recipients exists, so create the thread.
+                cursor.close();
+
+                Log.d(LOG_TAG, "getThreadId: create new thread_id for recipients " +
+                        /*recipients*/ "xxxxxxxx");
+                insertThread(recipientIds, recipients.size());
+
+                // The thread was just created, now find it and return it.
+                cursor = db.rawQuery(THREAD_QUERY, selectionArgs);
+            }
+            db.setTransactionSuccessful();
+        } catch (Throwable ex) {
+            Log.e(LOG_TAG, ex.getMessage(), ex);
+        } finally {
+            db.endTransaction();
         }
 
-        if (cursor.getCount() > 1) {
+        if (cursor != null && cursor.getCount() > 1) {
             Log.w(LOG_TAG, "getThreadId: why is cursorCount=" + cursor.getCount());
         }
-
         return cursor;
     }
 
@@ -700,7 +716,7 @@ public class MmsSmsProvider extends ContentProvider {
      */
     private Cursor getSimpleConversations(String[] projection, String selection,
             String[] selectionArgs, String sortOrder) {
-        return mOpenHelper.getReadableDatabase().query("threads", projection,
+        return mOpenHelper.getReadableDatabase().query(TABLE_THREADS, projection,
                 selection, selectionArgs, null, null, " date DESC");
     }
 
@@ -1005,7 +1021,7 @@ public class MmsSmsProvider extends ContentProvider {
         String[] columns = handleNullThreadsProjection(projection);
 
         queryBuilder.setDistinct(true);
-        queryBuilder.setTables("threads");
+        queryBuilder.setTables(TABLE_THREADS);
         return queryBuilder.query(
                 mOpenHelper.getReadableDatabase(), columns, finalSelection,
                 selectionArgs, sortOrder, null, null);
@@ -1177,7 +1193,7 @@ public class MmsSmsProvider extends ContentProvider {
                 MmsSmsDatabaseHelper.updateAllThreads(db, null, null);
                 break;
             case URI_OBSOLETE_THREADS:
-                affectedRows = db.delete("threads",
+                affectedRows = db.delete(TABLE_THREADS,
                         "_id NOT IN (SELECT DISTINCT thread_id FROM sms where thread_id NOT NULL " +
                         "UNION SELECT DISTINCT thread_id FROM pdu where thread_id NOT NULL)", null);
                 break;
