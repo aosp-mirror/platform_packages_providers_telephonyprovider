@@ -26,6 +26,7 @@ import android.content.UriMatcher;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.database.Cursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -320,6 +321,7 @@ public class TelephonyProvider extends ContentProvider
         private void loadApns(SQLiteDatabase db, XmlPullParser parser) {
             if (parser != null) {
                 try {
+                    db.beginTransaction();
                     while (true) {
                         XmlUtils.nextElement(parser);
                         ContentValues row = getRow(parser);
@@ -329,10 +331,15 @@ public class TelephonyProvider extends ContentProvider
                             break;  // do we really want to skip the rest of the file?
                         }
                     }
+                    db.setTransactionSuccessful();
                 } catch (XmlPullParserException e)  {
                     Log.e(TAG, "Got execption while getting perferred time zone.", e);
                 } catch (IOException e) {
                     Log.e(TAG, "Got execption while getting perferred time zone.", e);
+                } catch (SQLException e){
+                    Log.e(TAG, "Got SQLException", e);
+                } finally {
+                    db.endTransaction();
                 }
             }
         }
