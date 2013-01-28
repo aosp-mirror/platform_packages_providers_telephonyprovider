@@ -168,7 +168,7 @@ public class TelephonyProvider extends ContentProvider
                 parser.close();
             }
 
-           // Read external APNS data (partner-provided)
+            // Read external APNS data (partner-provided)
             XmlPullParser confparser = null;
             // Environment.getRootDirectory() is a fancy way of saying ANDROID_ROOT or "/system".
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
@@ -226,7 +226,7 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 6 << 16 | 6;
             }
             if (oldVersion < (7 << 16 | 6)) {
-                // Add protcol fields to the APN. The XML file does not change.
+                // Add carrier_enabled, bearer fields to the APN. The XML file does not change.
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
                         " ADD COLUMN carrier_enabled BOOLEAN DEFAULT 1;");
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
