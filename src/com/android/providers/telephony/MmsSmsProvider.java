@@ -21,6 +21,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
+import android.app.AppOpsManager;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
@@ -282,6 +283,7 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
         mUseStrictPhoneNumberComparation =
             getContext().getResources().getBoolean(

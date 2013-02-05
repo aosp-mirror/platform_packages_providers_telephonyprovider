@@ -16,6 +16,7 @@
 
 package com.android.providers.telephony;
 
+import android.app.AppOpsManager;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -82,6 +83,7 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
+        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
         return true;
     }
