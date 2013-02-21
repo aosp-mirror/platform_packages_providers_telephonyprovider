@@ -470,8 +470,14 @@ public class TelephonyProvider extends ContentProvider
         }
 
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
-        Cursor ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
-        ret.setNotificationUri(getContext().getContentResolver(), url);
+        Cursor ret = null;
+        try {
+            ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
+        } catch (SQLException e) {
+            Log.e(TAG, "got exception when querying: " + e);
+        }
+        if (ret != null)
+            ret.setNotificationUri(getContext().getContentResolver(), url);
         return ret;
     }
 
@@ -736,7 +742,11 @@ public class TelephonyProvider extends ContentProvider
     private void restoreDefaultAPN() {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
-        db.delete(CARRIERS_TABLE, null, null);
+        try {
+            db.delete(CARRIERS_TABLE, null, null);
+        } catch (SQLException e) {
+            Log.e(TAG, "got exception when deleting to restore: " + e);
+        }
         setPreferredApnId((long)-1);
         mOpenHelper.initDatabase(db);
     }
