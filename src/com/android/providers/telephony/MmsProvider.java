@@ -266,6 +266,10 @@ public class MmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
+        // Don't let anyone insert anything with the _data column
+        if (values != null && values.containsKey(Part._DATA)) {
+            return null;
+        }
         int msgBox = Mms.MESSAGE_BOX_ALL;
         boolean notify = true;
 
@@ -680,6 +684,10 @@ public class MmsProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
+        // Don't let anyone update the _data column
+        if (values != null && values.containsKey(Part._DATA)) {
+            return 0;
+        }
         int match = sURLMatcher.match(uri);
         if (LOCAL_LOGV) {
             Log.v(TAG, "Update uri=" + uri + ", match=" + match);
