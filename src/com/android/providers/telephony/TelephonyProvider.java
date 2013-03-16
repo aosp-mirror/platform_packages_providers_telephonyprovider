@@ -57,7 +57,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String DATABASE_NAME = "telephony.db";
     private static final boolean DBG = true;
 
-    private static final int DATABASE_VERSION = 7 << 16;
+    private static final int DATABASE_VERSION = 8 << 16;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
     private static final int URL_ID = 3;
@@ -148,7 +148,9 @@ public class TelephonyProvider extends ContentProvider
                     "protocol TEXT," +
                     "roaming_protocol TEXT," +
                     "carrier_enabled BOOLEAN," +
-                    "bearer INTEGER);");
+                    "bearer INTEGER," +
+                    "mvno_type TEXT," +
+                    "mvno_match_data TEXT);");
 
             initDatabase(db);
         }
@@ -233,6 +235,15 @@ public class TelephonyProvider extends ContentProvider
                         " ADD COLUMN bearer INTEGER DEFAULT 0;");
                 oldVersion = 7 << 16 | 6;
             }
+            if (oldVersion < (8 << 16 | 6)) {
+                // Add mvno_type, mvno_match_data fields to the APN.
+                // The XML file does not change.
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
+                        " ADD COLUMN mvno_type TEXT DEFAULT '';");
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
+                        " ADD COLUMN mvno_match_data TEXT DEFAULT '';");
+                oldVersion = 8 << 16 | 6;
+            }
         }
 
         /**
@@ -308,6 +319,15 @@ public class TelephonyProvider extends ContentProvider
             if (bearer != null) {
                 map.put(Telephony.Carriers.BEARER, Integer.parseInt(bearer));
             }
+
+            String mvno_type = parser.getAttributeValue(null, "mvno_type");
+            if (mvno_type != null) {
+                String mvno_match_data = parser.getAttributeValue(null, "mvno_match_data");
+                if (mvno_match_data != null) {
+                    map.put(Telephony.Carriers.MVNO_TYPE, mvno_type);
+                    map.put(Telephony.Carriers.MVNO_MATCH_DATA, mvno_match_data);
+                }
+            }
             return map;
         }
 
@@ -360,6 +380,12 @@ public class TelephonyProvider extends ContentProvider
             }
             if (row.containsKey(Telephony.Carriers.BEARER) == false) {
                 row.put(Telephony.Carriers.BEARER, 0);
+            }
+            if (row.containsKey(Telephony.Carriers.MVNO_TYPE) == false) {
+                row.put(Telephony.Carriers.MVNO_TYPE, "");
+            }
+            if (row.containsKey(Telephony.Carriers.MVNO_MATCH_DATA) == false) {
+                row.put(Telephony.Carriers.MVNO_MATCH_DATA, "");
             }
             db.insert(CARRIERS_TABLE, null, row);
         }
@@ -564,6 +590,12 @@ public class TelephonyProvider extends ContentProvider
                 }
                 if (!values.containsKey(Telephony.Carriers.BEARER)) {
                     values.put(Telephony.Carriers.BEARER, 0);
+                }
+                if (!values.containsKey(Telephony.Carriers.MVNO_TYPE)) {
+                    values.put(Telephony.Carriers.MVNO_TYPE, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.MVNO_MATCH_DATA)) {
+                    values.put(Telephony.Carriers.MVNO_MATCH_DATA, "");
                 }
 
                 long rowID = db.insert(CARRIERS_TABLE, null, values);
