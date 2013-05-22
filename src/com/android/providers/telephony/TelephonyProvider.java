@@ -458,10 +458,8 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
-
-        checkPermission();
-
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+        qb.setStrict(true); // a little protection from injection attacks
         qb.setTables("carriers");
 
         int match = s_urlMatcher.match(url);
@@ -493,6 +491,24 @@ public class TelephonyProvider extends ContentProvider
             default: {
                 return null;
             }
+        }
+
+        if (projectionIn != null) {
+            for (String column : projectionIn) {
+                if (Telephony.Carriers.TYPE.equals(column) ||
+                        Telephony.Carriers.MMSC.equals(column) ||
+                        Telephony.Carriers.MMSPROXY.equals(column) ||
+                        Telephony.Carriers.MMSPORT.equals(column) ||
+                        Telephony.Carriers.APN.equals(column)) {
+                    // noop
+                } else {
+                    checkPermission();
+                    break;
+                }
+            }
+        } else {
+            // null returns all columns, so need permission check
+            checkPermission();
         }
 
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
