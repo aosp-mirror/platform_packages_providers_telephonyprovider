@@ -947,12 +947,12 @@ public class MmsSmsProvider extends ContentProvider {
      * Use this query:
      *
      * SELECT ...
-     *   FROM pdu, (SELECT _id AS address_id
+     *   FROM pdu, (SELECT msg_id AS address_msg_id
      *              FROM addr
      *              WHERE (address='<phoneNumber>' OR
      *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0)))
      *             AS matching_addresses
-     *   WHERE pdu._id = matching_addresses.address_id
+     *   WHERE pdu._id = matching_addresses.address_msg_id
      * UNION
      * SELECT ...
      *   FROM sms
@@ -965,7 +965,7 @@ public class MmsSmsProvider extends ContentProvider {
         String finalMmsSelection =
                 concatSelections(
                         selection,
-                        "pdu._id = matching_addresses.address_id");
+                        "pdu._id = matching_addresses.address_msg_id");
         String finalSmsSelection =
                 concatSelections(
                         selection,
@@ -979,7 +979,7 @@ public class MmsSmsProvider extends ContentProvider {
         smsQueryBuilder.setDistinct(true);
         mmsQueryBuilder.setTables(
                 MmsProvider.TABLE_PDU +
-                ", (SELECT _id AS address_id " +
+                ", (SELECT msg_id AS address_msg_id " +
                 "FROM addr WHERE (address=" + escapedPhoneNumber +
                 " OR PHONE_NUMBERS_EQUAL(addr.address, " +
                 escapedPhoneNumber +
