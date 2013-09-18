@@ -29,6 +29,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.Binder;
 import android.provider.Contacts;
 import android.provider.Telephony;
 import android.provider.Telephony.Mms;
@@ -279,7 +280,15 @@ public class SmsProvider extends ContentProvider {
      */
     private Cursor getAllMessagesFromIcc() {
         SmsManager smsManager = SmsManager.getDefault();
-        ArrayList<SmsMessage> messages = smsManager.getAllMessagesFromIcc();
+        ArrayList<SmsMessage> messages;
+
+        // use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call
+        long token = Binder.clearCallingIdentity();
+        try {
+            messages = smsManager.getAllMessagesFromIcc();
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
 
         final int count = messages.size();
         MatrixCursor cursor = new MatrixCursor(ICC_COLUMNS, count);

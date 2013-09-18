@@ -19,6 +19,7 @@
         coreApp="true"
         android:sharedUserId="android.uid.phone">
 
+    <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application android:process="com.android.phone"
@@ -30,18 +31,18 @@
         <provider android:name="TelephonyProvider"
                   android:authorities="telephony"
                   android:exported="true"
-                  android:multiprocess="true" />
+                  android:multiprocess="false" />
 
         <provider android:name="SmsProvider"
                   android:authorities="sms"
-                  android:multiprocess="true"
+                  android:multiprocess="false"
                   android:exported="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS" />
 
         <provider android:name="MmsProvider"
                   android:authorities="mms"
-                  android:multiprocess="true"
+                  android:multiprocess="false"
                   android:exported="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS">
@@ -51,7 +52,7 @@
 
         <provider android:name="MmsSmsProvider"
                   android:authorities="mms-sms"
-                  android:multiprocess="true"
+                  android:multiprocess="false"
                   android:exported="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS" />
