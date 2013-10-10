@@ -347,6 +347,15 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri url, ContentValues initialValues) {
+        long token = Binder.clearCallingIdentity();
+        try {
+            return insertInner(url, initialValues);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
+
+    private Uri insertInner(Uri url, ContentValues initialValues) {
         ContentValues values;
         long rowID;
         int type = Sms.MESSAGE_TYPE_ALL;
