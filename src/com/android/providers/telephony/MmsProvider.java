@@ -18,13 +18,13 @@ package com.android.providers.telephony;
 
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
@@ -205,9 +205,15 @@ public class MmsProvider extends ContentProvider {
             finalSortOrder = sortOrder;
         }
 
-        SQLiteDatabase db = mOpenHelper.getReadableDatabase();
-        Cursor ret = qb.query(db, projection, selection,
-                selectionArgs, null, null, finalSortOrder);
+        Cursor ret;
+        try {
+            SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+            ret = qb.query(db, projection, selection,
+                    selectionArgs, null, null, finalSortOrder);
+        } catch (SQLiteException e) {
+            Log.e(TAG, "returning NULL cursor, query: " + uri, e);
+            return null;
+        }
 
         // TODO: Does this need to be a URI for this provider.
         ret.setNotificationUri(getContext().getContentResolver(), uri);
