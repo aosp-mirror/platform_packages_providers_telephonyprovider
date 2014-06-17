@@ -49,7 +49,7 @@ public class SmsProvider extends ContentProvider {
     private static final Uri NOTIFICATION_URI = Uri.parse("content://sms");
     private static final Uri ICC_URI = Uri.parse("content://sms/icc");
     static final String TABLE_SMS = "sms";
-    private static final String TABLE_RAW = "raw";
+    static final String TABLE_RAW = "raw";
     private static final String TABLE_SR_PENDING = "sr_pending";
     private static final String TABLE_WORDS = "words";
 

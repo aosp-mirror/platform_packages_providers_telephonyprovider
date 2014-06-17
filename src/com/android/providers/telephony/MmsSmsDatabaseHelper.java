@@ -215,7 +215,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 57;
+    static final int DATABASE_VERSION = 58;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -592,6 +592,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.DELIVERY_TIME + " INTEGER," +
                    Mms.DELIVERY_REPORT + " INTEGER," +
                    Mms.LOCKED + " INTEGER DEFAULT 0," +
+                   Mms.SUB_ID + " INTEGER DEFAULT -1, " +
                    Mms.SEEN + " INTEGER DEFAULT 0," +
                    Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
                    ");");
@@ -835,6 +836,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "body TEXT," +
                    "service_center TEXT," +
                    "locked INTEGER DEFAULT 0," +
+                   "sub_id INTEGER DEFAULT -1, " +
                    "error_code INTEGER DEFAULT 0," +
                    "seen INTEGER DEFAULT 0" +
                    ");");
@@ -851,6 +853,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "sequence INTEGER," + // the part number of this message
                    "destination_port INTEGER," +
                    "address TEXT," +
+                   "sub_id INTEGER DEFAULT -1, " +
                    "pdu TEXT);"); // the raw PDU for this part
 
         db.execSQL("CREATE TABLE attachments (" +
@@ -917,6 +920,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    PendingMessages.ERROR_CODE + " INTEGER," +
                    PendingMessages.RETRY_INDEX + " INTEGER NOT NULL DEFAULT 0," +
                    PendingMessages.DUE_TIME + " INTEGER," +
+                   PendingMessages.SUB_ID + " INTEGER DEFAULT 0, " +
                    PendingMessages.LAST_TRY + " INTEGER);");
 
     }
@@ -1273,6 +1277,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 57:
+            if (currentVersion <= 57) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion58(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1472,6 +1492,17 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private void upgradeDatabaseToVersion57(SQLiteDatabase db) {
         // Clear out bad rows, those with empty threadIds, from the pdu table.
         db.execSQL("DELETE FROM " + MmsProvider.TABLE_PDU + " WHERE " + Mms.THREAD_ID + " IS NULL");
+    }
+
+    private void upgradeDatabaseToVersion58(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PDU +" ADD COLUMN "
+                + Mms.SUB_ID + " INTEGER DEFAULT -1");
+        db.execSQL("ALTER TABLE " + MmsSmsProvider.TABLE_PENDING_MSG +" ADD COLUMN "
+                + "pending_sub_id" + " INTEGER DEFAULT 0");
+        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_SMS +" ADD COLUMN "
+                + Sms.SUB_ID + " INTEGER DEFAULT -1");
+        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN "
+                + Sms.SUB_ID + " INTEGER DEFAULT -1");
     }
 
     @Override
@@ -1751,6 +1782,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 Mms.DELIVERY_TIME + " INTEGER," +
                 Mms.DELIVERY_REPORT + " INTEGER," +
                 Mms.LOCKED + " INTEGER DEFAULT 0," +
+                Mms.SUB_ID + " INTEGER DEFAULT -1," +
                 Mms.SEEN + " INTEGER DEFAULT 0," +
                 Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
                 ");");
