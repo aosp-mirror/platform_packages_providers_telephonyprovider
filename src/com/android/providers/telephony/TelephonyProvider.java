@@ -28,6 +28,7 @@ import android.content.res.XmlResourceParser;
 import android.database.Cursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
@@ -128,15 +129,19 @@ public class TelephonyProvider extends ContentProvider
         }
 
         private static int getVersion(Context context) {
+            if (VDBG) log("getVersion:+");
             // Get the database version, combining a static schema version and the XML version
             Resources r = context.getResources();
             XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
             try {
                 XmlUtils.beginDocument(parser, "apns");
                 int publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
-                return DATABASE_VERSION | publicversion;
+                int version = DATABASE_VERSION | publicversion;
+                if (VDBG) log("getVersion:- version=0x" + Integer.toHexString(version));
+                return version;
             } catch (Exception e) {
-                loge("Can't get version of APN database" + e);
+                loge("Can't get version of APN database" + e + " return version=" +
+                        Integer.toHexString(DATABASE_VERSION));
                 return DATABASE_VERSION;
             } finally {
                 parser.close();
@@ -145,6 +150,40 @@ public class TelephonyProvider extends ContentProvider
 
         @Override
         public void onCreate(SQLiteDatabase db) {
+            if (DBG) log("dbh.onCreate:+ db=" + db);
+            createSimInfoTable(db);
+            createCarriersTable(db);
+            initDatabase(db);
+            if (DBG) log("dbh.onCreate:- db=" + db);
+        }
+
+        @Override
+        public void onOpen(SQLiteDatabase db) {
+            if (VDBG) log("dbh.onOpen:+ db=" + db);
+            try {
+                // Try to access the table and create it if "no such table"
+                db.query(SIMINFO_TABLE, null, null, null, null, null, null);
+                if (DBG) log("dbh.onOpen: ok, queried table=" + SIMINFO_TABLE);
+            } catch (SQLiteException e) {
+                loge("Exception " + SIMINFO_TABLE + "e=" + e);
+                if (e.getMessage().startsWith("no such table")) {
+                    createSimInfoTable(db);
+                }
+            }
+            try {
+                db.query(CARRIERS_TABLE, null, null, null, null, null, null);
+                if (DBG) log("dbh.onOpen: ok, queried table=" + CARRIERS_TABLE);
+            } catch (SQLiteException e) {
+                loge("Exception " + CARRIERS_TABLE + " e=" + e);
+                if (e.getMessage().startsWith("no such table")) {
+                    createCarriersTable(db);
+                }
+            }
+            if (VDBG) log("dbh.onOpen:- db=" + db);
+        }
+
+        private void createSimInfoTable(SQLiteDatabase db) {
+            if (DBG) log("dbh.createSimInfoTable:+");
             db.execSQL("CREATE TABLE " + SIMINFO_TABLE + "("
                     + "_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
@@ -156,7 +195,12 @@ public class TelephonyProvider extends ContentProvider
                     + SubscriptionManager.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL DEFAULT " + SubscriptionManager.DISLPAY_NUMBER_DEFAULT + ","
                     + SubscriptionManager.DATA_ROAMING + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT
                     + ");");
+            if (DBG) log("dbh.createSimInfoTable:-");
+        }
+
+        private void createCarriersTable(SQLiteDatabase db) {
             // Set up the database schema
+            if (DBG) log("dbh.createCarriersTable:+");
             db.execSQL("CREATE TABLE " + CARRIERS_TABLE +
                 "(_id INTEGER PRIMARY KEY," +
                     "name TEXT," +
@@ -184,11 +228,10 @@ public class TelephonyProvider extends ContentProvider
                     "sub_id LONG DEFAULT -1);");
              /* FIXME Currenlty sub_id is column is not used for query purpose.
              This would be modified to more appropriate default value later. */
-
-            initDatabase(db);
+            if (DBG) log("dbh.createCarriersTable:-");
         }
-
         private void initDatabase(SQLiteDatabase db) {
+            if (VDBG) log("dbh.initDatabase:+ db=" + db);
             // Read internal APNS data
             Resources r = mContext.getResources();
             XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
@@ -230,10 +273,15 @@ public class TelephonyProvider extends ContentProvider
             } finally {
                 try { if (confreader != null) confreader.close(); } catch (IOException e) { }
             }
+            if (VDBG) log("dbh.initDatabase:- db=" + db);
         }
 
         @Override
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            if (DBG) {
+                log("dbh.onUpgrade:+ db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
+            }
+
             if (oldVersion < (5 << 16 | 6)) {
                 // 5 << 16 is the Database version and 6 in the xml version.
 
@@ -281,6 +329,9 @@ public class TelephonyProvider extends ContentProvider
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
                         " ADD COLUMN sub_id LONG DEFAULT -1;");
                 oldVersion = 9 << 16 | 6;
+            }
+            if (DBG) {
+                log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
         }
 
@@ -431,7 +482,9 @@ public class TelephonyProvider extends ContentProvider
 
     @Override
     public boolean onCreate() {
+        if (VDBG) log("onCreate:+");
         mOpenHelper = new DatabaseHelper(getContext());
+        if (VDBG) log("onCreate:- ret true");
         return true;
     }
 
