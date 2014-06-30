@@ -68,5 +68,12 @@
                   android:singleUser="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS" />
+
+        <provider android:name="HbpcdLookupProvider"
+                  android:authorities="hbpcd_lookup"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:multiprocess="false"
+                  android:writePermission="android.permission.MODIFY_PHONE_STATE" />
     </application>
 </manifest>

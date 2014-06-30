@@ -1,0 +1,7218 @@
+<?xml version="1.0"?>
+<!--
+/*
+** Copyright 2014, The Android Open Source Project
+**
+** Licensed under the Apache License, Version 2.0 (the "License");
+** you may not use this file except in compliance with the License.
+** You may obtain a copy of the License at
+**
+**     http://www.apache.org/licenses/LICENSE-2.0
+**
+** Unless required by applicable law or agreed to in writing, software
+** distributed under the License is distributed on an "AS IS" BASIS,
+** WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+** See the License for the specific language governing permissions and
+** limitations under the License.
+*/
+-->
+<hbpcd_info>
+<table name="MCC_IDD">
+<row id="1">
+<MCC>289</MCC>
+<IDD>8888</IDD>
+</row>
+<row id="2">
+<MCC>412</MCC>
+<IDD>00</IDD>
+</row>
+<row id="3">
+<MCC>276</MCC>
+<IDD>00</IDD>
+</row>
+<row id="4">
+<MCC>603</MCC>
+<IDD>00</IDD>
+</row>
+<row id="5">
+<MCC>544</MCC>
+<IDD>011</IDD>
+</row>
+<row id="6">
+<MCC>213</MCC>
+<IDD>00</IDD>
+</row>
+<row id="7">
+<MCC>631</MCC>
+<IDD>00</IDD>
+</row>
+<row id="8">
+<MCC>365</MCC>
+<IDD>011</IDD>
+</row>
+<row id="9">
+<MCC>344</MCC>
+<IDD>011</IDD>
+</row>
+<row id="10">
+<MCC>722</MCC>
+<IDD>00</IDD>
+</row>
+<row id="11">
+<MCC>283</MCC>
+<IDD>00</IDD>
+</row>
+<row id="12">
+<MCC>363</MCC>
+<IDD>00</IDD>
+</row>
+<row id="13">
+<MCC>505</MCC>
+<IDD>0011</IDD>
+</row>
+<row id="14">
+<MCC>232</MCC>
+<IDD>00</IDD>
+</row>
+<row id="15">
+<MCC>400</MCC>
+<IDD>00</IDD>
+</row>
+<row id="16">
+<MCC>364</MCC>
+<IDD>011</IDD>
+</row>
+<row id="17">
+<MCC>426</MCC>
+<IDD>00</IDD>
+</row>
+<row id="18">
+<MCC>470</MCC>
+<IDD>00</IDD>
+</row>
+<row id="19">
+<MCC>342</MCC>
+<IDD>011</IDD>
+</row>
+<row id="20">
+<MCC>257</MCC>
+<IDD>810</IDD>
+</row>
+<row id="21">
+<MCC>206</MCC>
+<IDD>00</IDD>
+</row>
+<row id="22">
+<MCC>702</MCC>
+<IDD>00</IDD>
+</row>
+<row id="23">
+<MCC>616</MCC>
+<IDD>00</IDD>
+</row>
+<row id="24">
+<MCC>350</MCC>
+<IDD>011</IDD>
+</row>
+<row id="25">
+<MCC>402</MCC>
+<IDD>00</IDD>
+</row>
+<row id="26">
+<MCC>736</MCC>
+<IDD>00</IDD>
+</row>
+<row id="27">
+<MCC>218</MCC>
+<IDD>00</IDD>
+</row>
+<row id="28">
+<MCC>652</MCC>
+<IDD>00</IDD>
+</row>
+<row id="29">
+<MCC>724</MCC>
+<IDD>0015</IDD>
+</row>
+<row id="30">
+<MCC>348</MCC>
+<IDD>011</IDD>
+</row>
+<row id="31">
+<MCC>528</MCC>
+<IDD>00</IDD>
+</row>
+<row id="32">
+<MCC>284</MCC>
+<IDD>00</IDD>
+</row>
+<row id="33">
+<MCC>613</MCC>
+<IDD>00</IDD>
+</row>
+<row id="34">
+<MCC>642</MCC>
+<IDD>00</IDD>
+</row>
+<row id="35">
+<MCC>456</MCC>
+<IDD>001</IDD>
+</row>
+<row id="36">
+<MCC>624</MCC>
+<IDD>00</IDD>
+</row>
+<row id="37">
+<MCC>302</MCC>
+<IDD>011</IDD>
+</row>
+<row id="38">
+<MCC>625</MCC>
+<IDD>0</IDD>
+</row>
+<row id="39">
+<MCC>346</MCC>
+<IDD>011</IDD>
+</row>
+<row id="40">
+<MCC>623</MCC>
+<IDD>00</IDD>
+</row>
+<row id="41">
+<MCC>622</MCC>
+<IDD>15</IDD>
+</row>
+<row id="42">
+<MCC>730</MCC>
+<IDD>00</IDD>
+</row>
+<row id="43">
+<MCC>460</MCC>
+<IDD>00</IDD>
+</row>
+<row id="44">
+<MCC>732</MCC>
+<IDD>00</IDD>
+</row>
+<row id="45">
+<MCC>654</MCC>
+<IDD>00</IDD>
+</row>
+<row id="46">
+<MCC>629</MCC>
+<IDD>00</IDD>
+</row>
+<row id="47">
+<MCC>548</MCC>
+<IDD>00</IDD>
+</row>
+<row id="48">
+<MCC>712</MCC>
+<IDD>00</IDD>
+</row>
+<row id="49">
+<MCC>612</MCC>
+<IDD>00</IDD>
+</row>
+<row id="50">
+<MCC>219</MCC>
+<IDD>00</IDD>
+</row>
+<row id="51">
+<MCC>368</MCC>
+<IDD>119</IDD>
+</row>
+<row id="52">
+<MCC>280</MCC>
+<IDD>00</IDD>
+</row>
+<row id="53">
+<MCC>230</MCC>
+<IDD>00</IDD>
+</row>
+<row id="54">
+<MCC>630</MCC>
+<IDD>00</IDD>
+</row>
+<row id="55">
+<MCC>238</MCC>
+<IDD>00</IDD>
+</row>
+<row id="56">
+<MCC>638</MCC>
+<IDD>00</IDD>
+</row>
+<row id="57">
+<MCC>366</MCC>
+<IDD>011</IDD>
+</row>
+<row id="58">
+<MCC>370</MCC>
+<IDD>011</IDD>
+</row>
+<row id="59">
+<MCC>514</MCC>
+<IDD>00</IDD>
+</row>
+<row id="60">
+<MCC>740</MCC>
+<IDD>00</IDD>
+</row>
+<row id="61">
+<MCC>602</MCC>
+<IDD>00</IDD>
+</row>
+<row id="62">
+<MCC>706</MCC>
+<IDD>00</IDD>
+</row>
+<row id="63">
+<MCC>627</MCC>
+<IDD>00</IDD>
+</row>
+<row id="64">
+<MCC>657</MCC>
+<IDD>00</IDD>
+</row>
+<row id="65">
+<MCC>248</MCC>
+<IDD>00</IDD>
+</row>
+<row id="66">
+<MCC>636</MCC>
+<IDD>00</IDD>
+</row>
+<row id="67">
+<MCC>750</MCC>
+<IDD>8888</IDD>
+</row>
+<row id="68">
+<MCC>288</MCC>
+<IDD>00</IDD>
+</row>
+<row id="69">
+<MCC>542</MCC>
+<IDD>00</IDD>
+</row>
+<row id="70">
+<MCC>244</MCC>
+<IDD>00</IDD>
+</row>
+<row id="71">
+<MCC>208</MCC>
+<IDD>00</IDD>
+</row>
+<row id="72">
+<MCC>742</MCC>
+<IDD>00</IDD>
+</row>
+<row id="73">
+<MCC>547</MCC>
+<IDD>00</IDD>
+</row>
+<row id="74">
+<MCC>628</MCC>
+<IDD>00</IDD>
+</row>
+<row id="75">
+<MCC>607</MCC>
+<IDD>00</IDD>
+</row>
+<row id="76">
+<MCC>282</MCC>
+<IDD>810</IDD>
+</row>
+<row id="77">
+<MCC>262</MCC>
+<IDD>00</IDD>
+</row>
+<row id="78">
+<MCC>620</MCC>
+<IDD>00</IDD>
+</row>
+<row id="79">
+<MCC>266</MCC>
+<IDD>00</IDD>
+</row>
+<row id="80">
+<MCC>202</MCC>
+<IDD>00</IDD>
+</row>
+<row id="81">
+<MCC>290</MCC>
+<IDD>00</IDD>
+</row>
+<row id="82">
+<MCC>352</MCC>
+<IDD>011</IDD>
+</row>
+<row id="83">
+<MCC>340</MCC>
+<IDD>00</IDD>
+</row>
+<row id="84">
+<MCC>535</MCC>
+<IDD>011</IDD>
+</row>
+<row id="85">
+<MCC>704</MCC>
+<IDD>00</IDD>
+</row>
+<row id="86">
+<MCC>611</MCC>
+<IDD>00</IDD>
+</row>
+<row id="87">
+<MCC>632</MCC>
+<IDD>00</IDD>
+</row>
+<row id="88">
+<MCC>738</MCC>
+<IDD>001</IDD>
+</row>
+<row id="89">
+<MCC>372</MCC>
+<IDD>00</IDD>
+</row>
+<row id="90">
+<MCC>708</MCC>
+<IDD>00</IDD>
+</row>
+<row id="91">
+<MCC>454</MCC>
+<IDD>001</IDD>
+</row>
+<row id="92">
+<MCC>216</MCC>
+<IDD>00</IDD>
+</row>
+<row id="93">
+<MCC>274</MCC>
+<IDD>00</IDD>
+</row>
+<row id="94">
+<MCC>404</MCC>
+<IDD>00</IDD>
+</row>
+<row id="95">
+<MCC>405</MCC>
+<IDD>00</IDD>
+</row>
+<row id="96">
+<MCC>510</MCC>
+<IDD>001</IDD>
+</row>
+<row id="97">
+<MCC>432</MCC>
+<IDD>00</IDD>
+</row>
+<row id="98">
+<MCC>418</MCC>
+<IDD>00</IDD>
+</row>
+<row id="99">
+<MCC>272</MCC>
+<IDD>00</IDD>
+</row>
+<row id="100">
+<MCC>425</MCC>
+<IDD>00</IDD>
+</row>
+<row id="101">
+<MCC>222</MCC>
+<IDD>00</IDD>
+</row>
+<row id="102">
+<MCC>338</MCC>
+<IDD>011</IDD>
+</row>
+<row id="103">
+<MCC>440</MCC>
+<IDD>010</IDD>
+</row>
+<row id="104">
+<MCC>441</MCC>
+<IDD>010</IDD>
+</row>
+<row id="105">
+<MCC>416</MCC>
+<IDD>00</IDD>
+</row>
+<row id="106">
+<MCC>401</MCC>
+<IDD>810</IDD>
+</row>
+<row id="107">
+<MCC>639</MCC>
+<IDD>00</IDD>
+</row>
+<row id="108">
+<MCC>545</MCC>
+<IDD>00</IDD>
+</row>
+<row id="109">
+<MCC>467</MCC>
+<IDD>00</IDD>
+</row>
+<row id="110">
+<MCC>450</MCC>
+<IDD>00700</IDD>
+</row>
+<row id="111">
+<MCC>419</MCC>
+<IDD>00</IDD>
+</row>
+<row id="112">
+<MCC>437</MCC>
+<IDD>00</IDD>
+</row>
+<row id="113">
+<MCC>457</MCC>
+<IDD>00</IDD>
+</row>
+<row id="114">
+<MCC>247</MCC>
+<IDD>00</IDD>
+</row>
+<row id="115">
+<MCC>415</MCC>
+<IDD>00</IDD>
+</row>
+<row id="116">
+<MCC>651</MCC>
+<IDD>00</IDD>
+</row>
+<row id="117">
+<MCC>618</MCC>
+<IDD>00</IDD>
+</row>
+<row id="118">
+<MCC>606</MCC>
+<IDD>00</IDD>
+</row>
+<row id="119">
+<MCC>295</MCC>
+<IDD>00</IDD>
+</row>
+<row id="120">
+<MCC>246</MCC>
+<IDD>00</IDD>
+</row>
+<row id="121">
+<MCC>270</MCC>
+<IDD>00</IDD>
+</row>
+<row id="122">
+<MCC>455</MCC>
+<IDD>00</IDD>
+</row>
+<row id="123">
+<MCC>294</MCC>
+<IDD>00</IDD>
+</row>
+<row id="124">
+<MCC>646</MCC>
+<IDD>00</IDD>
+</row>
+<row id="125">
+<MCC>650</MCC>
+<IDD>00</IDD>
+</row>
+<row id="126">
+<MCC>502</MCC>
+<IDD>00</IDD>
+</row>
+<row id="127">
+<MCC>472</MCC>
+<IDD>00</IDD>
+</row>
+<row id="128">
+<MCC>610</MCC>
+<IDD>00</IDD>
+</row>
+<row id="129">
+<MCC>278</MCC>
+<IDD>00</IDD>
+</row>
+<row id="130">
+<MCC>551</MCC>
+<IDD>011</IDD>
+</row>
+<row id="131">
+<MCC>609</MCC>
+<IDD>00</IDD>
+</row>
+<row id="132">
+<MCC>617</MCC>
+<IDD>020</IDD>
+</row>
+<row id="133">
+<MCC>334</MCC>
+<IDD>00</IDD>
+</row>
+<row id="134">
+<MCC>550</MCC>
+<IDD>011</IDD>
+</row>
+<row id="135">
+<MCC>259</MCC>
+<IDD>00</IDD>
+</row>
+<row id="136">
+<MCC>212</MCC>
+<IDD>00</IDD>
+</row>
+<row id="137">
+<MCC>428</MCC>
+<IDD>001</IDD>
+</row>
+<row id="138">
+<MCC>297</MCC>
+<IDD>00</IDD>
+</row>
+<row id="139">
+<MCC>354</MCC>
+<IDD>011</IDD>
+</row>
+<row id="140">
+<MCC>604</MCC>
+<IDD>00</IDD>
+</row>
+<row id="141">
+<MCC>643</MCC>
+<IDD>00</IDD>
+</row>
+<row id="142">
+<MCC>414</MCC>
+<IDD>00</IDD>
+</row>
+<row id="143">
+<MCC>649</MCC>
+<IDD>00</IDD>
+</row>
+<row id="144">
+<MCC>536</MCC>
+<IDD>00</IDD>
+</row>
+<row id="145">
+<MCC>429</MCC>
+<IDD>00</IDD>
+</row>
+<row id="146">
+<MCC>204</MCC>
+<IDD>00</IDD>
+</row>
+<row id="147">
+<MCC>362</MCC>
+<IDD>00</IDD>
+</row>
+<row id="148">
+<MCC>546</MCC>
+<IDD>00</IDD>
+</row>
+<row id="149">
+<MCC>530</MCC>
+<IDD>00</IDD>
+</row>
+<row id="150">
+<MCC>710</MCC>
+<IDD>00</IDD>
+</row>
+<row id="151">
+<MCC>614</MCC>
+<IDD>00</IDD>
+</row>
+<row id="152">
+<MCC>621</MCC>
+<IDD>009</IDD>
+</row>
+<row id="153">
+<MCC>534</MCC>
+<IDD>011</IDD>
+</row>
+<row id="154">
+<MCC>242</MCC>
+<IDD>00</IDD>
+</row>
+<row id="155">
+<MCC>422</MCC>
+<IDD>00</IDD>
+</row>
+<row id="156">
+<MCC>410</MCC>
+<IDD>00</IDD>
+</row>
+<row id="157">
+<MCC>552</MCC>
+<IDD>11</IDD>
+</row>
+<row id="158">
+<MCC>423</MCC>
+<IDD>8888</IDD>
+</row>
+<row id="159">
+<MCC>714</MCC>
+<IDD>00</IDD>
+</row>
+<row id="160">
+<MCC>537</MCC>
+<IDD>5</IDD>
+</row>
+<row id="161">
+<MCC>744</MCC>
+<IDD>2</IDD>
+</row>
+<row id="162">
+<MCC>716</MCC>
+<IDD>00</IDD>
+</row>
+<row id="163">
+<MCC>515</MCC>
+<IDD>00</IDD>
+</row>
+<row id="164">
+<MCC>260</MCC>
+<IDD>00</IDD>
+</row>
+<row id="165">
+<MCC>268</MCC>
+<IDD>00</IDD>
+</row>
+<row id="166">
+<MCC>330</MCC>
+<IDD>011</IDD>
+</row>
+<row id="167">
+<MCC>427</MCC>
+<IDD>00</IDD>
+</row>
+<row id="168">
+<MCC>647</MCC>
+<IDD>00</IDD>
+</row>
+<row id="169">
+<MCC>226</MCC>
+<IDD>00</IDD>
+</row>
+<row id="170">
+<MCC>250</MCC>
+<IDD>810</IDD>
+</row>
+<row id="171">
+<MCC>635</MCC>
+<IDD>00</IDD>
+</row>
+<row id="172">
+<MCC>356</MCC>
+<IDD>011</IDD>
+</row>
+<row id="173">
+<MCC>358</MCC>
+<IDD>011</IDD>
+</row>
+<row id="174">
+<MCC>308</MCC>
+<IDD>00</IDD>
+</row>
+<row id="175">
+<MCC>360</MCC>
+<IDD>011</IDD>
+</row>
+<row id="176">
+<MCC>549</MCC>
+<IDD>0</IDD>
+</row>
+<row id="177">
+<MCC>292</MCC>
+<IDD>00</IDD>
+</row>
+<row id="178">
+<MCC>626</MCC>
+<IDD>00</IDD>
+</row>
+<row id="179">
+<MCC>420</MCC>
+<IDD>00</IDD>
+</row>
+<row id="180">
+<MCC>608</MCC>
+<IDD>00</IDD>
+</row>
+<row id="181">
+<MCC>220</MCC>
+<IDD>99</IDD>
+</row>
+<row id="182">
+<MCC>633</MCC>
+<IDD>00</IDD>
+</row>
+<row id="183">
+<MCC>619</MCC>
+<IDD>00</IDD>
+</row>
+<row id="184">
+<MCC>525</MCC>
+<IDD>001</IDD>
+</row>
+<row id="185">
+<MCC>231</MCC>
+<IDD>00</IDD>
+</row>
+<row id="186">
+<MCC>293</MCC>
+<IDD>00</IDD>
+</row>
+<row id="187">
+<MCC>540</MCC>
+<IDD>00</IDD>
+</row>
+<row id="188">
+<MCC>637</MCC>
+<IDD>00</IDD>
+</row>
+<row id="189">
+<MCC>655</MCC>
+<IDD>00</IDD>
+</row>
+<row id="190">
+<MCC>214</MCC>
+<IDD>00</IDD>
+</row>
+<row id="191">
+<MCC>413</MCC>
+<IDD>00</IDD>
+</row>
+<row id="192">
+<MCC>634</MCC>
+<IDD>00</IDD>
+</row>
+<row id="193">
+<MCC>746</MCC>
+<IDD>00</IDD>
+</row>
+<row id="194">
+<MCC>653</MCC>
+<IDD>00</IDD>
+</row>
+<row id="195">
+<MCC>240</MCC>
+<IDD>00</IDD>
+</row>
+<row id="196">
+<MCC>228</MCC>
+<IDD>00</IDD>
+</row>
+<row id="197">
+<MCC>417</MCC>
+<IDD>00</IDD>
+</row>
+<row id="198">
+<MCC>466</MCC>
+<IDD>002</IDD>
+</row>
+<row id="199">
+<MCC>436</MCC>
+<IDD>810</IDD>
+</row>
+<row id="200">
+<MCC>640</MCC>
+<IDD>000</IDD>
+</row>
+<row id="201">
+<MCC>520</MCC>
+<IDD>001</IDD>
+</row>
+<row id="202">
+<MCC>615</MCC>
+<IDD>00</IDD>
+</row>
+<row id="203">
+<MCC>539</MCC>
+<IDD>00</IDD>
+</row>
+<row id="204">
+<MCC>374</MCC>
+<IDD>011</IDD>
+</row>
+<row id="205">
+<MCC>605</MCC>
+<IDD>00</IDD>
+</row>
+<row id="206">
+<MCC>286</MCC>
+<IDD>00</IDD>
+</row>
+<row id="207">
+<MCC>438</MCC>
+<IDD>810</IDD>
+</row>
+<row id="208">
+<MCC>376</MCC>
+<IDD>011</IDD>
+</row>
+<row id="209">
+<MCC>641</MCC>
+<IDD>000</IDD>
+</row>
+<row id="210">
+<MCC>255</MCC>
+<IDD>810</IDD>
+</row>
+<row id="211">
+<MCC>424</MCC>
+<IDD>00</IDD>
+</row>
+<row id="212">
+<MCC>430</MCC>
+<IDD>00</IDD>
+</row>
+<row id="213">
+<MCC>431</MCC>
+<IDD>00</IDD>
+</row>
+<row id="214">
+<MCC>234</MCC>
+<IDD>00</IDD>
+</row>
+<row id="215">
+<MCC>235</MCC>
+<IDD>00</IDD>
+</row>
+<row id="216">
+<MCC>310</MCC>
+<IDD>011</IDD>
+</row>
+<row id="217">
+<MCC>311</MCC>
+<IDD>011</IDD>
+</row>
+<row id="218">
+<MCC>312</MCC>
+<IDD>011</IDD>
+</row>
+<row id="219">
+<MCC>313</MCC>
+<IDD>011</IDD>
+</row>
+<row id="220">
+<MCC>314</MCC>
+<IDD>011</IDD>
+</row>
+<row id="221">
+<MCC>316</MCC>
+<IDD>011</IDD>
+</row>
+<row id="222">
+<MCC>332</MCC>
+<IDD>011</IDD>
+</row>
+<row id="223">
+<MCC>748</MCC>
+<IDD>00</IDD>
+</row>
+<row id="224">
+<MCC>541</MCC>
+<IDD>00</IDD>
+</row>
+<row id="225">
+<MCC>225</MCC>
+<IDD>00</IDD>
+</row>
+<row id="226">
+<MCC>734</MCC>
+<IDD>00</IDD>
+</row>
+<row id="227">
+<MCC>452</MCC>
+<IDD>00</IDD>
+</row>
+<row id="228">
+<MCC>543</MCC>
+<IDD>19</IDD>
+</row>
+<row id="229">
+<MCC>421</MCC>
+<IDD>00</IDD>
+</row>
+<row id="230">
+<MCC>645</MCC>
+<IDD>00</IDD>
+</row>
+<row id="231">
+<MCC>648</MCC>
+<IDD>00</IDD>
+</row>
+<row id="232">
+<MCC>315</MCC>
+<IDD>011</IDD>
+</row>
+<row id="233">
+<MCC>434</MCC>
+<IDD>810</IDD>
+</row>
+<row id="234">
+<MCC>901</MCC>
+<IDD>011</IDD>
+</row>
+<row id="235">
+<MCC>724</MCC>
+<IDD>0014</IDD>
+</row>
+<row id="236">
+<MCC>724</MCC>
+<IDD>0021</IDD>
+</row>
+<row id="237">
+<MCC>724</MCC>
+<IDD>0023</IDD>
+</row>
+<row id="238">
+<MCC>724</MCC>
+<IDD>0031</IDD>
+</row>
+<row id="239">
+<MCC>456</MCC>
+<IDD>007</IDD>
+</row>
+<row id="240">
+<MCC>456</MCC>
+<IDD>008</IDD>
+</row>
+<row id="241">
+<MCC>732</MCC>
+<IDD>005</IDD>
+</row>
+<row id="242">
+<MCC>732</MCC>
+<IDD>007</IDD>
+</row>
+<row id="243">
+<MCC>732</MCC>
+<IDD>009</IDD>
+</row>
+<row id="244">
+<MCC>732</MCC>
+<IDD>00444</IDD>
+</row>
+<row id="245">
+<MCC>244</MCC>
+<IDD>990</IDD>
+</row>
+<row id="246">
+<MCC>244</MCC>
+<IDD>994</IDD>
+</row>
+<row id="247">
+<MCC>244</MCC>
+<IDD>999</IDD>
+</row>
+<row id="248">
+<MCC>510</MCC>
+<IDD>008</IDD>
+</row>
+<row id="249">
+<MCC>425</MCC>
+<IDD>012</IDD>
+</row>
+<row id="250">
+<MCC>425</MCC>
+<IDD>013</IDD>
+</row>
+<row id="251">
+<MCC>425</MCC>
+<IDD>014</IDD>
+</row>
+<row id="252">
+<MCC>425</MCC>
+<IDD>018</IDD>
+</row>
+<row id="253">
+<MCC>525</MCC>
+<IDD>008</IDD>
+</row>
+<row id="254">
+<MCC>450</MCC>
+<IDD>001</IDD>
+</row>
+<row id="255">
+<MCC>450</MCC>
+<IDD>002</IDD>
+</row>
+</table>
+
+<table name="MCC_LOOKUP_TABLE">
+<row id="1">
+<MCC>202</MCC>
+<Country_Code>30</Country_Code>
+<Country_Name>Greece</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="2">
+<MCC>204</MCC>
+<Country_Code>31</Country_Code>
+<Country_Name>Netherlands</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="3">
+<MCC>206</MCC>
+<Country_Code>32</Country_Code>
+<Country_Name>Belgium</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="4">
+<MCC>208</MCC>
+<Country_Code>33</Country_Code>
+<Country_Name>France</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="5">
+<MCC>212</MCC>
+<Country_Code>377</Country_Code>
+<Country_Name>Monaco</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="6">
+<MCC>213</MCC>
+<Country_Code>376</Country_Code>
+<Country_Name>Andorra</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="7">
+<MCC>214</MCC>
+<Country_Code>34</Country_Code>
+<Country_Name>Spain</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="8">
+<MCC>216</MCC>
+<Country_Code>36</Country_Code>
+<Country_Name>Hungary</Country_Name>
+<NDD>06</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="9">
+<MCC>218</MCC>
+<Country_Code>387</Country_Code>
+<Country_Name>Bosnia and Herzegovina</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="10">
+<MCC>219</MCC>
+<Country_Code>385</Country_Code>
+<Country_Name>Croatia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="11">
+<MCC>220</MCC>
+<Country_Code>381</Country_Code>
+<Country_Name>Serbia (Republic of)</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="12">
+<MCC>222</MCC>
+<Country_Code>39</Country_Code>
+<Country_Name>Italy</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="13">
+<MCC>225</MCC>
+<Country_Code>39</Country_Code>
+<Country_Name>Vatican City State</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="14">
+<MCC>226</MCC>
+<Country_Code>40</Country_Code>
+<Country_Name>Romania</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="15">
+<MCC>228</MCC>
+<Country_Code>41</Country_Code>
+<Country_Name>Switzerland</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="16">
+<MCC>230</MCC>
+<Country_Code>420</Country_Code>
+<Country_Name>Czech Republic</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="17">
+<MCC>231</MCC>
+<Country_Code>421</Country_Code>
+<Country_Name>Slovakia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="18">
+<MCC>232</MCC>
+<Country_Code>43</Country_Code>
+<Country_Name>Austria</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="19">
+<MCC>234</MCC>
+<Country_Code>44</Country_Code>
+<Country_Name>United Kingdom</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="20">
+<MCC>238</MCC>
+<Country_Code>45</Country_Code>
+<Country_Name>Denmark</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="21">
+<MCC>240</MCC>
+<Country_Code>46</Country_Code>
+<Country_Name>Sweden</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="22">
+<MCC>242</MCC>
+<Country_Code>47</Country_Code>
+<Country_Name>Norway</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="23">
+<MCC>244</MCC>
+<Country_Code>358</Country_Code>
+<Country_Name>Finland</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="24">
+<MCC>246</MCC>
+<Country_Code>370</Country_Code>
+<Country_Name>Lithuania</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="25">
+<MCC>247</MCC>
+<Country_Code>371</Country_Code>
+<Country_Name>Latvia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="26">
+<MCC>248</MCC>
+<Country_Code>372</Country_Code>
+<Country_Name>Estonia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="27">
+<MCC>250</MCC>
+<Country_Code>7</Country_Code>
+<Country_Name>Russian Federation</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>12.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>13.0</GMT_DST_High>
+</row>
+<row id="28">
+<MCC>255</MCC>
+<Country_Code>380</Country_Code>
+<Country_Name>Ukraine</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="29">
+<MCC>257</MCC>
+<Country_Code>375</Country_Code>
+<Country_Name>Belarus</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="30">
+<MCC>259</MCC>
+<Country_Code>373</Country_Code>
+<Country_Name>Moldova</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="31">
+<MCC>260</MCC>
+<Country_Code>48</Country_Code>
+<Country_Name>Poland</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="32">
+<MCC>262</MCC>
+<Country_Code>49</Country_Code>
+<Country_Name>Germany</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="33">
+<MCC>266</MCC>
+<Country_Code>350</Country_Code>
+<Country_Name>Gibraltar (UK)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="34">
+<MCC>268</MCC>
+<Country_Code>351</Country_Code>
+<Country_Name>Portugal</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="35">
+<MCC>270</MCC>
+<Country_Code>352</Country_Code>
+<Country_Name>Luxembourg</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="36">
+<MCC>272</MCC>
+<Country_Code>353</Country_Code>
+<Country_Name>Ireland</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="37">
+<MCC>274</MCC>
+<Country_Code>354</Country_Code>
+<Country_Name>Iceland</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="38">
+<MCC>276</MCC>
+<Country_Code>355</Country_Code>
+<Country_Name>Albania</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="39">
+<MCC>278</MCC>
+<Country_Code>356</Country_Code>
+<Country_Name>Malta</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="40">
+<MCC>280</MCC>
+<Country_Code>357</Country_Code>
+<Country_Name>Cyprus</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="41">
+<MCC>282</MCC>
+<Country_Code>995</Country_Code>
+<Country_Name>Georgia</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="42">
+<MCC>283</MCC>
+<Country_Code>374</Country_Code>
+<Country_Name>Armenia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>5.0</GMT_DST_High>
+</row>
+<row id="43">
+<MCC>284</MCC>
+<Country_Code>359</Country_Code>
+<Country_Name>Bulgaria</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="44">
+<MCC>286</MCC>
+<Country_Code>90</Country_Code>
+<Country_Name>Turkey</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="45">
+<MCC>288</MCC>
+<Country_Code>298</Country_Code>
+<Country_Name>Faroe Islands (Denmark)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="46">
+<MCC>290</MCC>
+<Country_Code>299</Country_Code>
+<Country_Name>Greenland (Denmark)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="47">
+<MCC>292</MCC>
+<Country_Code>378</Country_Code>
+<Country_Name>San Marino</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="48">
+<MCC>293</MCC>
+<Country_Code>386</Country_Code>
+<Country_Name>Slovenia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="49">
+<MCC>294</MCC>
+<Country_Code>389</Country_Code>
+<Country_Name>Republic of Macedonia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="50">
+<MCC>295</MCC>
+<Country_Code>423</Country_Code>
+<Country_Name>Liechtenstein</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="51">
+<MCC>297</MCC>
+<Country_Code>382</Country_Code>
+<Country_Name>Montenegro (Republic of)</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="52">
+<MCC>302</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Canada</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-3.5</GMT_Offset_Low>
+<GMT_Offset_High>-8.0</GMT_Offset_High>
+<GMT_DST_Low>-2.5</GMT_DST_Low>
+<GMT_DST_High>-8.0</GMT_DST_High>
+</row>
+<row id="53">
+<MCC>308</MCC>
+<Country_Code>508</Country_Code>
+<Country_Name>Saint Pierre and Miquelon (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-3.0</GMT_Offset_Low>
+<GMT_Offset_High>-3.0</GMT_Offset_High>
+<GMT_DST_Low>-2.0</GMT_DST_Low>
+<GMT_DST_High>-2.0</GMT_DST_High>
+</row>
+<row id="54">
+<MCC>310</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="55">
+<MCC>311</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="56">
+<MCC>312</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="57">
+<MCC>313</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="58">
+<MCC>314</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="59">
+<MCC>315</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="60">
+<MCC>316</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States of America</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="61">
+<MCC>330</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Puerto Rico (US)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="62">
+<MCC>332</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>United States Virgin Islands (US)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="63">
+<MCC>334</MCC>
+<Country_Code>52</Country_Code>
+<Country_Name>Mexico</Country_Name>
+<NDD>01</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-8.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-8.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="64">
+<MCC>338</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Jamaica</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="65">
+<MCC>340</MCC>
+<Country_Code>590</Country_Code>
+<Country_Name>Guadeloupe (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="66">
+<MCC>342</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Barbados</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="67">
+<MCC>344</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Antigua and Barbuda</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="68">
+<MCC>346</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Cayman Islands (UK)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="69">
+<MCC>348</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>British Virgin Islands (UK)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="70">
+<MCC>350</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Bermuda (UK)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="71">
+<MCC>352</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Grenada</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="72">
+<MCC>354</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Montserrat (UK)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="73">
+<MCC>356</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Saint Kitts and Nevis</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="74">
+<MCC>358</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Saint Lucia</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="75">
+<MCC>360</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Saint Vincent and the Grenadines</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="76">
+<MCC>362</MCC>
+<Country_Code>599</Country_Code>
+<Country_Name>Netherlands Antilles (Netherlands)</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="77">
+<MCC>363</MCC>
+<Country_Code>297</Country_Code>
+<Country_Name>Aruba (Netherlands)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="78">
+<MCC>364</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Bahamas</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="79">
+<MCC>365</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Anguilla</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="80">
+<MCC>366</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Dominica</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="81">
+<MCC>368</MCC>
+<Country_Code>53</Country_Code>
+<Country_Name>Cuba</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="82">
+<MCC>370</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Dominican Republic</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="83">
+<MCC>372</MCC>
+<Country_Code>509</Country_Code>
+<Country_Name>Haiti</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="84">
+<MCC>374</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Trinidad and Tobago</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="85">
+<MCC>376</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Turks and Caicos Islands (UK)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="86">
+<MCC>400</MCC>
+<Country_Code>994</Country_Code>
+<Country_Name>Azerbaijani Republic</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>5.0</GMT_DST_High>
+</row>
+<row id="87">
+<MCC>401</MCC>
+<Country_Code>7</Country_Code>
+<Country_Name>Kazakhstan</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.0</GMT_Offset_Low>
+<GMT_Offset_High>6.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>6.0</GMT_DST_High>
+</row>
+<row id="88">
+<MCC>402</MCC>
+<Country_Code>975</Country_Code>
+<Country_Name>Bhutan</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>6.0</GMT_Offset_Low>
+<GMT_Offset_High>6.0</GMT_Offset_High>
+<GMT_DST_Low>6.0</GMT_DST_Low>
+<GMT_DST_High>6.0</GMT_DST_High>
+</row>
+<row id="89">
+<MCC>404</MCC>
+<Country_Code>91</Country_Code>
+<Country_Name>India</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.5</GMT_Offset_Low>
+<GMT_Offset_High>5.5</GMT_Offset_High>
+<GMT_DST_Low>5.5</GMT_DST_Low>
+<GMT_DST_High>5.5</GMT_DST_High>
+</row>
+<row id="90">
+<MCC>410</MCC>
+<Country_Code>92</Country_Code>
+<Country_Name>Pakistan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.0</GMT_Offset_Low>
+<GMT_Offset_High>5.0</GMT_Offset_High>
+<GMT_DST_Low>6.0</GMT_DST_Low>
+<GMT_DST_High>6.0</GMT_DST_High>
+</row>
+<row id="91">
+<MCC>412</MCC>
+<Country_Code>93</Country_Code>
+<Country_Name>Afghanistan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.5</GMT_Offset_Low>
+<GMT_Offset_High>4.5</GMT_Offset_High>
+<GMT_DST_Low>4.5</GMT_DST_Low>
+<GMT_DST_High>4.5</GMT_DST_High>
+</row>
+<row id="92">
+<MCC>413</MCC>
+<Country_Code>94</Country_Code>
+<Country_Name>Sri Lanka</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.5</GMT_Offset_Low>
+<GMT_Offset_High>5.5</GMT_Offset_High>
+<GMT_DST_Low>5.5</GMT_DST_Low>
+<GMT_DST_High>5.5</GMT_DST_High>
+</row>
+<row id="93">
+<MCC>414</MCC>
+<Country_Code>95</Country_Code>
+<Country_Name>Myanmar</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>6.5</GMT_Offset_Low>
+<GMT_Offset_High>6.5</GMT_Offset_High>
+<GMT_DST_Low>6.5</GMT_DST_Low>
+<GMT_DST_High>6.5</GMT_DST_High>
+</row>
+<row id="94">
+<MCC>415</MCC>
+<Country_Code>961</Country_Code>
+<Country_Name>Lebanon</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="95">
+<MCC>416</MCC>
+<Country_Code>962</Country_Code>
+<Country_Name>Jordan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="96">
+<MCC>417</MCC>
+<Country_Code>963</Country_Code>
+<Country_Name>Syria</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="97">
+<MCC>418</MCC>
+<Country_Code>964</Country_Code>
+<Country_Name>Iraq</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="98">
+<MCC>419</MCC>
+<Country_Code>965</Country_Code>
+<Country_Name>Kuwait</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="99">
+<MCC>420</MCC>
+<Country_Code>966</Country_Code>
+<Country_Name>Saudi Arabia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="100">
+<MCC>421</MCC>
+<Country_Code>967</Country_Code>
+<Country_Name>Yemen</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="101">
+<MCC>422</MCC>
+<Country_Code>968</Country_Code>
+<Country_Name>Oman</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="102">
+<MCC>424</MCC>
+<Country_Code>971</Country_Code>
+<Country_Name>United Arab Emirates</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="103">
+<MCC>425</MCC>
+<Country_Code>972</Country_Code>
+<Country_Name>Israel</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="104">
+<MCC>426</MCC>
+<Country_Code>973</Country_Code>
+<Country_Name>Bahrain</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="105">
+<MCC>427</MCC>
+<Country_Code>974</Country_Code>
+<Country_Name>Qatar</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="106">
+<MCC>428</MCC>
+<Country_Code>976</Country_Code>
+<Country_Name>Mongolia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>7.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>7.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="107">
+<MCC>429</MCC>
+<Country_Code>977</Country_Code>
+<Country_Name>Nepal</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.75</GMT_Offset_Low>
+<GMT_Offset_High>5.75</GMT_Offset_High>
+<GMT_DST_Low>5.75</GMT_DST_Low>
+<GMT_DST_High>5.75</GMT_DST_High>
+</row>
+<row id="108">
+<MCC>430</MCC>
+<Country_Code>971</Country_Code>
+<Country_Name>United Arab Emirates (Abu Dhabi)</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="109">
+<MCC>431</MCC>
+<Country_Code>971</Country_Code>
+<Country_Name>United Arab Emirates (Dubai)</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="110">
+<MCC>432</MCC>
+<Country_Code>98</Country_Code>
+<Country_Name>Iran</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.5</GMT_Offset_Low>
+<GMT_Offset_High>3.5</GMT_Offset_High>
+<GMT_DST_Low>4.5</GMT_DST_Low>
+<GMT_DST_High>4.5</GMT_DST_High>
+</row>
+<row id="111">
+<MCC>434</MCC>
+<Country_Code>998</Country_Code>
+<Country_Name>Uzbekistan</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.0</GMT_Offset_Low>
+<GMT_Offset_High>5.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>5.0</GMT_DST_High>
+</row>
+<row id="112">
+<MCC>436</MCC>
+<Country_Code>992</Country_Code>
+<Country_Name>Tajikistan</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.0</GMT_Offset_Low>
+<GMT_Offset_High>5.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>5.0</GMT_DST_High>
+</row>
+<row id="113">
+<MCC>437</MCC>
+<Country_Code>996</Country_Code>
+<Country_Name>Kyrgyz Republic</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>6.0</GMT_Offset_Low>
+<GMT_Offset_High>6.0</GMT_Offset_High>
+<GMT_DST_Low>6.0</GMT_DST_Low>
+<GMT_DST_High>6.0</GMT_DST_High>
+</row>
+<row id="114">
+<MCC>438</MCC>
+<Country_Code>993</Country_Code>
+<Country_Name>Turkmenistan</Country_Name>
+<NDD>8</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.0</GMT_Offset_Low>
+<GMT_Offset_High>5.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>5.0</GMT_DST_High>
+</row>
+<row id="115">
+<MCC>440</MCC>
+<Country_Code>81</Country_Code>
+<Country_Name>Japan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="116">
+<MCC>450</MCC>
+<Country_Code>82</Country_Code>
+<Country_Name>Korea, South</Country_Name>
+<NDD>0082</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="117">
+<MCC>452</MCC>
+<Country_Code>84</Country_Code>
+<Country_Name>Viet Nam</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>7.0</GMT_Offset_Low>
+<GMT_Offset_High>7.0</GMT_Offset_High>
+<GMT_DST_Low>7.0</GMT_DST_Low>
+<GMT_DST_High>7.0</GMT_DST_High>
+</row>
+<row id="118">
+<MCC>454</MCC>
+<Country_Code>852</Country_Code>
+<Country_Name>Hong Kong (PRC)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="119">
+<MCC>455</MCC>
+<Country_Code>853</Country_Code>
+<Country_Name>Macau (PRC)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="120">
+<MCC>456</MCC>
+<Country_Code>855</Country_Code>
+<Country_Name>Cambodia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>7.0</GMT_Offset_Low>
+<GMT_Offset_High>7.0</GMT_Offset_High>
+<GMT_DST_Low>7.0</GMT_DST_Low>
+<GMT_DST_High>7.0</GMT_DST_High>
+</row>
+<row id="121">
+<MCC>457</MCC>
+<Country_Code>856</Country_Code>
+<Country_Name>Laos</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>7.0</GMT_Offset_Low>
+<GMT_Offset_High>7.0</GMT_Offset_High>
+<GMT_DST_Low>7.0</GMT_DST_Low>
+<GMT_DST_High>7.0</GMT_DST_High>
+</row>
+<row id="122">
+<MCC>460</MCC>
+<Country_Code>86</Country_Code>
+<Country_Name>China</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="123">
+<MCC>466</MCC>
+<Country_Code>886</Country_Code>
+<Country_Name>Taiwan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="124">
+<MCC>467</MCC>
+<Country_Code>850</Country_Code>
+<Country_Name>Korea, North</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="125">
+<MCC>470</MCC>
+<Country_Code>880</Country_Code>
+<Country_Name>Bangladesh</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>6.0</GMT_Offset_Low>
+<GMT_Offset_High>6.0</GMT_Offset_High>
+<GMT_DST_Low>6.0</GMT_DST_Low>
+<GMT_DST_High>6.0</GMT_DST_High>
+</row>
+<row id="126">
+<MCC>472</MCC>
+<Country_Code>960</Country_Code>
+<Country_Name>Maldives</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.0</GMT_Offset_Low>
+<GMT_Offset_High>5.0</GMT_Offset_High>
+<GMT_DST_Low>5.0</GMT_DST_Low>
+<GMT_DST_High>5.0</GMT_DST_High>
+</row>
+<row id="127">
+<MCC>502</MCC>
+<Country_Code>60</Country_Code>
+<Country_Name>Malaysia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="128">
+<MCC>505</MCC>
+<Country_Code>61</Country_Code>
+<Country_Name>Australia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>10.5</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>11.5</GMT_DST_High>
+</row>
+<row id="129">
+<MCC>510</MCC>
+<Country_Code>62</Country_Code>
+<Country_Name>Indonesia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>7.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>7.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="130">
+<MCC>514</MCC>
+<Country_Code>670</Country_Code>
+<Country_Name>East Timor</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="131">
+<MCC>515</MCC>
+<Country_Code>63</Country_Code>
+<Country_Name>Philippines</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="132">
+<MCC>520</MCC>
+<Country_Code>66</Country_Code>
+<Country_Name>Thailand</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>7.0</GMT_Offset_Low>
+<GMT_Offset_High>7.0</GMT_Offset_High>
+<GMT_DST_Low>7.0</GMT_DST_Low>
+<GMT_DST_High>7.0</GMT_DST_High>
+</row>
+<row id="133">
+<MCC>525</MCC>
+<Country_Code>65</Country_Code>
+<Country_Name>Singapore</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="134">
+<MCC>528</MCC>
+<Country_Code>673</Country_Code>
+<Country_Name>Brunei Darussalam</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>8.0</GMT_Offset_Low>
+<GMT_Offset_High>8.0</GMT_Offset_High>
+<GMT_DST_Low>8.0</GMT_DST_Low>
+<GMT_DST_High>8.0</GMT_DST_High>
+</row>
+<row id="135">
+<MCC>530</MCC>
+<Country_Code>64</Country_Code>
+<Country_Name>New Zealand</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>12.0</GMT_Offset_Low>
+<GMT_Offset_High>12.0</GMT_Offset_High>
+<GMT_DST_Low>13.0</GMT_DST_Low>
+<GMT_DST_High>13.0</GMT_DST_High>
+</row>
+<row id="136">
+<MCC>534</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Northern Mariana Islands (US)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>10.0</GMT_Offset_Low>
+<GMT_Offset_High>10.0</GMT_Offset_High>
+<GMT_DST_Low>10.0</GMT_DST_Low>
+<GMT_DST_High>10.0</GMT_DST_High>
+</row>
+<row id="137">
+<MCC>535</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Guam (US)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>10.0</GMT_Offset_Low>
+<GMT_Offset_High>10.0</GMT_Offset_High>
+<GMT_DST_Low>10.0</GMT_DST_Low>
+<GMT_DST_High>10.0</GMT_DST_High>
+</row>
+<row id="138">
+<MCC>536</MCC>
+<Country_Code>674</Country_Code>
+<Country_Name>Nauru</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>12.0</GMT_Offset_Low>
+<GMT_Offset_High>12.0</GMT_Offset_High>
+<GMT_DST_Low>12.0</GMT_DST_Low>
+<GMT_DST_High>12.0</GMT_DST_High>
+</row>
+<row id="139">
+<MCC>537</MCC>
+<Country_Code>675</Country_Code>
+<Country_Name>Papua New Guinea</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>10.0</GMT_Offset_Low>
+<GMT_Offset_High>10.0</GMT_Offset_High>
+<GMT_DST_Low>10.0</GMT_DST_Low>
+<GMT_DST_High>10.0</GMT_DST_High>
+</row>
+<row id="140">
+<MCC>539</MCC>
+<Country_Code>676</Country_Code>
+<Country_Name>Tonga</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>13.0</GMT_Offset_Low>
+<GMT_Offset_High>13.0</GMT_Offset_High>
+<GMT_DST_Low>13.0</GMT_DST_Low>
+<GMT_DST_High>13.0</GMT_DST_High>
+</row>
+<row id="141">
+<MCC>540</MCC>
+<Country_Code>677</Country_Code>
+<Country_Name>Solomon Islands</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>11.0</GMT_Offset_Low>
+<GMT_Offset_High>11.0</GMT_Offset_High>
+<GMT_DST_Low>11.0</GMT_DST_Low>
+<GMT_DST_High>11.0</GMT_DST_High>
+</row>
+<row id="142">
+<MCC>541</MCC>
+<Country_Code>678</Country_Code>
+<Country_Name>Vanuatu</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>11.0</GMT_Offset_Low>
+<GMT_Offset_High>11.0</GMT_Offset_High>
+<GMT_DST_Low>12.0</GMT_DST_Low>
+<GMT_DST_High>12.0</GMT_DST_High>
+</row>
+<row id="143">
+<MCC>542</MCC>
+<Country_Code>679</Country_Code>
+<Country_Name>Fiji</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>12.0</GMT_Offset_Low>
+<GMT_Offset_High>12.0</GMT_Offset_High>
+<GMT_DST_Low>12.0</GMT_DST_Low>
+<GMT_DST_High>12.0</GMT_DST_High>
+</row>
+<row id="144">
+<MCC>543</MCC>
+<Country_Code>681</Country_Code>
+<Country_Name>Wallis and Futuna (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>12.0</GMT_Offset_Low>
+<GMT_Offset_High>12.0</GMT_Offset_High>
+<GMT_DST_Low>12.0</GMT_DST_Low>
+<GMT_DST_High>12.0</GMT_DST_High>
+</row>
+<row id="145">
+<MCC>544</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>American Samoa (US)</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-11.0</GMT_Offset_Low>
+<GMT_Offset_High>-11.0</GMT_Offset_High>
+<GMT_DST_Low>-11.0</GMT_DST_Low>
+<GMT_DST_High>-11.0</GMT_DST_High>
+</row>
+<row id="146">
+<MCC>545</MCC>
+<Country_Code>686</Country_Code>
+<Country_Name>Kiribati</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>12.0</GMT_Offset_Low>
+<GMT_Offset_High>14.0</GMT_Offset_High>
+<GMT_DST_Low>12.0</GMT_DST_Low>
+<GMT_DST_High>14.0</GMT_DST_High>
+</row>
+<row id="147">
+<MCC>546</MCC>
+<Country_Code>687</Country_Code>
+<Country_Name>New Caledonia (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>11.0</GMT_Offset_Low>
+<GMT_Offset_High>11.0</GMT_Offset_High>
+<GMT_DST_Low>11.0</GMT_DST_Low>
+<GMT_DST_High>11.0</GMT_DST_High>
+</row>
+<row id="148">
+<MCC>547</MCC>
+<Country_Code>689</Country_Code>
+<Country_Name>French Polynesia (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-10.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-10.0</GMT_DST_High>
+</row>
+<row id="149">
+<MCC>548</MCC>
+<Country_Code>682</Country_Code>
+<Country_Name>Cook Islands (NZ)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-10.0</GMT_Offset_Low>
+<GMT_Offset_High>-10.0</GMT_Offset_High>
+<GMT_DST_Low>-10.0</GMT_DST_Low>
+<GMT_DST_High>-10.0</GMT_DST_High>
+</row>
+<row id="150">
+<MCC>549</MCC>
+<Country_Code>685</Country_Code>
+<Country_Name>Samoa</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-11.0</GMT_Offset_Low>
+<GMT_Offset_High>-11.0</GMT_Offset_High>
+<GMT_DST_Low>-11.0</GMT_DST_Low>
+<GMT_DST_High>-11.0</GMT_DST_High>
+</row>
+<row id="151">
+<MCC>550</MCC>
+<Country_Code>691</Country_Code>
+<Country_Name>Federated States of Micronesia</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>10.0</GMT_Offset_Low>
+<GMT_Offset_High>10.0</GMT_Offset_High>
+<GMT_DST_Low>11.0</GMT_DST_Low>
+<GMT_DST_High>11.0</GMT_DST_High>
+</row>
+<row id="152">
+<MCC>551</MCC>
+<Country_Code>692</Country_Code>
+<Country_Name>Marshall Islands</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>12.0</GMT_Offset_Low>
+<GMT_Offset_High>12.0</GMT_Offset_High>
+<GMT_DST_Low>12.0</GMT_DST_Low>
+<GMT_DST_High>12.0</GMT_DST_High>
+</row>
+<row id="153">
+<MCC>552</MCC>
+<Country_Code>680</Country_Code>
+<Country_Name>Palau</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="154">
+<MCC>602</MCC>
+<Country_Code>20</Country_Code>
+<Country_Name>Egypt</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="155">
+<MCC>603</MCC>
+<Country_Code>213</Country_Code>
+<Country_Name>Algeria</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="156">
+<MCC>604</MCC>
+<Country_Code>212</Country_Code>
+<Country_Name>Morocco</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="157">
+<MCC>605</MCC>
+<Country_Code>216</Country_Code>
+<Country_Name>Tunisia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="158">
+<MCC>606</MCC>
+<Country_Code>218</Country_Code>
+<Country_Name>Libya</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="159">
+<MCC>607</MCC>
+<Country_Code>220</Country_Code>
+<Country_Name>Gambia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="160">
+<MCC>608</MCC>
+<Country_Code>221</Country_Code>
+<Country_Name>Senegal</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="161">
+<MCC>609</MCC>
+<Country_Code>222</Country_Code>
+<Country_Name>Mauritania</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="162">
+<MCC>610</MCC>
+<Country_Code>223</Country_Code>
+<Country_Name>Mali</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="163">
+<MCC>611</MCC>
+<Country_Code>224</Country_Code>
+<Country_Name>Guinea</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="164">
+<MCC>612</MCC>
+<Country_Code>225</Country_Code>
+<Country_Name>Cote d&apos;Ivoire</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="165">
+<MCC>613</MCC>
+<Country_Code>226</Country_Code>
+<Country_Name>Burkina Faso</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="166">
+<MCC>614</MCC>
+<Country_Code>227</Country_Code>
+<Country_Name>Niger</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="167">
+<MCC>615</MCC>
+<Country_Code>228</Country_Code>
+<Country_Name>Togolese Republic</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="168">
+<MCC>616</MCC>
+<Country_Code>229</Country_Code>
+<Country_Name>Benin</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="169">
+<MCC>617</MCC>
+<Country_Code>230</Country_Code>
+<Country_Name>Mauritius</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="170">
+<MCC>618</MCC>
+<Country_Code>231</Country_Code>
+<Country_Name>Liberia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="171">
+<MCC>619</MCC>
+<Country_Code>232</Country_Code>
+<Country_Name>Sierra Leone</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="172">
+<MCC>620</MCC>
+<Country_Code>233</Country_Code>
+<Country_Name>Ghana</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="173">
+<MCC>621</MCC>
+<Country_Code>234</Country_Code>
+<Country_Name>Nigeria</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="174">
+<MCC>622</MCC>
+<Country_Code>235</Country_Code>
+<Country_Name>Chad</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="175">
+<MCC>623</MCC>
+<Country_Code>238</Country_Code>
+<Country_Name>Central African Republic</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="176">
+<MCC>624</MCC>
+<Country_Code>237</Country_Code>
+<Country_Name>Cameroon</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="177">
+<MCC>625</MCC>
+<Country_Code>238</Country_Code>
+<Country_Name>Cape Verde</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-1.0</GMT_Offset_Low>
+<GMT_Offset_High>-1.0</GMT_Offset_High>
+<GMT_DST_Low>-1.0</GMT_DST_Low>
+<GMT_DST_High>-1.0</GMT_DST_High>
+</row>
+<row id="178">
+<MCC>626</MCC>
+<Country_Code>239</Country_Code>
+<Country_Name>Sao Tome and Principe</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="179">
+<MCC>627</MCC>
+<Country_Code>240</Country_Code>
+<Country_Name>Equatorial Guinea</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="180">
+<MCC>628</MCC>
+<Country_Code>241</Country_Code>
+<Country_Name>Gabonese Republic</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="181">
+<MCC>629</MCC>
+<Country_Code>243</Country_Code>
+<Country_Name>Republic of the Congo</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="182">
+<MCC>630</MCC>
+<Country_Code>243</Country_Code>
+<Country_Name>Democratic Republic of the Congo</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="183">
+<MCC>631</MCC>
+<Country_Code>244</Country_Code>
+<Country_Name>Angola</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="184">
+<MCC>632</MCC>
+<Country_Code>245</Country_Code>
+<Country_Name>Guinea-Bissau</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>0.0</GMT_DST_Low>
+<GMT_DST_High>0.0</GMT_DST_High>
+</row>
+<row id="185">
+<MCC>633</MCC>
+<Country_Code>248</Country_Code>
+<Country_Name>Seychelles</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="186">
+<MCC>634</MCC>
+<Country_Code>249</Country_Code>
+<Country_Name>Sudan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="187">
+<MCC>635</MCC>
+<Country_Code>250</Country_Code>
+<Country_Name>Rwandese Republic</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="188">
+<MCC>636</MCC>
+<Country_Code>251</Country_Code>
+<Country_Name>Ethiopia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="189">
+<MCC>637</MCC>
+<Country_Code>252</Country_Code>
+<Country_Name>Somalia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="190">
+<MCC>638</MCC>
+<Country_Code>253</Country_Code>
+<Country_Name>Djibouti</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="191">
+<MCC>639</MCC>
+<Country_Code>254</Country_Code>
+<Country_Name>Kenya</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="192">
+<MCC>640</MCC>
+<Country_Code>255</Country_Code>
+<Country_Name>Tanzania</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="193">
+<MCC>641</MCC>
+<Country_Code>256</Country_Code>
+<Country_Name>Uganda</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="194">
+<MCC>642</MCC>
+<Country_Code>257</Country_Code>
+<Country_Name>Burundi</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="195">
+<MCC>643</MCC>
+<Country_Code>258</Country_Code>
+<Country_Name>Mozambique</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="196">
+<MCC>645</MCC>
+<Country_Code>260</Country_Code>
+<Country_Name>Zambia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="197">
+<MCC>646</MCC>
+<Country_Code>261</Country_Code>
+<Country_Name>Madagascar</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="198">
+<MCC>647</MCC>
+<Country_Code>262</Country_Code>
+<Country_Name>Reunion (France)</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>4.0</GMT_Offset_Low>
+<GMT_Offset_High>4.0</GMT_Offset_High>
+<GMT_DST_Low>4.0</GMT_DST_Low>
+<GMT_DST_High>4.0</GMT_DST_High>
+</row>
+<row id="199">
+<MCC>648</MCC>
+<Country_Code>263</Country_Code>
+<Country_Name>Zimbabwe</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="200">
+<MCC>649</MCC>
+<Country_Code>264</Country_Code>
+<Country_Name>Namibia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>1.0</GMT_Offset_Low>
+<GMT_Offset_High>1.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="201">
+<MCC>650</MCC>
+<Country_Code>265</Country_Code>
+<Country_Name>Malawi</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="202">
+<MCC>651</MCC>
+<Country_Code>266</Country_Code>
+<Country_Name>Lesotho</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="203">
+<MCC>652</MCC>
+<Country_Code>267</Country_Code>
+<Country_Name>Botswana</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="204">
+<MCC>653</MCC>
+<Country_Code>268</Country_Code>
+<Country_Name>Swaziland</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="205">
+<MCC>654</MCC>
+<Country_Code>269</Country_Code>
+<Country_Name>Comoros</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="206">
+<MCC>655</MCC>
+<Country_Code>27</Country_Code>
+<Country_Name>South Africa</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>2.0</GMT_Offset_Low>
+<GMT_Offset_High>2.0</GMT_Offset_High>
+<GMT_DST_Low>2.0</GMT_DST_Low>
+<GMT_DST_High>2.0</GMT_DST_High>
+</row>
+<row id="207">
+<MCC>657</MCC>
+<Country_Code>291</Country_Code>
+<Country_Name>Eritrea</Country_Name>
+<NDD>00</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>3.0</GMT_Offset_Low>
+<GMT_Offset_High>3.0</GMT_Offset_High>
+<GMT_DST_Low>3.0</GMT_DST_Low>
+<GMT_DST_High>3.0</GMT_DST_High>
+</row>
+<row id="208">
+<MCC>702</MCC>
+<Country_Code>501</Country_Code>
+<Country_Name>Belize</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-6.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-6.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="209">
+<MCC>704</MCC>
+<Country_Code>502</Country_Code>
+<Country_Name>Guatemala</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-6.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-6.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="210">
+<MCC>706</MCC>
+<Country_Code>593</Country_Code>
+<Country_Name>El Salvador</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-6.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-6.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="211">
+<MCC>708</MCC>
+<Country_Code>504</Country_Code>
+<Country_Name>Honduras</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-6.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-6.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="212">
+<MCC>710</MCC>
+<Country_Code>505</Country_Code>
+<Country_Name>Nicaragua</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-6.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-6.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="213">
+<MCC>712</MCC>
+<Country_Code>506</Country_Code>
+<Country_Name>Costa Rica</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-6.0</GMT_Offset_Low>
+<GMT_Offset_High>-6.0</GMT_Offset_High>
+<GMT_DST_Low>-6.0</GMT_DST_Low>
+<GMT_DST_High>-6.0</GMT_DST_High>
+</row>
+<row id="214">
+<MCC>714</MCC>
+<Country_Code>507</Country_Code>
+<Country_Name>Panama</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="215">
+<MCC>716</MCC>
+<Country_Code>51</Country_Code>
+<Country_Name>Peru</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="216">
+<MCC>722</MCC>
+<Country_Code>54</Country_Code>
+<Country_Name>Argentine Republic</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-3.0</GMT_Offset_Low>
+<GMT_Offset_High>-3.0</GMT_Offset_High>
+<GMT_DST_Low>-2.0</GMT_DST_Low>
+<GMT_DST_High>-2.0</GMT_DST_High>
+</row>
+<row id="217">
+<MCC>724</MCC>
+<Country_Code>55</Country_Code>
+<Country_Name>Brazil</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-2.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-2.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="218">
+<MCC>730</MCC>
+<Country_Code>56</Country_Code>
+<Country_Name>Chile</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-3.0</GMT_DST_Low>
+<GMT_DST_High>-3.0</GMT_DST_High>
+</row>
+<row id="219">
+<MCC>732</MCC>
+<Country_Code>57</Country_Code>
+<Country_Name>Colombia</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="220">
+<MCC>734</MCC>
+<Country_Code>58</Country_Code>
+<Country_Name>Venezuela</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.5</GMT_Offset_Low>
+<GMT_Offset_High>-4.5</GMT_Offset_High>
+<GMT_DST_Low>-4.5</GMT_DST_Low>
+<GMT_DST_High>-4.5</GMT_DST_High>
+</row>
+<row id="221">
+<MCC>736</MCC>
+<Country_Code>591</Country_Code>
+<Country_Name>Bolivia</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="222">
+<MCC>738</MCC>
+<Country_Code>592</Country_Code>
+<Country_Name>Guyana</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="223">
+<MCC>740</MCC>
+<Country_Code>593</Country_Code>
+<Country_Name>Ecuador</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-5.0</GMT_Offset_Low>
+<GMT_Offset_High>-5.0</GMT_Offset_High>
+<GMT_DST_Low>-5.0</GMT_DST_Low>
+<GMT_DST_High>-5.0</GMT_DST_High>
+</row>
+<row id="224">
+<MCC>742</MCC>
+<Country_Code>594</Country_Code>
+<Country_Name>French Guiana (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="225">
+<MCC>744</MCC>
+<Country_Code>595</Country_Code>
+<Country_Name>Paraguay</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-3.0</GMT_DST_Low>
+<GMT_DST_High>-3.0</GMT_DST_High>
+</row>
+<row id="226">
+<MCC>746</MCC>
+<Country_Code>597</Country_Code>
+<Country_Name>Suriname</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-3.0</GMT_Offset_Low>
+<GMT_Offset_High>-3.0</GMT_Offset_High>
+<GMT_DST_Low>-3.0</GMT_DST_Low>
+<GMT_DST_High>-3.0</GMT_DST_High>
+</row>
+<row id="227">
+<MCC>748</MCC>
+<Country_Code>598</Country_Code>
+<Country_Name>Uruguay</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-3.0</GMT_Offset_Low>
+<GMT_Offset_High>-3.0</GMT_Offset_High>
+<GMT_DST_Low>-2.0</GMT_DST_Low>
+<GMT_DST_High>-2.0</GMT_DST_High>
+</row>
+<row id="228">
+<MCC>441</MCC>
+<Country_Code>81</Country_Code>
+<Country_Name>Japan</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>9.0</GMT_Offset_Low>
+<GMT_Offset_High>9.0</GMT_Offset_High>
+<GMT_DST_Low>9.0</GMT_DST_Low>
+<GMT_DST_High>9.0</GMT_DST_High>
+</row>
+<row id="229">
+<MCC>340</MCC>
+<Country_Code>596</Country_Code>
+<Country_Name>Martinique (France)</Country_Name>
+<NDD></NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>-4.0</GMT_Offset_Low>
+<GMT_Offset_High>-4.0</GMT_Offset_High>
+<GMT_DST_Low>-4.0</GMT_DST_Low>
+<GMT_DST_High>-4.0</GMT_DST_High>
+</row>
+<row id="230">
+<MCC>235</MCC>
+<Country_Code>44</Country_Code>
+<Country_Name>United Kingdom</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>0.0</GMT_Offset_Low>
+<GMT_Offset_High>0.0</GMT_Offset_High>
+<GMT_DST_Low>1.0</GMT_DST_Low>
+<GMT_DST_High>1.0</GMT_DST_High>
+</row>
+<row id="231">
+<MCC>901</MCC>
+<Country_Code>1</Country_Code>
+<Country_Name>Maritime</Country_Name>
+<NDD>1</NDD>
+<NANPS>0</NANPS>
+<!--value is not available, use -100-->
+<GMT_Offset_Low>-100.0</GMT_Offset_Low>
+<GMT_Offset_High>-100.0</GMT_Offset_High>
+<GMT_DST_Low>-100.0</GMT_DST_Low>
+<GMT_DST_High>-100.0</GMT_DST_High>
+</row>
+<row id="232">
+<MCC>405</MCC>
+<Country_Code>91</Country_Code>
+<Country_Name>India</Country_Name>
+<NDD>0</NDD>
+<NANPS>0</NANPS>
+<GMT_Offset_Low>5.5</GMT_Offset_Low>
+<GMT_Offset_High>5.5</GMT_Offset_High>
+<GMT_DST_Low>5.5</GMT_DST_Low>
+<GMT_DST_High>5.5</GMT_DST_High>
+</row>
+</table>
+
+<table name="MCC_SID_RANGE">
+<row id="1">
+<MCC>412</MCC>
+<SID_Range_Low>14976</SID_Range_Low>
+<SID_Range_High>15103</SID_Range_High>
+</row>
+<row id="2">
+<MCC>276</MCC>
+<SID_Range_Low>31456</SID_Range_Low>
+<SID_Range_High>31471</SID_Range_High>
+</row>
+<row id="3">
+<MCC>603</MCC>
+<SID_Range_Low>8288</SID_Range_Low>
+<SID_Range_High>8319</SID_Range_High>
+</row>
+<row id="4">
+<MCC>631</MCC>
+<SID_Range_Low>9504</SID_Range_Low>
+<SID_Range_High>9535</SID_Range_High>
+</row>
+<row id="5">
+<MCC>344</MCC>
+<SID_Range_Low>8144</SID_Range_Low>
+<SID_Range_High>8159</SID_Range_High>
+</row>
+<row id="6">
+<MCC>722</MCC>
+<SID_Range_Low>32128</SID_Range_Low>
+<SID_Range_High>32255</SID_Range_High>
+</row>
+<row id="7">
+<MCC>363</MCC>
+<SID_Range_Low>9648</SID_Range_Low>
+<SID_Range_High>9663</SID_Range_High>
+</row>
+<row id="8">
+<MCC>505</MCC>
+<SID_Range_Low>7680</SID_Range_Low>
+<SID_Range_High>7807</SID_Range_High>
+</row>
+<row id="9">
+<MCC>505</MCC>
+<SID_Range_Low>8320</SID_Range_Low>
+<SID_Range_High>8447</SID_Range_High>
+</row>
+<row id="10">
+<MCC>232</MCC>
+<SID_Range_Low>22912</SID_Range_Low>
+<SID_Range_High>23039</SID_Range_High>
+</row>
+<row id="11">
+<MCC>364</MCC>
+<SID_Range_Low>8080</SID_Range_Low>
+<SID_Range_High>8095</SID_Range_High>
+</row>
+<row id="12">
+<MCC>426</MCC>
+<SID_Range_Low>31408</SID_Range_Low>
+<SID_Range_High>31423</SID_Range_High>
+</row>
+<row id="13">
+<MCC>470</MCC>
+<SID_Range_Low>13472</SID_Range_Low>
+<SID_Range_High>13479</SID_Range_High>
+</row>
+<row id="14">
+<MCC>342</MCC>
+<SID_Range_Low>8160</SID_Range_Low>
+<SID_Range_High>8175</SID_Range_High>
+</row>
+<row id="15">
+<MCC>206</MCC>
+<SID_Range_Low>23936</SID_Range_Low>
+<SID_Range_High>24063</SID_Range_High>
+</row>
+<row id="16">
+<MCC>702</MCC>
+<SID_Range_Low>32640</SID_Range_Low>
+<SID_Range_High>32649</SID_Range_High>
+</row>
+<row id="17">
+<MCC>616</MCC>
+<SID_Range_Low>9088</SID_Range_Low>
+<SID_Range_High>9119</SID_Range_High>
+</row>
+<row id="18">
+<MCC>736</MCC>
+<SID_Range_Low>31232</SID_Range_Low>
+<SID_Range_High>31263</SID_Range_High>
+</row>
+<row id="19">
+<MCC>652</MCC>
+<SID_Range_Low>10176</SID_Range_Low>
+<SID_Range_High>10207</SID_Range_High>
+</row>
+<row id="20">
+<MCC>724</MCC>
+<SID_Range_Low>31872</SID_Range_Low>
+<SID_Range_High>32127</SID_Range_High>
+</row>
+<row id="21">
+<MCC>348</MCC>
+<SID_Range_Low>8112</SID_Range_Low>
+<SID_Range_High>8127</SID_Range_High>
+</row>
+<row id="22">
+<MCC>528</MCC>
+<SID_Range_Low>10880</SID_Range_Low>
+<SID_Range_High>10895</SID_Range_High>
+</row>
+<row id="23">
+<MCC>284</MCC>
+<SID_Range_Low>15584</SID_Range_Low>
+<SID_Range_High>15615</SID_Range_High>
+</row>
+<row id="24">
+<MCC>613</MCC>
+<SID_Range_Low>8992</SID_Range_Low>
+<SID_Range_High>9023</SID_Range_High>
+</row>
+<row id="25">
+<MCC>642</MCC>
+<SID_Range_Low>9952</SID_Range_Low>
+<SID_Range_High>9983</SID_Range_High>
+</row>
+<row id="26">
+<MCC>456</MCC>
+<SID_Range_Low>11104</SID_Range_Low>
+<SID_Range_High>11135</SID_Range_High>
+</row>
+<row id="27">
+<MCC>624</MCC>
+<SID_Range_Low>9344</SID_Range_Low>
+<SID_Range_High>9375</SID_Range_High>
+</row>
+<row id="28">
+<MCC>302</MCC>
+<SID_Range_Low>16384</SID_Range_Low>
+<SID_Range_High>18431</SID_Range_High>
+</row>
+<row id="29">
+<MCC>625</MCC>
+<SID_Range_Low>8848</SID_Range_Low>
+<SID_Range_High>8863</SID_Range_High>
+</row>
+<row id="30">
+<MCC>346</MCC>
+<SID_Range_Low>8128</SID_Range_Low>
+<SID_Range_High>8143</SID_Range_High>
+</row>
+<row id="31">
+<MCC>623</MCC>
+<SID_Range_Low>9312</SID_Range_Low>
+<SID_Range_High>9343</SID_Range_High>
+</row>
+<row id="32">
+<MCC>622</MCC>
+<SID_Range_Low>9280</SID_Range_Low>
+<SID_Range_High>9311</SID_Range_High>
+</row>
+<row id="33">
+<MCC>730</MCC>
+<SID_Range_Low>31744</SID_Range_Low>
+<SID_Range_High>31754</SID_Range_High>
+</row>
+<row id="34">
+<MCC>730</MCC>
+<SID_Range_Low>31809</SID_Range_Low>
+<SID_Range_High>31820</SID_Range_High>
+</row>
+<row id="35">
+<MCC>730</MCC>
+<SID_Range_Low>31841</SID_Range_Low>
+<SID_Range_High>31854</SID_Range_High>
+</row>
+<row id="36">
+<MCC>460</MCC>
+<SID_Range_Low>13568</SID_Range_Low>
+<SID_Range_High>14335</SID_Range_High>
+</row>
+<row id="37">
+<MCC>460</MCC>
+<SID_Range_Low>25600</SID_Range_Low>
+<SID_Range_High>26111</SID_Range_High>
+</row>
+<row id="38">
+<MCC>732</MCC>
+<SID_Range_Low>31616</SID_Range_Low>
+<SID_Range_High>31743</SID_Range_High>
+</row>
+<row id="39">
+<MCC>654</MCC>
+<SID_Range_Low>10208</SID_Range_Low>
+<SID_Range_High>10239</SID_Range_High>
+</row>
+<row id="40">
+<MCC>548</MCC>
+<SID_Range_Low>11136</SID_Range_Low>
+<SID_Range_High>11151</SID_Range_High>
+</row>
+<row id="41">
+<MCC>712</MCC>
+<SID_Range_Low>32544</SID_Range_Low>
+<SID_Range_High>32575</SID_Range_High>
+</row>
+<row id="42">
+<MCC>612</MCC>
+<SID_Range_Low>8960</SID_Range_Low>
+<SID_Range_High>8991</SID_Range_High>
+</row>
+<row id="43">
+<MCC>368</MCC>
+<SID_Range_Low>32256</SID_Range_Low>
+<SID_Range_High>32383</SID_Range_High>
+</row>
+<row id="44">
+<MCC>280</MCC>
+<SID_Range_Low>31200</SID_Range_Low>
+<SID_Range_High>31231</SID_Range_High>
+</row>
+<row id="45">
+<MCC>230</MCC>
+<SID_Range_Low>16128</SID_Range_Low>
+<SID_Range_High>16255</SID_Range_High>
+</row>
+<row id="46">
+<MCC>630</MCC>
+<SID_Range_Low>9440</SID_Range_Low>
+<SID_Range_High>9471</SID_Range_High>
+</row>
+<row id="47">
+<MCC>238</MCC>
+<SID_Range_Low>22528</SID_Range_Low>
+<SID_Range_High>22543</SID_Range_High>
+</row>
+<row id="48">
+<MCC>638</MCC>
+<SID_Range_Low>8912</SID_Range_Low>
+<SID_Range_High>8927</SID_Range_High>
+</row>
+<row id="49">
+<MCC>366</MCC>
+<SID_Range_Low>9616</SID_Range_Low>
+<SID_Range_High>9631</SID_Range_High>
+</row>
+<row id="50">
+<MCC>370</MCC>
+<SID_Range_Low>8832</SID_Range_Low>
+<SID_Range_High>8847</SID_Range_High>
+</row>
+<row id="51">
+<MCC>740</MCC>
+<SID_Range_Low>31296</SID_Range_Low>
+<SID_Range_High>31327</SID_Range_High>
+</row>
+<row id="52">
+<MCC>602</MCC>
+<SID_Range_Low>8224</SID_Range_Low>
+<SID_Range_High>8255</SID_Range_High>
+</row>
+<row id="53">
+<MCC>706</MCC>
+<SID_Range_Low>32704</SID_Range_Low>
+<SID_Range_High>32735</SID_Range_High>
+</row>
+<row id="54">
+<MCC>627</MCC>
+<SID_Range_Low>9376</SID_Range_Low>
+<SID_Range_High>9407</SID_Range_High>
+</row>
+<row id="55">
+<MCC>248</MCC>
+<SID_Range_Low>10872</SID_Range_Low>
+<SID_Range_High>10879</SID_Range_High>
+</row>
+<row id="56">
+<MCC>636</MCC>
+<SID_Range_Low>9760</SID_Range_Low>
+<SID_Range_High>9791</SID_Range_High>
+</row>
+<row id="57">
+<MCC>288</MCC>
+<SID_Range_Low>7936</SID_Range_Low>
+<SID_Range_High>7951</SID_Range_High>
+</row>
+<row id="58">
+<MCC>550</MCC>
+<SID_Range_Low>11040</SID_Range_Low>
+<SID_Range_High>11071</SID_Range_High>
+</row>
+<row id="59">
+<MCC>542</MCC>
+<SID_Range_Low>10960</SID_Range_Low>
+<SID_Range_High>10975</SID_Range_High>
+</row>
+<row id="60">
+<MCC>244</MCC>
+<SID_Range_Low>24448</SID_Range_Low>
+<SID_Range_High>24451</SID_Range_High>
+</row>
+<row id="61">
+<MCC>208</MCC>
+<SID_Range_Low>23680</SID_Range_Low>
+<SID_Range_High>23935</SID_Range_High>
+</row>
+<row id="62">
+<MCC>742</MCC>
+<SID_Range_Low>31328</SID_Range_Low>
+<SID_Range_High>31359</SID_Range_High>
+</row>
+<row id="63">
+<MCC>547</MCC>
+<SID_Range_Low>11248</SID_Range_Low>
+<SID_Range_High>11263</SID_Range_High>
+</row>
+<row id="64">
+<MCC>628</MCC>
+<SID_Range_Low>9408</SID_Range_Low>
+<SID_Range_High>9439</SID_Range_High>
+</row>
+<row id="65">
+<MCC>607</MCC>
+<SID_Range_Low>8544</SID_Range_Low>
+<SID_Range_High>8575</SID_Range_High>
+</row>
+<row id="66">
+<MCC>262</MCC>
+<SID_Range_Low>22016</SID_Range_Low>
+<SID_Range_High>22271</SID_Range_High>
+</row>
+<row id="67">
+<MCC>620</MCC>
+<SID_Range_Low>9216</SID_Range_Low>
+<SID_Range_High>9247</SID_Range_High>
+</row>
+<row id="68">
+<MCC>266</MCC>
+<SID_Range_Low>31440</SID_Range_Low>
+<SID_Range_High>31455</SID_Range_High>
+</row>
+<row id="69">
+<MCC>202</MCC>
+<SID_Range_Low>24192</SID_Range_Low>
+<SID_Range_High>24319</SID_Range_High>
+</row>
+<row id="70">
+<MCC>290</MCC>
+<SID_Range_Low>7952</SID_Range_Low>
+<SID_Range_High>7967</SID_Range_High>
+</row>
+<row id="71">
+<MCC>352</MCC>
+<SID_Range_Low>8064</SID_Range_Low>
+<SID_Range_High>8079</SID_Range_High>
+</row>
+<row id="72">
+<MCC>340</MCC>
+<SID_Range_Low>31360</SID_Range_Low>
+<SID_Range_High>31375</SID_Range_High>
+</row>
+<row id="73">
+<MCC>535</MCC>
+<SID_Range_Low>9696</SID_Range_Low>
+<SID_Range_High>9711</SID_Range_High>
+</row>
+<row id="74">
+<MCC>704</MCC>
+<SID_Range_Low>32672</SID_Range_Low>
+<SID_Range_High>32703</SID_Range_High>
+</row>
+<row id="75">
+<MCC>611</MCC>
+<SID_Range_Low>8800</SID_Range_Low>
+<SID_Range_High>8831</SID_Range_High>
+</row>
+<row id="76">
+<MCC>632</MCC>
+<SID_Range_Low>8800</SID_Range_Low>
+<SID_Range_High>8831</SID_Range_High>
+</row>
+<row id="77">
+<MCC>738</MCC>
+<SID_Range_Low>31264</SID_Range_Low>
+<SID_Range_High>31295</SID_Range_High>
+</row>
+<row id="78">
+<MCC>372</MCC>
+<SID_Range_Low>32608</SID_Range_Low>
+<SID_Range_High>32639</SID_Range_High>
+</row>
+<row id="79">
+<MCC>708</MCC>
+<SID_Range_Low>32736</SID_Range_Low>
+<SID_Range_High>32767</SID_Range_High>
+</row>
+<row id="80">
+<MCC>454</MCC>
+<SID_Range_Low>10640</SID_Range_Low>
+<SID_Range_High>10647</SID_Range_High>
+</row>
+<row id="81">
+<MCC>216</MCC>
+<SID_Range_Low>15744</SID_Range_Low>
+<SID_Range_High>15871</SID_Range_High>
+</row>
+<row id="82">
+<MCC>274</MCC>
+<SID_Range_Low>24416</SID_Range_Low>
+<SID_Range_High>24447</SID_Range_High>
+</row>
+<row id="83">
+<MCC>404</MCC>
+<SID_Range_Low>14464</SID_Range_Low>
+<SID_Range_High>14847</SID_Range_High>
+</row>
+<row id="84">
+<MCC>510</MCC>
+<SID_Range_Low>10496</SID_Range_Low>
+<SID_Range_High>10623</SID_Range_High>
+</row>
+<row id="85">
+<MCC>432</MCC>
+<SID_Range_Low>15616</SID_Range_Low>
+<SID_Range_High>15743</SID_Range_High>
+</row>
+<row id="86">
+<MCC>418</MCC>
+<SID_Range_Low>15456</SID_Range_Low>
+<SID_Range_High>15487</SID_Range_High>
+</row>
+<row id="87">
+<MCC>272</MCC>
+<SID_Range_Low>24384</SID_Range_Low>
+<SID_Range_High>24387</SID_Range_High>
+</row>
+<row id="88">
+<MCC>425</MCC>
+<SID_Range_Low>8448</SID_Range_Low>
+<SID_Range_High>8479</SID_Range_High>
+</row>
+<row id="89">
+<MCC>222</MCC>
+<SID_Range_Low>23168</SID_Range_Low>
+<SID_Range_High>23423</SID_Range_High>
+</row>
+<row id="90">
+<MCC>338</MCC>
+<SID_Range_Low>8176</SID_Range_Low>
+<SID_Range_High>8189</SID_Range_High>
+</row>
+<row id="91">
+<MCC>440</MCC>
+<SID_Range_Low>12288</SID_Range_Low>
+<SID_Range_High>13311</SID_Range_High>
+</row>
+<row id="92">
+<MCC>416</MCC>
+<SID_Range_Low>15392</SID_Range_Low>
+<SID_Range_High>15423</SID_Range_High>
+</row>
+<row id="93">
+<MCC>401</MCC>
+<SID_Range_Low>8928</SID_Range_Low>
+<SID_Range_High>8943</SID_Range_High>
+</row>
+<row id="94">
+<MCC>639</MCC>
+<SID_Range_Low>9856</SID_Range_Low>
+<SID_Range_High>9887</SID_Range_High>
+</row>
+<row id="95">
+<MCC>545</MCC>
+<SID_Range_Low>11200</SID_Range_Low>
+<SID_Range_High>11215</SID_Range_High>
+</row>
+<row id="96">
+<MCC>467</MCC>
+<SID_Range_Low>11072</SID_Range_Low>
+<SID_Range_High>11103</SID_Range_High>
+</row>
+<row id="97">
+<MCC>450</MCC>
+<SID_Range_Low>2176</SID_Range_Low>
+<SID_Range_High>2303</SID_Range_High>
+</row>
+<row id="98">
+<MCC>419</MCC>
+<SID_Range_Low>11312</SID_Range_Low>
+<SID_Range_High>11327</SID_Range_High>
+</row>
+<row id="99">
+<MCC>437</MCC>
+<SID_Range_Low>21550</SID_Range_Low>
+<SID_Range_High>21566</SID_Range_High>
+</row>
+<row id="100">
+<MCC>457</MCC>
+<SID_Range_Low>13440</SID_Range_Low>
+<SID_Range_High>13471</SID_Range_High>
+</row>
+<row id="101">
+<MCC>247</MCC>
+<SID_Range_Low>10784</SID_Range_Low>
+<SID_Range_High>10785</SID_Range_High>
+</row>
+<row id="102">
+<MCC>415</MCC>
+<SID_Range_Low>15360</SID_Range_Low>
+<SID_Range_High>15391</SID_Range_High>
+</row>
+<row id="103">
+<MCC>651</MCC>
+<SID_Range_Low>9600</SID_Range_Low>
+<SID_Range_High>9615</SID_Range_High>
+</row>
+<row id="104">
+<MCC>618</MCC>
+<SID_Range_Low>9152</SID_Range_Low>
+<SID_Range_High>9183</SID_Range_High>
+</row>
+<row id="105">
+<MCC>606</MCC>
+<SID_Range_Low>8512</SID_Range_Low>
+<SID_Range_High>8543</SID_Range_High>
+</row>
+<row id="106">
+<MCC>270</MCC>
+<SID_Range_Low>24352</SID_Range_Low>
+<SID_Range_High>24383</SID_Range_High>
+</row>
+<row id="107">
+<MCC>455</MCC>
+<SID_Range_Low>11296</SID_Range_Low>
+<SID_Range_High>11311</SID_Range_High>
+</row>
+<row id="108">
+<MCC>646</MCC>
+<SID_Range_Low>10048</SID_Range_Low>
+<SID_Range_High>10079</SID_Range_High>
+</row>
+<row id="109">
+<MCC>650</MCC>
+<SID_Range_Low>10144</SID_Range_Low>
+<SID_Range_High>10175</SID_Range_High>
+</row>
+<row id="110">
+<MCC>502</MCC>
+<SID_Range_Low>10368</SID_Range_Low>
+<SID_Range_High>10495</SID_Range_High>
+</row>
+<row id="111">
+<MCC>472</MCC>
+<SID_Range_Low>13536</SID_Range_Low>
+<SID_Range_High>13567</SID_Range_High>
+</row>
+<row id="112">
+<MCC>610</MCC>
+<SID_Range_Low>8768</SID_Range_Low>
+<SID_Range_High>8799</SID_Range_High>
+</row>
+<row id="113">
+<MCC>278</MCC>
+<SID_Range_Low>31472</SID_Range_Low>
+<SID_Range_High>31475</SID_Range_High>
+</row>
+<row id="114">
+<MCC>551</MCC>
+<SID_Range_Low>11280</SID_Range_Low>
+<SID_Range_High>11295</SID_Range_High>
+</row>
+<row id="115">
+<MCC>340</MCC>
+<SID_Range_Low>31376</SID_Range_Low>
+<SID_Range_High>31391</SID_Range_High>
+</row>
+<row id="116">
+<MCC>609</MCC>
+<SID_Range_Low>8736</SID_Range_Low>
+<SID_Range_High>8767</SID_Range_High>
+</row>
+<row id="117">
+<MCC>617</MCC>
+<SID_Range_Low>9120</SID_Range_Low>
+<SID_Range_High>9151</SID_Range_High>
+</row>
+<row id="118">
+<MCC>334</MCC>
+<SID_Range_Low>24576</SID_Range_Low>
+<SID_Range_High>25075</SID_Range_High>
+</row>
+<row id="119">
+<MCC>334</MCC>
+<SID_Range_Low>25100</SID_Range_Low>
+<SID_Range_High>25124</SID_Range_High>
+</row>
+<row id="120">
+<MCC>259</MCC>
+<SID_Range_Low>15922</SID_Range_Low>
+<SID_Range_High>15937</SID_Range_High>
+</row>
+<row id="121">
+<MCC>212</MCC>
+<SID_Range_Low>10752</SID_Range_Low>
+<SID_Range_High>10767</SID_Range_High>
+</row>
+<row id="122">
+<MCC>428</MCC>
+<SID_Range_Low>15520</SID_Range_Low>
+<SID_Range_High>15551</SID_Range_High>
+</row>
+<row id="123">
+<MCC>354</MCC>
+<SID_Range_Low>8048</SID_Range_Low>
+<SID_Range_High>8063</SID_Range_High>
+</row>
+<row id="124">
+<MCC>604</MCC>
+<SID_Range_Low>8256</SID_Range_Low>
+<SID_Range_High>8287</SID_Range_High>
+</row>
+<row id="125">
+<MCC>643</MCC>
+<SID_Range_Low>9984</SID_Range_Low>
+<SID_Range_High>10015</SID_Range_High>
+</row>
+<row id="126">
+<MCC>414</MCC>
+<SID_Range_Low>15232</SID_Range_Low>
+<SID_Range_High>15359</SID_Range_High>
+</row>
+<row id="127">
+<MCC>649</MCC>
+<SID_Range_Low>10112</SID_Range_Low>
+<SID_Range_High>10143</SID_Range_High>
+</row>
+<row id="128">
+<MCC>536</MCC>
+<SID_Range_Low>10896</SID_Range_Low>
+<SID_Range_High>10911</SID_Range_High>
+</row>
+<row id="129">
+<MCC>429</MCC>
+<SID_Range_Low>15552</SID_Range_Low>
+<SID_Range_High>15583</SID_Range_High>
+</row>
+<row id="130">
+<MCC>204</MCC>
+<SID_Range_Low>24064</SID_Range_Low>
+<SID_Range_High>24191</SID_Range_High>
+</row>
+<row id="131">
+<MCC>362</MCC>
+<SID_Range_Low>31392</SID_Range_Low>
+<SID_Range_High>31407</SID_Range_High>
+</row>
+<row id="132">
+<MCC>546</MCC>
+<SID_Range_Low>11216</SID_Range_Low>
+<SID_Range_High>11231</SID_Range_High>
+</row>
+<row id="133">
+<MCC>530</MCC>
+<SID_Range_Low>8576</SID_Range_Low>
+<SID_Range_High>8582</SID_Range_High>
+</row>
+<row id="134">
+<MCC>710</MCC>
+<SID_Range_Low>32512</SID_Range_Low>
+<SID_Range_High>32543</SID_Range_High>
+</row>
+<row id="135">
+<MCC>614</MCC>
+<SID_Range_Low>9024</SID_Range_Low>
+<SID_Range_High>9055</SID_Range_High>
+</row>
+<row id="136">
+<MCC>621</MCC>
+<SID_Range_Low>9248</SID_Range_Low>
+<SID_Range_High>9279</SID_Range_High>
+</row>
+<row id="137">
+<MCC>534</MCC>
+<SID_Range_Low>9680</SID_Range_Low>
+<SID_Range_High>9695</SID_Range_High>
+</row>
+<row id="138">
+<MCC>242</MCC>
+<SID_Range_Low>22272</SID_Range_Low>
+<SID_Range_High>22399</SID_Range_High>
+</row>
+<row id="139">
+<MCC>422</MCC>
+<SID_Range_Low>11344</SID_Range_Low>
+<SID_Range_High>11359</SID_Range_High>
+</row>
+<row id="140">
+<MCC>410</MCC>
+<SID_Range_Low>14848</SID_Range_Low>
+<SID_Range_High>14975</SID_Range_High>
+</row>
+<row id="141">
+<MCC>552</MCC>
+<SID_Range_Low>10976</SID_Range_Low>
+<SID_Range_High>10991</SID_Range_High>
+</row>
+<row id="142">
+<MCC>714</MCC>
+<SID_Range_Low>32576</SID_Range_Low>
+<SID_Range_High>32607</SID_Range_High>
+</row>
+<row id="143">
+<MCC>537</MCC>
+<SID_Range_Low>11008</SID_Range_Low>
+<SID_Range_High>11039</SID_Range_High>
+</row>
+<row id="144">
+<MCC>744</MCC>
+<SID_Range_Low>31104</SID_Range_Low>
+<SID_Range_High>31135</SID_Range_High>
+</row>
+<row id="145">
+<MCC>716</MCC>
+<SID_Range_Low>32384</SID_Range_Low>
+<SID_Range_High>32511</SID_Range_High>
+</row>
+<row id="146">
+<MCC>515</MCC>
+<SID_Range_Low>10624</SID_Range_Low>
+<SID_Range_High>10639</SID_Range_High>
+</row>
+<row id="147">
+<MCC>515</MCC>
+<SID_Range_Low>10656</SID_Range_Low>
+<SID_Range_High>10751</SID_Range_High>
+</row>
+<row id="148">
+<MCC>260</MCC>
+<SID_Range_Low>16256</SID_Range_Low>
+<SID_Range_High>16271</SID_Range_High>
+</row>
+<row id="149">
+<MCC>260</MCC>
+<SID_Range_Low>16272</SID_Range_Low>
+<SID_Range_High>16383</SID_Range_High>
+</row>
+<row id="150">
+<MCC>268</MCC>
+<SID_Range_Low>24320</SID_Range_Low>
+<SID_Range_High>24351</SID_Range_High>
+</row>
+<row id="151">
+<MCC>427</MCC>
+<SID_Range_Low>31424</SID_Range_Low>
+<SID_Range_High>31439</SID_Range_High>
+</row>
+<row id="152">
+<MCC>629</MCC>
+<SID_Range_Low>9440</SID_Range_Low>
+<SID_Range_High>9471</SID_Range_High>
+</row>
+<row id="153">
+<MCC>647</MCC>
+<SID_Range_Low>8944</SID_Range_Low>
+<SID_Range_High>8959</SID_Range_High>
+</row>
+<row id="154">
+<MCC>226</MCC>
+<SID_Range_Low>16000</SID_Range_Low>
+<SID_Range_High>16127</SID_Range_High>
+</row>
+<row id="155">
+<MCC>250</MCC>
+<SID_Range_Low>11392</SID_Range_Low>
+<SID_Range_High>11554</SID_Range_High>
+</row>
+<row id="156">
+<MCC>250</MCC>
+<SID_Range_Low>11556</SID_Range_Low>
+<SID_Range_High>11599</SID_Range_High>
+</row>
+<row id="157">
+<MCC>250</MCC>
+<SID_Range_Low>11601</SID_Range_Low>
+<SID_Range_High>12287</SID_Range_High>
+</row>
+<row id="158">
+<MCC>635</MCC>
+<SID_Range_Low>9728</SID_Range_Low>
+<SID_Range_High>9759</SID_Range_High>
+</row>
+<row id="159">
+<MCC>356</MCC>
+<SID_Range_Low>8032</SID_Range_Low>
+<SID_Range_High>8047</SID_Range_High>
+</row>
+<row id="160">
+<MCC>358</MCC>
+<SID_Range_Low>8016</SID_Range_Low>
+<SID_Range_High>8031</SID_Range_High>
+</row>
+<row id="161">
+<MCC>308</MCC>
+<SID_Range_Low>7984</SID_Range_Low>
+<SID_Range_High>7999</SID_Range_High>
+</row>
+<row id="162">
+<MCC>308</MCC>
+<SID_Range_Low>10816</SID_Range_Low>
+<SID_Range_High>10831</SID_Range_High>
+</row>
+<row id="163">
+<MCC>360</MCC>
+<SID_Range_Low>8000</SID_Range_Low>
+<SID_Range_High>8007</SID_Range_High>
+</row>
+<row id="164">
+<MCC>549</MCC>
+<SID_Range_Low>11184</SID_Range_Low>
+<SID_Range_High>11199</SID_Range_High>
+</row>
+<row id="165">
+<MCC>292</MCC>
+<SID_Range_Low>10768</SID_Range_Low>
+<SID_Range_High>10783</SID_Range_High>
+</row>
+<row id="166">
+<MCC>626</MCC>
+<SID_Range_Low>8864</SID_Range_Low>
+<SID_Range_High>8879</SID_Range_High>
+</row>
+<row id="167">
+<MCC>420</MCC>
+<SID_Range_Low>15488</SID_Range_Low>
+<SID_Range_High>15519</SID_Range_High>
+</row>
+<row id="168">
+<MCC>608</MCC>
+<SID_Range_Low>8704</SID_Range_Low>
+<SID_Range_High>8735</SID_Range_High>
+</row>
+<row id="169">
+<MCC>220</MCC>
+<SID_Range_Low>23424</SID_Range_Low>
+<SID_Range_High>23551</SID_Range_High>
+</row>
+<row id="170">
+<MCC>633</MCC>
+<SID_Range_Low>8896</SID_Range_Low>
+<SID_Range_High>8911</SID_Range_High>
+</row>
+<row id="171">
+<MCC>619</MCC>
+<SID_Range_Low>9184</SID_Range_Low>
+<SID_Range_High>9215</SID_Range_High>
+</row>
+<row id="172">
+<MCC>525</MCC>
+<SID_Range_Low>9664</SID_Range_Low>
+<SID_Range_High>9679</SID_Range_High>
+</row>
+<row id="173">
+<MCC>540</MCC>
+<SID_Range_Low>10928</SID_Range_Low>
+<SID_Range_High>10943</SID_Range_High>
+</row>
+<row id="174">
+<MCC>637</MCC>
+<SID_Range_Low>9792</SID_Range_Low>
+<SID_Range_High>9823</SID_Range_High>
+</row>
+<row id="175">
+<MCC>655</MCC>
+<SID_Range_Low>10240</SID_Range_Low>
+<SID_Range_High>10367</SID_Range_High>
+</row>
+<row id="176">
+<MCC>214</MCC>
+<SID_Range_Low>23552</SID_Range_Low>
+<SID_Range_High>23679</SID_Range_High>
+</row>
+<row id="177">
+<MCC>413</MCC>
+<SID_Range_Low>15104</SID_Range_Low>
+<SID_Range_High>15231</SID_Range_High>
+</row>
+<row id="178">
+<MCC>634</MCC>
+<SID_Range_Low>9568</SID_Range_Low>
+<SID_Range_High>9599</SID_Range_High>
+</row>
+<row id="179">
+<MCC>746</MCC>
+<SID_Range_Low>31136</SID_Range_Low>
+<SID_Range_High>31167</SID_Range_High>
+</row>
+<row id="180">
+<MCC>653</MCC>
+<SID_Range_Low>9632</SID_Range_Low>
+<SID_Range_High>9647</SID_Range_High>
+</row>
+<row id="181">
+<MCC>240</MCC>
+<SID_Range_Low>22400</SID_Range_Low>
+<SID_Range_High>22403</SID_Range_High>
+</row>
+<row id="182">
+<MCC>228</MCC>
+<SID_Range_Low>23040</SID_Range_Low>
+<SID_Range_High>23167</SID_Range_High>
+</row>
+<row id="183">
+<MCC>417</MCC>
+<SID_Range_Low>15424</SID_Range_Low>
+<SID_Range_High>15455</SID_Range_High>
+</row>
+<row id="184">
+<MCC>466</MCC>
+<SID_Range_Low>13504</SID_Range_Low>
+<SID_Range_High>13535</SID_Range_High>
+</row>
+<row id="185">
+<MCC>436</MCC>
+<SID_Range_Low>10856</SID_Range_Low>
+<SID_Range_High>10871</SID_Range_High>
+</row>
+<row id="186">
+<MCC>640</MCC>
+<SID_Range_Low>9888</SID_Range_Low>
+<SID_Range_High>9919</SID_Range_High>
+</row>
+<row id="187">
+<MCC>520</MCC>
+<SID_Range_Low>8192</SID_Range_Low>
+<SID_Range_High>8223</SID_Range_High>
+</row>
+<row id="188">
+<MCC>615</MCC>
+<SID_Range_Low>9056</SID_Range_Low>
+<SID_Range_High>9087</SID_Range_High>
+</row>
+<row id="189">
+<MCC>539</MCC>
+<SID_Range_Low>10912</SID_Range_Low>
+<SID_Range_High>10927</SID_Range_High>
+</row>
+<row id="190">
+<MCC>374</MCC>
+<SID_Range_Low>9824</SID_Range_Low>
+<SID_Range_High>9855</SID_Range_High>
+</row>
+<row id="191">
+<MCC>605</MCC>
+<SID_Range_Low>8480</SID_Range_Low>
+<SID_Range_High>8511</SID_Range_High>
+</row>
+<row id="192">
+<MCC>286</MCC>
+<SID_Range_Low>14336</SID_Range_Low>
+<SID_Range_High>14463</SID_Range_High>
+</row>
+<row id="193">
+<MCC>376</MCC>
+<SID_Range_Low>10800</SID_Range_Low>
+<SID_Range_High>10815</SID_Range_High>
+</row>
+<row id="194">
+<MCC>641</MCC>
+<SID_Range_Low>9920</SID_Range_Low>
+<SID_Range_High>9951</SID_Range_High>
+</row>
+<row id="195">
+<MCC>255</MCC>
+<SID_Range_Low>15906</SID_Range_Low>
+<SID_Range_High>15921</SID_Range_High>
+</row>
+<row id="196">
+<MCC>424</MCC>
+<SID_Range_Low>11376</SID_Range_Low>
+<SID_Range_High>11391</SID_Range_High>
+</row>
+<row id="197">
+<MCC>430</MCC>
+<SID_Range_Low>11376</SID_Range_Low>
+<SID_Range_High>11391</SID_Range_High>
+</row>
+<row id="198">
+<MCC>431</MCC>
+<SID_Range_Low>11376</SID_Range_Low>
+<SID_Range_High>11391</SID_Range_High>
+</row>
+<row id="199">
+<MCC>234</MCC>
+<SID_Range_Low>22656</SID_Range_Low>
+<SID_Range_High>22911</SID_Range_High>
+</row>
+<row id="200">
+<MCC>310</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="201">
+<MCC>310</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="202">
+<MCC>310</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="203">
+<MCC>748</MCC>
+<SID_Range_Low>31168</SID_Range_Low>
+<SID_Range_High>31199</SID_Range_High>
+</row>
+<row id="204">
+<MCC>434</MCC>
+<SID_Range_Low>10832</SID_Range_Low>
+<SID_Range_High>10855</SID_Range_High>
+</row>
+<row id="205">
+<MCC>434</MCC>
+<SID_Range_Low>11555</SID_Range_Low>
+<SID_Range_High>11555</SID_Range_High>
+</row>
+<row id="206">
+<MCC>434</MCC>
+<SID_Range_Low>11600</SID_Range_Low>
+<SID_Range_High>11600</SID_Range_High>
+</row>
+<row id="207">
+<MCC>541</MCC>
+<SID_Range_Low>10944</SID_Range_Low>
+<SID_Range_High>10959</SID_Range_High>
+</row>
+<row id="208">
+<MCC>734</MCC>
+<SID_Range_Low>31488</SID_Range_Low>
+<SID_Range_High>31615</SID_Range_High>
+</row>
+<row id="209">
+<MCC>452</MCC>
+<SID_Range_Low>13312</SID_Range_Low>
+<SID_Range_High>13439</SID_Range_High>
+</row>
+<row id="210">
+<MCC>543</MCC>
+<SID_Range_Low>10992</SID_Range_Low>
+<SID_Range_High>11007</SID_Range_High>
+</row>
+<row id="211">
+<MCC>421</MCC>
+<SID_Range_Low>11328</SID_Range_Low>
+<SID_Range_High>11343</SID_Range_High>
+</row>
+<row id="212">
+<MCC>421</MCC>
+<SID_Range_Low>11360</SID_Range_Low>
+<SID_Range_High>11375</SID_Range_High>
+</row>
+<row id="213">
+<MCC>645</MCC>
+<SID_Range_Low>10016</SID_Range_Low>
+<SID_Range_High>10047</SID_Range_High>
+</row>
+<row id="214">
+<MCC>648</MCC>
+<SID_Range_Low>10080</SID_Range_Low>
+<SID_Range_High>10111</SID_Range_High>
+</row>
+<row id="215">
+<MCC>544</MCC>
+<SID_Range_Low>11168</SID_Range_Low>
+<SID_Range_High>11183</SID_Range_High>
+</row>
+<row id="216">
+<MCC>283</MCC>
+<SID_Range_Low>15938</SID_Range_Low>
+<SID_Range_High>15945</SID_Range_High>
+</row>
+<row id="217">
+<MCC>400</MCC>
+<SID_Range_Low>15946</SID_Range_Low>
+<SID_Range_High>15953</SID_Range_High>
+</row>
+<row id="218">
+<MCC>257</MCC>
+<SID_Range_Low>15954</SID_Range_Low>
+<SID_Range_High>15961</SID_Range_High>
+</row>
+<row id="219">
+<MCC>350</MCC>
+<SID_Range_Low>8096</SID_Range_Low>
+<SID_Range_High>8111</SID_Range_High>
+</row>
+<row id="220">
+<MCC>438</MCC>
+<SID_Range_Low>15970</SID_Range_Low>
+<SID_Range_High>15977</SID_Range_High>
+</row>
+<row id="221">
+<MCC>470</MCC>
+<SID_Range_Low>13480</SID_Range_Low>
+<SID_Range_High>13480</SID_Range_High>
+</row>
+<row id="222">
+<MCC>470</MCC>
+<SID_Range_Low>12461</SID_Range_Low>
+<SID_Range_High>12461</SID_Range_High>
+</row>
+<row id="223">
+<MCC>470</MCC>
+<SID_Range_Low>12463</SID_Range_Low>
+<SID_Range_High>12464</SID_Range_High>
+</row>
+<row id="224">
+<MCC>454</MCC>
+<SID_Range_Low>10648</SID_Range_Low>
+<SID_Range_High>10648</SID_Range_High>
+</row>
+<row id="225">
+<MCC>454</MCC>
+<SID_Range_Low>10649</SID_Range_Low>
+<SID_Range_High>10655</SID_Range_High>
+</row>
+<row id="226">
+<MCC>405</MCC>
+<SID_Range_Low>14464</SID_Range_Low>
+<SID_Range_High>14847</SID_Range_High>
+</row>
+<row id="227">
+<MCC>338</MCC>
+<SID_Range_Low>8190</SID_Range_Low>
+<SID_Range_High>8190</SID_Range_High>
+</row>
+<row id="228">
+<MCC>338</MCC>
+<SID_Range_Low>8191</SID_Range_Low>
+<SID_Range_High>8191</SID_Range_High>
+</row>
+<row id="229">
+<MCC>530</MCC>
+<SID_Range_Low>8583</SID_Range_Low>
+<SID_Range_High>8583</SID_Range_High>
+</row>
+<row id="230">
+<MCC>530</MCC>
+<SID_Range_Low>8584</SID_Range_Low>
+<SID_Range_High>8703</SID_Range_High>
+</row>
+<row id="231">
+<MCC>235</MCC>
+<SID_Range_Low>22656</SID_Range_Low>
+<SID_Range_High>22911</SID_Range_High>
+</row>
+<row id="232">
+<MCC>310</MCC>
+<SID_Range_Low>6291</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="233">
+<MCC>311</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="234">
+<MCC>311</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>6189</SID_Range_High>
+</row>
+<row id="235">
+<MCC>311</MCC>
+<SID_Range_Low>6191</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="236">
+<MCC>311</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="237">
+<MCC>312</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="238">
+<MCC>313</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="239">
+<MCC>314</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="240">
+<MCC>315</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="241">
+<MCC>316</MCC>
+<SID_Range_Low>21567</SID_Range_Low>
+<SID_Range_High>21630</SID_Range_High>
+</row>
+<row id="242">
+<MCC>316</MCC>
+<SID_Range_Low>6191</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="243">
+<MCC>315</MCC>
+<SID_Range_Low>6191</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="244">
+<MCC>314</MCC>
+<SID_Range_Low>6191</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="245">
+<MCC>313</MCC>
+<SID_Range_Low>6191</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="246">
+<MCC>312</MCC>
+<SID_Range_Low>6191</SID_Range_Low>
+<SID_Range_High>7679</SID_Range_High>
+</row>
+<row id="247">
+<MCC>312</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>6189</SID_Range_High>
+</row>
+<row id="248">
+<MCC>313</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>6189</SID_Range_High>
+</row>
+<row id="249">
+<MCC>314</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>6189</SID_Range_High>
+</row>
+<row id="250">
+<MCC>315</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>6189</SID_Range_High>
+</row>
+<row id="251">
+<MCC>316</MCC>
+<SID_Range_Low>2304</SID_Range_Low>
+<SID_Range_High>6189</SID_Range_High>
+</row>
+<row id="252">
+<MCC>316</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="253">
+<MCC>315</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="254">
+<MCC>314</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="255">
+<MCC>313</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="256">
+<MCC>312</MCC>
+<SID_Range_Low>1</SID_Range_Low>
+<SID_Range_High>2175</SID_Range_High>
+</row>
+<row id="257">
+<MCC>348</MCC>
+<SID_Range_Low>6190</SID_Range_Low>
+<SID_Range_High>6190</SID_Range_High>
+</row>
+<row id="258">
+<MCC>470</MCC>
+<SID_Range_Low>13481</SID_Range_Low>
+<SID_Range_High>13503</SID_Range_High>
+</row>
+<row id="259">
+<MCC>310</MCC>
+<SID_Range_Low>22404</SID_Range_Low>
+<SID_Range_High>22527</SID_Range_High>
+</row>
+</table>
+
+<table name="MCC_SID_Conflict">
+<row id="1">
+<MCC>603</MCC>
+<SID_Conflict>8294</SID_Conflict>
+</row>
+<row id="2">
+<MCC>363</MCC>
+<SID_Conflict>12978</SID_Conflict>
+</row>
+<row id="3">
+<MCC>505</MCC>
+<SID_Conflict>8358</SID_Conflict>
+</row>
+<row id="4">
+<MCC>505</MCC>
+<SID_Conflict>8360</SID_Conflict>
+</row>
+<row id="5">
+<MCC>364</MCC>
+<SID_Conflict>32752</SID_Conflict>
+</row>
+<row id="6">
+<MCC>470</MCC>
+<SID_Conflict>12461</SID_Conflict>
+</row>
+<row id="7">
+<MCC>470</MCC>
+<SID_Conflict>12463</SID_Conflict>
+</row>
+<row id="8">
+<MCC>470</MCC>
+<SID_Conflict>12464</SID_Conflict>
+</row>
+<row id="9">
+<MCC>350</MCC>
+<SID_Conflict>8198</SID_Conflict>
+</row>
+<row id="10">
+<MCC>625</MCC>
+<SID_Conflict>8860</SID_Conflict>
+</row>
+<row id="11">
+<MCC>625</MCC>
+<SID_Conflict>8861</SID_Conflict>
+</row>
+<row id="12">
+<MCC>625</MCC>
+<SID_Conflict>8863</SID_Conflict>
+</row>
+<row id="13">
+<MCC>623</MCC>
+<SID_Conflict>9322</SID_Conflict>
+</row>
+<row id="14">
+<MCC>612</MCC>
+<SID_Conflict>8960</SID_Conflict>
+</row>
+<row id="15">
+<MCC>612</MCC>
+<SID_Conflict>8962</SID_Conflict>
+</row>
+<row id="16">
+<MCC>627</MCC>
+<SID_Conflict>9394</SID_Conflict>
+</row>
+<row id="17">
+<MCC>636</MCC>
+<SID_Conflict>9788</SID_Conflict>
+</row>
+<row id="18">
+<MCC>636</MCC>
+<SID_Conflict>9790</SID_Conflict>
+</row>
+<row id="19">
+<MCC>620</MCC>
+<SID_Conflict>9244</SID_Conflict>
+</row>
+<row id="20">
+<MCC>630</MCC>
+<SID_Conflict>9488</SID_Conflict>
+</row>
+<row id="21">
+<MCC>632</MCC>
+<SID_Conflict>9562</SID_Conflict>
+</row>
+<row id="22">
+<MCC>708</MCC>
+<SID_Conflict>32752</SID_Conflict>
+</row>
+<row id="23">
+<MCC>454</MCC>
+<SID_Conflict>13</SID_Conflict>
+</row>
+<row id="24">
+<MCC>404</MCC>
+<SID_Conflict>2222</SID_Conflict>
+</row>
+<row id="25">
+<MCC>404</MCC>
+<SID_Conflict>14850</SID_Conflict>
+</row>
+<row id="26">
+<MCC>440</MCC>
+<SID_Conflict>12461</SID_Conflict>
+</row>
+<row id="27">
+<MCC>440</MCC>
+<SID_Conflict>12463</SID_Conflict>
+</row>
+<row id="28">
+<MCC>440</MCC>
+<SID_Conflict>12464</SID_Conflict>
+</row>
+<row id="29">
+<MCC>440</MCC>
+<SID_Conflict>12978</SID_Conflict>
+</row>
+<row id="30">
+<MCC>230</MCC>
+<SID_Conflict>16128</SID_Conflict>
+</row>
+<row id="31">
+<MCC>334</MCC>
+<SID_Conflict>1525</SID_Conflict>
+</row>
+<row id="32">
+<MCC>362</MCC>
+<SID_Conflict>136</SID_Conflict>
+</row>
+<row id="33">
+<MCC>530</MCC>
+<SID_Conflict>8616</SID_Conflict>
+</row>
+<row id="34">
+<MCC>621</MCC>
+<SID_Conflict>111</SID_Conflict>
+</row>
+<row id="35">
+<MCC>621</MCC>
+<SID_Conflict>211</SID_Conflict>
+</row>
+<row id="36">
+<MCC>621</MCC>
+<SID_Conflict>311</SID_Conflict>
+</row>
+<row id="37">
+<MCC>410</MCC>
+<SID_Conflict>14850</SID_Conflict>
+</row>
+<row id="38">
+<MCC>310</MCC>
+<SID_Conflict>1284</SID_Conflict>
+</row>
+<row id="39">
+<MCC>250</MCC>
+<SID_Conflict>1901</SID_Conflict>
+</row>
+<row id="40">
+<MCC>619</MCC>
+<SID_Conflict>9212</SID_Conflict>
+</row>
+<row id="41">
+<MCC>520</MCC>
+<SID_Conflict>8198</SID_Conflict>
+</row>
+<row id="42">
+<MCC>615</MCC>
+<SID_Conflict>9080</SID_Conflict>
+</row>
+<row id="43">
+<MCC>734</MCC>
+<SID_Conflict>4100</SID_Conflict>
+</row>
+<row id="44">
+<MCC>734</MCC>
+<SID_Conflict>4120</SID_Conflict>
+</row>
+<row id="45">
+<MCC>734</MCC>
+<SID_Conflict>4130</SID_Conflict>
+</row>
+<row id="46">
+<MCC>734</MCC>
+<SID_Conflict>4140</SID_Conflict>
+</row>
+<row id="47">
+<MCC>734</MCC>
+<SID_Conflict>4101</SID_Conflict>
+</row>
+<row id="48">
+<MCC>734</MCC>
+<SID_Conflict>4150</SID_Conflict>
+</row>
+<row id="49">
+<MCC>724</MCC>
+<SID_Conflict>3</SID_Conflict>
+</row>
+<row id="50">
+<MCC>724</MCC>
+<SID_Conflict>23</SID_Conflict>
+</row>
+<row id="51">
+<MCC>724</MCC>
+<SID_Conflict>27</SID_Conflict>
+</row>
+<row id="52">
+<MCC>724</MCC>
+<SID_Conflict>29</SID_Conflict>
+</row>
+<row id="53">
+<MCC>724</MCC>
+<SID_Conflict>33</SID_Conflict>
+</row>
+<row id="54">
+<MCC>724</MCC>
+<SID_Conflict>43</SID_Conflict>
+</row>
+<row id="55">
+<MCC>724</MCC>
+<SID_Conflict>47</SID_Conflict>
+</row>
+<row id="56">
+<MCC>724</MCC>
+<SID_Conflict>61</SID_Conflict>
+</row>
+<row id="57">
+<MCC>724</MCC>
+<SID_Conflict>65</SID_Conflict>
+</row>
+<row id="58">
+<MCC>724</MCC>
+<SID_Conflict>67</SID_Conflict>
+</row>
+<row id="59">
+<MCC>724</MCC>
+<SID_Conflict>69</SID_Conflict>
+</row>
+<row id="60">
+<MCC>724</MCC>
+<SID_Conflict>71</SID_Conflict>
+</row>
+<row id="61">
+<MCC>724</MCC>
+<SID_Conflict>131</SID_Conflict>
+</row>
+<row id="62">
+<MCC>724</MCC>
+<SID_Conflict>257</SID_Conflict>
+</row>
+<row id="63">
+<MCC>724</MCC>
+<SID_Conflict>259</SID_Conflict>
+</row>
+<row id="64">
+<MCC>724</MCC>
+<SID_Conflict>261</SID_Conflict>
+</row>
+<row id="65">
+<MCC>724</MCC>
+<SID_Conflict>263</SID_Conflict>
+</row>
+<row id="66">
+<MCC>724</MCC>
+<SID_Conflict>320</SID_Conflict>
+</row>
+<row id="67">
+<MCC>724</MCC>
+<SID_Conflict>322</SID_Conflict>
+</row>
+<row id="68">
+<MCC>724</MCC>
+<SID_Conflict>326</SID_Conflict>
+</row>
+<row id="69">
+<MCC>724</MCC>
+<SID_Conflict>328</SID_Conflict>
+</row>
+<row id="70">
+<MCC>724</MCC>
+<SID_Conflict>330</SID_Conflict>
+</row>
+<row id="71">
+<MCC>724</MCC>
+<SID_Conflict>387</SID_Conflict>
+</row>
+<row id="72">
+<MCC>724</MCC>
+<SID_Conflict>389</SID_Conflict>
+</row>
+<row id="73">
+<MCC>724</MCC>
+<SID_Conflict>391</SID_Conflict>
+</row>
+<row id="74">
+<MCC>724</MCC>
+<SID_Conflict>395</SID_Conflict>
+</row>
+<row id="75">
+<MCC>724</MCC>
+<SID_Conflict>576</SID_Conflict>
+</row>
+<row id="76">
+<MCC>724</MCC>
+<SID_Conflict>582</SID_Conflict>
+</row>
+<row id="77">
+<MCC>724</MCC>
+<SID_Conflict>703</SID_Conflict>
+</row>
+<row id="78">
+<MCC>724</MCC>
+<SID_Conflict>739</SID_Conflict>
+</row>
+<row id="79">
+<MCC>724</MCC>
+<SID_Conflict>1218</SID_Conflict>
+</row>
+<row id="80">
+<MCC>724</MCC>
+<SID_Conflict>1220</SID_Conflict>
+</row>
+<row id="81">
+<MCC>724</MCC>
+<SID_Conflict>1222</SID_Conflict>
+</row>
+<row id="82">
+<MCC>724</MCC>
+<SID_Conflict>1282</SID_Conflict>
+</row>
+<row id="83">
+<MCC>724</MCC>
+<SID_Conflict>1313</SID_Conflict>
+</row>
+<row id="84">
+<MCC>724</MCC>
+<SID_Conflict>1315</SID_Conflict>
+</row>
+<row id="85">
+<MCC>724</MCC>
+<SID_Conflict>1329</SID_Conflict>
+</row>
+<row id="86">
+<MCC>724</MCC>
+<SID_Conflict>1409</SID_Conflict>
+</row>
+<row id="87">
+<MCC>724</MCC>
+<SID_Conflict>1443</SID_Conflict>
+</row>
+<row id="88">
+<MCC>724</MCC>
+<SID_Conflict>1521</SID_Conflict>
+</row>
+<row id="89">
+<MCC>724</MCC>
+<SID_Conflict>1569</SID_Conflict>
+</row>
+<row id="90">
+<MCC>724</MCC>
+<SID_Conflict>1581</SID_Conflict>
+</row>
+<row id="91">
+<MCC>724</MCC>
+<SID_Conflict>1634</SID_Conflict>
+</row>
+<row id="92">
+<MCC>724</MCC>
+<SID_Conflict>1666</SID_Conflict>
+</row>
+<row id="93">
+<MCC>724</MCC>
+<SID_Conflict>1668</SID_Conflict>
+</row>
+<row id="94">
+<MCC>310</MCC>
+<SID_Conflict>1</SID_Conflict>
+</row>
+<row id="95">
+<MCC>310</MCC>
+<SID_Conflict>2</SID_Conflict>
+</row>
+<row id="96">
+<MCC>310</MCC>
+<SID_Conflict>3</SID_Conflict>
+</row>
+<row id="97">
+<MCC>310</MCC>
+<SID_Conflict>7</SID_Conflict>
+</row>
+<row id="98">
+<MCC>310</MCC>
+<SID_Conflict>13</SID_Conflict>
+</row>
+<row id="99">
+<MCC>310</MCC>
+<SID_Conflict>23</SID_Conflict>
+</row>
+<row id="100">
+<MCC>310</MCC>
+<SID_Conflict>27</SID_Conflict>
+</row>
+<row id="101">
+<MCC>310</MCC>
+<SID_Conflict>29</SID_Conflict>
+</row>
+<row id="102">
+<MCC>310</MCC>
+<SID_Conflict>33</SID_Conflict>
+</row>
+<row id="103">
+<MCC>310</MCC>
+<SID_Conflict>43</SID_Conflict>
+</row>
+<row id="104">
+<MCC>310</MCC>
+<SID_Conflict>47</SID_Conflict>
+</row>
+<row id="105">
+<MCC>310</MCC>
+<SID_Conflict>61</SID_Conflict>
+</row>
+<row id="106">
+<MCC>310</MCC>
+<SID_Conflict>65</SID_Conflict>
+</row>
+<row id="107">
+<MCC>310</MCC>
+<SID_Conflict>67</SID_Conflict>
+</row>
+<row id="108">
+<MCC>310</MCC>
+<SID_Conflict>69</SID_Conflict>
+</row>
+<row id="109">
+<MCC>310</MCC>
+<SID_Conflict>71</SID_Conflict>
+</row>
+<row id="110">
+<MCC>310</MCC>
+<SID_Conflict>111</SID_Conflict>
+</row>
+<row id="111">
+<MCC>310</MCC>
+<SID_Conflict>131</SID_Conflict>
+</row>
+<row id="112">
+<MCC>310</MCC>
+<SID_Conflict>211</SID_Conflict>
+</row>
+<row id="113">
+<MCC>310</MCC>
+<SID_Conflict>257</SID_Conflict>
+</row>
+<row id="114">
+<MCC>310</MCC>
+<SID_Conflict>259</SID_Conflict>
+</row>
+<row id="115">
+<MCC>310</MCC>
+<SID_Conflict>261</SID_Conflict>
+</row>
+<row id="116">
+<MCC>310</MCC>
+<SID_Conflict>263</SID_Conflict>
+</row>
+<row id="117">
+<MCC>310</MCC>
+<SID_Conflict>311</SID_Conflict>
+</row>
+<row id="118">
+<MCC>310</MCC>
+<SID_Conflict>320</SID_Conflict>
+</row>
+<row id="119">
+<MCC>310</MCC>
+<SID_Conflict>322</SID_Conflict>
+</row>
+<row id="120">
+<MCC>310</MCC>
+<SID_Conflict>326</SID_Conflict>
+</row>
+<row id="121">
+<MCC>310</MCC>
+<SID_Conflict>328</SID_Conflict>
+</row>
+<row id="122">
+<MCC>310</MCC>
+<SID_Conflict>330</SID_Conflict>
+</row>
+<row id="123">
+<MCC>310</MCC>
+<SID_Conflict>387</SID_Conflict>
+</row>
+<row id="124">
+<MCC>310</MCC>
+<SID_Conflict>389</SID_Conflict>
+</row>
+<row id="125">
+<MCC>310</MCC>
+<SID_Conflict>391</SID_Conflict>
+</row>
+<row id="126">
+<MCC>310</MCC>
+<SID_Conflict>395</SID_Conflict>
+</row>
+<row id="127">
+<MCC>310</MCC>
+<SID_Conflict>576</SID_Conflict>
+</row>
+<row id="128">
+<MCC>310</MCC>
+<SID_Conflict>582</SID_Conflict>
+</row>
+<row id="129">
+<MCC>310</MCC>
+<SID_Conflict>703</SID_Conflict>
+</row>
+<row id="130">
+<MCC>310</MCC>
+<SID_Conflict>739</SID_Conflict>
+</row>
+<row id="131">
+<MCC>310</MCC>
+<SID_Conflict>741</SID_Conflict>
+</row>
+<row id="132">
+<MCC>310</MCC>
+<SID_Conflict>1111</SID_Conflict>
+</row>
+<row id="133">
+<MCC>310</MCC>
+<SID_Conflict>1112</SID_Conflict>
+</row>
+<row id="134">
+<MCC>310</MCC>
+<SID_Conflict>1113</SID_Conflict>
+</row>
+<row id="135">
+<MCC>310</MCC>
+<SID_Conflict>1218</SID_Conflict>
+</row>
+<row id="136">
+<MCC>310</MCC>
+<SID_Conflict>1220</SID_Conflict>
+</row>
+<row id="137">
+<MCC>310</MCC>
+<SID_Conflict>1222</SID_Conflict>
+</row>
+<row id="138">
+<MCC>724</MCC>
+<SID_Conflict>1284</SID_Conflict>
+</row>
+<row id="139">
+<MCC>310</MCC>
+<SID_Conflict>1282</SID_Conflict>
+</row>
+<row id="140">
+<MCC>310</MCC>
+<SID_Conflict>1313</SID_Conflict>
+</row>
+<row id="141">
+<MCC>310</MCC>
+<SID_Conflict>1315</SID_Conflict>
+</row>
+<row id="142">
+<MCC>310</MCC>
+<SID_Conflict>1329</SID_Conflict>
+</row>
+<row id="143">
+<MCC>310</MCC>
+<SID_Conflict>1409</SID_Conflict>
+</row>
+<row id="144">
+<MCC>310</MCC>
+<SID_Conflict>1443</SID_Conflict>
+</row>
+<row id="145">
+<MCC>310</MCC>
+<SID_Conflict>1521</SID_Conflict>
+</row>
+<row id="146">
+<MCC>310</MCC>
+<SID_Conflict>1569</SID_Conflict>
+</row>
+<row id="147">
+<MCC>310</MCC>
+<SID_Conflict>1581</SID_Conflict>
+</row>
+<row id="148">
+<MCC>310</MCC>
+<SID_Conflict>1634</SID_Conflict>
+</row>
+<row id="149">
+<MCC>310</MCC>
+<SID_Conflict>1666</SID_Conflict>
+</row>
+<row id="150">
+<MCC>310</MCC>
+<SID_Conflict>1668</SID_Conflict>
+</row>
+<row id="151">
+<MCC>310</MCC>
+<SID_Conflict>1700</SID_Conflict>
+</row>
+<row id="152">
+<MCC>310</MCC>
+<SID_Conflict>1901</SID_Conflict>
+</row>
+<row id="153">
+<MCC>310</MCC>
+<SID_Conflict>2177</SID_Conflict>
+</row>
+<row id="154">
+<MCC>310</MCC>
+<SID_Conflict>2179</SID_Conflict>
+</row>
+<row id="155">
+<MCC>310</MCC>
+<SID_Conflict>2181</SID_Conflict>
+</row>
+<row id="156">
+<MCC>310</MCC>
+<SID_Conflict>2183</SID_Conflict>
+</row>
+<row id="157">
+<MCC>310</MCC>
+<SID_Conflict>2185</SID_Conflict>
+</row>
+<row id="158">
+<MCC>310</MCC>
+<SID_Conflict>2187</SID_Conflict>
+</row>
+<row id="159">
+<MCC>310</MCC>
+<SID_Conflict>2189</SID_Conflict>
+</row>
+<row id="160">
+<MCC>310</MCC>
+<SID_Conflict>2191</SID_Conflict>
+</row>
+<row id="161">
+<MCC>310</MCC>
+<SID_Conflict>2193</SID_Conflict>
+</row>
+<row id="162">
+<MCC>310</MCC>
+<SID_Conflict>2195</SID_Conflict>
+</row>
+<row id="163">
+<MCC>310</MCC>
+<SID_Conflict>2197</SID_Conflict>
+</row>
+<row id="164">
+<MCC>310</MCC>
+<SID_Conflict>2199</SID_Conflict>
+</row>
+<row id="165">
+<MCC>310</MCC>
+<SID_Conflict>2201</SID_Conflict>
+</row>
+<row id="166">
+<MCC>310</MCC>
+<SID_Conflict>2203</SID_Conflict>
+</row>
+<row id="167">
+<MCC>310</MCC>
+<SID_Conflict>2205</SID_Conflict>
+</row>
+<row id="168">
+<MCC>310</MCC>
+<SID_Conflict>2207</SID_Conflict>
+</row>
+<row id="169">
+<MCC>310</MCC>
+<SID_Conflict>2209</SID_Conflict>
+</row>
+<row id="170">
+<MCC>310</MCC>
+<SID_Conflict>2211</SID_Conflict>
+</row>
+<row id="171">
+<MCC>310</MCC>
+<SID_Conflict>2213</SID_Conflict>
+</row>
+<row id="172">
+<MCC>310</MCC>
+<SID_Conflict>2215</SID_Conflict>
+</row>
+<row id="173">
+<MCC>310</MCC>
+<SID_Conflict>2217</SID_Conflict>
+</row>
+<row id="174">
+<MCC>310</MCC>
+<SID_Conflict>2219</SID_Conflict>
+</row>
+<row id="175">
+<MCC>310</MCC>
+<SID_Conflict>2221</SID_Conflict>
+</row>
+<row id="176">
+<MCC>310</MCC>
+<SID_Conflict>2223</SID_Conflict>
+</row>
+<row id="177">
+<MCC>310</MCC>
+<SID_Conflict>2225</SID_Conflict>
+</row>
+<row id="178">
+<MCC>310</MCC>
+<SID_Conflict>2227</SID_Conflict>
+</row>
+<row id="179">
+<MCC>310</MCC>
+<SID_Conflict>2229</SID_Conflict>
+</row>
+<row id="180">
+<MCC>310</MCC>
+<SID_Conflict>2231</SID_Conflict>
+</row>
+<row id="181">
+<MCC>310</MCC>
+<SID_Conflict>2233</SID_Conflict>
+</row>
+<row id="182">
+<MCC>310</MCC>
+<SID_Conflict>2235</SID_Conflict>
+</row>
+<row id="183">
+<MCC>310</MCC>
+<SID_Conflict>2237</SID_Conflict>
+</row>
+<row id="184">
+<MCC>310</MCC>
+<SID_Conflict>2239</SID_Conflict>
+</row>
+<row id="185">
+<MCC>310</MCC>
+<SID_Conflict>2241</SID_Conflict>
+</row>
+<row id="186">
+<MCC>310</MCC>
+<SID_Conflict>2243</SID_Conflict>
+</row>
+<row id="187">
+<MCC>310</MCC>
+<SID_Conflict>2301</SID_Conflict>
+</row>
+<row id="188">
+<MCC>310</MCC>
+<SID_Conflict>2303</SID_Conflict>
+</row>
+<row id="189">
+<MCC>310</MCC>
+<SID_Conflict>4110</SID_Conflict>
+</row>
+<row id="190">
+<MCC>310</MCC>
+<SID_Conflict>4369</SID_Conflict>
+</row>
+<row id="191">
+<MCC>310</MCC>
+<SID_Conflict>4370</SID_Conflict>
+</row>
+<row id="192">
+<MCC>310</MCC>
+<SID_Conflict>4371</SID_Conflict>
+</row>
+<row id="193">
+<MCC>310</MCC>
+<SID_Conflict>4120</SID_Conflict>
+</row>
+<row id="194">
+<MCC>310</MCC>
+<SID_Conflict>4130</SID_Conflict>
+</row>
+<row id="195">
+<MCC>310</MCC>
+<SID_Conflict>4140</SID_Conflict>
+</row>
+<row id="196">
+<MCC>310</MCC>
+<SID_Conflict>5732</SID_Conflict>
+</row>
+<row id="197">
+<MCC>310</MCC>
+<SID_Conflict>5734</SID_Conflict>
+</row>
+<row id="198">
+<MCC>310</MCC>
+<SID_Conflict>5772</SID_Conflict>
+</row>
+<row id="199">
+<MCC>310</MCC>
+<SID_Conflict>8294</SID_Conflict>
+</row>
+<row id="200">
+<MCC>310</MCC>
+<SID_Conflict>8358</SID_Conflict>
+</row>
+<row id="201">
+<MCC>310</MCC>
+<SID_Conflict>8360</SID_Conflict>
+</row>
+<row id="202">
+<MCC>310</MCC>
+<SID_Conflict>8616</SID_Conflict>
+</row>
+<row id="203">
+<MCC>310</MCC>
+<SID_Conflict>8860</SID_Conflict>
+</row>
+<row id="204">
+<MCC>310</MCC>
+<SID_Conflict>8861</SID_Conflict>
+</row>
+<row id="205">
+<MCC>310</MCC>
+<SID_Conflict>8863</SID_Conflict>
+</row>
+<row id="206">
+<MCC>310</MCC>
+<SID_Conflict>8950</SID_Conflict>
+</row>
+<row id="207">
+<MCC>310</MCC>
+<SID_Conflict>8952</SID_Conflict>
+</row>
+<row id="208">
+<MCC>310</MCC>
+<SID_Conflict>8960</SID_Conflict>
+</row>
+<row id="209">
+<MCC>310</MCC>
+<SID_Conflict>8962</SID_Conflict>
+</row>
+<row id="210">
+<MCC>310</MCC>
+<SID_Conflict>9080</SID_Conflict>
+</row>
+<row id="211">
+<MCC>310</MCC>
+<SID_Conflict>9212</SID_Conflict>
+</row>
+<row id="212">
+<MCC>310</MCC>
+<SID_Conflict>9244</SID_Conflict>
+</row>
+<row id="213">
+<MCC>308</MCC>
+<SID_Conflict>10817</SID_Conflict>
+</row>
+<row id="214">
+<MCC>310</MCC>
+<SID_Conflict>9322</SID_Conflict>
+</row>
+<row id="215">
+<MCC>310</MCC>
+<SID_Conflict>9394</SID_Conflict>
+</row>
+<row id="216">
+<MCC>310</MCC>
+<SID_Conflict>9488</SID_Conflict>
+</row>
+<row id="217">
+<MCC>310</MCC>
+<SID_Conflict>9562</SID_Conflict>
+</row>
+<row id="218">
+<MCC>310</MCC>
+<SID_Conflict>9640</SID_Conflict>
+</row>
+<row id="219">
+<MCC>310</MCC>
+<SID_Conflict>9642</SID_Conflict>
+</row>
+<row id="220">
+<MCC>310</MCC>
+<SID_Conflict>9644</SID_Conflict>
+</row>
+<row id="221">
+<MCC>310</MCC>
+<SID_Conflict>9788</SID_Conflict>
+</row>
+<row id="222">
+<MCC>310</MCC>
+<SID_Conflict>9790</SID_Conflict>
+</row>
+<row id="223">
+<MCC>450</MCC>
+<SID_Conflict>1111</SID_Conflict>
+</row>
+<row id="224">
+<MCC>450</MCC>
+<SID_Conflict>1112</SID_Conflict>
+</row>
+<row id="225">
+<MCC>450</MCC>
+<SID_Conflict>1113</SID_Conflict>
+</row>
+<row id="226">
+<MCC>450</MCC>
+<SID_Conflict>1700</SID_Conflict>
+</row>
+<row id="227">
+<MCC>450</MCC>
+<SID_Conflict>2177</SID_Conflict>
+</row>
+<row id="228">
+<MCC>450</MCC>
+<SID_Conflict>2179</SID_Conflict>
+</row>
+<row id="229">
+<MCC>450</MCC>
+<SID_Conflict>2181</SID_Conflict>
+</row>
+<row id="230">
+<MCC>450</MCC>
+<SID_Conflict>2183</SID_Conflict>
+</row>
+<row id="231">
+<MCC>450</MCC>
+<SID_Conflict>2185</SID_Conflict>
+</row>
+<row id="232">
+<MCC>450</MCC>
+<SID_Conflict>2187</SID_Conflict>
+</row>
+<row id="233">
+<MCC>450</MCC>
+<SID_Conflict>2189</SID_Conflict>
+</row>
+<row id="234">
+<MCC>450</MCC>
+<SID_Conflict>2191</SID_Conflict>
+</row>
+<row id="235">
+<MCC>450</MCC>
+<SID_Conflict>2193</SID_Conflict>
+</row>
+<row id="236">
+<MCC>450</MCC>
+<SID_Conflict>2195</SID_Conflict>
+</row>
+<row id="237">
+<MCC>450</MCC>
+<SID_Conflict>2197</SID_Conflict>
+</row>
+<row id="238">
+<MCC>450</MCC>
+<SID_Conflict>2199</SID_Conflict>
+</row>
+<row id="239">
+<MCC>450</MCC>
+<SID_Conflict>2201</SID_Conflict>
+</row>
+<row id="240">
+<MCC>450</MCC>
+<SID_Conflict>2203</SID_Conflict>
+</row>
+<row id="241">
+<MCC>450</MCC>
+<SID_Conflict>2205</SID_Conflict>
+</row>
+<row id="242">
+<MCC>450</MCC>
+<SID_Conflict>2207</SID_Conflict>
+</row>
+<row id="243">
+<MCC>450</MCC>
+<SID_Conflict>2209</SID_Conflict>
+</row>
+<row id="244">
+<MCC>450</MCC>
+<SID_Conflict>2211</SID_Conflict>
+</row>
+<row id="245">
+<MCC>450</MCC>
+<SID_Conflict>2213</SID_Conflict>
+</row>
+<row id="246">
+<MCC>450</MCC>
+<SID_Conflict>2215</SID_Conflict>
+</row>
+<row id="247">
+<MCC>450</MCC>
+<SID_Conflict>2217</SID_Conflict>
+</row>
+<row id="248">
+<MCC>450</MCC>
+<SID_Conflict>2219</SID_Conflict>
+</row>
+<row id="249">
+<MCC>450</MCC>
+<SID_Conflict>2221</SID_Conflict>
+</row>
+<row id="250">
+<MCC>450</MCC>
+<SID_Conflict>2222</SID_Conflict>
+</row>
+<row id="251">
+<MCC>450</MCC>
+<SID_Conflict>2223</SID_Conflict>
+</row>
+<row id="252">
+<MCC>450</MCC>
+<SID_Conflict>2225</SID_Conflict>
+</row>
+<row id="253">
+<MCC>450</MCC>
+<SID_Conflict>2227</SID_Conflict>
+</row>
+<row id="254">
+<MCC>450</MCC>
+<SID_Conflict>2229</SID_Conflict>
+</row>
+<row id="255">
+<MCC>450</MCC>
+<SID_Conflict>2231</SID_Conflict>
+</row>
+<row id="256">
+<MCC>450</MCC>
+<SID_Conflict>2233</SID_Conflict>
+</row>
+<row id="257">
+<MCC>450</MCC>
+<SID_Conflict>2235</SID_Conflict>
+</row>
+<row id="258">
+<MCC>450</MCC>
+<SID_Conflict>2237</SID_Conflict>
+</row>
+<row id="259">
+<MCC>450</MCC>
+<SID_Conflict>2239</SID_Conflict>
+</row>
+<row id="260">
+<MCC>450</MCC>
+<SID_Conflict>2241</SID_Conflict>
+</row>
+<row id="261">
+<MCC>450</MCC>
+<SID_Conflict>2243</SID_Conflict>
+</row>
+<row id="262">
+<MCC>450</MCC>
+<SID_Conflict>2301</SID_Conflict>
+</row>
+<row id="263">
+<MCC>450</MCC>
+<SID_Conflict>2303</SID_Conflict>
+</row>
+<row id="264">
+<MCC>450</MCC>
+<SID_Conflict>4369</SID_Conflict>
+</row>
+<row id="265">
+<MCC>450</MCC>
+<SID_Conflict>4370</SID_Conflict>
+</row>
+<row id="266">
+<MCC>450</MCC>
+<SID_Conflict>4371</SID_Conflict>
+</row>
+<row id="267">
+<MCC>310</MCC>
+<SID_Conflict>4100</SID_Conflict>
+</row>
+<row id="268">
+<MCC>647</MCC>
+<SID_Conflict>8950</SID_Conflict>
+</row>
+<row id="269">
+<MCC>647</MCC>
+<SID_Conflict>8952</SID_Conflict>
+</row>
+<row id="270">
+<MCC>259</MCC>
+<SID_Conflict>16128</SID_Conflict>
+</row>
+<row id="271">
+<MCC>653</MCC>
+<SID_Conflict>9640</SID_Conflict>
+</row>
+<row id="272">
+<MCC>653</MCC>
+<SID_Conflict>9642</SID_Conflict>
+</row>
+<row id="273">
+<MCC>653</MCC>
+<SID_Conflict>9644</SID_Conflict>
+</row>
+<row id="274">
+<MCC>404</MCC>
+<SID_Conflict>1</SID_Conflict>
+</row>
+<row id="275">
+<MCC>404</MCC>
+<SID_Conflict>2</SID_Conflict>
+</row>
+<row id="276">
+<MCC>404</MCC>
+<SID_Conflict>7</SID_Conflict>
+</row>
+<row id="277">
+<MCC>310</MCC>
+<SID_Conflict>136</SID_Conflict>
+</row>
+<row id="278">
+<MCC>310</MCC>
+<SID_Conflict>324</SID_Conflict>
+</row>
+<row id="279">
+<MCC>724</MCC>
+<SID_Conflict>324</SID_Conflict>
+</row>
+<row id="280">
+<MCC>724</MCC>
+<SID_Conflict>393</SID_Conflict>
+</row>
+<row id="281">
+<MCC>310</MCC>
+<SID_Conflict>393</SID_Conflict>
+</row>
+<row id="282">
+<MCC>310</MCC>
+<SID_Conflict>578</SID_Conflict>
+</row>
+<row id="283">
+<MCC>724</MCC>
+<SID_Conflict>578</SID_Conflict>
+</row>
+<row id="284">
+<MCC>301</MCC>
+<SID_Conflict>700</SID_Conflict>
+</row>
+<row id="285">
+<MCC>346</MCC>
+<SID_Conflict>700</SID_Conflict>
+</row>
+<row id="286">
+<MCC>740</MCC>
+<SID_Conflict>741</SID_Conflict>
+</row>
+<row id="287">
+<MCC>310</MCC>
+<SID_Conflict>1411</SID_Conflict>
+</row>
+<row id="288">
+<MCC>724</MCC>
+<SID_Conflict>1411</SID_Conflict>
+</row>
+<row id="289">
+<MCC>310</MCC>
+<SID_Conflict>1525</SID_Conflict>
+</row>
+<row id="290">
+<MCC>310</MCC>
+<SID_Conflict>1538</SID_Conflict>
+</row>
+<row id="291">
+<MCC>724</MCC>
+<SID_Conflict>1538</SID_Conflict>
+</row>
+<row id="292">
+<MCC>310</MCC>
+<SID_Conflict>4101</SID_Conflict>
+</row>
+<row id="293">
+<MCC>310</MCC>
+<SID_Conflict>4150</SID_Conflict>
+</row>
+<row id="294">
+<MCC>732</MCC>
+<SID_Conflict>5732</SID_Conflict>
+</row>
+<row id="295">
+<MCC>732</MCC>
+<SID_Conflict>5734</SID_Conflict>
+</row>
+<row id="296">
+<MCC>732</MCC>
+<SID_Conflict>5772</SID_Conflict>
+</row>
+<row id="297">
+<MCC>360</MCC>
+<SID_Conflict>8002</SID_Conflict>
+</row>
+<row id="298">
+<MCC>352</MCC>
+<SID_Conflict>8002</SID_Conflict>
+</row>
+<row id="299">
+<MCC>360</MCC>
+<SID_Conflict>8003</SID_Conflict>
+</row>
+<row id="300">
+<MCC>352</MCC>
+<SID_Conflict>8003</SID_Conflict>
+</row>
+<row id="301">
+<MCC>356</MCC>
+<SID_Conflict>8036</SID_Conflict>
+</row>
+<row id="302">
+<MCC>310</MCC>
+<SID_Conflict>8036</SID_Conflict>
+</row>
+<row id="303">
+<MCC>352</MCC>
+<SID_Conflict>8066</SID_Conflict>
+</row>
+<row id="304">
+<MCC>310</MCC>
+<SID_Conflict>8066</SID_Conflict>
+</row>
+<row id="305">
+<MCC>342</MCC>
+<SID_Conflict>8166</SID_Conflict>
+</row>
+<row id="306">
+<MCC>356</MCC>
+<SID_Conflict>8166</SID_Conflict>
+</row>
+<row id="307">
+<MCC>620</MCC>
+<SID_Conflict>9246</SID_Conflict>
+</row>
+<row id="308">
+<MCC>310</MCC>
+<SID_Conflict>9246</SID_Conflict>
+</row>
+<row id="309">
+<MCC>510</MCC>
+<SID_Conflict>10817</SID_Conflict>
+</row>
+<row id="310">
+<MCC>404</MCC>
+<SID_Conflict>14838</SID_Conflict>
+</row>
+<row id="311">
+<MCC>405</MCC>
+<SID_Conflict>14838</SID_Conflict>
+</row>
+<row id="312">
+<MCC>404</MCC>
+<SID_Conflict>14839</SID_Conflict>
+</row>
+<row id="313">
+<MCC>405</MCC>
+<SID_Conflict>14839</SID_Conflict>
+</row>
+<row id="314">
+<MCC>404</MCC>
+<SID_Conflict>14840</SID_Conflict>
+</row>
+<row id="315">
+<MCC>405</MCC>
+<SID_Conflict>14840</SID_Conflict>
+</row>
+<row id="316">
+<MCC>404</MCC>
+<SID_Conflict>14841</SID_Conflict>
+</row>
+<row id="317">
+<MCC>405</MCC>
+<SID_Conflict>14841</SID_Conflict>
+</row>
+<row id="318">
+<MCC>404</MCC>
+<SID_Conflict>14842</SID_Conflict>
+</row>
+<row id="319">
+<MCC>405</MCC>
+<SID_Conflict>14842</SID_Conflict>
+</row>
+<row id="320">
+<MCC>404</MCC>
+<SID_Conflict>14843</SID_Conflict>
+</row>
+<row id="321">
+<MCC>405</MCC>
+<SID_Conflict>14843</SID_Conflict>
+</row>
+<row id="322">
+<MCC>404</MCC>
+<SID_Conflict>14844</SID_Conflict>
+</row>
+<row id="323">
+<MCC>405</MCC>
+<SID_Conflict>14844</SID_Conflict>
+</row>
+<row id="324">
+<MCC>404</MCC>
+<SID_Conflict>14845</SID_Conflict>
+</row>
+<row id="325">
+<MCC>405</MCC>
+<SID_Conflict>14845</SID_Conflict>
+</row>
+<row id="326">
+<MCC>404</MCC>
+<SID_Conflict>14846</SID_Conflict>
+</row>
+<row id="327">
+<MCC>405</MCC>
+<SID_Conflict>14846</SID_Conflict>
+</row>
+</table>
+
+<table name="ARBITRARY_MCC_SID_MATCH">
+<row id="1">
+<MCC>362</MCC>
+<SID>136</SID>
+</row>
+<row id="2">
+<MCC>310</MCC>
+<SID>741</SID>
+</row>
+<row id="3">
+<MCC>334</MCC>
+<SID>1525</SID>
+</row>
+<row id="4">
+<MCC>734</MCC>
+<SID>4101</SID>
+</row>
+<row id="5">
+<MCC>310</MCC>
+<SID>4110</SID>
+</row>
+<row id="6">
+<MCC>734</MCC>
+<SID>4150</SID>
+</row>
+<row id="7">
+<MCC>310</MCC>
+<SID>5732</SID>
+</row>
+<row id="8">
+<MCC>310</MCC>
+<SID>5734</SID>
+</row>
+<row id="9">
+<MCC>310</MCC>
+<SID>5772</SID>
+</row>
+</table>
+
+<table name="NANP_Area_Code">
+<row id="1">
+<Area_Code>201</Area_Code>
+</row>
+<row id="2">
+<Area_Code>203</Area_Code>
+</row>
+<row id="3">
+<Area_Code>204</Area_Code>
+</row>
+<row id="4">
+<Area_Code>205</Area_Code>
+</row>
+<row id="5">
+<Area_Code>206</Area_Code>
+</row>
+<row id="6">
+<Area_Code>207</Area_Code>
+</row>
+<row id="7">
+<Area_Code>208</Area_Code>
+</row>
+<row id="8">
+<Area_Code>209</Area_Code>
+</row>
+<row id="9">
+<Area_Code>210</Area_Code>
+</row>
+<row id="10">
+<Area_Code>212</Area_Code>
+</row>
+<row id="11">
+<Area_Code>213</Area_Code>
+</row>
+<row id="12">
+<Area_Code>214</Area_Code>
+</row>
+<row id="13">
+<Area_Code>215</Area_Code>
+</row>
+<row id="14">
+<Area_Code>216</Area_Code>
+</row>
+<row id="15">
+<Area_Code>217</Area_Code>
+</row>
+<row id="16">
+<Area_Code>218</Area_Code>
+</row>
+<row id="17">
+<Area_Code>219</Area_Code>
+</row>
+<row id="18">
+<Area_Code>224</Area_Code>
+</row>
+<row id="19">
+<Area_Code>225</Area_Code>
+</row>
+<row id="20">
+<Area_Code>226</Area_Code>
+</row>
+<row id="21">
+<Area_Code>228</Area_Code>
+</row>
+<row id="22">
+<Area_Code>229</Area_Code>
+</row>
+<row id="23">
+<Area_Code>231</Area_Code>
+</row>
+<row id="24">
+<Area_Code>234</Area_Code>
+</row>
+<row id="25">
+<Area_Code>239</Area_Code>
+</row>
+<row id="26">
+<Area_Code>240</Area_Code>
+</row>
+<row id="27">
+<Area_Code>242</Area_Code>
+</row>
+<row id="28">
+<Area_Code>246</Area_Code>
+</row>
+<row id="29">
+<Area_Code>248</Area_Code>
+</row>
+<row id="30">
+<Area_Code>250</Area_Code>
+</row>
+<row id="31">
+<Area_Code>251</Area_Code>
+</row>
+<row id="32">
+<Area_Code>252</Area_Code>
+</row>
+<row id="33">
+<Area_Code>253</Area_Code>
+</row>
+<row id="34">
+<Area_Code>254</Area_Code>
+</row>
+<row id="35">
+<Area_Code>256</Area_Code>
+</row>
+<row id="36">
+<Area_Code>260</Area_Code>
+</row>
+<row id="37">
+<Area_Code>262</Area_Code>
+</row>
+<row id="38">
+<Area_Code>264</Area_Code>
+</row>
+<row id="39">
+<Area_Code>267</Area_Code>
+</row>
+<row id="40">
+<Area_Code>268</Area_Code>
+</row>
+<row id="41">
+<Area_Code>269</Area_Code>
+</row>
+<row id="42">
+<Area_Code>270</Area_Code>
+</row>
+<row id="43">
+<Area_Code>276</Area_Code>
+</row>
+<row id="44">
+<Area_Code>281</Area_Code>
+</row>
+<row id="45">
+<Area_Code>284</Area_Code>
+</row>
+<row id="46">
+<Area_Code>289</Area_Code>
+</row>
+<row id="47">
+<Area_Code>301</Area_Code>
+</row>
+<row id="48">
+<Area_Code>302</Area_Code>
+</row>
+<row id="49">
+<Area_Code>303</Area_Code>
+</row>
+<row id="50">
+<Area_Code>304</Area_Code>
+</row>
+<row id="51">
+<Area_Code>305</Area_Code>
+</row>
+<row id="52">
+<Area_Code>306</Area_Code>
+</row>
+<row id="53">
+<Area_Code>307</Area_Code>
+</row>
+<row id="54">
+<Area_Code>308</Area_Code>
+</row>
+<row id="55">
+<Area_Code>309</Area_Code>
+</row>
+<row id="56">
+<Area_Code>310</Area_Code>
+</row>
+<row id="57">
+<Area_Code>312</Area_Code>
+</row>
+<row id="58">
+<Area_Code>313</Area_Code>
+</row>
+<row id="59">
+<Area_Code>314</Area_Code>
+</row>
+<row id="60">
+<Area_Code>315</Area_Code>
+</row>
+<row id="61">
+<Area_Code>316</Area_Code>
+</row>
+<row id="62">
+<Area_Code>317</Area_Code>
+</row>
+<row id="63">
+<Area_Code>318</Area_Code>
+</row>
+<row id="64">
+<Area_Code>319</Area_Code>
+</row>
+<row id="65">
+<Area_Code>320</Area_Code>
+</row>
+<row id="66">
+<Area_Code>321</Area_Code>
+</row>
+<row id="67">
+<Area_Code>323</Area_Code>
+</row>
+<row id="68">
+<Area_Code>325</Area_Code>
+</row>
+<row id="69">
+<Area_Code>330</Area_Code>
+</row>
+<row id="70">
+<Area_Code>334</Area_Code>
+</row>
+<row id="71">
+<Area_Code>336</Area_Code>
+</row>
+<row id="72">
+<Area_Code>337</Area_Code>
+</row>
+<row id="73">
+<Area_Code>339</Area_Code>
+</row>
+<row id="74">
+<Area_Code>340</Area_Code>
+</row>
+<row id="75">
+<Area_Code>345</Area_Code>
+</row>
+<row id="76">
+<Area_Code>347</Area_Code>
+</row>
+<row id="77">
+<Area_Code>351</Area_Code>
+</row>
+<row id="78">
+<Area_Code>352</Area_Code>
+</row>
+<row id="79">
+<Area_Code>360</Area_Code>
+</row>
+<row id="80">
+<Area_Code>361</Area_Code>
+</row>
+<row id="81">
+<Area_Code>386</Area_Code>
+</row>
+<row id="82">
+<Area_Code>401</Area_Code>
+</row>
+<row id="83">
+<Area_Code>402</Area_Code>
+</row>
+<row id="84">
+<Area_Code>403</Area_Code>
+</row>
+<row id="85">
+<Area_Code>404</Area_Code>
+</row>
+<row id="86">
+<Area_Code>405</Area_Code>
+</row>
+<row id="87">
+<Area_Code>406</Area_Code>
+</row>
+<row id="88">
+<Area_Code>407</Area_Code>
+</row>
+<row id="89">
+<Area_Code>408</Area_Code>
+</row>
+<row id="90">
+<Area_Code>409</Area_Code>
+</row>
+<row id="91">
+<Area_Code>410</Area_Code>
+</row>
+<row id="92">
+<Area_Code>412</Area_Code>
+</row>
+<row id="93">
+<Area_Code>413</Area_Code>
+</row>
+<row id="94">
+<Area_Code>414</Area_Code>
+</row>
+<row id="95">
+<Area_Code>415</Area_Code>
+</row>
+<row id="96">
+<Area_Code>416</Area_Code>
+</row>
+<row id="97">
+<Area_Code>417</Area_Code>
+</row>
+<row id="98">
+<Area_Code>418</Area_Code>
+</row>
+<row id="99">
+<Area_Code>419</Area_Code>
+</row>
+<row id="100">
+<Area_Code>423</Area_Code>
+</row>
+<row id="101">
+<Area_Code>424</Area_Code>
+</row>
+<row id="102">
+<Area_Code>425</Area_Code>
+</row>
+<row id="103">
+<Area_Code>430</Area_Code>
+</row>
+<row id="104">
+<Area_Code>432</Area_Code>
+</row>
+<row id="105">
+<Area_Code>434</Area_Code>
+</row>
+<row id="106">
+<Area_Code>435</Area_Code>
+</row>
+<row id="107">
+<Area_Code>440</Area_Code>
+</row>
+<row id="108">
+<Area_Code>441</Area_Code>
+</row>
+<row id="109">
+<Area_Code>443</Area_Code>
+</row>
+<row id="110">
+<Area_Code>450</Area_Code>
+</row>
+<row id="111">
+<Area_Code>469</Area_Code>
+</row>
+<row id="112">
+<Area_Code>473</Area_Code>
+</row>
+<row id="113">
+<Area_Code>478</Area_Code>
+</row>
+<row id="114">
+<Area_Code>479</Area_Code>
+</row>
+<row id="115">
+<Area_Code>480</Area_Code>
+</row>
+<row id="116">
+<Area_Code>484</Area_Code>
+</row>
+<row id="117">
+<Area_Code>501</Area_Code>
+</row>
+<row id="118">
+<Area_Code>502</Area_Code>
+</row>
+<row id="119">
+<Area_Code>503</Area_Code>
+</row>
+<row id="120">
+<Area_Code>504</Area_Code>
+</row>
+<row id="121">
+<Area_Code>505</Area_Code>
+</row>
+<row id="122">
+<Area_Code>506</Area_Code>
+</row>
+<row id="123">
+<Area_Code>507</Area_Code>
+</row>
+<row id="124">
+<Area_Code>508</Area_Code>
+</row>
+<row id="125">
+<Area_Code>509</Area_Code>
+</row>
+<row id="126">
+<Area_Code>510</Area_Code>
+</row>
+<row id="127">
+<Area_Code>512</Area_Code>
+</row>
+<row id="128">
+<Area_Code>513</Area_Code>
+</row>
+<row id="129">
+<Area_Code>514</Area_Code>
+</row>
+<row id="130">
+<Area_Code>515</Area_Code>
+</row>
+<row id="131">
+<Area_Code>516</Area_Code>
+</row>
+<row id="132">
+<Area_Code>517</Area_Code>
+</row>
+<row id="133">
+<Area_Code>518</Area_Code>
+</row>
+<row id="134">
+<Area_Code>519</Area_Code>
+</row>
+<row id="135">
+<Area_Code>520</Area_Code>
+</row>
+<row id="136">
+<Area_Code>530</Area_Code>
+</row>
+<row id="137">
+<Area_Code>540</Area_Code>
+</row>
+<row id="138">
+<Area_Code>541</Area_Code>
+</row>
+<row id="139">
+<Area_Code>551</Area_Code>
+</row>
+<row id="140">
+<Area_Code>559</Area_Code>
+</row>
+<row id="141">
+<Area_Code>561</Area_Code>
+</row>
+<row id="142">
+<Area_Code>562</Area_Code>
+</row>
+<row id="143">
+<Area_Code>563</Area_Code>
+</row>
+<row id="144">
+<Area_Code>567</Area_Code>
+</row>
+<row id="145">
+<Area_Code>570</Area_Code>
+</row>
+<row id="146">
+<Area_Code>571</Area_Code>
+</row>
+<row id="147">
+<Area_Code>573</Area_Code>
+</row>
+<row id="148">
+<Area_Code>574</Area_Code>
+</row>
+<row id="149">
+<Area_Code>575</Area_Code>
+</row>
+<row id="150">
+<Area_Code>580</Area_Code>
+</row>
+<row id="151">
+<Area_Code>585</Area_Code>
+</row>
+<row id="152">
+<Area_Code>586</Area_Code>
+</row>
+<row id="153">
+<Area_Code>601</Area_Code>
+</row>
+<row id="154">
+<Area_Code>602</Area_Code>
+</row>
+<row id="155">
+<Area_Code>603</Area_Code>
+</row>
+<row id="156">
+<Area_Code>604</Area_Code>
+</row>
+<row id="157">
+<Area_Code>605</Area_Code>
+</row>
+<row id="158">
+<Area_Code>606</Area_Code>
+</row>
+<row id="159">
+<Area_Code>607</Area_Code>
+</row>
+<row id="160">
+<Area_Code>608</Area_Code>
+</row>
+<row id="161">
+<Area_Code>609</Area_Code>
+</row>
+<row id="162">
+<Area_Code>610</Area_Code>
+</row>
+<row id="163">
+<Area_Code>612</Area_Code>
+</row>
+<row id="164">
+<Area_Code>613</Area_Code>
+</row>
+<row id="165">
+<Area_Code>614</Area_Code>
+</row>
+<row id="166">
+<Area_Code>615</Area_Code>
+</row>
+<row id="167">
+<Area_Code>616</Area_Code>
+</row>
+<row id="168">
+<Area_Code>617</Area_Code>
+</row>
+<row id="169">
+<Area_Code>618</Area_Code>
+</row>
+<row id="170">
+<Area_Code>619</Area_Code>
+</row>
+<row id="171">
+<Area_Code>620</Area_Code>
+</row>
+<row id="172">
+<Area_Code>623</Area_Code>
+</row>
+<row id="173">
+<Area_Code>626</Area_Code>
+</row>
+<row id="174">
+<Area_Code>630</Area_Code>
+</row>
+<row id="175">
+<Area_Code>631</Area_Code>
+</row>
+<row id="176">
+<Area_Code>636</Area_Code>
+</row>
+<row id="177">
+<Area_Code>641</Area_Code>
+</row>
+<row id="178">
+<Area_Code>646</Area_Code>
+</row>
+<row id="179">
+<Area_Code>647</Area_Code>
+</row>
+<row id="180">
+<Area_Code>649</Area_Code>
+</row>
+<row id="181">
+<Area_Code>650</Area_Code>
+</row>
+<row id="182">
+<Area_Code>651</Area_Code>
+</row>
+<row id="183">
+<Area_Code>660</Area_Code>
+</row>
+<row id="184">
+<Area_Code>661</Area_Code>
+</row>
+<row id="185">
+<Area_Code>662</Area_Code>
+</row>
+<row id="186">
+<Area_Code>664</Area_Code>
+</row>
+<row id="187">
+<Area_Code>670</Area_Code>
+</row>
+<row id="188">
+<Area_Code>671</Area_Code>
+</row>
+<row id="189">
+<Area_Code>678</Area_Code>
+</row>
+<row id="190">
+<Area_Code>682</Area_Code>
+</row>
+<row id="191">
+<Area_Code>684</Area_Code>
+</row>
+<row id="192">
+<Area_Code>701</Area_Code>
+</row>
+<row id="193">
+<Area_Code>702</Area_Code>
+</row>
+<row id="194">
+<Area_Code>703</Area_Code>
+</row>
+<row id="195">
+<Area_Code>704</Area_Code>
+</row>
+<row id="196">
+<Area_Code>705</Area_Code>
+</row>
+<row id="197">
+<Area_Code>706</Area_Code>
+</row>
+<row id="198">
+<Area_Code>707</Area_Code>
+</row>
+<row id="199">
+<Area_Code>708</Area_Code>
+</row>
+<row id="200">
+<Area_Code>709</Area_Code>
+</row>
+<row id="201">
+<Area_Code>712</Area_Code>
+</row>
+<row id="202">
+<Area_Code>713</Area_Code>
+</row>
+<row id="203">
+<Area_Code>714</Area_Code>
+</row>
+<row id="204">
+<Area_Code>715</Area_Code>
+</row>
+<row id="205">
+<Area_Code>716</Area_Code>
+</row>
+<row id="206">
+<Area_Code>717</Area_Code>
+</row>
+<row id="207">
+<Area_Code>718</Area_Code>
+</row>
+<row id="208">
+<Area_Code>719</Area_Code>
+</row>
+<row id="209">
+<Area_Code>720</Area_Code>
+</row>
+<row id="210">
+<Area_Code>724</Area_Code>
+</row>
+<row id="211">
+<Area_Code>727</Area_Code>
+</row>
+<row id="212">
+<Area_Code>731</Area_Code>
+</row>
+<row id="213">
+<Area_Code>732</Area_Code>
+</row>
+<row id="214">
+<Area_Code>734</Area_Code>
+</row>
+<row id="215">
+<Area_Code>740</Area_Code>
+</row>
+<row id="216">
+<Area_Code>754</Area_Code>
+</row>
+<row id="217">
+<Area_Code>757</Area_Code>
+</row>
+<row id="218">
+<Area_Code>758</Area_Code>
+</row>
+<row id="219">
+<Area_Code>760</Area_Code>
+</row>
+<row id="220">
+<Area_Code>763</Area_Code>
+</row>
+<row id="221">
+<Area_Code>765</Area_Code>
+</row>
+<row id="222">
+<Area_Code>767</Area_Code>
+</row>
+<row id="223">
+<Area_Code>769</Area_Code>
+</row>
+<row id="224">
+<Area_Code>770</Area_Code>
+</row>
+<row id="225">
+<Area_Code>772</Area_Code>
+</row>
+<row id="226">
+<Area_Code>773</Area_Code>
+</row>
+<row id="227">
+<Area_Code>774</Area_Code>
+</row>
+<row id="228">
+<Area_Code>775</Area_Code>
+</row>
+<row id="229">
+<Area_Code>778</Area_Code>
+</row>
+<row id="230">
+<Area_Code>780</Area_Code>
+</row>
+<row id="231">
+<Area_Code>781</Area_Code>
+</row>
+<row id="232">
+<Area_Code>784</Area_Code>
+</row>
+<row id="233">
+<Area_Code>785</Area_Code>
+</row>
+<row id="234">
+<Area_Code>786</Area_Code>
+</row>
+<row id="235">
+<Area_Code>787</Area_Code>
+</row>
+<row id="236">
+<Area_Code>800</Area_Code>
+</row>
+<row id="237">
+<Area_Code>801</Area_Code>
+</row>
+<row id="238">
+<Area_Code>802</Area_Code>
+</row>
+<row id="239">
+<Area_Code>803</Area_Code>
+</row>
+<row id="240">
+<Area_Code>804</Area_Code>
+</row>
+<row id="241">
+<Area_Code>805</Area_Code>
+</row>
+<row id="242">
+<Area_Code>806</Area_Code>
+</row>
+<row id="243">
+<Area_Code>807</Area_Code>
+</row>
+<row id="244">
+<Area_Code>808</Area_Code>
+</row>
+<row id="245">
+<Area_Code>809</Area_Code>
+</row>
+<row id="246">
+<Area_Code>810</Area_Code>
+</row>
+<row id="247">
+<Area_Code>812</Area_Code>
+</row>
+<row id="248">
+<Area_Code>813</Area_Code>
+</row>
+<row id="249">
+<Area_Code>814</Area_Code>
+</row>
+<row id="250">
+<Area_Code>815</Area_Code>
+</row>
+<row id="251">
+<Area_Code>816</Area_Code>
+</row>
+<row id="252">
+<Area_Code>817</Area_Code>
+</row>
+<row id="253">
+<Area_Code>818</Area_Code>
+</row>
+<row id="254">
+<Area_Code>819</Area_Code>
+</row>
+<row id="255">
+<Area_Code>828</Area_Code>
+</row>
+<row id="256">
+<Area_Code>829</Area_Code>
+</row>
+<row id="257">
+<Area_Code>830</Area_Code>
+</row>
+<row id="258">
+<Area_Code>831</Area_Code>
+</row>
+<row id="259">
+<Area_Code>832</Area_Code>
+</row>
+<row id="260">
+<Area_Code>843</Area_Code>
+</row>
+<row id="261">
+<Area_Code>845</Area_Code>
+</row>
+<row id="262">
+<Area_Code>847</Area_Code>
+</row>
+<row id="263">
+<Area_Code>848</Area_Code>
+</row>
+<row id="264">
+<Area_Code>850</Area_Code>
+</row>
+<row id="265">
+<Area_Code>856</Area_Code>
+</row>
+<row id="266">
+<Area_Code>857</Area_Code>
+</row>
+<row id="267">
+<Area_Code>858</Area_Code>
+</row>
+<row id="268">
+<Area_Code>859</Area_Code>
+</row>
+<row id="269">
+<Area_Code>860</Area_Code>
+</row>
+<row id="270">
+<Area_Code>862</Area_Code>
+</row>
+<row id="271">
+<Area_Code>863</Area_Code>
+</row>
+<row id="272">
+<Area_Code>864</Area_Code>
+</row>
+<row id="273">
+<Area_Code>865</Area_Code>
+</row>
+<row id="274">
+<Area_Code>866</Area_Code>
+</row>
+<row id="275">
+<Area_Code>867</Area_Code>
+</row>
+<row id="276">
+<Area_Code>868</Area_Code>
+</row>
+<row id="277">
+<Area_Code>869</Area_Code>
+</row>
+<row id="278">
+<Area_Code>870</Area_Code>
+</row>
+<row id="279">
+<Area_Code>876</Area_Code>
+</row>
+<row id="280">
+<Area_Code>877</Area_Code>
+</row>
+<row id="281">
+<Area_Code>878</Area_Code>
+</row>
+<row id="282">
+<Area_Code>888</Area_Code>
+</row>
+<row id="283">
+<Area_Code>901</Area_Code>
+</row>
+<row id="284">
+<Area_Code>902</Area_Code>
+</row>
+<row id="285">
+<Area_Code>903</Area_Code>
+</row>
+<row id="286">
+<Area_Code>904</Area_Code>
+</row>
+<row id="287">
+<Area_Code>905</Area_Code>
+</row>
+<row id="288">
+<Area_Code>906</Area_Code>
+</row>
+<row id="289">
+<Area_Code>907</Area_Code>
+</row>
+<row id="290">
+<Area_Code>908</Area_Code>
+</row>
+<row id="291">
+<Area_Code>909</Area_Code>
+</row>
+<row id="292">
+<Area_Code>910</Area_Code>
+</row>
+<row id="293">
+<Area_Code>912</Area_Code>
+</row>
+<row id="294">
+<Area_Code>913</Area_Code>
+</row>
+<row id="295">
+<Area_Code>914</Area_Code>
+</row>
+<row id="296">
+<Area_Code>915</Area_Code>
+</row>
+<row id="297">
+<Area_Code>916</Area_Code>
+</row>
+<row id="298">
+<Area_Code>917</Area_Code>
+</row>
+<row id="299">
+<Area_Code>918</Area_Code>
+</row>
+<row id="300">
+<Area_Code>919</Area_Code>
+</row>
+<row id="301">
+<Area_Code>920</Area_Code>
+</row>
+<row id="302">
+<Area_Code>925</Area_Code>
+</row>
+<row id="303">
+<Area_Code>928</Area_Code>
+</row>
+<row id="304">
+<Area_Code>931</Area_Code>
+</row>
+<row id="305">
+<Area_Code>936</Area_Code>
+</row>
+<row id="306">
+<Area_Code>937</Area_Code>
+</row>
+<row id="307">
+<Area_Code>939</Area_Code>
+</row>
+<row id="308">
+<Area_Code>940</Area_Code>
+</row>
+<row id="309">
+<Area_Code>941</Area_Code>
+</row>
+<row id="310">
+<Area_Code>947</Area_Code>
+</row>
+<row id="311">
+<Area_Code>949</Area_Code>
+</row>
+<row id="312">
+<Area_Code>951</Area_Code>
+</row>
+<row id="313">
+<Area_Code>952</Area_Code>
+</row>
+<row id="314">
+<Area_Code>954</Area_Code>
+</row>
+<row id="315">
+<Area_Code>956</Area_Code>
+</row>
+<row id="316">
+<Area_Code>970</Area_Code>
+</row>
+<row id="317">
+<Area_Code>971</Area_Code>
+</row>
+<row id="318">
+<Area_Code>972</Area_Code>
+</row>
+<row id="319">
+<Area_Code>973</Area_Code>
+</row>
+<row id="320">
+<Area_Code>978</Area_Code>
+</row>
+<row id="321">
+<Area_Code>979</Area_Code>
+</row>
+<row id="322">
+<Area_Code>980</Area_Code>
+</row>
+<row id="323">
+<Area_Code>989</Area_Code>
+</row>
+</table>
+</hbpcd_info>
