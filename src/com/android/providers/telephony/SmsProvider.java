@@ -84,7 +84,10 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
+        if (!Telephony.NEW_API) {
+            // TODO(ywen): Temporarily enable this so not to break existing apps
+            setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
+        }
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
         return true;
     }
@@ -347,6 +350,7 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri url, ContentValues initialValues) {
+        SmsWritePermission.enforce();
         long token = Binder.clearCallingIdentity();
         try {
             return insertInner(url, initialValues);
@@ -539,6 +543,7 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public int delete(Uri url, String where, String[] whereArgs) {
+        SmsWritePermission.enforce();
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
@@ -624,6 +629,7 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
+        SmsWritePermission.enforce();
         int count = 0;
         String table = TABLE_SMS;
         String extraWhere = null;

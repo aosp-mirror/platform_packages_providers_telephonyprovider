@@ -33,6 +33,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.provider.BaseColumns;
+import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
@@ -284,7 +285,10 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
+        if (!Telephony.NEW_API) {
+            // TODO(ywen): Temporarily enable this so not to break existing apps
+            setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
+        }
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
         mUseStrictPhoneNumberComparation =
             getContext().getResources().getBoolean(
@@ -1170,6 +1174,7 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection,
             String[] selectionArgs) {
+        SmsWritePermission.enforce();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Context context = getContext();
         int affectedRows = 0;
@@ -1225,6 +1230,7 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
+        SmsWritePermission.enforce();
         if (URI_MATCHER.match(uri) == URI_PENDING_MSG) {
             SQLiteDatabase db = mOpenHelper.getWritableDatabase();
             long rowId = db.insert(TABLE_PENDING_MSG, null, values);
@@ -1236,6 +1242,7 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
+        SmsWritePermission.enforce();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int affectedRows = 0;
         switch(URI_MATCHER.match(uri)) {
