@@ -65,7 +65,7 @@ public class MmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        if (!Telephony.NEW_API) {
+        if (!Telephony.AUTO_PERSIST) {
             // TODO(ywen): Temporarily enable this so not to break existing apps
             setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         }

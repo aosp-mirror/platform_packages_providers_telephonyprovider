@@ -28,7 +28,7 @@ public class SmsWritePermission {
     public static final String TAG = "SmsWritePermission";
 
     public static void enforce() {
-        if (!Telephony.NEW_API) {
+        if (!Telephony.AUTO_PERSIST) {
             // TODO(ywen): Temporarily disable this so not to break existing apps
             return;
         }
