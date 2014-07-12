@@ -215,7 +215,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 59;
+    static final int DATABASE_VERSION = 58;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -594,8 +594,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Mms.LOCKED + " INTEGER DEFAULT 0," +
                    Mms.SUB_ID + " INTEGER DEFAULT -1, " +
                    Mms.SEEN + " INTEGER DEFAULT 0," +
-                   Mms.ARCHIVED + " INTEGER DEFAULT 0," +
-                   Mms.CREATOR + " TEXT," +
                    Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
                    ");");
 
@@ -840,8 +838,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "locked INTEGER DEFAULT 0," +
                    "sub_id INTEGER DEFAULT -1, " +
                    "error_code INTEGER DEFAULT 0," +
-                   "archived INTEGER DEFAULT 0," +
-                   "creator TEXT," +
                    "seen INTEGER DEFAULT 0" +
                    ");");
 
@@ -1297,22 +1293,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-            // fall through
-        case 58:
-            if (currentVersion <= 58) {
-                return;
-            }
-
-            db.beginTransaction();
-            try {
-                upgradeDatabaseToVersion59(db);
-                db.setTransactionSuccessful();
-            } catch (Throwable ex) {
-                Log.e(TAG, ex.getMessage(), ex);
-                break;
-            } finally {
-                db.endTransaction();
-            }
             return;
         }
 
@@ -1523,17 +1503,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 + Sms.SUB_ID + " INTEGER DEFAULT -1");
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN "
                 + Sms.SUB_ID + " INTEGER DEFAULT -1");
-    }
-
-    private void upgradeDatabaseToVersion59(SQLiteDatabase db) {
-        db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PDU +" ADD COLUMN "
-                + Mms.ARCHIVED + " INTEGER DEFAULT 0");
-        db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PDU +" ADD COLUMN "
-                + Mms.CREATOR + " TEXT");
-        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_SMS +" ADD COLUMN "
-                + Sms.ARCHIVED + " INTEGER DEFAULT 0");
-        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_SMS +" ADD COLUMN "
-                + Sms.CREATOR + " TEXT");
     }
 
     @Override
