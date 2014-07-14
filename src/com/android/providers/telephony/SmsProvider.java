@@ -20,6 +20,7 @@ import android.app.AppOpsManager;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.UriMatcher;
 
 import android.database.Cursor;
@@ -84,11 +85,10 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        if (!Telephony.AUTO_PERSIST) {
-            // TODO(ywen): Temporarily enable this so not to break existing apps
-            setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
-        }
-        mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
+        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_NONE);
+        final Context context = getContext();
+        mOpenHelper = MmsSmsDatabaseHelper.getInstance(context);
+        mAppOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
         return true;
     }
 
@@ -350,7 +350,10 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri url, ContentValues initialValues) {
-        SmsWritePermission.enforce();
+        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
+            Log.e(TAG, "insert: rejected");
+            return rejectInsert(url, initialValues);
+        }
         long token = Binder.clearCallingIdentity();
         try {
             return insertInner(url, initialValues);
@@ -543,7 +546,10 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public int delete(Uri url, String where, String[] whereArgs) {
-        SmsWritePermission.enforce();
+        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
+            Log.e(TAG, "delete: rejected");
+            return 0;
+        }
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
@@ -629,7 +635,10 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
-        SmsWritePermission.enforce();
+        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
+            Log.e(TAG, "update: rejected");
+            return 0;
+        }
         int count = 0;
         String table = TABLE_SMS;
         String extraWhere = null;
@@ -709,6 +718,8 @@ public class SmsProvider extends ContentProvider {
     }
 
     private SQLiteOpenHelper mOpenHelper;
+
+    private AppOpsManager mAppOps;
 
     private final static String TAG = "SmsProvider";
     private final static String VND_ANDROID_SMS = "vnd.android.cursor.item/sms";

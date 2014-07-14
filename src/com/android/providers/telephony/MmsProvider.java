@@ -65,11 +65,10 @@ public class MmsProvider extends ContentProvider {
 
     @Override
     public boolean onCreate() {
-        if (!Telephony.AUTO_PERSIST) {
-            // TODO(ywen): Temporarily enable this so not to break existing apps
-            setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
-        }
-        mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
+        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_NONE);
+        final Context context = getContext();
+        mOpenHelper = MmsSmsDatabaseHelper.getInstance(context);
+        mAppOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
         return true;
     }
 
@@ -277,7 +276,10 @@ public class MmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        SmsWritePermission.enforce();
+        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
+            Log.e(TAG, "insert: rejected");
+            return rejectInsert(uri, values);
+        }
         // Don't let anyone insert anything with the _data column
         if (values != null && values.containsKey(Part._DATA)) {
             return null;
@@ -543,7 +545,10 @@ public class MmsProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection,
             String[] selectionArgs) {
-        SmsWritePermission.enforce();
+        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
+            Log.e(TAG, "delete: rejected");
+            return 0;
+        }
         int match = sURLMatcher.match(uri);
         if (LOCAL_LOGV) {
             Log.v(TAG, "Delete uri=" + uri + ", match=" + match);
@@ -697,7 +702,10 @@ public class MmsProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
-        SmsWritePermission.enforce();
+        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
+            Log.e(TAG, "update: rejected");
+            return 0;
+        }
         // Don't let anyone update the _data column
         if (values != null && values.containsKey(Part._DATA)) {
             return 0;
@@ -940,6 +948,8 @@ public class MmsProvider extends ContentProvider {
     }
 
     private SQLiteOpenHelper mOpenHelper;
+
+    private AppOpsManager mAppOps;
 
     private static String concatSelections(String selection1, String selection2) {
         if (TextUtils.isEmpty(selection1)) {

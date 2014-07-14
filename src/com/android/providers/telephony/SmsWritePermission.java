@@ -16,9 +16,10 @@
 
 package com.android.providers.telephony;
 
+import android.app.AppOpsManager;
+import android.content.Context;
 import android.os.Binder;
 import android.os.Process;
-import android.provider.Telephony;
 import android.util.Log;
 
 /**
@@ -27,15 +28,18 @@ import android.util.Log;
 public class SmsWritePermission {
     public static final String TAG = "SmsWritePermission";
 
-    public static void enforce() {
-        if (!Telephony.AUTO_PERSIST) {
-            // TODO(ywen): Temporarily disable this so not to break existing apps
-            return;
+    public static boolean permit(AppOpsManager appOpsManager, String callingPkg) {
+        final int uid = Binder.getCallingUid();
+        Log.d(TAG, "SmsWritePermission.permit: calling UID " + uid);
+        if (uid == Process.SYSTEM_UID || uid == Process.PHONE_UID) {
+            // Allow system or phone process to access anyway
+            return true;
         }
-        final long uid = Binder.getCallingUid();
-        Log.d(TAG, "Calling UID " + uid);
-        if (uid != Process.SYSTEM_UID && uid != Process.PHONE_UID) {
-            throw new SecurityException("Only system or phone can access");
+        if (appOpsManager.noteOp(AppOpsManager.OP_WRITE_SMS, uid, callingPkg) ==
+                AppOpsManager.MODE_ALLOWED) {
+            // Or we allow the default SMS app to access
+            return true;
         }
+        return false;
     }
 }
