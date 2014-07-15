@@ -23,6 +23,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
+import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.database.Cursor;
@@ -32,6 +33,7 @@ import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Environment;
 import android.provider.Telephony;
 import android.telephony.SubscriptionManager;
@@ -1047,8 +1049,24 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private void checkPermission() {
-        getContext().enforceCallingOrSelfPermission("android.permission.WRITE_APN_SETTINGS",
-                "No permission to write APN settings");
+        int status = getContext().checkCallingOrSelfPermission(
+                "android.permission.WRITE_APN_SETTINGS");
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        PackageManager packageManager = getContext().getPackageManager();
+        String[] packages = packageManager.getPackagesForUid(Binder.getCallingUid());
+
+        TelephonyManager telephonyManager =
+                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
+        for (String pkg : packages) {
+            if (telephonyManager.checkCarrierPrivilegesForPackage(pkg) ==
+                    TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS) {
+                return;
+            }
+        }
+        throw new SecurityException("No permission to write APN settings");
     }
 
     private DatabaseHelper mOpenHelper;
