@@ -281,16 +281,12 @@ public class MmsSmsProvider extends ContentProvider {
 
     private SQLiteOpenHelper mOpenHelper;
 
-    private AppOpsManager mAppOps;
-
     private boolean mUseStrictPhoneNumberComparation;
 
     @Override
     public boolean onCreate() {
-        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_NONE);
-        final Context context = getContext();
-        mOpenHelper = MmsSmsDatabaseHelper.getInstance(context);
-        mAppOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
+        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
+        mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
         mUseStrictPhoneNumberComparation =
             getContext().getResources().getBoolean(
                     com.android.internal.R.bool.config_use_strict_phone_number_comparation);
@@ -1175,10 +1171,6 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection,
             String[] selectionArgs) {
-        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
-            Log.e(LOG_TAG, "delete: rejected");
-            return 0;
-        }
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Context context = getContext();
         int affectedRows = 0;
@@ -1234,10 +1226,6 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
-            Log.e(LOG_TAG, "insert: rejected");
-            return rejectInsert(uri, values);
-        }
         if (URI_MATCHER.match(uri) == URI_PENDING_MSG) {
             SQLiteDatabase db = mOpenHelper.getWritableDatabase();
             long rowId = db.insert(TABLE_PENDING_MSG, null, values);
@@ -1249,10 +1237,6 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
-        if (!SmsWritePermission.permit(mAppOps, getCallingPackage())) {
-            Log.e(LOG_TAG, "update: rejected");
-            return 0;
-        }
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int affectedRows = 0;
         switch(URI_MATCHER.match(uri)) {
