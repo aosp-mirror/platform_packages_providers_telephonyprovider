@@ -1259,6 +1259,16 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
             }
 
+            case URI_CONVERSATIONS: {
+                final ContentValues finalValues = new ContentValues(1);
+                if (values.containsKey(Threads.ARCHIVED)) {
+                    // Only allow update archived
+                    finalValues.put(Threads.ARCHIVED, values.getAsBoolean(Threads.ARCHIVED));
+                }
+                affectedRows = db.update(TABLE_THREADS, finalValues, selection, selectionArgs);
+                break;
+            }
+
             default:
                 throw new UnsupportedOperationException(
                         NO_DELETES_INSERTS_OR_UPDATES + uri);
