@@ -33,27 +33,39 @@
                   android:exported="true"
                   android:multiprocess="false" />
 
+        <!-- This is a singleton provider that is used by all users.
+             A new instance is not created for each user. And the db is shared
+             as well. -->
         <provider android:name="SmsProvider"
                   android:authorities="sms"
                   android:multiprocess="false"
                   android:exported="true"
+                  android:singleUser="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS" />
 
+        <!-- This is a singleton provider that is used by all users.
+             A new instance is not created for each user. And the db is shared
+             as well. -->
         <provider android:name="MmsProvider"
                   android:authorities="mms"
                   android:multiprocess="false"
                   android:exported="true"
+                  android:singleUser="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS">
             <grant-uri-permission android:pathPrefix="/part/" />
             <grant-uri-permission android:pathPrefix="/drm/" />
         </provider>
 
+        <!-- This is a singleton provider that is used by all users.
+             A new instance is not created for each user. And the db is shared
+             as well. -->
         <provider android:name="MmsSmsProvider"
                   android:authorities="mms-sms"
                   android:multiprocess="false"
                   android:exported="true"
+                  android:singleUser="true"
                   android:readPermission="android.permission.READ_SMS"
                   android:writePermission="android.permission.WRITE_SMS" />
     </application>
