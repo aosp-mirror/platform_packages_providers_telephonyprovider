@@ -61,7 +61,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
 
-    private static final int DATABASE_VERSION = 10 << 16;
+    private static final int DATABASE_VERSION = 9 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -227,12 +227,7 @@ public class TelephonyProvider extends ContentProvider
                     "bearer INTEGER," +
                     "mvno_type TEXT," +
                     "mvno_match_data TEXT," +
-                    "sub_id LONG DEFAULT -1," +
-                    "profile_id INTEGER default 0," +
-                    "modem_cognitive BOOLEAN default 0," +
-                    "max_conns INTEGER default 0," +
-                    "wait_time INTEGER default 0," +
-                    "max_conns_time INTEGER default 0);");
+                    "sub_id LONG DEFAULT -1);");
              /* FIXME Currenlty sub_id is column is not used for query purpose.
              This would be modified to more appropriate default value later. */
             if (DBG) log("dbh.createCarriersTable:-");
@@ -281,7 +276,6 @@ public class TelephonyProvider extends ContentProvider
                 try { if (confreader != null) confreader.close(); } catch (IOException e) { }
             }
             if (VDBG) log("dbh.initDatabase:- db=" + db);
-
         }
 
         @Override
@@ -337,19 +331,6 @@ public class TelephonyProvider extends ContentProvider
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
                         " ADD COLUMN sub_id LONG DEFAULT -1;");
                 oldVersion = 9 << 16 | 6;
-            }
-            if (oldVersion < (10 << 16 | 6)) {
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN profile_id INTEGER DEFAULT 0;");
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN modem_cognitive BOOLEAN DEFAULT 0;");
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN max_conns INTEGER DEFAULT 0;");
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN wait_time INTEGER DEFAULT 0;");
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN max_conns_time INTEGER DEFAULT 0;");
-                oldVersion = 10 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -438,32 +419,6 @@ public class TelephonyProvider extends ContentProvider
                     map.put(Telephony.Carriers.MVNO_MATCH_DATA, mvno_match_data);
                 }
             }
-
-            String profileId = parser.getAttributeValue(null, "profile_id");
-            if (profileId != null) {
-                map.put(Telephony.Carriers.PROFILE_ID, Integer.parseInt(profileId));
-            }
-
-            String modemCognitive = parser.getAttributeValue(null, "modem_cognitive");
-            if (carrierEnabled != null) {
-                map.put(Telephony.Carriers.MODEM_COGNITIVE, Boolean.parseBoolean(modemCognitive));
-            }
-
-            String maxConns = parser.getAttributeValue(null, "max_conns");
-            if (maxConns != null) {
-                map.put(Telephony.Carriers.MAX_CONNS, Integer.parseInt(maxConns));
-            }
-
-            String waitTime = parser.getAttributeValue(null, "wait_time");
-            if (waitTime != null) {
-                map.put(Telephony.Carriers.WAIT_TIME, Integer.parseInt(waitTime));
-            }
-
-            String maxConnsTime = parser.getAttributeValue(null, "max_conns_time");
-            if (maxConnsTime != null) {
-                map.put(Telephony.Carriers.MAX_CONNS_TIME, Integer.parseInt(maxConnsTime));
-            }
-
             return map;
         }
 
@@ -500,82 +455,29 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        static public ContentValues setDefaultValue(ContentValues values) {
-            if (!values.containsKey(Telephony.Carriers.NAME)) {
-                values.put(Telephony.Carriers.NAME, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.APN)) {
-                values.put(Telephony.Carriers.APN, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.PORT)) {
-                values.put(Telephony.Carriers.PORT, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.PROXY)) {
-                values.put(Telephony.Carriers.PROXY, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.USER)) {
-                values.put(Telephony.Carriers.USER, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.SERVER)) {
-                values.put(Telephony.Carriers.SERVER, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.PASSWORD)) {
-                values.put(Telephony.Carriers.PASSWORD, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.MMSPORT)) {
-                values.put(Telephony.Carriers.MMSPORT, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.MMSPROXY)) {
-                values.put(Telephony.Carriers.MMSPROXY, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.AUTH_TYPE)) {
-                values.put(Telephony.Carriers.AUTH_TYPE, -1);
-            }
-            if (!values.containsKey(Telephony.Carriers.PROTOCOL)) {
-                values.put(Telephony.Carriers.PROTOCOL, "IP");
-            }
-            if (!values.containsKey(Telephony.Carriers.ROAMING_PROTOCOL)) {
-                values.put(Telephony.Carriers.ROAMING_PROTOCOL, "IP");
-            }
-            if (!values.containsKey(Telephony.Carriers.CARRIER_ENABLED)) {
-                values.put(Telephony.Carriers.CARRIER_ENABLED, true);
-            }
-            if (!values.containsKey(Telephony.Carriers.BEARER)) {
-                values.put(Telephony.Carriers.BEARER, 0);
-            }
-            if (!values.containsKey(Telephony.Carriers.MVNO_TYPE)) {
-                values.put(Telephony.Carriers.MVNO_TYPE, "");
-            }
-            if (!values.containsKey(Telephony.Carriers.MVNO_MATCH_DATA)) {
-                values.put(Telephony.Carriers.MVNO_MATCH_DATA, "");
-            }
-
-            long subId = SubscriptionManager.getDefaultSubId();
-            if (!values.containsKey(Telephony.Carriers.SUB_ID)) {
-                values.put(Telephony.Carriers.SUB_ID, subId);
-            }
-
-            if (!values.containsKey(Telephony.Carriers.PROFILE_ID)) {
-                values.put(Telephony.Carriers.PROFILE_ID, 0);
-            }
-            if (!values.containsKey(Telephony.Carriers.MODEM_COGNITIVE)) {
-                values.put(Telephony.Carriers.MODEM_COGNITIVE, false);
-            }
-            if (!values.containsKey(Telephony.Carriers.MAX_CONNS)) {
-                values.put(Telephony.Carriers.MAX_CONNS, 0);
-            }
-            if (!values.containsKey(Telephony.Carriers.WAIT_TIME)) {
-                values.put(Telephony.Carriers.WAIT_TIME, 0);
-            }
-            if (!values.containsKey(Telephony.Carriers.MAX_CONNS_TIME)) {
-                values.put(Telephony.Carriers.MAX_CONNS_TIME, 0);
-            }
-
-            return values;
-        }
-
         private void insertAddingDefaults(SQLiteDatabase db, String table, ContentValues row) {
-            row = setDefaultValue(row);
+            // Initialize defaults if any
+            if (row.containsKey(Telephony.Carriers.AUTH_TYPE) == false) {
+                row.put(Telephony.Carriers.AUTH_TYPE, -1);
+            }
+            if (row.containsKey(Telephony.Carriers.PROTOCOL) == false) {
+                row.put(Telephony.Carriers.PROTOCOL, "IP");
+            }
+            if (row.containsKey(Telephony.Carriers.ROAMING_PROTOCOL) == false) {
+                row.put(Telephony.Carriers.ROAMING_PROTOCOL, "IP");
+            }
+            if (row.containsKey(Telephony.Carriers.CARRIER_ENABLED) == false) {
+                row.put(Telephony.Carriers.CARRIER_ENABLED, true);
+            }
+            if (row.containsKey(Telephony.Carriers.BEARER) == false) {
+                row.put(Telephony.Carriers.BEARER, 0);
+            }
+            if (row.containsKey(Telephony.Carriers.MVNO_TYPE) == false) {
+                row.put(Telephony.Carriers.MVNO_TYPE, "");
+            }
+            if (row.containsKey(Telephony.Carriers.MVNO_MATCH_DATA) == false) {
+                row.put(Telephony.Carriers.MVNO_MATCH_DATA, "");
+            }
             db.insert(CARRIERS_TABLE, null, row);
         }
     }
@@ -776,7 +678,60 @@ public class TelephonyProvider extends ContentProvider
                     values = new ContentValues();
                 }
 
-                values = DatabaseHelper.setDefaultValue(values);
+                // TODO Review this. This code should probably not bet here.
+                // It is valid for the database to return a null string.
+                if (!values.containsKey(Telephony.Carriers.NAME)) {
+                    values.put(Telephony.Carriers.NAME, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.APN)) {
+                    values.put(Telephony.Carriers.APN, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.PORT)) {
+                    values.put(Telephony.Carriers.PORT, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.PROXY)) {
+                    values.put(Telephony.Carriers.PROXY, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.USER)) {
+                    values.put(Telephony.Carriers.USER, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.SERVER)) {
+                    values.put(Telephony.Carriers.SERVER, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.PASSWORD)) {
+                    values.put(Telephony.Carriers.PASSWORD, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.MMSPORT)) {
+                    values.put(Telephony.Carriers.MMSPORT, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.MMSPROXY)) {
+                    values.put(Telephony.Carriers.MMSPROXY, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.AUTH_TYPE)) {
+                    values.put(Telephony.Carriers.AUTH_TYPE, -1);
+                }
+                if (!values.containsKey(Telephony.Carriers.PROTOCOL)) {
+                    values.put(Telephony.Carriers.PROTOCOL, "IP");
+                }
+                if (!values.containsKey(Telephony.Carriers.ROAMING_PROTOCOL)) {
+                    values.put(Telephony.Carriers.ROAMING_PROTOCOL, "IP");
+                }
+                if (!values.containsKey(Telephony.Carriers.CARRIER_ENABLED)) {
+                    values.put(Telephony.Carriers.CARRIER_ENABLED, true);
+                }
+                if (!values.containsKey(Telephony.Carriers.BEARER)) {
+                    values.put(Telephony.Carriers.BEARER, 0);
+                }
+                if (!values.containsKey(Telephony.Carriers.MVNO_TYPE)) {
+                    values.put(Telephony.Carriers.MVNO_TYPE, "");
+                }
+                if (!values.containsKey(Telephony.Carriers.MVNO_MATCH_DATA)) {
+                    values.put(Telephony.Carriers.MVNO_MATCH_DATA, "");
+                }
+
+                if (!values.containsKey(Telephony.Carriers.SUB_ID)) {
+                    values.put(Telephony.Carriers.SUB_ID, subId);
+                }
 
                 long rowID = db.insert(CARRIERS_TABLE, null, values);
                 if (rowID > 0)
