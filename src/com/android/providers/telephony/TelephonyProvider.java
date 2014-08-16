@@ -53,7 +53,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
-
+import java.lang.NumberFormatException;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -61,7 +61,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
 
-    private static final int DATABASE_VERSION = 10 << 16;
+    private static final int DATABASE_VERSION = 11 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -232,7 +232,8 @@ public class TelephonyProvider extends ContentProvider
                     "modem_cognitive BOOLEAN default 0," +
                     "max_conns INTEGER default 0," +
                     "wait_time INTEGER default 0," +
-                    "max_conns_time INTEGER default 0);");
+                    "max_conns_time INTEGER default 0," +
+                    "mtu INTEGER);");
              /* FIXME Currenlty sub_id is column is not used for query purpose.
              This would be modified to more appropriate default value later. */
             if (DBG) log("dbh.createCarriersTable:-");
@@ -351,6 +352,11 @@ public class TelephonyProvider extends ContentProvider
                         " ADD COLUMN max_conns_time INTEGER DEFAULT 0;");
                 oldVersion = 10 << 16 | 6;
             }
+            if (oldVersion < (11 << 16 | 6)) {
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
+                        " ADD COLUMN mtu INTEGER DEFAULT 0;");
+                oldVersion = 11 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -462,6 +468,11 @@ public class TelephonyProvider extends ContentProvider
             String maxConnsTime = parser.getAttributeValue(null, "max_conns_time");
             if (maxConnsTime != null) {
                 map.put(Telephony.Carriers.MAX_CONNS_TIME, Integer.parseInt(maxConnsTime));
+            }
+
+            String mtu = parser.getAttributeValue(null, "mtu");
+            if (mtu != null) {
+                map.put(Telephony.Carriers.MTU, Integer.parseInt(mtu));
             }
 
             return map;
