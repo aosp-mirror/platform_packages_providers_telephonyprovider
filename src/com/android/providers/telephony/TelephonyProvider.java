@@ -191,7 +191,7 @@ public class TelephonyProvider extends ContentProvider
                     + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
                     + SubscriptionManager.SIM_ID + " INTEGER DEFAULT " + SubscriptionManager.SIM_NOT_INSERTED + ","
                     + SubscriptionManager.DISPLAY_NAME + " TEXT,"
-                    + SubscriptionManager.NAME_SOURCE + " INTEGER DEFAULT " + SubscriptionManager.DEFAULT_SOURCE + ","
+                    + SubscriptionManager.NAME_SOURCE + " INTEGER DEFAULT " + SubscriptionManager.NAME_SOURCE_DEFAULT_SOURCE + ","
                     + SubscriptionManager.COLOR + " INTEGER DEFAULT " + SubscriptionManager.COLOR_DEFAULT + ","
                     + SubscriptionManager.NUMBER + " TEXT,"
                     + SubscriptionManager.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL DEFAULT " + SubscriptionManager.DISLPAY_NUMBER_DEFAULT + ","
