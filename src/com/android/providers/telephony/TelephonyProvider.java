@@ -61,7 +61,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false;
 
-    private static final int DATABASE_VERSION = 11 << 16;
+    private static final int DATABASE_VERSION = 12 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -195,7 +195,9 @@ public class TelephonyProvider extends ContentProvider
                     + SubscriptionManager.COLOR + " INTEGER DEFAULT " + SubscriptionManager.COLOR_DEFAULT + ","
                     + SubscriptionManager.NUMBER + " TEXT,"
                     + SubscriptionManager.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL DEFAULT " + SubscriptionManager.DISLPAY_NUMBER_DEFAULT + ","
-                    + SubscriptionManager.DATA_ROAMING + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT
+                    + SubscriptionManager.DATA_ROAMING + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT + ","
+                    + SubscriptionManager.MCC + " INTEGER DEFAULT 0,"
+                    + SubscriptionManager.MNC + " INTEGER DEFAULT 0"
                     + ");");
             if (DBG) log("dbh.createSimInfoTable:-");
         }
@@ -356,6 +358,13 @@ public class TelephonyProvider extends ContentProvider
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
                         " ADD COLUMN mtu INTEGER DEFAULT 0;");
                 oldVersion = 11 << 16 | 6;
+            }
+            if (oldVersion < (12 << 16 | 6)) {
+                db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                        " ADD COLUMN " + SubscriptionManager.MCC + " INTEGER DEFAULT 0;");
+                db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                        " ADD COLUMN " + SubscriptionManager.MNC + " INTEGER DEFAULT 0;");
+                oldVersion = 12 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
