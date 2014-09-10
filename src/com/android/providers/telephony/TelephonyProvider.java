@@ -360,10 +360,18 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 11 << 16 | 6;
             }
             if (oldVersion < (12 << 16 | 6)) {
-                db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                        " ADD COLUMN " + SubscriptionManager.MCC + " INTEGER DEFAULT 0;");
-                db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                        " ADD COLUMN " + SubscriptionManager.MNC + " INTEGER DEFAULT 0;");
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.MCC + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.MNC + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                " The table will get created in onOpen.");
+                    }
+                }
                 oldVersion = 12 << 16 | 6;
             }
             if (DBG) {
