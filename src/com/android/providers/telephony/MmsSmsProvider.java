@@ -32,6 +32,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.UserHandle;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
@@ -611,7 +612,8 @@ public class MmsSmsProvider extends ContentProvider {
         Log.d(LOG_TAG, "insertThread: created new thread_id " + result +
                 " for recipientIds " + /*recipientIds*/ "xxxxxxx");
 
-        getContext().getContentResolver().notifyChange(MmsSms.CONTENT_URI, null);
+        getContext().getContentResolver().notifyChange(MmsSms.CONTENT_URI, null, true,
+                UserHandle.USER_ALL);
     }
 
     private static final String THREAD_QUERY =
@@ -1206,7 +1208,8 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         if (affectedRows > 0) {
-            context.getContentResolver().notifyChange(MmsSms.CONTENT_URI, null);
+            context.getContentResolver().notifyChange(MmsSms.CONTENT_URI, null, true,
+                    UserHandle.USER_ALL);
         }
         return affectedRows;
     }
@@ -1276,7 +1279,7 @@ public class MmsSmsProvider extends ContentProvider {
 
         if (affectedRows > 0) {
             getContext().getContentResolver().notifyChange(
-                    MmsSms.CONTENT_URI, null);
+                    MmsSms.CONTENT_URI, null, true, UserHandle.USER_ALL);
         }
         return affectedRows;
     }
