@@ -30,6 +30,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.FileUtils;
 import android.os.ParcelFileDescriptor;
+import android.os.UserHandle;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
@@ -41,13 +42,13 @@ import android.provider.Telephony.Mms.Rate;
 import android.text.TextUtils;
 import android.util.Log;
 
-
 import com.google.android.mms.pdu.PduHeaders;
 import com.google.android.mms.util.DownloadDrmHelper;
 
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+
 import android.provider.Telephony.Threads;
 
 /**
@@ -875,7 +876,7 @@ public class MmsProvider extends ContentProvider {
 
     private void notifyChange() {
         getContext().getContentResolver().notifyChange(
-                MmsSms.CONTENT_URI, null);
+                MmsSms.CONTENT_URI, null, true, UserHandle.USER_ALL);
     }
 
     private final static String TAG = "MmsProvider";
