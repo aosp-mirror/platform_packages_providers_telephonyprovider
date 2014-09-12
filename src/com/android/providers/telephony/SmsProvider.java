@@ -22,7 +22,6 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
-
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.MatrixCursor;
@@ -31,6 +30,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.UserHandle;
 import android.provider.Contacts;
 import android.provider.Telephony;
 import android.provider.Telephony.Mms;
@@ -619,7 +619,7 @@ public class SmsProvider extends ContentProvider {
         } finally {
             ContentResolver cr = getContext().getContentResolver();
 
-            cr.notifyChange(ICC_URI, null);
+            cr.notifyChange(ICC_URI, null, true, UserHandle.USER_ALL);
         }
     }
 
@@ -698,9 +698,10 @@ public class SmsProvider extends ContentProvider {
 
     private void notifyChange(Uri uri) {
         ContentResolver cr = getContext().getContentResolver();
-        cr.notifyChange(uri, null);
-        cr.notifyChange(MmsSms.CONTENT_URI, null);
-        cr.notifyChange(Uri.parse("content://mms-sms/conversations/"), null);
+        cr.notifyChange(uri, null, true, UserHandle.USER_ALL);
+        cr.notifyChange(MmsSms.CONTENT_URI, null, true, UserHandle.USER_ALL);
+        cr.notifyChange(Uri.parse("content://mms-sms/conversations/"), null, true,
+                UserHandle.USER_ALL);
     }
 
     private SQLiteOpenHelper mOpenHelper;
