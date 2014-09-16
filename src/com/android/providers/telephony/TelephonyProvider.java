@@ -229,17 +229,16 @@ public class TelephonyProvider extends ContentProvider
                     "bearer INTEGER," +
                     "mvno_type TEXT," +
                     "mvno_match_data TEXT," +
-                    "sub_id LONG DEFAULT -1," +
+                    "sub_id LONG DEFAULT " + SubscriptionManager.INVALID_SUB_ID + "," +
                     "profile_id INTEGER default 0," +
                     "modem_cognitive BOOLEAN default 0," +
                     "max_conns INTEGER default 0," +
                     "wait_time INTEGER default 0," +
                     "max_conns_time INTEGER default 0," +
                     "mtu INTEGER);");
-             /* FIXME Currenlty sub_id is column is not used for query purpose.
-             This would be modified to more appropriate default value later. */
             if (DBG) log("dbh.createCarriersTable:-");
         }
+
         private void initDatabase(SQLiteDatabase db) {
             if (VDBG) log("dbh.initDatabase:+ db=" + db);
             // Read internal APNS data
@@ -338,7 +337,8 @@ public class TelephonyProvider extends ContentProvider
             }
             if (oldVersion < (9 << 16 | 6)) {
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN sub_id LONG DEFAULT -1;");
+                        " ADD COLUMN sub_id LONG DEFAULT " +
+                        SubscriptionManager.INVALID_SUB_ID + ";");
                 oldVersion = 9 << 16 | 6;
             }
             if (oldVersion < (10 << 16 | 6)) {
