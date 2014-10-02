@@ -652,7 +652,7 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                qb.appendWhere("numeric = " + mTelephonyManager.getSimOperator(subId));
+                qb.appendWhere("numeric = '" + mTelephonyManager.getSimOperator(subId)+"'");
                 // FIXME alter the selection to pass subId
                 // selection = selection + "and subId = "
             }
