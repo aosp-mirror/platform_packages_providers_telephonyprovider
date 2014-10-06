@@ -468,7 +468,7 @@ public class TelephonyProvider extends ContentProvider
             }
 
             String modemCognitive = parser.getAttributeValue(null, "modem_cognitive");
-            if (carrierEnabled != null) {
+            if (modemCognitive != null) {
                 map.put(Telephony.Carriers.MODEM_COGNITIVE, Boolean.parseBoolean(modemCognitive));
             }
 
