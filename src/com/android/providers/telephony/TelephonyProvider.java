@@ -229,7 +229,7 @@ public class TelephonyProvider extends ContentProvider
                     "bearer INTEGER," +
                     "mvno_type TEXT," +
                     "mvno_match_data TEXT," +
-                    "sub_id LONG DEFAULT " + SubscriptionManager.INVALID_SUB_ID + "," +
+                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUB_ID + "," +
                     "profile_id INTEGER default 0," +
                     "modem_cognitive BOOLEAN default 0," +
                     "max_conns INTEGER default 0," +
@@ -337,7 +337,7 @@ public class TelephonyProvider extends ContentProvider
             }
             if (oldVersion < (9 << 16 | 6)) {
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
-                        " ADD COLUMN sub_id LONG DEFAULT " +
+                        " ADD COLUMN sub_id INTEGER DEFAULT " +
                         SubscriptionManager.INVALID_SUB_ID + ";");
                 oldVersion = 9 << 16 | 6;
             }
