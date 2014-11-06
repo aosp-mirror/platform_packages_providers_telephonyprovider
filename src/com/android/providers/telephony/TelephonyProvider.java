@@ -35,6 +35,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Environment;
+import android.os.UserHandle;
 import android.provider.Telephony;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -884,7 +885,8 @@ public class TelephonyProvider extends ContentProvider
         }
 
         if (notify) {
-            getContext().getContentResolver().notifyChange(Telephony.Carriers.CONTENT_URI, null);
+            getContext().getContentResolver().notifyChange(Telephony.Carriers.CONTENT_URI, null,
+                    true, UserHandle.USER_ALL);
         }
 
         return result;
@@ -997,7 +999,8 @@ public class TelephonyProvider extends ContentProvider
         }
 
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(Telephony.Carriers.CONTENT_URI, null);
+            getContext().getContentResolver().notifyChange(Telephony.Carriers.CONTENT_URI, null,
+                    true, UserHandle.USER_ALL);
         }
 
         return count;
@@ -1110,11 +1113,11 @@ public class TelephonyProvider extends ContentProvider
             switch (uriType) {
                 case URL_SIMINFO:
                     getContext().getContentResolver().notifyChange(
-                            SubscriptionManager.CONTENT_URI, null);
+                            SubscriptionManager.CONTENT_URI, null, true, UserHandle.USER_ALL);
                     break;
                 default:
                     getContext().getContentResolver().notifyChange(
-                            Telephony.Carriers.CONTENT_URI, null);
+                            Telephony.Carriers.CONTENT_URI, null, true, UserHandle.USER_ALL);
             }
         }
 
