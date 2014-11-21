@@ -16,11 +16,6 @@
 
 package com.android.providers.telephony;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
-
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -32,21 +27,26 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.UserHandle;
 import android.provider.BaseColumns;
-import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
+import android.provider.Telephony.MmsSms.PendingMessages;
 import android.provider.Telephony.Sms;
+import android.provider.Telephony.Sms.Conversations;
 import android.provider.Telephony.Threads;
 import android.provider.Telephony.ThreadsColumns;
-import android.provider.Telephony.MmsSms.PendingMessages;
-import android.provider.Telephony.Sms.Conversations;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.android.mms.pdu.PduHeaders;
+
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 /**
  * This class provides the ability to query the MMS and SMS databases
@@ -1240,13 +1240,14 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
+        final int callerUid = Binder.getCallingUid();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int affectedRows = 0;
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
                 String threadIdString = uri.getPathSegments().get(1);
                 affectedRows = updateConversation(threadIdString, values,
-                        selection, selectionArgs);
+                        selection, selectionArgs, callerUid);
                 break;
 
             case URI_PENDING_MSG:
@@ -1286,12 +1287,22 @@ public class MmsSmsProvider extends ContentProvider {
 
     private int updateConversation(
             String threadIdString, ContentValues values, String selection,
-            String[] selectionArgs) {
+            String[] selectionArgs, int callerUid) {
         try {
             Long.parseLong(threadIdString);
         } catch (NumberFormatException exception) {
             Log.e(LOG_TAG, "Thread ID must be a Long.");
             return 0;
+
+        }
+        if (ProviderUtil.shouldRemoveCreator(values, callerUid)) {
+            // CREATOR should not be changed by non-SYSTEM/PHONE apps
+            Log.w(LOG_TAG, ProviderUtil.getPackageNamesByUid(getContext(), callerUid) +
+                    " tries to update CREATOR");
+            // Sms.CREATOR and Mms.CREATOR are same. But let's do this
+            // twice in case the names may differ in the future
+            values.remove(Sms.CREATOR);
+            values.remove(Mms.CREATOR);
         }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
