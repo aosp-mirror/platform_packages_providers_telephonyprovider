@@ -188,9 +188,9 @@ public class TelephonyProvider extends ContentProvider
         private void createSimInfoTable(SQLiteDatabase db) {
             if (DBG) log("dbh.createSimInfoTable:+");
             db.execSQL("CREATE TABLE " + SIMINFO_TABLE + "("
-                    + SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                    + "_id INTEGER PRIMARY KEY AUTOINCREMENT,"
                     + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
-                    + SubscriptionManager.SIM_SLOT_INDEX + " INTEGER DEFAULT " + SubscriptionManager.SIM_NOT_INSERTED + ","
+                    + SubscriptionManager.SIM_ID + " INTEGER DEFAULT " + SubscriptionManager.SIM_NOT_INSERTED + ","
                     + SubscriptionManager.DISPLAY_NAME + " TEXT,"
                     + SubscriptionManager.CARRIER_NAME + " TEXT,"
                     + SubscriptionManager.NAME_SOURCE + " INTEGER DEFAULT " + SubscriptionManager.NAME_SOURCE_DEFAULT_SOURCE + ","
@@ -231,7 +231,7 @@ public class TelephonyProvider extends ContentProvider
                     "bearer INTEGER," +
                     "mvno_type TEXT," +
                     "mvno_match_data TEXT," +
-                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
+                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUB_ID + "," +
                     "profile_id INTEGER default 0," +
                     "modem_cognitive BOOLEAN default 0," +
                     "max_conns INTEGER default 0," +
@@ -340,7 +340,7 @@ public class TelephonyProvider extends ContentProvider
             if (oldVersion < (9 << 16 | 6)) {
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE +
                         " ADD COLUMN sub_id INTEGER DEFAULT " +
-                        SubscriptionManager.INVALID_SUBSCRIPTION_ID + ";");
+                        SubscriptionManager.INVALID_SUB_ID + ";");
                 oldVersion = 9 << 16 | 6;
             }
             if (oldVersion < (10 << 16 | 6)) {
@@ -594,8 +594,8 @@ public class TelephonyProvider extends ContentProvider
             }
 
             int subId = SubscriptionManager.getDefaultSubId();
-            if (!values.containsKey(Telephony.Carriers.SUBSCRIPTION_ID)) {
-                values.put(Telephony.Carriers.SUBSCRIPTION_ID, subId);
+            if (!values.containsKey(Telephony.Carriers.SUB_ID)) {
+                values.put(Telephony.Carriers.SUB_ID, subId);
             }
 
             if (!values.containsKey(Telephony.Carriers.PROFILE_ID)) {
