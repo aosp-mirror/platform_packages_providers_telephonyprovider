@@ -63,6 +63,8 @@ public class MmsProvider extends ContentProvider {
     static final String TABLE_DRM  = "drm";
     static final String TABLE_WORDS = "words";
 
+    // The name of parts directory. The full dir is "app_parts".
+    private static final String PARTS_DIR_NAME = "parts";
 
     @Override
     public boolean onCreate() {
@@ -427,7 +429,7 @@ public class MmsProvider extends ContentProvider {
 
                 // Generate the '_data' field of the part with default
                 // permission settings.
-                String path = getContext().getDir("parts", 0).getPath()
+                String path = getContext().getDir(PARTS_DIR_NAME, 0).getPath()
                         + "/PART_" + System.currentTimeMillis() + contentLocation;
 
                 if (DownloadDrmHelper.isDrmConvertNeeded(contentType)) {
@@ -493,7 +495,7 @@ public class MmsProvider extends ContentProvider {
             db.delete(table, Rate.SENT_TIME + "<=" + oneHourAgo, null);
             db.insert(table, null, values);
         } else if (table.equals(TABLE_DRM)) {
-            String path = getContext().getDir("parts", 0).getPath()
+            String path = getContext().getDir(PARTS_DIR_NAME, 0).getPath()
                     + "/PART_" + System.currentTimeMillis();
             finalValues = new ContentValues(1);
             finalValues.put("_data", path);
@@ -739,7 +741,7 @@ public class MmsProvider extends ContentProvider {
                 break;
 
             case MMS_PART_RESET_FILE_PERMISSION:
-                String path = getContext().getDir("parts", 0).getPath() + '/' +
+                String path = getContext().getDir(PARTS_DIR_NAME, 0).getPath() + '/' +
                         uri.getPathSegments().get(1);
                 // Reset the file permission back to read for everyone but me.
                 int result = FileUtils.setPermissions(path, 0644, -1, -1);
@@ -834,10 +836,17 @@ public class MmsProvider extends ContentProvider {
         try {
             File filePath = new File(path);
             if (!filePath.getCanonicalPath()
-                    .startsWith(getContext().getApplicationInfo().dataDir + "/app_parts/")) {
+                    .startsWith(getContext().getDir(PARTS_DIR_NAME, 0).getPath())) {
+                Log.e(TAG, "openFile: path "
+                        + filePath.getCanonicalPath()
+                        + " does not start with "
+                        + getContext().getDir(PARTS_DIR_NAME, 0).getPath());
+                // Don't care return value
+                filePath.delete();
                 return null;
             }
         } catch (IOException e) {
+            Log.e(TAG, "openFile: create path failed " + e, e);
             return null;
         }
 
