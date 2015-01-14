@@ -86,6 +86,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String COLUMN_APN_ID = "apn_id";
 
     private static final String PARTNER_APNS_PATH = "etc/apns-conf.xml";
+    private static final String OEM_APNS_PATH = "telephony/apns-conf.xml";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -261,7 +262,27 @@ public class TelephonyProvider extends ContentProvider
             XmlPullParser confparser = null;
             // Environment.getRootDirectory() is a fancy way of saying ANDROID_ROOT or "/system".
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
+            File oemConfFile =  new File(Environment.getOemDirectory(), OEM_APNS_PATH);
+            if (oemConfFile.exists()) {
+                // OEM image exist APN xml, get the timestamp from OEM & System image for comparison
+                long oemApnTime = oemConfFile.lastModified();
+                long sysApnTime = confFile.lastModified();
+                if (DBG) log("APNs Timestamp: oemTime = " + oemApnTime + " sysTime = "
+                        + sysApnTime);
+
+                // To get the latest version from OEM or System image
+                if (oemApnTime > sysApnTime) {
+                    if (DBG) log("APNs Timestamp: OEM image is greater than System image");
+                    confFile = oemConfFile;
+                }
+            } else {
+                // No Apn in OEM image, so load it from system image.
+                if (DBG) log("No APNs in OEM image = " + oemConfFile.getPath() +
+                        " Load APNs from system image");
+            }
+
             FileReader confreader = null;
+            if (DBG) log("confFile = " + confFile);
             try {
                 confreader = new FileReader(confFile);
                 confparser = Xml.newPullParser();
