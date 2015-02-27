@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- persist APNs for these PLMNs on db upgrade to version 14 -->
+    <string-array name="persist_apns_for_plmn">
+        <item>20404</item>
+        <item>310120</item>
+        <item>311480</item>
+    </string-array>
+</resources>
