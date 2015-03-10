@@ -51,6 +51,7 @@ public class SmsProvider extends ContentProvider {
     static final String TABLE_RAW = "raw";
     private static final String TABLE_SR_PENDING = "sr_pending";
     private static final String TABLE_WORDS = "words";
+    static final String VIEW_SMS_RESTRICTED = "sms_restricted";
 
     private static final Integer ONE = Integer.valueOf(1);
 
@@ -88,48 +89,65 @@ public class SmsProvider extends ContentProvider {
         return true;
     }
 
+    /**
+     * Return the proper view of "sms" table for the current access status.
+     *
+     * @param accessRestricted If the access is restricted
+     * @return the table/view name of the "sms" data
+     */
+    public static String getSmsTable(boolean accessRestricted) {
+        return accessRestricted ? VIEW_SMS_RESTRICTED : TABLE_SMS;
+    }
+
     @Override
     public Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
+        // First check if a restricted view of the "sms" table should be used based on the
+        // caller's identity. Only system, phone or the default sms app can have full access
+        // of sms data. For other apps, we present a restricted view which only contains sent
+        // or received messages.
+        final boolean accessRestricted = ProviderUtil.isAccessRestricted(
+                getContext(), getCallingPackage(), Binder.getCallingUid());
+        final String smsTable = getSmsTable(accessRestricted);
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
         switch (match) {
             case SMS_ALL:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_ALL);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_ALL, smsTable);
                 break;
 
             case SMS_UNDELIVERED:
-                constructQueryForUndelivered(qb);
+                constructQueryForUndelivered(qb, smsTable);
                 break;
 
             case SMS_FAILED:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_FAILED);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_FAILED, smsTable);
                 break;
 
             case SMS_QUEUED:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_QUEUED);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_QUEUED, smsTable);
                 break;
 
             case SMS_INBOX:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_INBOX);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_INBOX, smsTable);
                 break;
 
             case SMS_SENT:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_SENT);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_SENT, smsTable);
                 break;
 
             case SMS_DRAFT:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_DRAFT);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_DRAFT, smsTable);
                 break;
 
             case SMS_OUTBOX:
-                constructQueryForBox(qb, Sms.MESSAGE_TYPE_OUTBOX);
+                constructQueryForBox(qb, Sms.MESSAGE_TYPE_OUTBOX, smsTable);
                 break;
 
             case SMS_ALL_ID:
-                qb.setTables(TABLE_SMS);
+                qb.setTables(smsTable);
                 qb.appendWhere("(_id = " + url.getPathSegments().get(0) + ")");
                 break;
 
@@ -138,7 +156,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_SENT_ID:
             case SMS_DRAFT_ID:
             case SMS_OUTBOX_ID:
-                qb.setTables(TABLE_SMS);
+                qb.setTables(smsTable);
                 qb.appendWhere("(_id = " + url.getPathSegments().get(1) + ")");
                 break;
 
@@ -158,16 +176,28 @@ public class SmsProvider extends ContentProvider {
                     return null;
                 }
 
-                qb.setTables(TABLE_SMS);
+                qb.setTables(smsTable);
                 qb.appendWhere("thread_id = " + threadID);
                 break;
 
             case SMS_CONVERSATIONS:
-                qb.setTables("sms, (SELECT thread_id AS group_thread_id, MAX(date)AS group_date,"
-                       + "COUNT(*) AS msg_count FROM sms GROUP BY thread_id) AS groups");
-                qb.appendWhere("sms.thread_id = groups.group_thread_id AND sms.date ="
-                       + "groups.group_date");
-                qb.setProjectionMap(sConversationProjectionMap);
+                qb.setTables(smsTable + ", "
+                        + "(SELECT thread_id AS group_thread_id, "
+                        + "MAX(date) AS group_date, "
+                        + "COUNT(*) AS msg_count "
+                        + "FROM " + smsTable + " "
+                        + "GROUP BY thread_id) AS groups");
+                qb.appendWhere(smsTable + ".thread_id=groups.group_thread_id"
+                        + " AND " + smsTable + ".date=groups.group_date");
+                final HashMap<String, String> projectionMap = new HashMap<>();
+                projectionMap.put(Sms.Conversations.SNIPPET,
+                        smsTable + ".body AS snippet");
+                projectionMap.put(Sms.Conversations.THREAD_ID,
+                        smsTable + ".thread_id AS thread_id");
+                projectionMap.put(Sms.Conversations.MESSAGE_COUNT,
+                        "groups.msg_count AS msg_count");
+                projectionMap.put("delta", null);
+                qb.setProjectionMap(projectionMap);
                 break;
 
             case SMS_RAW_MESSAGE:
@@ -196,7 +226,7 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_STATUS_ID:
-                qb.setTables(TABLE_SMS);
+                qb.setTables(smsTable);
                 qb.appendWhere("(_id = " + url.getPathSegments().get(1) + ")");
                 break;
 
@@ -217,7 +247,7 @@ public class SmsProvider extends ContentProvider {
 
         if (!TextUtils.isEmpty(sort)) {
             orderBy = sort;
-        } else if (qb.getTables().equals(TABLE_SMS)) {
+        } else if (qb.getTables().equals(smsTable)) {
             orderBy = Sms.DEFAULT_SORT_ORDER;
         }
 
@@ -314,16 +344,16 @@ public class SmsProvider extends ContentProvider {
         return cursor;
     }
 
-    private void constructQueryForBox(SQLiteQueryBuilder qb, int type) {
-        qb.setTables(TABLE_SMS);
+    private void constructQueryForBox(SQLiteQueryBuilder qb, int type, String smsTable) {
+        qb.setTables(smsTable);
 
         if (type != Sms.MESSAGE_TYPE_ALL) {
             qb.appendWhere("type=" + type);
         }
     }
 
-    private void constructQueryForUndelivered(SQLiteQueryBuilder qb) {
-        qb.setTables(TABLE_SMS);
+    private void constructQueryForUndelivered(SQLiteQueryBuilder qb, String smsTable) {
+        qb.setTables(smsTable);
 
         qb.appendWhere("(type=" + Sms.MESSAGE_TYPE_OUTBOX +
                        " OR type=" + Sms.MESSAGE_TYPE_FAILED +
@@ -356,15 +386,16 @@ public class SmsProvider extends ContentProvider {
     @Override
     public Uri insert(Uri url, ContentValues initialValues) {
         final int callerUid = Binder.getCallingUid();
+        final String callerPkg = getCallingPackage();
         long token = Binder.clearCallingIdentity();
         try {
-            return insertInner(url, initialValues, callerUid);
+            return insertInner(url, initialValues, callerUid, callerPkg);
         } finally {
             Binder.restoreCallingIdentity(token);
         }
     }
 
-    private Uri insertInner(Uri url, ContentValues initialValues, int callerUid) {
+    private Uri insertInner(Uri url, ContentValues initialValues, int callerUid, String callerPkg) {
         ContentValues values;
         long rowID;
         int type = Sms.MESSAGE_TYPE_ALL;
@@ -512,7 +543,7 @@ public class SmsProvider extends ContentProvider {
                 // If caller is not SYSTEM or PHONE, or SYSTEM or PHONE does not set CREATOR
                 // set CREATOR using the truth on caller.
                 // Note: Inferring package name from UID may include unrelated package names
-                values.put(Sms.CREATOR, ProviderUtil.getPackageNamesByUid(getContext(), callerUid));
+                values.put(Sms.CREATOR, callerPkg);
             }
         } else {
             if (initialValues == null) {
@@ -643,6 +674,7 @@ public class SmsProvider extends ContentProvider {
     @Override
     public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
         final int callerUid = Binder.getCallingUid();
+        final String callerPkg = getCallingPackage();
         int count = 0;
         String table = TABLE_SMS;
         String extraWhere = null;
@@ -704,8 +736,7 @@ public class SmsProvider extends ContentProvider {
 
         if (table.equals(TABLE_SMS) && ProviderUtil.shouldRemoveCreator(values, callerUid)) {
             // CREATOR should not be changed by non-SYSTEM/PHONE apps
-            Log.w(TAG, ProviderUtil.getPackageNamesByUid(getContext(), callerUid) +
-                    " tries to update CREATOR");
+            Log.w(TAG, callerPkg + " tries to update CREATOR");
             values.remove(Sms.CREATOR);
         }
 
@@ -738,8 +769,6 @@ public class SmsProvider extends ContentProvider {
     private final static String VND_ANDROID_DIR_SMS =
             "vnd.android.cursor.dir/sms";
 
-    private static final HashMap<String, String> sConversationProjectionMap =
-            new HashMap<String, String>();
     private static final String[] sIDProjection = new String[] { "_id" };
 
     private static final int SMS_ALL = 0;
@@ -800,13 +829,5 @@ public class SmsProvider extends ContentProvider {
         //we keep these for not breaking old applications
         sURLMatcher.addURI("sms", "sim", SMS_ALL_ICC);
         sURLMatcher.addURI("sms", "sim/#", SMS_ICC);
-
-        sConversationProjectionMap.put(Sms.Conversations.SNIPPET,
-            "sms.body AS snippet");
-        sConversationProjectionMap.put(Sms.Conversations.THREAD_ID,
-            "sms.thread_id AS thread_id");
-        sConversationProjectionMap.put(Sms.Conversations.MESSAGE_COUNT,
-            "groups.msg_count AS msg_count");
-        sConversationProjectionMap.put("delta", null);
     }
 }

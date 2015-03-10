@@ -187,32 +187,50 @@ public class MmsSmsProvider extends ContentProvider {
             Mms.MESSAGE_TYPE + " = " + PduHeaders.MESSAGE_TYPE_RETRIEVE_CONF + " OR " +
             Mms.MESSAGE_TYPE + " = " + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND + "))";
 
-    // Search on the words table but return the rows from the corresponding sms table
-    private static final String SMS_QUERY =
-            "SELECT sms._id AS _id,thread_id,address,body,date,date_sent,index_text,words._id " +
-            "FROM sms,words WHERE (index_text MATCH ? " +
-            "AND sms._id=words.source_id AND words.table_to_use=1)";
+    private static String getTextSearchQuery(String smsTable, String pduTable) {
+        // Search on the words table but return the rows from the corresponding sms table
+        final String smsQuery = "SELECT "
+                + smsTable + "._id AS _id,"
+                + "thread_id,"
+                + "address,"
+                + "body,"
+                + "date,"
+                + "date_sent,"
+                + "index_text,"
+                + "words._id "
+                + "FROM " + smsTable + ",words "
+                + "WHERE (index_text MATCH ? "
+                + "AND " + smsTable + "._id=words.source_id "
+                + "AND words.table_to_use=1)";
 
-    // Search on the words table but return the rows from the corresponding parts table
-    private static final String MMS_QUERY =
-            "SELECT pdu._id,thread_id,addr.address,part.text " +
-            "AS body,pdu.date,pdu.date_sent,index_text,words._id " +
-            "FROM pdu,part,addr,words WHERE ((part.mid=pdu._id) AND " +
-            "(addr.msg_id=pdu._id) AND " +
-            "(addr.type=" + PduHeaders.TO + ") AND " +
-            "(part.ct='text/plain') AND " +
-            "(index_text MATCH ?) AND " +
-            "(part._id = words.source_id) AND " +
-            "(words.table_to_use=2))";
+        // Search on the words table but return the rows from the corresponding parts table
+        final String mmsQuery = "SELECT "
+                + pduTable + "._id,"
+                + "thread_id,"
+                + "addr.address,"
+                + "part.text AS body,"
+                + pduTable + ".date,"
+                + pduTable + ".date_sent,"
+                + "index_text,"
+                + "words._id "
+                + "FROM " + pduTable + ",part,addr,words "
+                + "WHERE ((part.mid=" + pduTable + "._id) "
+                + "AND (addr.msg_id=" + pduTable + "._id) "
+                + "AND (addr.type=" + PduHeaders.TO + ") "
+                + "AND (part.ct='text/plain') "
+                + "AND (index_text MATCH ?) "
+                + "AND (part._id = words.source_id) "
+                + "AND (words.table_to_use=2))";
 
-    // This code queries the sms and mms tables and returns a unified result set
-    // of text matches.  We query the sms table which is pretty simple.  We also
-    // query the pdu, part and addr table to get the mms result.  Notet we're
-    // using a UNION so we have to have the same number of result columns from
-    // both queries.
-    private static final String SMS_MMS_QUERY =
-            SMS_QUERY + " UNION " + MMS_QUERY +
-            " GROUP BY thread_id ORDER BY thread_id ASC, date DESC";
+        // This code queries the sms and mms tables and returns a unified result set
+        // of text matches.  We query the sms table which is pretty simple.  We also
+        // query the pdu, part and addr table to get the mms result.  Note we're
+        // using a UNION so we have to have the same number of result columns from
+        // both queries.
+        return smsQuery + " UNION " + mmsQuery + " "
+                + "GROUP BY thread_id "
+                + "ORDER BY thread_id ASC, date DESC";
+    }
 
     private static final String AUTHORITY = "mms-sms";
 
@@ -297,11 +315,22 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection,
             String selection, String[] selectionArgs, String sortOrder) {
+        // First check if restricted views of the "sms" and "pdu" tables should be used based on the
+        // caller's identity. Only system, phone or the default sms app can have full access
+        // of sms/mms data. For other apps, we present a restricted view which only contains sent
+        // or received messages, without wap pushes.
+        final boolean accessRestricted = ProviderUtil.isAccessRestricted(
+                getContext(), getCallingPackage(), Binder.getCallingUid());
+        final String pduTable = MmsProvider.getPduTable(accessRestricted);
+        final String smsTable = SmsProvider.getSmsTable(accessRestricted);
+
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = null;
-        switch(URI_MATCHER.match(uri)) {
+        final int match = URI_MATCHER.match(uri);
+        switch (match) {
             case URI_COMPLETE_CONVERSATIONS:
-                cursor = getCompleteConversations(projection, selection, sortOrder);
+                cursor = getCompleteConversations(projection, selection, sortOrder, smsTable,
+                        pduTable);
                 break;
             case URI_CONVERSATIONS:
                 String simple = uri.getQueryParameter("simple");
@@ -315,12 +344,12 @@ public class MmsSmsProvider extends ContentProvider {
                             projection, selection, selectionArgs, sortOrder);
                 } else {
                     cursor = getConversations(
-                            projection, selection, sortOrder);
+                            projection, selection, sortOrder, smsTable, pduTable);
                 }
                 break;
             case URI_CONVERSATIONS_MESSAGES:
                 cursor = getConversationMessages(uri.getPathSegments().get(1), projection,
-                        selection, sortOrder);
+                        selection, sortOrder, smsTable, pduTable);
                 break;
             case URI_CONVERSATIONS_RECIPIENTS:
                 cursor = getConversationById(
@@ -334,7 +363,8 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
             case URI_MESSAGES_BY_PHONE:
                 cursor = getMessagesByPhoneNumber(
-                        uri.getPathSegments().get(2), projection, selection, sortOrder);
+                        uri.getPathSegments().get(2), projection, selection, sortOrder, smsTable,
+                        pduTable);
                 break;
             case URI_THREAD_ID:
                 List<String> recipients = uri.getQueryParameters("recipient");
@@ -387,7 +417,7 @@ public class MmsSmsProvider extends ContentProvider {
                     switch (Integer.parseInt(uri.getQueryParameter("table_to_use"))) {
                         case 1:  // sms
                             cursor = db.query(
-                                "sms",
+                                smsTable,
                                 new String[] { "thread_id" },
                                 "_id=?",
                                 new String[] { String.valueOf(id) },
@@ -396,9 +426,10 @@ public class MmsSmsProvider extends ContentProvider {
                                 null);
                             break;
                         case 2:  // mms
-                            String mmsQuery =
-                                "SELECT thread_id FROM pdu,part WHERE ((part.mid=pdu._id) AND " +
-                                "(part._id=?))";
+                            String mmsQuery = "SELECT thread_id "
+                                    + "FROM " + pduTable + ",part "
+                                    + "WHERE ((part.mid=" + pduTable + "._id) "
+                                    + "AND " + "(part._id=?))";
                             cursor = db.rawQuery(mmsQuery, new String[] { String.valueOf(id) });
                             break;
                     }
@@ -420,7 +451,8 @@ public class MmsSmsProvider extends ContentProvider {
                 String searchString = uri.getQueryParameter("pattern") + "*";
 
                 try {
-                    cursor = db.rawQuery(SMS_MMS_QUERY, new String[] { searchString, searchString });
+                    cursor = db.rawQuery(getTextSearchQuery(smsTable, pduTable),
+                            new String[] { searchString, searchString });
                 } catch (Exception ex) {
                     Log.e(LOG_TAG, "got exception: " + ex.toString());
                 }
@@ -448,11 +480,11 @@ public class MmsSmsProvider extends ContentProvider {
             }
             case URI_UNDELIVERED_MSG: {
                 cursor = getUndeliveredMessages(projection, selection,
-                        selectionArgs, sortOrder);
+                        selectionArgs, sortOrder, smsTable, pduTable);
                 break;
             }
             case URI_DRAFT: {
-                cursor = getDraftThread(projection, selection, sortOrder);
+                cursor = getDraftThread(projection, selection, sortOrder, smsTable, pduTable);
                 break;
             }
             case URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID: {
@@ -464,11 +496,12 @@ public class MmsSmsProvider extends ContentProvider {
                     break;
                 }
                 cursor = getFirstLockedMessage(projection, "thread_id=" + Long.toString(threadId),
-                        sortOrder);
+                        sortOrder, smsTable, pduTable);
                 break;
             }
             case URI_FIRST_LOCKED_MESSAGE_ALL: {
-                cursor = getFirstLockedMessage(projection, selection, sortOrder);
+                cursor = getFirstLockedMessage(
+                        projection, selection, sortOrder, smsTable, pduTable);
                 break;
             }
             default:
@@ -743,13 +776,13 @@ public class MmsSmsProvider extends ContentProvider {
      *   ;
      */
     private Cursor getDraftThread(String[] projection, String selection,
-            String sortOrder) {
+            String sortOrder, String smsTable, String pduTable) {
         String[] innerProjection = new String[] {BaseColumns._ID, Conversations.THREAD_ID};
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
-        mmsQueryBuilder.setTables(MmsProvider.TABLE_PDU);
-        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+        mmsQueryBuilder.setTables(pduTable);
+        smsQueryBuilder.setTables(smsTable);
 
         String mmsSubQuery = mmsQueryBuilder.buildUnionSubQuery(
                 MmsSms.TYPE_DISCRIMINATOR_COLUMN, innerProjection,
@@ -803,12 +836,12 @@ public class MmsSmsProvider extends ContentProvider {
      * messages.
      */
     private Cursor getConversations(String[] projection, String selection,
-            String sortOrder) {
+            String sortOrder, String smsTable, String pduTable) {
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
-        mmsQueryBuilder.setTables(MmsProvider.TABLE_PDU);
-        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+        mmsQueryBuilder.setTables(pduTable);
+        smsQueryBuilder.setTables(smsTable);
 
         String[] columns = handleNullMessageProjection(projection);
         String[] innerMmsProjection = makeProjectionWithDateAndThreadId(
@@ -856,12 +889,12 @@ public class MmsSmsProvider extends ContentProvider {
      * there is *any* locked message, not the actual messages themselves.
      */
     private Cursor getFirstLockedMessage(String[] projection, String selection,
-            String sortOrder) {
+            String sortOrder, String smsTable, String pduTable) {
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
-        mmsQueryBuilder.setTables(MmsProvider.TABLE_PDU);
-        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+        mmsQueryBuilder.setTables(pduTable);
+        smsQueryBuilder.setTables(smsTable);
 
         String[] idColumn = new String[] { BaseColumns._ID };
 
@@ -899,8 +932,9 @@ public class MmsSmsProvider extends ContentProvider {
      * and SMS.
      */
     private Cursor getCompleteConversations(String[] projection,
-            String selection, String sortOrder) {
-        String unionQuery = buildConversationQuery(projection, selection, sortOrder);
+            String selection, String sortOrder, String smsTable, String pduTable) {
+        String unionQuery = buildConversationQuery(projection, selection, sortOrder, smsTable,
+                pduTable);
 
         return mOpenHelper.getReadableDatabase().rawQuery(unionQuery, EMPTY_STRING_ARRAY);
     }
@@ -929,7 +963,7 @@ public class MmsSmsProvider extends ContentProvider {
      */
     private Cursor getConversationMessages(
             String threadIdString, String[] projection, String selection,
-            String sortOrder) {
+            String sortOrder, String smsTable, String pduTable) {
         try {
             Long.parseLong(threadIdString);
         } catch (NumberFormatException exception) {
@@ -939,7 +973,8 @@ public class MmsSmsProvider extends ContentProvider {
 
         String finalSelection = concatSelections(
                 selection, "thread_id = " + threadIdString);
-        String unionQuery = buildConversationQuery(projection, finalSelection, sortOrder);
+        String unionQuery = buildConversationQuery(projection, finalSelection, sortOrder, smsTable,
+                pduTable);
 
         return mOpenHelper.getReadableDatabase().rawQuery(unionQuery, EMPTY_STRING_ARRAY);
     }
@@ -964,12 +999,12 @@ public class MmsSmsProvider extends ContentProvider {
      */
     private Cursor getMessagesByPhoneNumber(
             String phoneNumber, String[] projection, String selection,
-            String sortOrder) {
+            String sortOrder, String smsTable, String pduTable) {
         String escapedPhoneNumber = DatabaseUtils.sqlEscapeString(phoneNumber);
         String finalMmsSelection =
                 concatSelections(
                         selection,
-                        "pdu._id = matching_addresses.address_msg_id");
+                        pduTable + "._id = matching_addresses.address_msg_id");
         String finalSmsSelection =
                 concatSelections(
                         selection,
@@ -982,14 +1017,14 @@ public class MmsSmsProvider extends ContentProvider {
         mmsQueryBuilder.setDistinct(true);
         smsQueryBuilder.setDistinct(true);
         mmsQueryBuilder.setTables(
-                MmsProvider.TABLE_PDU +
+                pduTable +
                 ", (SELECT msg_id AS address_msg_id " +
                 "FROM addr WHERE (address=" + escapedPhoneNumber +
                 " OR PHONE_NUMBERS_EQUAL(addr.address, " +
                 escapedPhoneNumber +
                 (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0))) ") +
                 "AS matching_addresses");
-        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+        smsQueryBuilder.setTables(smsTable);
 
         String[] columns = handleNullMessageProjection(projection);
         String mmsSubQuery = mmsQueryBuilder.buildUnionSubQuery(
@@ -1033,16 +1068,16 @@ public class MmsSmsProvider extends ContentProvider {
                 selectionArgs, sortOrder, null, null);
     }
 
-    private static String joinPduAndPendingMsgTables() {
-        return MmsProvider.TABLE_PDU + " LEFT JOIN " + TABLE_PENDING_MSG
-                + " ON pdu._id = pending_msgs.msg_id";
+    private static String joinPduAndPendingMsgTables(String pduTable) {
+        return pduTable + " LEFT JOIN " + TABLE_PENDING_MSG
+                + " ON " + pduTable + "._id = pending_msgs.msg_id";
     }
 
-    private static String[] createMmsProjection(String[] old) {
+    private static String[] createMmsProjection(String[] old, String pduTable) {
         String[] newProjection = new String[old.length];
         for (int i = 0; i < old.length; i++) {
             if (old[i].equals(BaseColumns._ID)) {
-                newProjection[i] = "pdu._id";
+                newProjection[i] = pduTable + "._id";
             } else {
                 newProjection[i] = old[i];
             }
@@ -1052,14 +1087,14 @@ public class MmsSmsProvider extends ContentProvider {
 
     private Cursor getUndeliveredMessages(
             String[] projection, String selection, String[] selectionArgs,
-            String sortOrder) {
-        String[] mmsProjection = createMmsProjection(projection);
+            String sortOrder, String smsTable, String pduTable) {
+        String[] mmsProjection = createMmsProjection(projection, pduTable);
 
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
-        mmsQueryBuilder.setTables(joinPduAndPendingMsgTables());
-        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+        mmsQueryBuilder.setTables(joinPduAndPendingMsgTables(pduTable));
+        smsQueryBuilder.setTables(smsTable);
 
         String finalMmsSelection = concatSelections(
                 selection, Mms.MESSAGE_BOX + " = " + Mms.MESSAGE_BOX_OUTBOX);
@@ -1076,7 +1111,7 @@ public class MmsSmsProvider extends ContentProvider {
                 smsColumns, 1);
 
         Set<String> columnsPresentInTable = new HashSet<String>(MMS_COLUMNS);
-        columnsPresentInTable.add("pdu._id");
+        columnsPresentInTable.add(pduTable + "._id");
         columnsPresentInTable.add(PendingMessages.ERROR_TYPE);
         String mmsSubQuery = mmsQueryBuilder.buildUnionSubQuery(
                 MmsSms.TYPE_DISCRIMINATOR_COLUMN, innerMmsProjection,
@@ -1118,16 +1153,16 @@ public class MmsSmsProvider extends ContentProvider {
     }
 
     private static String buildConversationQuery(String[] projection,
-            String selection, String sortOrder) {
-        String[] mmsProjection = createMmsProjection(projection);
+            String selection, String sortOrder, String smsTable, String pduTable) {
+        String[] mmsProjection = createMmsProjection(projection, pduTable);
 
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
         mmsQueryBuilder.setDistinct(true);
         smsQueryBuilder.setDistinct(true);
-        mmsQueryBuilder.setTables(joinPduAndPendingMsgTables());
-        smsQueryBuilder.setTables(SmsProvider.TABLE_SMS);
+        mmsQueryBuilder.setTables(joinPduAndPendingMsgTables(pduTable));
+        smsQueryBuilder.setTables(smsTable);
 
         String[] smsColumns = handleNullMessageProjection(projection);
         String[] mmsColumns = handleNullMessageProjection(mmsProjection);
@@ -1135,7 +1170,7 @@ public class MmsSmsProvider extends ContentProvider {
         String[] innerSmsProjection = makeProjectionWithNormalizedDate(smsColumns, 1);
 
         Set<String> columnsPresentInTable = new HashSet<String>(MMS_COLUMNS);
-        columnsPresentInTable.add("pdu._id");
+        columnsPresentInTable.add(pduTable + "._id");
         columnsPresentInTable.add(PendingMessages.ERROR_TYPE);
 
         String mmsSelection = concatSelections(selection,
@@ -1241,13 +1276,14 @@ public class MmsSmsProvider extends ContentProvider {
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
         final int callerUid = Binder.getCallingUid();
+        final String callerPkg = getCallingPackage();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int affectedRows = 0;
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
                 String threadIdString = uri.getPathSegments().get(1);
                 affectedRows = updateConversation(threadIdString, values,
-                        selection, selectionArgs, callerUid);
+                        selection, selectionArgs, callerUid, callerPkg);
                 break;
 
             case URI_PENDING_MSG:
@@ -1285,9 +1321,8 @@ public class MmsSmsProvider extends ContentProvider {
         return affectedRows;
     }
 
-    private int updateConversation(
-            String threadIdString, ContentValues values, String selection,
-            String[] selectionArgs, int callerUid) {
+    private int updateConversation(String threadIdString, ContentValues values, String selection,
+            String[] selectionArgs, int callerUid, String callerPkg) {
         try {
             Long.parseLong(threadIdString);
         } catch (NumberFormatException exception) {
@@ -1297,8 +1332,7 @@ public class MmsSmsProvider extends ContentProvider {
         }
         if (ProviderUtil.shouldRemoveCreator(values, callerUid)) {
             // CREATOR should not be changed by non-SYSTEM/PHONE apps
-            Log.w(LOG_TAG, ProviderUtil.getPackageNamesByUid(getContext(), callerUid) +
-                    " tries to update CREATOR");
+            Log.w(LOG_TAG, callerPkg + " tries to update CREATOR");
             // Sms.CREATOR and Mms.CREATOR are same. But let's do this
             // twice in case the names may differ in the future
             values.remove(Sms.CREATOR);

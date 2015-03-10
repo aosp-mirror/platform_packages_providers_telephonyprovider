@@ -62,6 +62,7 @@ public class MmsProvider extends ContentProvider {
     static final String TABLE_RATE = "rate";
     static final String TABLE_DRM  = "drm";
     static final String TABLE_WORDS = "words";
+    static final String VIEW_PDU_RESTRICTED = "pdu_restricted";
 
     // The name of parts directory. The full dir is "app_parts".
     private static final String PARTS_DIR_NAME = "parts";
@@ -73,9 +74,27 @@ public class MmsProvider extends ContentProvider {
         return true;
     }
 
+    /**
+     * Return the proper view of "pdu" table for the current access status.
+     *
+     * @param accessRestricted If the access is restricted
+     * @return the table/view name of the mms data
+     */
+    public static String getPduTable(boolean accessRestricted) {
+        return accessRestricted ? VIEW_PDU_RESTRICTED : TABLE_PDU;
+    }
+
     @Override
     public Cursor query(Uri uri, String[] projection,
             String selection, String[] selectionArgs, String sortOrder) {
+        // First check if a restricted view of the "pdu" table should be used based on the
+        // caller's identity. Only system, phone or the default sms app can have full access
+        // of mms data. For other apps, we present a restricted view which only contains sent
+        // or received messages, without wap pushes.
+        final boolean accessRestricted = ProviderUtil.isAccessRestricted(
+                getContext(), getCallingPackage(), Binder.getCallingUid());
+        final String pduTable = getPduTable(accessRestricted);
+
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
         // Generate the body of the query.
@@ -86,29 +105,29 @@ public class MmsProvider extends ContentProvider {
 
         switch (match) {
             case MMS_ALL:
-                constructQueryForBox(qb, Mms.MESSAGE_BOX_ALL);
+                constructQueryForBox(qb, Mms.MESSAGE_BOX_ALL, pduTable);
                 break;
             case MMS_INBOX:
-                constructQueryForBox(qb, Mms.MESSAGE_BOX_INBOX);
+                constructQueryForBox(qb, Mms.MESSAGE_BOX_INBOX, pduTable);
                 break;
             case MMS_SENT:
-                constructQueryForBox(qb, Mms.MESSAGE_BOX_SENT);
+                constructQueryForBox(qb, Mms.MESSAGE_BOX_SENT, pduTable);
                 break;
             case MMS_DRAFTS:
-                constructQueryForBox(qb, Mms.MESSAGE_BOX_DRAFTS);
+                constructQueryForBox(qb, Mms.MESSAGE_BOX_DRAFTS, pduTable);
                 break;
             case MMS_OUTBOX:
-                constructQueryForBox(qb, Mms.MESSAGE_BOX_OUTBOX);
+                constructQueryForBox(qb, Mms.MESSAGE_BOX_OUTBOX, pduTable);
                 break;
             case MMS_ALL_ID:
-                qb.setTables(TABLE_PDU);
+                qb.setTables(pduTable);
                 qb.appendWhere(Mms._ID + "=" + uri.getPathSegments().get(0));
                 break;
             case MMS_INBOX_ID:
             case MMS_SENT_ID:
             case MMS_DRAFTS_ID:
             case MMS_OUTBOX_ID:
-                qb.setTables(TABLE_PDU);
+                qb.setTables(pduTable);
                 qb.appendWhere(Mms._ID + "=" + uri.getPathSegments().get(1));
                 qb.appendWhere(" AND " + Mms.MESSAGE_BOX + "="
                         + getMessageBoxByMatch(match));
@@ -155,19 +174,23 @@ public class MmsProvider extends ContentProvider {
                    OR (msg_id = id3 AND type = 137)
                    WHERE T.id1 = ?;
                  */
-                qb.setTables("addr INNER JOIN (SELECT P1._id AS id1, P2._id" +
-                             " AS id2, P3._id AS id3, ifnull(P2.st, 0) AS" +
-                             " delivery_status, ifnull(P3.read_status, 0) AS" +
-                             " read_status FROM pdu P1 INNER JOIN pdu P2 ON" +
-                             " P1.m_id=P2.m_id AND P2.m_type=134 LEFT JOIN" +
-                             " pdu P3 ON P1.m_id=P3.m_id AND P3.m_type=136" +
-                             " UNION SELECT P1._id AS id1, P2._id AS id2, P3._id" +
-                             " AS id3, ifnull(P2.st, 0) AS delivery_status," +
-                             " ifnull(P3.read_status, 0) AS read_status FROM" +
-                             " pdu P1 INNER JOIN pdu P3 ON P1.m_id=P3.m_id AND" +
-                             " P3.m_type=136 LEFT JOIN pdu P2 ON P1.m_id=P2.m_id" +
-                             " AND P2.m_type=134) T ON (msg_id=id2 AND type=151)" +
-                             " OR (msg_id=id3 AND type=137)");
+                qb.setTables(TABLE_ADDR + " INNER JOIN "
+                        + "(SELECT P1._id AS id1, P2._id AS id2, P3._id AS id3, "
+                        + "ifnull(P2.st, 0) AS delivery_status, "
+                        + "ifnull(P3.read_status, 0) AS read_status "
+                        + "FROM " + pduTable + " P1 INNER JOIN " + pduTable + " P2 "
+                        + "ON P1.m_id=P2.m_id AND P2.m_type=134 "
+                        + "LEFT JOIN " + pduTable + " P3 "
+                        + "ON P1.m_id=P3.m_id AND P3.m_type=136 "
+                        + "UNION "
+                        + "SELECT P1._id AS id1, P2._id AS id2, P3._id AS id3, "
+                        + "ifnull(P2.st, 0) AS delivery_status, "
+                        + "ifnull(P3.read_status, 0) AS read_status "
+                        + "FROM " + pduTable + " P1 INNER JOIN " + pduTable + " P3 "
+                        + "ON P1.m_id=P3.m_id AND P3.m_type=136 "
+                        + "LEFT JOIN " + pduTable + " P2 "
+                        + "ON P1.m_id=P2.m_id AND P2.m_type=134) T "
+                        + "ON (msg_id=id2 AND type=151) OR (msg_id=id3 AND type=137)");
                 qb.appendWhere("T.id1 = " + uri.getLastPathSegment());
                 qb.setDistinct(true);
                 break;
@@ -178,9 +201,9 @@ public class MmsProvider extends ContentProvider {
                    WHERE pdu._id = messageId AND addr.type = 151
                  */
                 qb.setTables(TABLE_ADDR + " join " +
-                        TABLE_PDU + " on pdu._id = addr.msg_id");
-                qb.appendWhere("pdu._id = " + uri.getLastPathSegment());
-                qb.appendWhere(" AND " + "addr.type = " + PduHeaders.TO);
+                        pduTable + " on " + pduTable + "._id = addr.msg_id");
+                qb.appendWhere(pduTable + "._id = " + uri.getLastPathSegment());
+                qb.appendWhere(" AND " + TABLE_ADDR + ".type = " + PduHeaders.TO);
                 break;
             case MMS_SENDING_RATE:
                 qb.setTables(TABLE_RATE);
@@ -190,7 +213,7 @@ public class MmsProvider extends ContentProvider {
                 qb.appendWhere(BaseColumns._ID + "=" + uri.getLastPathSegment());
                 break;
             case MMS_THREADS:
-                qb.setTables("pdu group by thread_id");
+                qb.setTables(pduTable + " group by thread_id");
                 break;
             default:
                 Log.e(TAG, "query: invalid request: " + uri);
@@ -199,7 +222,7 @@ public class MmsProvider extends ContentProvider {
 
         String finalSortOrder = null;
         if (TextUtils.isEmpty(sortOrder)) {
-            if (qb.getTables().equals(TABLE_PDU)) {
+            if (qb.getTables().equals(pduTable)) {
                 finalSortOrder = Mms.DATE + " DESC";
             } else if (qb.getTables().equals(TABLE_PART)) {
                 finalSortOrder = Part.SEQ;
@@ -223,8 +246,8 @@ public class MmsProvider extends ContentProvider {
         return ret;
     }
 
-    private void constructQueryForBox(SQLiteQueryBuilder qb, int msgBox) {
-        qb.setTables(TABLE_PDU);
+    private void constructQueryForBox(SQLiteQueryBuilder qb, int msgBox, String pduTable) {
+        qb.setTables(pduTable);
 
         if (msgBox != Mms.MESSAGE_BOX_ALL) {
             qb.appendWhere(Mms.MESSAGE_BOX + "=" + msgBox);
@@ -282,6 +305,7 @@ public class MmsProvider extends ContentProvider {
             return null;
         }
         final int callerUid = Binder.getCallingUid();
+        final String callerPkg = getCallingPackage();
         int msgBox = Mms.MESSAGE_BOX_ALL;
         boolean notify = true;
 
@@ -379,8 +403,7 @@ public class MmsProvider extends ContentProvider {
                 // If caller is not SYSTEM or PHONE, or SYSTEM or PHONE does not set CREATOR
                 // set CREATOR using the truth on caller.
                 // Note: Inferring package name from UID may include unrelated package names
-                finalValues.put(Telephony.Mms.CREATOR,
-                        ProviderUtil.getPackageNamesByUid(getContext(), callerUid));
+                finalValues.put(Telephony.Mms.CREATOR, callerPkg);
             }
 
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
@@ -709,6 +732,7 @@ public class MmsProvider extends ContentProvider {
             return 0;
         }
         final int callerUid = Binder.getCallingUid();
+        final String callerPkg = getCallingPackage();
         int match = sURLMatcher.match(uri);
         if (LOCAL_LOGV) {
             Log.v(TAG, "Update uri=" + uri + ", match=" + match);
@@ -763,8 +787,7 @@ public class MmsProvider extends ContentProvider {
             filterUnsupportedKeys(values);
             if (ProviderUtil.shouldRemoveCreator(values, callerUid)) {
                 // CREATOR should not be changed by non-SYSTEM/PHONE apps
-                Log.w(TAG, ProviderUtil.getPackageNamesByUid(getContext(), callerUid) +
-                        " tries to update CREATOR");
+                Log.w(TAG, callerPkg + " tries to update CREATOR");
                 values.remove(Mms.CREATOR);
             }
             finalValues = new ContentValues(values);

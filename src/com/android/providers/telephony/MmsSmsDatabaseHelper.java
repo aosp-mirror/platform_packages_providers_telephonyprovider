@@ -16,14 +16,6 @@
 
 package com.android.providers.telephony;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.FileInputStream;
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -35,18 +27,26 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.provider.Telephony.Mms;
-import android.provider.Telephony.MmsSms;
-import android.provider.Telephony.Sms;
-import android.provider.Telephony.Threads;
 import android.provider.Telephony.Mms.Addr;
 import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.Mms.Rate;
+import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.MmsSms.PendingMessages;
+import android.provider.Telephony.Sms;
+import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
 
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";
@@ -216,7 +216,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 60;
+    static final int DATABASE_VERSION = 61;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -630,6 +630,15 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE " + MmsProvider.TABLE_DRM + " (" +
                    BaseColumns._ID + " INTEGER PRIMARY KEY," +
                    "_data TEXT);");
+
+        // Restricted view of pdu table, only sent/received messages without wap pushes
+        db.execSQL("CREATE VIEW " + MmsProvider.VIEW_PDU_RESTRICTED + " AS " +
+                "SELECT * FROM " + MmsProvider.TABLE_PDU + " WHERE " +
+                "(" + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_INBOX +
+                " OR " +
+                Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_SENT + ")" +
+                " AND " +
+                "(" + Mms.MESSAGE_TYPE + "!=" + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND + ");");
     }
 
     // Unlike the other trigger-creating functions, this function can be called multiple times
@@ -873,6 +882,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "reference_number INTEGER," +
                    "action TEXT," +
                    "data TEXT);");
+
+        // Restricted view of sms table, only sent/received messages
+        db.execSQL("CREATE VIEW " + SmsProvider.VIEW_SMS_RESTRICTED + " AS " +
+                   "SELECT * FROM " + SmsProvider.TABLE_SMS + " WHERE " +
+                   Sms.TYPE + "=" + Sms.MESSAGE_TYPE_INBOX +
+                   " OR " +
+                   Sms.TYPE + "=" + Sms.MESSAGE_TYPE_SENT + ";");
     }
 
     private void createCommonTables(SQLiteDatabase db) {
@@ -1331,6 +1347,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 60:
+            if (currentVersion <= 60) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion61(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -1557,6 +1589,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private void upgradeDatabaseToVersion60(SQLiteDatabase db) {
         db.execSQL("ALTER TABLE " + MmsSmsProvider.TABLE_THREADS +" ADD COLUMN "
                 + Threads.ARCHIVED + " INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion61(SQLiteDatabase db) {
+        db.execSQL("CREATE VIEW " + SmsProvider.VIEW_SMS_RESTRICTED + " AS " +
+                   "SELECT * FROM " + SmsProvider.TABLE_SMS + " WHERE " +
+                   Sms.TYPE + "=" + Sms.MESSAGE_TYPE_INBOX +
+                   " OR " +
+                   Sms.TYPE + "=" + Sms.MESSAGE_TYPE_SENT + ";");
+        db.execSQL("CREATE VIEW " + MmsProvider.VIEW_PDU_RESTRICTED + "  AS " +
+                   "SELECT * FROM " + MmsProvider.TABLE_PDU + " WHERE " +
+                   "(" + Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_INBOX +
+                   " OR " +
+                   Mms.MESSAGE_BOX + "=" + Mms.MESSAGE_BOX_SENT + ")" +
+                   " AND " +
+                   "(" + Mms.MESSAGE_TYPE + "!=" + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND + ");");
+
     }
 
     @Override

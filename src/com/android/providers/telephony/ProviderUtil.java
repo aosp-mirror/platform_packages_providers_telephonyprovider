@@ -18,10 +18,10 @@ package com.android.providers.telephony;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.os.Process;
 import android.provider.Telephony;
-import android.text.TextUtils;
+
+import com.android.internal.telephony.SmsApplication;
 
 /**
  * Helpers
@@ -29,28 +29,18 @@ import android.text.TextUtils;
 public class ProviderUtil {
 
     /**
-     * Get space separated package names associated with a UID
+     * Check if a caller of the provider has restricted access,
+     * i.e. being non-system, non-phone, non-default SMS app
      *
-     * @param context The context to use
-     * @param uid The UID to look up
-     * @return The space separated list of package names for UID
+     * @param context the context to use
+     * @param packageName the caller package name
+     * @param uid the caller uid
+     * @return true if the caller is not system, or phone or default sms app, false otherwise
      */
-    public static String getPackageNamesByUid(Context context, int uid) {
-        final PackageManager pm = context.getPackageManager();
-        final String[] packageNames = pm.getPackagesForUid(uid);
-        if (packageNames != null) {
-            final StringBuilder sb = new StringBuilder();
-            for (String name : packageNames) {
-                if (!TextUtils.isEmpty(name)) {
-                    if (sb.length() > 0) {
-                        sb.append(' ');
-                    }
-                    sb.append(name);
-                }
-            }
-            return sb.toString();
-        }
-        return null;
+    public static boolean isAccessRestricted(Context context, String packageName, int uid) {
+        return (uid != Process.SYSTEM_UID
+                && uid != Process.PHONE_UID
+                && !SmsApplication.isDefaultSmsApplication(context, packageName));
     }
 
     /**
