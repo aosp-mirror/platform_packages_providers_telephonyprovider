@@ -38,6 +38,7 @@ import android.os.Environment;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
@@ -56,6 +57,7 @@ import java.io.IOException;
 import java.lang.NumberFormatException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -98,14 +100,6 @@ public class TelephonyProvider extends ContentProvider
 
     private static final ContentValues s_currentNullMap;
     private static final ContentValues s_currentSetMap;
-
-    private static final int USER_EDITED_UNTOUCHED = 0;
-    private static final int USER_EDITED_EDITED = 1;
-    private static final int USER_EDITED_DELETED = 2;
-        // DELETED_BUT_PRESENT is an intermediate value used to indicate that an entry deleted
-        // by the user is still present in the new APN database and therefore must remain tagged
-        // as user deleted rather than completely removed from the database
-    private static final int USER_EDITED_DELETED_BUT_PRESENT = 3;
 
     static {
         s_urlMatcher.addURI("telephony", "carriers", URL_TELEPHONY);
@@ -224,7 +218,7 @@ public class TelephonyProvider extends ContentProvider
             // Set up the database schema
             if (DBG) log("dbh.createCarriersTable: " + tableName);
             db.execSQL("CREATE TABLE " + tableName +
-                "(_id INTEGER PRIMARY KEY," +
+                    "(_id INTEGER PRIMARY KEY," +
                     "name TEXT DEFAULT ''," +
                     "numeric TEXT DEFAULT ''," +
                     "mcc TEXT DEFAULT ''," +
@@ -254,9 +248,8 @@ public class TelephonyProvider extends ContentProvider
                     "wait_time INTEGER DEFAULT 0," +
                     "max_conns_time INTEGER DEFAULT 0," +
                     "mtu INTEGER DEFAULT 0," +
-                    "user_edited INTEGER DEFAULT " + USER_EDITED_UNTOUCHED + "," +
-                    // Uniqueness collisions are used to trigger merge code so
-                    // if a field is listed
+                    "user_edited INTEGER DEFAULT " + Telephony.Carriers.UNEDITED + "," +
+                    // Uniqueness collisions are used to trigger merge code so if a field is listed
                     // here it means we will accept both (user edited + new apn_conf definition)
                     // Columns not included in UNIQUE constraint: name, current, user_edited,
                     // user, server, password, authtype, type, protocol, roaming_protocol, sub_id,
@@ -266,6 +259,10 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) log("dbh.createCarriersTable:-");
         }
 
+        /**
+         *  This function adds APNs from xml file(s) to db. The db may or may not be empty to begin
+         *  with.
+         */
         private void initDatabase(SQLiteDatabase db) {
             if (VDBG) log("dbh.initDatabase:+ db=" + db);
             // Read internal APNS data
@@ -329,21 +326,29 @@ public class TelephonyProvider extends ContentProvider
                 loge("initDatabase: Exception while parsing '" + confFile.getAbsolutePath() + "'" +
                         e);
             } finally {
-                // Get rid of user deleted entries that are not present in apn xml file. Those
-                // entries have user_edited value USER_EDITED_DELETED.
-                // Update user_edited value from USER_EDITED_DELETED_BUT_PRESENT
-                // to USER_EDITED_DELETED.
-                // USER_EDITED_DELETED_BUT_PRESENT indicates rows deleted by user but still
-                // present in the xml file. Mark them as user deleted (2).
+                // Get rid of user/carrier deleted entries that are not present in apn xml file.
+                // Those entries have user_edited value USER_DELETED/CARRIER_DELETED.
                 if (VDBG) {
-                    log("initDatabase: deleting USER_EDITED_DELETED and replacing "
-                            + "USER_EDITED_DELETED_BUT_PRESENT with USER_EDITED_DELETED");
+                    log("initDatabase: deleting USER_DELETED and replacing "
+                            + "DELETED_BUT_PRESENT_IN_XML with DELETED");
                 }
-                db.delete(CARRIERS_TABLE, "user_edited=" + USER_EDITED_DELETED, null);
+
+                // Delete USER_DELETED
+                db.delete(CARRIERS_TABLE, "user_edited=" + Telephony.Carriers.USER_DELETED + " or " +
+                        "user_edited=" + Telephony.Carriers.CARRIER_DELETED, null);
+
+                // Change USER_DELETED_BUT_PRESENT_IN_XML to USER_DELETED
                 ContentValues cv = new ContentValues();
-                cv.put(Telephony.Carriers.USER_EDITED, USER_EDITED_DELETED);
-                db.update(CARRIERS_TABLE, cv, "user_edited=" + USER_EDITED_DELETED_BUT_PRESENT,
+                cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_DELETED);
+                db.update(CARRIERS_TABLE, cv, "user_edited=" + Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML,
                         null);
+
+                // Change CARRIER_DELETED_BUT_PRESENT_IN_XML to CARRIER_DELETED
+                cv = new ContentValues();
+                cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.CARRIER_DELETED);
+                db.update(CARRIERS_TABLE, cv, "user_edited=" + Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML,
+                        null);
+
                 if (confreader != null) {
                     try {
                         confreader.close();
@@ -465,175 +470,7 @@ public class TelephonyProvider extends ContentProvider
 
                 createCarriersTable(db, CARRIERS_TABLE_TMP);
 
-                // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
-                if (c != null) {
-                    String[] persistApnsForPlmns = mContext.getResources().getStringArray(
-                            R.array.persist_apns_for_plmn);
-                    while (c.moveToNext()) {
-                        ContentValues cv = new ContentValues();
-                        String val;
-
-                        // Include only non-null values in cv so that null values can be replaced
-                        // with default if there's a default value for the field
-
-                        // String vals
-                        val = getValueFromCursor(c, Telephony.Carriers.NAME);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.NAME, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.NUMERIC);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.NUMERIC, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MCC);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MCC, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MNC);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MNC, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.APN);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.APN, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.USER);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.USER, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.SERVER);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.SERVER, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.PASSWORD);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.PASSWORD, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.PROXY);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.PROXY, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.PORT);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.PORT, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MMSPROXY);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MMSPROXY, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MMSPORT);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MMSPORT, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MMSC);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MMSC, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.TYPE);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.TYPE, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.PROTOCOL);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.PROTOCOL, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.ROAMING_PROTOCOL);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.ROAMING_PROTOCOL, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MVNO_TYPE);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MVNO_TYPE, val);
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MVNO_MATCH_DATA);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MVNO_MATCH_DATA, val);
-                        }
-
-                        // bool/int vals
-                        val = getValueFromCursor(c, Telephony.Carriers.AUTH_TYPE);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.AUTH_TYPE, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.CURRENT);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.CURRENT, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.CARRIER_ENABLED);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.CARRIER_ENABLED, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.BEARER);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.BEARER, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.SUBSCRIPTION_ID);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.SUBSCRIPTION_ID, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.PROFILE_ID);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.PROFILE_ID, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MODEM_COGNITIVE);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MODEM_COGNITIVE, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MAX_CONNS);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MAX_CONNS, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.WAIT_TIME);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.WAIT_TIME, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MAX_CONNS_TIME);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MAX_CONNS_TIME, new Integer(val));
-                        }
-                        val = getValueFromCursor(c, Telephony.Carriers.MTU);
-                        if (val != null) {
-                            cv.put(Telephony.Carriers.MTU, new Integer(val));
-                        }
-
-                        // New USER_EDITED column. Default value (USER_EDITED_UNTOUCHED) will
-                        // be used for all rows except for non-mvno entries for plmns indicated
-                        // by resource: those will be set to USER_EDITED_EDITED to preserve
-                        // their current values
-                        val = c.getString(c.getColumnIndex(Telephony.Carriers.NUMERIC));
-                        for (String s : persistApnsForPlmns) {
-                            if (!TextUtils.isEmpty(val) && val.equals(s) &&
-                                    (!cv.containsKey(Telephony.Carriers.MVNO_TYPE) ||
-                                            TextUtils.isEmpty(cv.getAsString(Telephony.Carriers.
-                                                    MVNO_TYPE)))) {
-                                cv.put(Telephony.Carriers.USER_EDITED, USER_EDITED_EDITED);
-                                break;
-                            }
-                        }
-
-                        try {
-                            db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
-                                    SQLiteDatabase.CONFLICT_ABORT);
-                            if (VDBG) {
-                                log("dbh.onUpgrade: db.insert returned >= 0; insert "
-                                        + "successful for cv " + cv);
-                            }
-                        } catch (SQLException e) {
-                            if (VDBG) log("dbh.onUpgrade insertWithOnConflict exception " + e);
-                            // Insertion failed which could be due to a conflict. Check if that is
-                            // the case and merge the entries
-                            Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
-                                    CARRIERS_TABLE_TMP, cv);
-                            if (oldRow != null) {
-                                ContentValues mergedValues = new ContentValues();
-                                mergeFieldsAndUpdateDb(db, CARRIERS_TABLE_TMP, oldRow, cv,
-                                        mergedValues, true);
-                                oldRow.close();
-                            }
-                        }
-                    }
-                    c.close();
-                }
+                populateNewTable(db, c);
 
                 db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
 
@@ -647,15 +484,15 @@ public class TelephonyProvider extends ContentProvider
                     c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
                     c.close();
-                    c = db.query(CARRIERS_TABLE, proj, "user_edited=" + USER_EDITED_UNTOUCHED, null,
+                    c = db.query(CARRIERS_TABLE, proj, "user_edited=" + Telephony.Carriers.UNEDITED, null,
                             null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows with user_edited="
-                            + USER_EDITED_UNTOUCHED + ": " + c.getCount());
+                            + Telephony.Carriers.UNEDITED + ": " + c.getCount());
                     c.close();
-                    c = db.query(CARRIERS_TABLE, proj, "user_edited!=" + USER_EDITED_UNTOUCHED,
+                    c = db.query(CARRIERS_TABLE, proj, "user_edited!=" + Telephony.Carriers.UNEDITED,
                             null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows with user_edited!="
-                            + USER_EDITED_UNTOUCHED + ": " + c.getCount());
+                            + Telephony.Carriers.UNEDITED + ": " + c.getCount());
                     c.close();
                 }
             }
@@ -664,9 +501,103 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        private String getValueFromCursor(Cursor c, String key) {
+        private void populateNewTable(SQLiteDatabase db, Cursor c) {
+            // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
+            if (c != null) {
+                String[] persistApnsForPlmns = mContext.getResources().getStringArray(
+                        R.array.persist_apns_for_plmn);
+                while (c.moveToNext()) {
+                    ContentValues cv = new ContentValues();
+                    String val;
+
+                    // Include only non-null values in cv so that null values can be replaced
+                    // with default if there's a default value for the field
+
+                    // String vals
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.NAME);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.NUMERIC);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MCC);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MNC);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.APN);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.USER);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.SERVER);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.PASSWORD);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.PROXY);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.PORT);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MMSPROXY);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MMSPORT);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MMSC);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.TYPE);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.PROTOCOL);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.ROAMING_PROTOCOL);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MVNO_TYPE);
+                    getStringValueFromCursor(cv, c, Telephony.Carriers.MVNO_MATCH_DATA);
+
+                    // bool/int vals
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.AUTH_TYPE);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.CURRENT);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.CARRIER_ENABLED);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.BEARER);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.SUBSCRIPTION_ID);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.PROFILE_ID);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.MODEM_COGNITIVE);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.MAX_CONNS);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.WAIT_TIME);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.MAX_CONNS_TIME);
+                    getIntValueFromCursor(cv, c, Telephony.Carriers.MTU);
+
+                    // New EDITED column. Default value (Telephony.Carriers.UNEDITED) will
+                    // be used for all rows except for non-mvno entries for plmns indicated
+                    // by resource: those will be set to CARRIER_EDITED to preserve
+                    // their current values
+                    val = c.getString(c.getColumnIndex(Telephony.Carriers.NUMERIC));
+                    for (String s : persistApnsForPlmns) {
+                        if (!TextUtils.isEmpty(val) && val.equals(s) &&
+                                (!cv.containsKey(Telephony.Carriers.MVNO_TYPE) ||
+                                        TextUtils.isEmpty(cv.getAsString(Telephony.Carriers.
+                                                MVNO_TYPE)))) {
+                            cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.CARRIER_EDITED);
+                            break;
+                        }
+                    }
+
+                    try {
+                        db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
+                                SQLiteDatabase.CONFLICT_ABORT);
+                        if (VDBG) {
+                            log("dbh.populateNewTable: db.insert returned >= 0; insert "
+                                    + "successful for cv " + cv);
+                        }
+                    } catch (SQLException e) {
+                        if (VDBG) log("dbh.populateNewTable insertWithOnConflict exception " + e);
+                        // Insertion failed which could be due to a conflict. Check if that is
+                        // the case and merge the entries
+                        Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
+                                CARRIERS_TABLE_TMP, cv);
+                        if (oldRow != null) {
+                            ContentValues mergedValues = new ContentValues();
+                            mergeFieldsAndUpdateDb(db, CARRIERS_TABLE_TMP, oldRow, cv,
+                                    mergedValues, true);
+                            oldRow.close();
+                        }
+                    }
+                }
+                c.close();
+            }
+        }
+
+        private void getStringValueFromCursor(ContentValues cv, Cursor c, String key) {
             String fromCursor = c.getString(c.getColumnIndex(key));
-            return !TextUtils.isEmpty(fromCursor) ? fromCursor : null;
+            if (!TextUtils.isEmpty(fromCursor)) {
+                cv.put(key, fromCursor);
+            }
+        }
+
+        private void getIntValueFromCursor(ContentValues cv, Cursor c, String key) {
+            String fromCursor = c.getString(c.getColumnIndex(key));
+            if (!TextUtils.isEmpty(fromCursor)) {
+                cv.put(key, new Integer(fromCursor));
+            }
         }
 
         /**
@@ -692,80 +623,29 @@ public class TelephonyProvider extends ContentProvider
             map.put(Telephony.Carriers.NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
-            String apn = parser.getAttributeValue(null, "apn");
-            if (apn != null) {
-                map.put(Telephony.Carriers.APN, apn);
-            }
+            addStringAttribute(parser, "apn", map, Telephony.Carriers.APN);
+            addStringAttribute(parser, "user", map, Telephony.Carriers.USER);
+            addStringAttribute(parser, "server", map, Telephony.Carriers.SERVER);
+            addStringAttribute(parser, "password", map, Telephony.Carriers.PASSWORD);
+            addStringAttribute(parser, "proxy", map, Telephony.Carriers.PROXY);
+            addStringAttribute(parser, "port", map, Telephony.Carriers.PORT);
+            addStringAttribute(parser, "mmsproxy", map, Telephony.Carriers.MMSPROXY);
+            addStringAttribute(parser, "mmsport", map, Telephony.Carriers.MMSPORT);
+            addStringAttribute(parser, "mmsc", map, Telephony.Carriers.MMSC);
+            addStringAttribute(parser, "type", map, Telephony.Carriers.TYPE);
+            addStringAttribute(parser, "protocol", map, Telephony.Carriers.PROTOCOL);
+            addStringAttribute(parser, "roaming_protocol", map, Telephony.Carriers.ROAMING_PROTOCOL);
 
-            String user = parser.getAttributeValue(null, "user");
-            if (user != null) {
-                map.put(Telephony.Carriers.USER, user);
-            }
+            addIntAttribute(parser, "authtype", map, Telephony.Carriers.AUTH_TYPE);
+            addIntAttribute(parser, "bearer", map, Telephony.Carriers.BEARER);
+            addIntAttribute(parser, "profile_id", map, Telephony.Carriers.PROFILE_ID);
+            addIntAttribute(parser, "max_conns", map, Telephony.Carriers.MAX_CONNS);
+            addIntAttribute(parser, "wait_time", map, Telephony.Carriers.WAIT_TIME);
+            addIntAttribute(parser, "max_conns_time", map, Telephony.Carriers.MAX_CONNS_TIME);
+            addIntAttribute(parser, "mtu", map, Telephony.Carriers.MTU);
 
-            String server = parser.getAttributeValue(null, "server");
-            if (server != null) {
-                map.put(Telephony.Carriers.SERVER, server);
-            }
-
-            String password = parser.getAttributeValue(null, "password");
-            if (password != null) {
-                map.put(Telephony.Carriers.PASSWORD, password);
-            }
-
-            String proxy = parser.getAttributeValue(null, "proxy");
-            if (proxy != null) {
-                map.put(Telephony.Carriers.PROXY, proxy);
-            }
-
-            String port = parser.getAttributeValue(null, "port");
-            if (port != null) {
-                map.put(Telephony.Carriers.PORT, port);
-            }
-
-            String mmsproxy = parser.getAttributeValue(null, "mmsproxy");
-            if (mmsproxy != null) {
-                map.put(Telephony.Carriers.MMSPROXY, mmsproxy);
-            }
-
-            String mmsport = parser.getAttributeValue(null, "mmsport");
-            if (mmsport != null) {
-                map.put(Telephony.Carriers.MMSPORT, mmsport);
-            }
-
-            String mmsc = parser.getAttributeValue(null, "mmsc");
-            if (mmsc != null) {
-                map.put(Telephony.Carriers.MMSC, mmsc);
-            }
-
-            String type = parser.getAttributeValue(null, "type");
-            if (type != null) {
-                map.put(Telephony.Carriers.TYPE, type);
-            }
-
-            String auth = parser.getAttributeValue(null, "authtype");
-            if (auth != null) {
-                map.put(Telephony.Carriers.AUTH_TYPE, Integer.parseInt(auth));
-            }
-
-            String protocol = parser.getAttributeValue(null, "protocol");
-            if (protocol != null) {
-                map.put(Telephony.Carriers.PROTOCOL, protocol);
-            }
-
-            String roamingProtocol = parser.getAttributeValue(null, "roaming_protocol");
-            if (roamingProtocol != null) {
-                map.put(Telephony.Carriers.ROAMING_PROTOCOL, roamingProtocol);
-            }
-
-            String carrierEnabled = parser.getAttributeValue(null, "carrier_enabled");
-            if (carrierEnabled != null) {
-                map.put(Telephony.Carriers.CARRIER_ENABLED, Boolean.parseBoolean(carrierEnabled));
-            }
-
-            String bearer = parser.getAttributeValue(null, "bearer");
-            if (bearer != null) {
-                map.put(Telephony.Carriers.BEARER, Integer.parseInt(bearer));
-            }
+            addBoolAttribute(parser, "carrier_enabled", map, Telephony.Carriers.CARRIER_ENABLED);
+            addBoolAttribute(parser, "modem_cognitive", map, Telephony.Carriers.MODEM_COGNITIVE);
 
             String mvno_type = parser.getAttributeValue(null, "mvno_type");
             if (mvno_type != null) {
@@ -776,37 +656,31 @@ public class TelephonyProvider extends ContentProvider
                 }
             }
 
-            String profileId = parser.getAttributeValue(null, "profile_id");
-            if (profileId != null) {
-                map.put(Telephony.Carriers.PROFILE_ID, Integer.parseInt(profileId));
-            }
-
-            String modemCognitive = parser.getAttributeValue(null, "modem_cognitive");
-            if (modemCognitive != null) {
-                map.put(Telephony.Carriers.MODEM_COGNITIVE, Boolean.parseBoolean(modemCognitive));
-            }
-
-            String maxConns = parser.getAttributeValue(null, "max_conns");
-            if (maxConns != null) {
-                map.put(Telephony.Carriers.MAX_CONNS, Integer.parseInt(maxConns));
-            }
-
-            String waitTime = parser.getAttributeValue(null, "wait_time");
-            if (waitTime != null) {
-                map.put(Telephony.Carriers.WAIT_TIME, Integer.parseInt(waitTime));
-            }
-
-            String maxConnsTime = parser.getAttributeValue(null, "max_conns_time");
-            if (maxConnsTime != null) {
-                map.put(Telephony.Carriers.MAX_CONNS_TIME, Integer.parseInt(maxConnsTime));
-            }
-
-            String mtu = parser.getAttributeValue(null, "mtu");
-            if (mtu != null) {
-                map.put(Telephony.Carriers.MTU, Integer.parseInt(mtu));
-            }
-
             return map;
+        }
+
+        private void addStringAttribute(XmlPullParser parser, String att,
+                                        ContentValues map, String key) {
+            String val = parser.getAttributeValue(null, att);
+            if (val != null) {
+                map.put(key, val);
+            }
+        }
+
+        private void addIntAttribute(XmlPullParser parser, String att,
+                                     ContentValues map, String key) {
+            String val = parser.getAttributeValue(null, att);
+            if (val != null) {
+                map.put(key, Integer.parseInt(val));
+            }
+        }
+
+        private void addBoolAttribute(XmlPullParser parser, String att,
+                                      ContentValues map, String key) {
+            String val = parser.getAttributeValue(null, att);
+            if (val != null) {
+                map.put(key, Boolean.parseBoolean(val));
+            }
         }
 
         /*
@@ -863,24 +737,28 @@ public class TelephonyProvider extends ContentProvider
                 // Insertion failed which could be due to a conflict. Check if that is the case and
                 // update user_edited field accordingly.
                 // Search for the exact same entry and update user_edited field.
-                // If it is USER_EDITED_EDITED change it to USER_EDITED_UNTOUCHED,
-                // and if USER_EDITED_DELETED change it to USER_EDITED_DELETED_BUT_PRESENT.
+                // If it is USER_EDITED/CARRIER_EDITED change it to UNEDITED,
+                // and if USER/CARRIER_DELETED change it to USER/CARRIER_DELETED_BUT_PRESENT_IN_XML.
                 Cursor oldRow = selectConflictingRow(db, CARRIERS_TABLE, row);
                 if (oldRow != null) {
                     // Update the row
                     ContentValues mergedValues = new ContentValues();
                     int user_edited = oldRow.getInt(oldRow.getColumnIndex(
-                            Telephony.Carriers.USER_EDITED));
+                            Telephony.Carriers.EDITED));
                     int old_user_edited = user_edited;
-                    if (user_edited != USER_EDITED_UNTOUCHED) {
-                        if (user_edited == USER_EDITED_EDITED) {
-                            user_edited = USER_EDITED_UNTOUCHED;
-                        } else if (user_edited == USER_EDITED_DELETED) {
-                            // user_edited 3 indicates entry has been deleted by user but present in
-                            // apn xml file.
-                            user_edited = USER_EDITED_DELETED_BUT_PRESENT;
+                    if (user_edited != Telephony.Carriers.UNEDITED) {
+                        if (user_edited == Telephony.Carriers.USER_EDITED || user_edited == Telephony.Carriers.CARRIER_EDITED) {
+                            user_edited = Telephony.Carriers.UNEDITED;
+                        } else if (user_edited == Telephony.Carriers.USER_DELETED) {
+                            // USER_DELETED_BUT_PRESENT_IN_XML indicates entry has been deleted
+                            // by user but present in apn xml file.
+                            user_edited = Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML;
+                        } else if (user_edited == Telephony.Carriers.CARRIER_DELETED) {
+                            // CARRIER_DELETED_BUT_PRESENT_IN_XML indicates entry has been deleted
+                            // by user but present in apn xml file.
+                            user_edited = Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
                         }
-                        mergedValues.put(Telephony.Carriers.USER_EDITED, user_edited);
+                        mergedValues.put(Telephony.Carriers.EDITED, user_edited);
                     }
 
                     mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, row, mergedValues, false);
@@ -944,7 +822,7 @@ public class TelephonyProvider extends ContentProvider
                 return null;
             }
 
-            String[] columns = { "_id", Telephony.Carriers.TYPE, Telephony.Carriers.USER_EDITED };
+            String[] columns = { "_id", Telephony.Carriers.TYPE, Telephony.Carriers.EDITED };
             String selection = "numeric=? AND mcc=? AND mnc=? AND apn=? AND proxy=? AND port=? "
                     + "AND mmsproxy=? AND mmsport=? AND mmsc=? AND carrier_enabled=? AND bearer=? "
                     + "AND mvno_type=? AND mvno_match_data=? AND profile_id=?";
@@ -981,17 +859,17 @@ public class TelephonyProvider extends ContentProvider
             Cursor c = db.query(table, columns, selection, selectionArgs, null, null, null);
 
             if (c != null) {
-                if (c.getCount() > 0) {
+                if (c.getCount() == 1) {
                     if (VDBG) log("dbh.selectConflictingRow: " + c.getCount() + " conflicting " +
-                            "row(s) found");
+                            "row found");
                     if (c.moveToFirst()) {
                         return c;
                     } else {
                         loge("dbh.selectConflictingRow: moveToFirst() failed");
                     }
                 } else {
-                    loge("dbh.selectConflictingRow: " + c.getCount() + " matching row found for " +
-                            "cv " + row);
+                    loge("dbh.selectConflictingRow: Expected 1 but found " + c.getCount() +
+                            " matching rows found for cv " + row);
                 }
                 c.close();
             } else {
@@ -1021,6 +899,23 @@ public class TelephonyProvider extends ContentProvider
             if (!newBuildId.equals(oldBuildId)) {
                 if (DBG) log("onCreate: build id changed from " + oldBuildId + " to " +
                         newBuildId);
+
+                // Get rid of old preferred apn shared preferences
+                SubscriptionManager sm = SubscriptionManager.from(getContext());
+                if (sm != null) {
+                    List<SubscriptionInfo> subInfoList = sm.getAllSubscriptionInfoList();
+                    for (SubscriptionInfo subInfo : subInfoList) {
+                        SharedPreferences spPrefFile = getContext().getSharedPreferences(
+                                PREF_FILE + subInfo.getSubscriptionId(), Context.MODE_PRIVATE);
+                        if (spPrefFile != null) {
+                            SharedPreferences.Editor editor = spPrefFile.edit();
+                            editor.clear();
+                            editor.apply();
+                        }
+                    }
+                }
+
+                // Update APN DB
                 updateApnDb();
             } else {
                 if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
@@ -1035,7 +930,6 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private void setPreferredApnId(Long id, int subId) {
-        //todo: remove old PREF_FILE+subId SharedPreferences
         SharedPreferences sp = getContext().getSharedPreferences(
                 PREF_FILE, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
@@ -1058,7 +952,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public Cursor query(Uri url, String[] projectionIn, String selection,
+    public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
             + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
@@ -1174,8 +1068,10 @@ public class TelephonyProvider extends ContentProvider
                 } else {
                     selection += " and ";
                 }
-                selection += "user_edited!=" + USER_EDITED_DELETED + " and user_edited!="
-                        + USER_EDITED_DELETED_BUT_PRESENT;
+                selection += "user_edited!=" + Telephony.Carriers.USER_DELETED + " and user_edited!="
+                        + Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML + " and user_edited!="
+                        + Telephony.Carriers.CARRIER_DELETED + " and user_edited!="
+                        + Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
                 if (VDBG) log("query: selection modified to " + selection);
             }
             ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
@@ -1210,7 +1106,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public Uri insert(Uri url, ContentValues initialValues)
+    public synchronized Uri insert(Uri url, ContentValues initialValues)
     {
         Uri result = null;
         int subId = SubscriptionManager.getDefaultSubId();
@@ -1245,12 +1141,14 @@ public class TelephonyProvider extends ContentProvider
                 }
 
                 values = DatabaseHelper.setDefaultValue(values);
-                values.put(Telephony.Carriers.USER_EDITED, USER_EDITED_EDITED);
+                if (!values.containsKey(Telephony.Carriers.EDITED)) {
+                    values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
+                }
 
                 try {
                     // Replace on conflict so that if same APN is present in db with user_edited
-                    // as USER_EDITED_UNTOUCHED or USER_EDITED_DELETED, it is replaced with
-                    // user_edited USER_EDITED_EDITED
+                    // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
+                    // user_edited USER/CARRIER_EDITED
                     long rowID = db.insertWithOnConflict(CARRIERS_TABLE, null, values,
                             SQLiteDatabase.CONFLICT_REPLACE);
                     if (rowID >= 0) {
@@ -1349,12 +1247,12 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public int delete(Uri url, String where, String[] whereArgs)
+    public synchronized int delete(Uri url, String where, String[] whereArgs)
     {
         int count = 0;
         int subId = SubscriptionManager.getDefaultSubId();
         ContentValues cv = new ContentValues();
-        cv.put(Telephony.Carriers.USER_EDITED, USER_EDITED_DELETED);
+        cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_DELETED);
 
         checkPermission();
 
@@ -1474,7 +1372,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public int update(Uri url, ContentValues values, String where, String[] whereArgs)
+    public synchronized int update(Uri url, ContentValues values, String where, String[] whereArgs)
     {
         int count = 0;
         int uriType = URL_UNKNOWN;
@@ -1502,11 +1400,13 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_TELEPHONY:
             {
-                values.put(Telephony.Carriers.USER_EDITED, USER_EDITED_EDITED);
+                if (!values.containsKey(Telephony.Carriers.EDITED)) {
+                    values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
+                }
 
                 // Replace on conflict so that if same APN is present in db with user_edited
-                // as USER_EDITED_UNTOUCHED or USER_EDITED_DELETED, it is replaced with
-                // user_edited USER_EDITED_EDITED
+                // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
+                // user_edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values, where, whereArgs,
                         SQLiteDatabase.CONFLICT_REPLACE);
                 break;
@@ -1528,10 +1428,12 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT:
             {
-                values.put(Telephony.Carriers.USER_EDITED, USER_EDITED_EDITED);
+                if (!values.containsKey(Telephony.Carriers.EDITED)) {
+                    values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
+                }
                 // Replace on conflict so that if same APN is present in db with user_edited
-                // as USER_EDITED_UNTOUCHED or USER_EDITED_DELETED, it is replaced with
-                // user_edited USER_EDITED_EDITED
+                // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
+                // user_edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values, where, whereArgs,
                         SQLiteDatabase.CONFLICT_REPLACE);
                 break;
@@ -1543,10 +1445,12 @@ public class TelephonyProvider extends ContentProvider
                     throw new UnsupportedOperationException(
                             "Cannot update URL " + url + " with a where clause");
                 }
-                values.put(Telephony.Carriers.USER_EDITED, USER_EDITED_EDITED);
+                if (!values.containsKey(Telephony.Carriers.EDITED)) {
+                    values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
+                }
                 // Replace on conflict so that if same APN is present in db with user_edited
-                // as USER_EDITED_UNTOUCHED or USER_EDITED_DELETED, it is replaced with
-                // user_edited USER_EDITED_EDITED
+                // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
+                // user_edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values,
                         Telephony.Carriers._ID + "=?", new String[] { url.getLastPathSegment() },
                         SQLiteDatabase.CONFLICT_REPLACE);
@@ -1642,33 +1546,26 @@ public class TelephonyProvider extends ContentProvider
         mOpenHelper.initDatabase(db);
     }
 
-    private void updateApnDb() {
+    private synchronized void updateApnDb() {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
+        // Delete preferred APN for all subIds
+        deletePreferredApnId();
+
+        // Delete entries in db
         try {
-            if (VDBG) log("updateApnDb: deleting user_edited=USER_EDITED_UNTOUCHED entries");
-            db.delete(CARRIERS_TABLE, "user_edited=" + USER_EDITED_UNTOUCHED, null);
+            if (VDBG) log("updateApnDb: deleting user_edited=Telephony.Carriers.UNEDITED entries");
+            db.delete(CARRIERS_TABLE, "user_edited=" + Telephony.Carriers.UNEDITED, null);
         } catch (SQLException e) {
             loge("got exception when deleting to update: " + e);
         }
 
-        // Delete preferred APN for all subIds
-        long currentPreferredApnId = getPreferredApnId(SubscriptionManager.getDefaultSubId());
-        Cursor c = db.query(CARRIERS_TABLE, null, "_id=" + currentPreferredApnId, null, null, null,
-                null);
-        if (VDBG) {
-            log("updateApnDb: currentPreferredApnId = " + currentPreferredApnId);
-            if (c != null && c.getCount() != 0) {
-                c.moveToNext();
-                log("updateApnDb: NAME=" + c.getString(c.getColumnIndex(Telephony.Carriers.NAME)));
-            }
-        }
-        deletePreferredApnId();
-
         mOpenHelper.initDatabase(db);
 
-        // TODO: restore preference APN ID
-        c.close();
+        // Notify listereners of DB change since DB has been updated
+        getContext().getContentResolver().notifyChange(
+                Telephony.Carriers.CONTENT_URI, null, true, UserHandle.USER_ALL);
+
     }
 
     /**
