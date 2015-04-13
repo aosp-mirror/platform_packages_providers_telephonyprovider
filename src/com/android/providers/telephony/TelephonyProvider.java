@@ -935,11 +935,11 @@ public class TelephonyProvider extends ContentProvider
 
         static public Cursor selectConflictingRow(SQLiteDatabase db, String table,
                                                   ContentValues row) {
-            // Conflict is possible only when numeric, mnnc, mnc (fields without any default value)
+            // Conflict is possible only when numeric, mcc, mnc (fields without any default value)
             // are set in the new row
-            if (row.containsKey(Telephony.Carriers.NUMERIC) ||
-                    row.containsKey(Telephony.Carriers.MCC) ||
-                    row.containsKey(Telephony.Carriers.MNC)) {
+            if (!row.containsKey(Telephony.Carriers.NUMERIC) ||
+                    !row.containsKey(Telephony.Carriers.MCC) ||
+                    !row.containsKey(Telephony.Carriers.MNC)) {
                 loge("dbh.selectConflictingRow: called for non-conflicting row: " + row);
                 return null;
             }
@@ -1268,6 +1268,7 @@ public class TelephonyProvider extends ContentProvider
                         DatabaseHelper.mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
                                 mergedValues, false);
                         oldRow.close();
+                        notify = true;
                     }
                 }
 
