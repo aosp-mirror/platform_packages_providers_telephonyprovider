@@ -859,11 +859,11 @@ public class MmsProvider extends ContentProvider {
         try {
             File filePath = new File(path);
             if (!filePath.getCanonicalPath()
-                    .startsWith(getContext().getDir(PARTS_DIR_NAME, 0).getPath())) {
+                    .startsWith(getContext().getDir(PARTS_DIR_NAME, 0).getCanonicalPath())) {
                 Log.e(TAG, "openFile: path "
                         + filePath.getCanonicalPath()
                         + " does not start with "
-                        + getContext().getDir(PARTS_DIR_NAME, 0).getPath());
+                        + getContext().getDir(PARTS_DIR_NAME, 0).getCanonicalPath());
                 // Don't care return value
                 filePath.delete();
                 return null;
