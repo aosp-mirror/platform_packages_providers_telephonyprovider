@@ -43,19 +43,20 @@
                   android:multiprocess="false"
                   android:exported="true"
                   android:singleUser="true"
-                  android:readPermission="android.permission.READ_SMS"
-                  android:writePermission="android.permission.WRITE_SMS" />
+                  android:readPermission="android.permission.READ_SMS" />
 
         <!-- This is a singleton provider that is used by all users.
              A new instance is not created for each user. And the db is shared
-             as well. -->
+             as well.
+
+             Note: We do not require a write permission as it is guarded by an app op.
+              -->
         <provider android:name="MmsProvider"
                   android:authorities="mms"
                   android:multiprocess="false"
                   android:exported="true"
                   android:singleUser="true"
-                  android:readPermission="android.permission.READ_SMS"
-                  android:writePermission="android.permission.WRITE_SMS">
+                  android:readPermission="android.permission.READ_SMS">
             <grant-uri-permission android:pathPrefix="/part/" />
             <grant-uri-permission android:pathPrefix="/drm/" />
         </provider>
@@ -68,8 +69,7 @@
                   android:multiprocess="false"
                   android:exported="true"
                   android:singleUser="true"
-                  android:readPermission="android.permission.READ_SMS"
-                  android:writePermission="android.permission.WRITE_SMS" />
+                  android:readPermission="android.permission.READ_SMS" />
 
         <provider android:name="HbpcdLookupProvider"
                   android:authorities="hbpcd_lookup"
