@@ -38,6 +38,7 @@ import android.os.Environment;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
+import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -45,6 +46,7 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Xml;
 
+import com.android.internal.telephony.RILConstants;
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -57,6 +59,7 @@ import java.io.IOException;
 import java.lang.NumberFormatException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public class TelephonyProvider extends ContentProvider
@@ -65,7 +68,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 14 << 16;
+    private static final int DATABASE_VERSION = 15 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -95,6 +98,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static final String PARTNER_APNS_PATH = "etc/apns-conf.xml";
     private static final String OEM_APNS_PATH = "telephony/apns-conf.xml";
+    private static final String OTA_UPDATED_APNS_PATH = "misc/apns-conf.xml";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -239,6 +243,7 @@ public class TelephonyProvider extends ContentProvider
                     "roaming_protocol TEXT DEFAULT 'IP'," +
                     "carrier_enabled BOOLEAN DEFAULT 1," +
                     "bearer INTEGER DEFAULT 0," +
+                    "bearer_bitmask INTEGER DEFAULT 0," +
                     "mvno_type TEXT DEFAULT ''," +
                     "mvno_match_data TEXT DEFAULT ''," +
                     "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
@@ -248,12 +253,12 @@ public class TelephonyProvider extends ContentProvider
                     "wait_time INTEGER DEFAULT 0," +
                     "max_conns_time INTEGER DEFAULT 0," +
                     "mtu INTEGER DEFAULT 0," +
-                    "user_edited INTEGER DEFAULT " + Telephony.Carriers.UNEDITED + "," +
+                    "edited INTEGER DEFAULT " + Telephony.Carriers.UNEDITED + "," +
                     // Uniqueness collisions are used to trigger merge code so if a field is listed
                     // here it means we will accept both (user edited + new apn_conf definition)
-                    // Columns not included in UNIQUE constraint: name, current, user_edited,
+                    // Columns not included in UNIQUE constraint: name, current, edited,
                     // user, server, password, authtype, type, protocol, roaming_protocol, sub_id,
-                    // modem_cognitive, max_conns, wait_time, max_conns_time, mtu
+                    // modem_cognitive, max_conns, wait_time, max_conns_time, mtu, bearer_bitmask
                     "UNIQUE (numeric, mcc, mnc, apn, proxy, port, mmsproxy, mmsport, mmsc," +
                     "carrier_enabled, bearer, mvno_type, mvno_match_data, profile_id));");
             if (DBG) log("dbh.createCarriersTable:-");
@@ -284,23 +289,9 @@ public class TelephonyProvider extends ContentProvider
             // Environment.getRootDirectory() is a fancy way of saying ANDROID_ROOT or "/system".
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
             File oemConfFile =  new File(Environment.getOemDirectory(), OEM_APNS_PATH);
-            if (oemConfFile.exists()) {
-                // OEM image exist APN xml, get the timestamp from OEM & System image for comparison
-                long oemApnTime = oemConfFile.lastModified();
-                long sysApnTime = confFile.lastModified();
-                if (DBG) log("APNs Timestamp: oemTime = " + oemApnTime + " sysTime = "
-                        + sysApnTime);
-
-                // To get the latest version from OEM or System image
-                if (oemApnTime > sysApnTime) {
-                    if (DBG) log("APNs Timestamp: OEM image is greater than System image");
-                    confFile = oemConfFile;
-                }
-            } else {
-                // No Apn in OEM image, so load it from system image.
-                if (DBG) log("No APNs in OEM image = " + oemConfFile.getPath() +
-                        " Load APNs from system image");
-            }
+            File updatedConfFile = new File(Environment.getDataDirectory(), OTA_UPDATED_APNS_PATH);
+            confFile = getNewerFile(confFile, oemConfFile);
+            confFile = getNewerFile(confFile, updatedConfFile);
 
             FileReader confreader = null;
             if (DBG) log("confFile = " + confFile);
@@ -327,26 +318,26 @@ public class TelephonyProvider extends ContentProvider
                         e);
             } finally {
                 // Get rid of user/carrier deleted entries that are not present in apn xml file.
-                // Those entries have user_edited value USER_DELETED/CARRIER_DELETED.
+                // Those entries have edited value USER_DELETED/CARRIER_DELETED.
                 if (VDBG) {
                     log("initDatabase: deleting USER_DELETED and replacing "
                             + "DELETED_BUT_PRESENT_IN_XML with DELETED");
                 }
 
                 // Delete USER_DELETED
-                db.delete(CARRIERS_TABLE, "user_edited=" + Telephony.Carriers.USER_DELETED + " or " +
-                        "user_edited=" + Telephony.Carriers.CARRIER_DELETED, null);
+                db.delete(CARRIERS_TABLE, "edited=" + Telephony.Carriers.USER_DELETED + " or " +
+                        "edited=" + Telephony.Carriers.CARRIER_DELETED, null);
 
                 // Change USER_DELETED_BUT_PRESENT_IN_XML to USER_DELETED
                 ContentValues cv = new ContentValues();
                 cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_DELETED);
-                db.update(CARRIERS_TABLE, cv, "user_edited=" + Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML,
+                db.update(CARRIERS_TABLE, cv, "edited=" + Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML,
                         null);
 
                 // Change CARRIER_DELETED_BUT_PRESENT_IN_XML to CARRIER_DELETED
                 cv = new ContentValues();
                 cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.CARRIER_DELETED);
-                db.update(CARRIERS_TABLE, cv, "user_edited=" + Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML,
+                db.update(CARRIERS_TABLE, cv, "edited=" + Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML,
                         null);
 
                 if (confreader != null) {
@@ -359,6 +350,28 @@ public class TelephonyProvider extends ContentProvider
             }
             if (VDBG) log("dbh.initDatabase:- db=" + db);
 
+        }
+
+        private File getNewerFile(File sysApnFile, File altApnFile) {
+            if (altApnFile.exists()) {
+                // Alternate file exists. Use the newer one.
+                long altFileTime = altApnFile.lastModified();
+                long currFileTime = sysApnFile.lastModified();
+                if (DBG) log("APNs Timestamp: altFileTime = " + altFileTime + " currFileTime = "
+                        + currFileTime);
+
+                // To get the latest version from OEM or System image
+                if (altFileTime > currFileTime) {
+                    if (DBG) log("APNs Timestamp: Alternate image " + altApnFile.getPath() +
+                            " is greater than System image");
+                    return altApnFile;
+                }
+            } else {
+                // No Apn in alternate image, so load it from system image.
+                if (DBG) log("No APNs in OEM image = " + altApnFile.getPath() +
+                        " Load APNs from system image");
+            }
+            return sysApnFile;
         }
 
         @Override
@@ -463,127 +476,192 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 13 << 16 | 6;
             }
             if (oldVersion < (14 << 16 | 6)) {
+                // Do nothing. This is to avoid recreating table twice. Table is anyway recreated
+                // for next version and that takes care of updates for this version as well.
+                // This version added a new column user_edited to carriers db.
+            }
+            if (oldVersion < (15 << 16 | 6)) {
                 Cursor c = db.query(CARRIERS_TABLE, null, null, null, null, null, null);
                 if (VDBG) {
                     log("dbh.onUpgrade:- before upgrading total number of rows: " + c.getCount());
                 }
-
                 createCarriersTable(db, CARRIERS_TABLE_TMP);
 
-                populateNewTable(db, c);
+                if (oldVersion < (14 << 16 | 6)) {
+                    populateNewTable(db, c, 13);
+                } else {
+                    populateNewTable(db, c, 14);
+                }
 
                 db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
 
                 db.execSQL("ALTER TABLE " + CARRIERS_TABLE_TMP + " rename to " + CARRIERS_TABLE +
                         ";");
 
-                oldVersion = 14 << 16 | 6;
-
                 if (VDBG) {
                     String[] proj = {"_id"};
                     c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
                     c.close();
-                    c = db.query(CARRIERS_TABLE, proj, "user_edited=" + Telephony.Carriers.UNEDITED, null,
-                            null, null, null);
-                    log("dbh.onUpgrade:- after upgrading total number of rows with user_edited="
-                            + Telephony.Carriers.UNEDITED + ": " + c.getCount());
-                    c.close();
-                    c = db.query(CARRIERS_TABLE, proj, "user_edited!=" + Telephony.Carriers.UNEDITED,
+                    c = db.query(CARRIERS_TABLE, proj, "edited=" + Telephony.Carriers.UNEDITED,
                             null, null, null, null);
-                    log("dbh.onUpgrade:- after upgrading total number of rows with user_edited!="
+                    log("dbh.onUpgrade:- after upgrading total number of rows with edited="
                             + Telephony.Carriers.UNEDITED + ": " + c.getCount());
                     c.close();
+                    c = db.query(CARRIERS_TABLE, proj, "edited!=" + Telephony.Carriers.UNEDITED,
+                            null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows with edited!="
+                            + Telephony.Carriers.UNEDITED + ": " + c.getCount());
                 }
+                c.close();
+
+                oldVersion = 15 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
         }
 
-        private void populateNewTable(SQLiteDatabase db, Cursor c) {
+        private void populateNewTable(SQLiteDatabase db, Cursor c, int oldVersion) {
             // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
             if (c != null) {
                 String[] persistApnsForPlmns = mContext.getResources().getStringArray(
                         R.array.persist_apns_for_plmn);
                 while (c.moveToNext()) {
-                    ContentValues cv = new ContentValues();
-                    String val;
+                    // only add those rows that will not be deleted as part of upgrade
+                    if (rowPersistedAfterUpgrade(c, oldVersion)) {
+                        ContentValues cv = new ContentValues();
+                        String val;
 
-                    // Include only non-null values in cv so that null values can be replaced
-                    // with default if there's a default value for the field
+                        // Include only non-null values in cv so that null values can be replaced
+                        // with default if there's a default value for the field
 
-                    // String vals
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.NAME);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.NUMERIC);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MCC);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MNC);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.APN);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.USER);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.SERVER);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.PASSWORD);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.PROXY);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.PORT);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MMSPROXY);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MMSPORT);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MMSC);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.TYPE);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.PROTOCOL);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.ROAMING_PROTOCOL);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MVNO_TYPE);
-                    getStringValueFromCursor(cv, c, Telephony.Carriers.MVNO_MATCH_DATA);
+                        // String vals
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.NAME);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.NUMERIC);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MCC);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MNC);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.APN);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.USER);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.SERVER);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.PASSWORD);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.PROXY);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.PORT);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MMSPROXY);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MMSPORT);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MMSC);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.TYPE);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.PROTOCOL);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.ROAMING_PROTOCOL);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MVNO_TYPE);
+                        getStringValueFromCursor(cv, c, Telephony.Carriers.MVNO_MATCH_DATA);
 
-                    // bool/int vals
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.AUTH_TYPE);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.CURRENT);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.CARRIER_ENABLED);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.BEARER);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.SUBSCRIPTION_ID);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.PROFILE_ID);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.MODEM_COGNITIVE);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.MAX_CONNS);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.WAIT_TIME);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.MAX_CONNS_TIME);
-                    getIntValueFromCursor(cv, c, Telephony.Carriers.MTU);
+                        // bool/int vals
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.AUTH_TYPE);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.CURRENT);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.CARRIER_ENABLED);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.BEARER);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.SUBSCRIPTION_ID);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.PROFILE_ID);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.MODEM_COGNITIVE);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.MAX_CONNS);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.WAIT_TIME);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.MAX_CONNS_TIME);
+                        getIntValueFromCursor(cv, c, Telephony.Carriers.MTU);
 
-                    // New EDITED column. Default value (Telephony.Carriers.UNEDITED) will
-                    // be used for all rows except for non-mvno entries for plmns indicated
-                    // by resource: those will be set to CARRIER_EDITED to preserve
-                    // their current values
-                    val = c.getString(c.getColumnIndex(Telephony.Carriers.NUMERIC));
-                    for (String s : persistApnsForPlmns) {
-                        if (!TextUtils.isEmpty(val) && val.equals(s) &&
-                                (!cv.containsKey(Telephony.Carriers.MVNO_TYPE) ||
-                                        TextUtils.isEmpty(cv.getAsString(Telephony.Carriers.
-                                                MVNO_TYPE)))) {
-                            cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.CARRIER_EDITED);
-                            break;
+                        // Change bearer to a bitmask
+                        String bearerStr = c.getString(c.getColumnIndex(Telephony.Carriers.BEARER));
+                        if (!TextUtils.isEmpty(bearerStr)) {
+                            int bearer_bitmask = ServiceState.getBitmaskForTech(
+                                    Integer.parseInt(bearerStr));
+                            cv.put(Telephony.Carriers.BEARER_BITMASK, bearer_bitmask);
                         }
-                    }
 
-                    try {
-                        db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
-                                SQLiteDatabase.CONFLICT_ABORT);
-                        if (VDBG) {
-                            log("dbh.populateNewTable: db.insert returned >= 0; insert "
-                                    + "successful for cv " + cv);
+                        if (oldVersion == 14) {
+                            String user_edited = c.getString(c.getColumnIndex("user_edited"));
+                            if (!TextUtils.isEmpty(user_edited)) {
+                                cv.put(Telephony.Carriers.EDITED, new Integer(user_edited));
+                            }
                         }
-                    } catch (SQLException e) {
-                        if (VDBG) log("dbh.populateNewTable insertWithOnConflict exception " + e);
-                        // Insertion failed which could be due to a conflict. Check if that is
-                        // the case and merge the entries
-                        Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
-                                CARRIERS_TABLE_TMP, cv);
-                        if (oldRow != null) {
-                            ContentValues mergedValues = new ContentValues();
-                            mergeFieldsAndUpdateDb(db, CARRIERS_TABLE_TMP, oldRow, cv,
-                                    mergedValues, true);
-                            oldRow.close();
+
+                        // New EDITED column. Default value (Telephony.Carriers.UNEDITED) will
+                        // be used for all rows except for non-mvno entries for plmns indicated
+                        // by resource: those will be set to CARRIER_EDITED to preserve
+                        // their current values
+                        val = c.getString(c.getColumnIndex(Telephony.Carriers.NUMERIC));
+                        for (String s : persistApnsForPlmns) {
+                            if (!TextUtils.isEmpty(val) && val.equals(s) &&
+                                    (!cv.containsKey(Telephony.Carriers.MVNO_TYPE) ||
+                                            TextUtils.isEmpty(cv.getAsString(Telephony.Carriers.
+                                                    MVNO_TYPE)))) {
+                                if (oldVersion == 13) {
+                                    cv.put(Telephony.Carriers.EDITED,
+                                            Telephony.Carriers.CARRIER_EDITED);
+                                } else { // if (oldVersion == 14)
+                                    if (cv.getAsInteger(Telephony.Carriers.EDITED) ==
+                                            Telephony.Carriers.USER_EDITED) {
+                                        cv.put(Telephony.Carriers.EDITED,
+                                                Telephony.Carriers.CARRIER_EDITED);
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+
+                        try {
+                            db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
+                                    SQLiteDatabase.CONFLICT_ABORT);
+                            if (VDBG) {
+                                log("dbh.populateNewTable: db.insert returned >= 0; insert "
+                                        + "successful for cv " + cv);
+                            }
+                        } catch (SQLException e) {
+                            if (VDBG)
+                                log("dbh.populateNewTable insertWithOnConflict exception " + e +
+                                        " for cv " + cv);
+                            // Insertion failed which could be due to a conflict. Check if that is
+                            // the case and merge the entries
+                            Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
+                                    CARRIERS_TABLE_TMP, cv);
+                            if (oldRow != null) {
+                                ContentValues mergedValues = new ContentValues();
+                                mergeFieldsAndUpdateDb(db, CARRIERS_TABLE_TMP, oldRow, cv,
+                                        mergedValues, true, mContext);
+                                oldRow.close();
+                            }
                         }
                     }
                 }
                 c.close();
             }
+        }
+
+        private boolean rowPersistedAfterUpgrade(Cursor c, int oldVersion) {
+            if (c != null) {
+                if (oldVersion == 14) {
+                    String user_edited = c.getString(c.getColumnIndex("user_edited"));
+                    if (!TextUtils.isEmpty(user_edited) &&
+                            Integer.parseInt(user_edited) != Telephony.Carriers.UNEDITED) {
+
+                        return true;
+                    }
+                } else { // coming from an older version
+                    String[] persistApnsForPlmns = mContext.getResources().getStringArray(
+                            R.array.persist_apns_for_plmn);
+                    String plmn = c.getString(c.getColumnIndex(Telephony.Carriers.NUMERIC));
+                    if (!TextUtils.isEmpty(plmn)) {
+                        for (String s : persistApnsForPlmns) {
+                            if (plmn.equals(s) &&
+                                    TextUtils.isEmpty(c.getString(c.getColumnIndex(
+                                            Telephony.Carriers.MVNO_TYPE)))) {
+                                return true;
+                            }
+                        }
+                    }
+                }
+            }
+            return false;
         }
 
         private void getStringValueFromCursor(ContentValues cv, Cursor c, String key) {
@@ -650,6 +728,12 @@ public class TelephonyProvider extends ContentProvider
 
             addBoolAttribute(parser, "carrier_enabled", map, Telephony.Carriers.CARRIER_ENABLED);
             addBoolAttribute(parser, "modem_cognitive", map, Telephony.Carriers.MODEM_COGNITIVE);
+
+            String bearerList = parser.getAttributeValue(null, "bearer_bitmask");
+            if (bearerList != null) {
+                int bearerBitmask = ServiceState.getBitmaskFromString(bearerList);
+                map.put(Telephony.Carriers.BEARER_BITMASK, bearerBitmask);
+            }
 
             String mvno_type = parser.getAttributeValue(null, "mvno_type");
             if (mvno_type != null) {
@@ -739,56 +823,74 @@ public class TelephonyProvider extends ContentProvider
             } catch (SQLException e) {
                 if (VDBG) log("dbh.insertAddingDefaults: exception " + e);
                 // Insertion failed which could be due to a conflict. Check if that is the case and
-                // update user_edited field accordingly.
-                // Search for the exact same entry and update user_edited field.
+                // update edited field accordingly.
+                // Search for the exact same entry and update edited field.
                 // If it is USER_EDITED/CARRIER_EDITED change it to UNEDITED,
                 // and if USER/CARRIER_DELETED change it to USER/CARRIER_DELETED_BUT_PRESENT_IN_XML.
                 Cursor oldRow = selectConflictingRow(db, CARRIERS_TABLE, row);
                 if (oldRow != null) {
                     // Update the row
                     ContentValues mergedValues = new ContentValues();
-                    int user_edited = oldRow.getInt(oldRow.getColumnIndex(
+                    int edited = oldRow.getInt(oldRow.getColumnIndex(
                             Telephony.Carriers.EDITED));
-                    int old_user_edited = user_edited;
-                    if (user_edited != Telephony.Carriers.UNEDITED) {
-                        if (user_edited == Telephony.Carriers.USER_EDITED || user_edited == Telephony.Carriers.CARRIER_EDITED) {
-                            user_edited = Telephony.Carriers.UNEDITED;
-                        } else if (user_edited == Telephony.Carriers.USER_DELETED) {
+                    int old_edited = edited;
+                    if (edited != Telephony.Carriers.UNEDITED) {
+                        if (edited == Telephony.Carriers.USER_DELETED) {
                             // USER_DELETED_BUT_PRESENT_IN_XML indicates entry has been deleted
                             // by user but present in apn xml file.
-                            user_edited = Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML;
-                        } else if (user_edited == Telephony.Carriers.CARRIER_DELETED) {
+                            edited = Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML;
+                        } else if (edited == Telephony.Carriers.CARRIER_DELETED) {
                             // CARRIER_DELETED_BUT_PRESENT_IN_XML indicates entry has been deleted
                             // by user but present in apn xml file.
-                            user_edited = Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
+                            edited = Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
                         }
-                        mergedValues.put(Telephony.Carriers.EDITED, user_edited);
+                        mergedValues.put(Telephony.Carriers.EDITED, edited);
                     }
 
-                    mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, row, mergedValues, false);
+                    mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, row, mergedValues, false,
+                            mContext);
 
-                    if (VDBG) log("dbh.insertAddingDefaults: old user_edited  = " + old_user_edited
-                            + " new user_edited = " + user_edited);
+                    if (VDBG) log("dbh.insertAddingDefaults: old edited = " + old_edited
+                            + " new edited = " + edited);
 
                     oldRow.close();
                 }
             }
         }
 
-        static public void mergeFieldsAndUpdateDb(SQLiteDatabase db, String table, Cursor oldRow,
+        public static void mergeFieldsAndUpdateDb(SQLiteDatabase db, String table, Cursor oldRow,
                                                   ContentValues newRow, ContentValues mergedValues,
-                                                  boolean useOld) {
+                                                  boolean onUpgrade, Context context) {
             if (newRow.containsKey(Telephony.Carriers.TYPE)) {
                 // Merge the types
                 String oldType = oldRow.getString(oldRow.getColumnIndex(Telephony.Carriers.TYPE));
                 String newType = newRow.getAsString(Telephony.Carriers.TYPE);
+
                 if (!oldType.equalsIgnoreCase(newType)) {
                     if (oldType.equals("") || newType.equals("")) {
                         newRow.put(Telephony.Carriers.TYPE, "");
                     } else {
-                        // Merge the 2 types
                         String[] oldTypes = oldType.toLowerCase().split(",");
                         String[] newTypes = newType.toLowerCase().split(",");
+
+                        if (VDBG) {
+                            log("mergeFieldsAndUpdateDb: Calling separateRowsNeeded() oldType=" +
+                                    oldType + " old bearer=" + oldRow.getInt(oldRow.getColumnIndex(
+                                    Telephony.Carriers.BEARER_BITMASK)) +
+                                    " old profile_id=" + oldRow.getInt(oldRow.getColumnIndex(
+                                    Telephony.Carriers.PROFILE_ID)) +
+                                    " newRow " + newRow);
+                        }
+
+                        // If separate rows are needed, do not need to merge any further
+                        if (separateRowsNeeded(db, table, oldRow, newRow, context, oldTypes,
+                                newTypes)) {
+                            if (VDBG) log("mergeFieldsAndUpdateDb: separateRowsNeeded() returned " +
+                                    "true");
+                            return;
+                        }
+
+                        // Merge the 2 types
                         ArrayList<String> mergedTypes = new ArrayList<String>();
                         mergedTypes.addAll(Arrays.asList(oldTypes));
                         for (String s : newTypes) {
@@ -807,7 +909,22 @@ public class TelephonyProvider extends ContentProvider
                         Telephony.Carriers.TYPE));
             }
 
-            if (!useOld) {
+            if (newRow.containsKey(Telephony.Carriers.BEARER_BITMASK)) {
+                int oldBearer = oldRow.getInt(oldRow.getColumnIndex(Telephony.Carriers.
+                        BEARER_BITMASK));
+                int newBearer = newRow.getAsInteger(Telephony.Carriers.BEARER_BITMASK);
+                if (oldBearer != newBearer) {
+                    if (oldBearer == 0 || newBearer == 0) {
+                        newRow.put(Telephony.Carriers.BEARER_BITMASK, 0);
+                    } else {
+                        newRow.put(Telephony.Carriers.BEARER_BITMASK, (oldBearer | newBearer));
+                    }
+                }
+                mergedValues.put(Telephony.Carriers.BEARER_BITMASK, newRow.getAsInteger(
+                        Telephony.Carriers.BEARER_BITMASK));
+            }
+
+            if (!onUpgrade) {
                 mergedValues.putAll(newRow);
             }
 
@@ -820,7 +937,110 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        static public Cursor selectConflictingRow(SQLiteDatabase db, String table,
+        private static boolean separateRowsNeeded(SQLiteDatabase db, String table, Cursor oldRow,
+                                                  ContentValues newRow, Context context,
+                                                  String[] oldTypes, String[] newTypes) {
+            // If this APN falls under persist_apns_for_plmn, and the
+            // only difference between old type and new type is that one has dun, and
+            // the APNs have profile_id 0 or not set, then set the profile_id to 1 for
+            // the dun APN/remove dun from type. This will ensure both oldRow and newRow exist
+            // separately in db.
+
+            boolean match = false;
+
+            // Check if APN falls under persist_apns_for_plmn
+            String[] persistApnsForPlmns = context.getResources().getStringArray(
+                    R.array.persist_apns_for_plmn);
+            for (String s : persistApnsForPlmns) {
+                if (s.equalsIgnoreCase(newRow.getAsString(Telephony.Carriers.
+                        NUMERIC))) {
+                    match = true;
+                    break;
+                }
+            }
+
+            if (!match) return false;
+
+            // APN falls under persist_apns_for_plmn
+            // Check if only difference between old type and new type is that
+            // one has dun
+            ArrayList<String> oldTypesAl = new ArrayList<String>(
+                    Arrays.asList(oldTypes));
+            ArrayList<String> newTypesAl = new ArrayList<String>(
+                    Arrays.asList(newTypes));
+            ArrayList<String> listWithDun = null;
+            ArrayList<String> listWithoutDun = null;
+            boolean dunInOld = false;
+            if (oldTypesAl.size() == newTypesAl.size() + 1) {
+                listWithDun = oldTypesAl;
+                listWithoutDun = newTypesAl;
+                dunInOld = true;
+            } else if (oldTypesAl.size() + 1 == newTypesAl.size()) {
+                listWithDun = newTypesAl;
+                listWithoutDun = oldTypesAl;
+            } else {
+                return false;
+            }
+
+            if (listWithDun.contains("dun") &&
+                    !listWithoutDun.contains("dun")) {
+                listWithoutDun.add("dun");
+                if (!listWithDun.containsAll(listWithoutDun)) {
+                    return false;
+                }
+
+                // Only difference between old type and new type is that
+                // one has dun
+                // Check if profile_id is 0/not set
+                if (oldRow.getInt(oldRow.getColumnIndex(Telephony.Carriers.
+                        PROFILE_ID)) == 0) {
+                    if (dunInOld) {
+                        // Update oldRow to remove dun from its type field
+                        ContentValues updateOldRow = new ContentValues();
+                        StringBuilder sb = new StringBuilder();
+                        boolean first = true;
+                        for (String s : listWithDun) {
+                            if (!s.equalsIgnoreCase("dun")) {
+                                sb.append(first ? s : "," + s);
+                                first = false;
+                            }
+                        }
+                        String updatedType = sb.toString();
+                        if (VDBG) {
+                            log("separateRowsNeeded: updating type in oldRow to " +
+                                    updatedType);
+                        }
+                        updateOldRow.put(Telephony.Carriers.TYPE, updatedType);
+                        db.update(table, updateOldRow,
+                                "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")), null);
+                        return true;
+                    } else {
+                        if (VDBG) log("separateRowsNeeded: adding profile id 1 to newRow");
+                        // Update newRow to set profile_id to 1
+                        newRow.put(Telephony.Carriers.PROFILE_ID,
+                                new Integer(1));
+                    }
+                } else {
+                    return false;
+                }
+
+                // If match was found, both oldRow and newRow need to exist
+                // separately in db. Add newRow to db.
+                try {
+                    db.insertWithOnConflict(table, null, newRow,
+                            SQLiteDatabase.CONFLICT_REPLACE);
+                    if (VDBG) log("separateRowsNeeded: added newRow with profile id 1 to db");
+                    return true;
+                } catch (SQLException e) {
+                    loge("Exception on trying to add new row after " +
+                            "updating profile_id");
+                }
+            }
+
+            return false;
+        }
+
+        public static Cursor selectConflictingRow(SQLiteDatabase db, String table,
                                                   ContentValues row) {
             // Conflict is possible only when numeric, mcc, mnc (fields without any default value)
             // are set in the new row
@@ -831,7 +1051,11 @@ public class TelephonyProvider extends ContentProvider
                 return null;
             }
 
-            String[] columns = { "_id", Telephony.Carriers.TYPE, Telephony.Carriers.EDITED };
+            String[] columns = { "_id",
+                    Telephony.Carriers.TYPE,
+                    Telephony.Carriers.EDITED,
+                    Telephony.Carriers.BEARER_BITMASK,
+                    Telephony.Carriers.PROFILE_ID };
             String selection = "numeric=? AND mcc=? AND mnc=? AND apn=? AND proxy=? AND port=? "
                     + "AND mmsproxy=? AND mmsport=? AND mmsc=? AND carrier_enabled=? AND bearer=? "
                     + "AND mvno_type=? AND mvno_match_data=? AND profile_id=?";
@@ -1077,9 +1301,9 @@ public class TelephonyProvider extends ContentProvider
                 } else {
                     selection += " and ";
                 }
-                selection += "user_edited!=" + Telephony.Carriers.USER_DELETED + " and user_edited!="
-                        + Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML + " and user_edited!="
-                        + Telephony.Carriers.CARRIER_DELETED + " and user_edited!="
+                selection += "edited!=" + Telephony.Carriers.USER_DELETED + " and edited!="
+                        + Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML + " and edited!="
+                        + Telephony.Carriers.CARRIER_DELETED + " and edited!="
                         + Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
                 if (VDBG) log("query: selection modified to " + selection);
             }
@@ -1155,9 +1379,9 @@ public class TelephonyProvider extends ContentProvider
                 }
 
                 try {
-                    // Replace on conflict so that if same APN is present in db with user_edited
+                    // Replace on conflict so that if same APN is present in db with edited
                     // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
-                    // user_edited USER/CARRIER_EDITED
+                    // edited USER/CARRIER_EDITED
                     long rowID = db.insertWithOnConflict(CARRIERS_TABLE, null, values,
                             SQLiteDatabase.CONFLICT_REPLACE);
                     if (rowID >= 0) {
@@ -1173,7 +1397,7 @@ public class TelephonyProvider extends ContentProvider
                     if (oldRow != null) {
                         ContentValues mergedValues = new ContentValues();
                         DatabaseHelper.mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
-                                mergedValues, false);
+                                mergedValues, false, getContext());
                         oldRow.close();
                         notify = true;
                     }
@@ -1414,9 +1638,9 @@ public class TelephonyProvider extends ContentProvider
                     values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
                 }
 
-                // Replace on conflict so that if same APN is present in db with user_edited
+                // Replace on conflict so that if same APN is present in db with edited
                 // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
-                // user_edited USER/CARRIER_EDITED
+                // edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values, where, whereArgs,
                         SQLiteDatabase.CONFLICT_REPLACE);
                 break;
@@ -1441,9 +1665,9 @@ public class TelephonyProvider extends ContentProvider
                 if (!values.containsKey(Telephony.Carriers.EDITED)) {
                     values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
                 }
-                // Replace on conflict so that if same APN is present in db with user_edited
+                // Replace on conflict so that if same APN is present in db with edited
                 // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
-                // user_edited USER/CARRIER_EDITED
+                // edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values, where, whereArgs,
                         SQLiteDatabase.CONFLICT_REPLACE);
                 break;
@@ -1458,9 +1682,9 @@ public class TelephonyProvider extends ContentProvider
                 if (!values.containsKey(Telephony.Carriers.EDITED)) {
                     values.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_EDITED);
                 }
-                // Replace on conflict so that if same APN is present in db with user_edited
+                // Replace on conflict so that if same APN is present in db with edited
                 // as Telephony.Carriers.UNEDITED or USER/CARRIER_DELETED, it is replaced with
-                // user_edited USER/CARRIER_EDITED
+                // edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values,
                         Telephony.Carriers._ID + "=?", new String[] { url.getLastPathSegment() },
                         SQLiteDatabase.CONFLICT_REPLACE);
@@ -1564,8 +1788,8 @@ public class TelephonyProvider extends ContentProvider
 
         // Delete entries in db
         try {
-            if (VDBG) log("updateApnDb: deleting user_edited=Telephony.Carriers.UNEDITED entries");
-            db.delete(CARRIERS_TABLE, "user_edited=" + Telephony.Carriers.UNEDITED, null);
+            if (VDBG) log("updateApnDb: deleting edited=Telephony.Carriers.UNEDITED entries");
+            db.delete(CARRIERS_TABLE, "edited=" + Telephony.Carriers.UNEDITED, null);
         } catch (SQLException e) {
             loge("got exception when deleting to update: " + e);
         }
