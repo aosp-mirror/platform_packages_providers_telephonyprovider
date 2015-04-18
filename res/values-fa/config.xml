@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<resources xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
+  <string-array name="persist_apns_for_plmn">
+    <item msgid="6413072509259000954">"۲۰۴۰۴"</item>
+    <item msgid="6382338691947744378">"۳۱۰۱۲۰"</item>
+    <item msgid="1479229073702631561">"۳۱۱۴۸۰"</item>
+  </string-array>
+</resources>
