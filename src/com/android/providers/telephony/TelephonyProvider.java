@@ -596,7 +596,11 @@ public class TelephonyProvider extends ContentProvider
         private void getIntValueFromCursor(ContentValues cv, Cursor c, String key) {
             String fromCursor = c.getString(c.getColumnIndex(key));
             if (!TextUtils.isEmpty(fromCursor)) {
-                cv.put(key, new Integer(fromCursor));
+                try {
+                    cv.put(key, new Integer(fromCursor));
+                } catch (NumberFormatException nfe) {
+                    // do nothing
+                }
             }
         }
 
