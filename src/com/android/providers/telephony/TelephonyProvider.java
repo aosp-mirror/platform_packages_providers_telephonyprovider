@@ -553,91 +553,47 @@ public class TelephonyProvider extends ContentProvider
                         // bool/int vals
                         val = getValueFromCursor(c, Telephony.Carriers.AUTH_TYPE);
                         if (val != null) {
-                            try {
-                                cv.put(Telephony.Carriers.AUTH_TYPE, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
+                            cv.put(Telephony.Carriers.AUTH_TYPE, new Integer(val));
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.CURRENT);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.CURRENT, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.CARRIER_ENABLED);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.CARRIER_ENABLED, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.BEARER);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.BEARER, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.SUBSCRIPTION_ID);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.SUBSCRIPTION_ID, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.PROFILE_ID);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.PROFILE_ID, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.MODEM_COGNITIVE);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.MODEM_COGNITIVE, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.MAX_CONNS);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.MAX_CONNS, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.WAIT_TIME);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.WAIT_TIME, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.MAX_CONNS_TIME);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.MAX_CONNS_TIME, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
                         val = getValueFromCursor(c, Telephony.Carriers.MTU);
                         if (val != null) {
-                            try {
                             cv.put(Telephony.Carriers.MTU, new Integer(val));
-                            } catch (NumberFormatException nfe) {
-                                // do nothing
-                            }
                         }
 
                         // New USER_EDITED column. Default value (USER_EDITED_UNTOUCHED) will
