@@ -928,12 +928,9 @@ public class TelephonyProvider extends ContentProvider
                 mergedValues.putAll(newRow);
             }
 
-            try {
+            if (mergedValues.size() > 0) {
                 db.update(table, mergedValues, "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")),
                         null);
-            } catch (Exception e) {
-                loge("mergeFieldsAndUpdateDb: Unexpected exception on db.update " + e);
-                loge("mergeFieldsAndUpdateDb: Failed to add updated values to db:" + mergedValues);
             }
         }
 
