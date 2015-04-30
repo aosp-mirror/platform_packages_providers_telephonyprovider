@@ -811,8 +811,13 @@ public class TelephonyProvider extends ContentProvider
                 mergedValues.putAll(newRow);
             }
 
-            db.update(table, mergedValues, "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")),
-                    null);
+            try {
+                db.update(table, mergedValues, "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")),
+                        null);
+            } catch (Exception e) {
+                loge("mergeFieldsAndUpdateDb: Unexpected exception on db.update " + e);
+                loge("mergeFieldsAndUpdateDb: Failed to add updated values to db:" + mergedValues);
+            }
         }
 
         static public Cursor selectConflictingRow(SQLiteDatabase db, String table,
