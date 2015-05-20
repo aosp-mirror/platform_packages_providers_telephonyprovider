@@ -27,7 +27,8 @@
                  android:allowClearUserData="false"
                  android:allowBackup="false"
                  android:label="@string/app_label"
-                 android:icon="@mipmap/ic_launcher_phone">
+                 android:icon="@mipmap/ic_launcher_phone"
+                 android:usesCleartextTraffic="false">
 
         <provider android:name="TelephonyProvider"
                   android:authorities="telephony"
