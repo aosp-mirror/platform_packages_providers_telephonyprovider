@@ -30,6 +30,7 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.UserHandle;
 import android.provider.BaseColumns;
+import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.MmsSms;
@@ -43,6 +44,8 @@ import android.util.Log;
 
 import com.google.android.mms.pdu.PduHeaders;
 
+import java.io.FileDescriptor;
+import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
@@ -1374,5 +1377,15 @@ public class MmsSmsProvider extends ContentProvider {
         for (String columnName : unionColumns) {
             UNION_COLUMNS[i++] = columnName;
         }
+    }
+
+    @Override
+    public void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
+        // Dump default SMS app
+        String defaultSmsApp = Telephony.Sms.getDefaultSmsPackage(getContext());
+        if (TextUtils.isEmpty(defaultSmsApp)) {
+            defaultSmsApp = "None";
+        }
+        writer.println("Default SMS app: " + defaultSmsApp);
     }
 }
