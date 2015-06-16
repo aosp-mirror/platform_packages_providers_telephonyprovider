@@ -1642,6 +1642,12 @@ public class TelephonyProvider extends ContentProvider
     {
         int count = 0;
         int subId = SubscriptionManager.getDefaultSubId();
+        String userOrCarrierEdited = ") and (" +
+                Telephony.Carriers.EDITED + "=" + Telephony.Carriers.USER_EDITED +  " or " +
+                Telephony.Carriers.EDITED + "=" + Telephony.Carriers.CARRIER_EDITED + ")";
+        String notUserOrCarrierEdited = ") and (" +
+                Telephony.Carriers.EDITED + "!=" + Telephony.Carriers.USER_EDITED +  " and " +
+                Telephony.Carriers.EDITED + "!=" + Telephony.Carriers.CARRIER_EDITED + ")";
         ContentValues cv = new ContentValues();
         cv.put(Telephony.Carriers.EDITED, Telephony.Carriers.USER_DELETED);
 
@@ -1667,8 +1673,11 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_TELEPHONY:
             {
-                // Mark as user deleted instead of deleting
-                count = db.update(CARRIERS_TABLE, cv, where, whereArgs);
+                // Delete user/carrier edited entries
+                count = db.delete(CARRIERS_TABLE, "(" + where + userOrCarrierEdited, whereArgs);
+                // Otherwise mark as user deleted instead of deleting
+                count += db.update(CARRIERS_TABLE, cv, "(" + where + notUserOrCarrierEdited,
+                        whereArgs);
                 break;
             }
 
@@ -1687,15 +1696,23 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT:
             {
-                // Mark as user deleted instead of deleting
-                count = db.update(CARRIERS_TABLE, cv, where, whereArgs);
+                // Delete user/carrier edited entries
+                count = db.delete(CARRIERS_TABLE, "(" + where + userOrCarrierEdited, whereArgs);
+                // Otherwise mark as user deleted instead of deleting
+                count += db.update(CARRIERS_TABLE, cv, "(" + where + notUserOrCarrierEdited,
+                        whereArgs);
                 break;
             }
 
             case URL_ID:
             {
-                // Mark as user deleted instead of deleting
-                count = db.update(CARRIERS_TABLE, cv, Telephony.Carriers._ID + "=?",
+                // Delete user/carrier edited entries
+                count = db.delete(CARRIERS_TABLE,
+                        "(" + Telephony.Carriers._ID + "=?" + userOrCarrierEdited,
+                        new String[] { url.getLastPathSegment() });
+                // Otherwise mark as user deleted instead of deleting
+                count += db.update(CARRIERS_TABLE, cv,
+                        "(" + Telephony.Carriers._ID + "=?" + notUserOrCarrierEdited,
                         new String[] { url.getLastPathSegment() });
                 break;
             }
