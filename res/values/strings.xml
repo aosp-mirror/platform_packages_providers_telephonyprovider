@@ -26,6 +26,6 @@
          Applications" UI.  The TelephonyProvider stores configuration
          info about the carrier and cell network, and also provides
          storage for SMS and MMS messages. [CHAR LIMIT=25] -->
-    <string name="app_label" product="default">Phone/Messaging Storage</string>
+    <string name="app_label" product="default">Phone and Messaging Storage</string>
 
 </resources>
