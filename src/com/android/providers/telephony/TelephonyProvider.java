@@ -66,7 +66,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 15 << 16;
+    private static final int DATABASE_VERSION = 16 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -212,7 +212,19 @@ public class TelephonyProvider extends ContentProvider
                     + SubscriptionManager.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL DEFAULT " + SubscriptionManager.DISPLAY_NUMBER_DEFAULT + ","
                     + SubscriptionManager.DATA_ROAMING + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT + ","
                     + SubscriptionManager.MCC + " INTEGER DEFAULT 0,"
-                    + SubscriptionManager.MNC + " INTEGER DEFAULT 0"
+                    + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
+                    + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
+                    + SubscriptionManager.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
+                    + SubscriptionManager.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                    + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
+                    + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                    + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1"
                     + ");");
             if (DBG) log("dbh.createSimInfoTable:-");
         }
@@ -512,11 +524,7 @@ public class TelephonyProvider extends ContentProvider
 
                 createCarriersTable(db, CARRIERS_TABLE_TMP);
 
-                if (oldVersion < (14 << 16 | 6)) {
-                    copyPreservedApnsToNewTable(db, c, 13);
-                } else {
-                    copyPreservedApnsToNewTable(db, c, 14);
-                }
+                copyPreservedApnsToNewTable(db, c);
                 c.close();
 
                 db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
@@ -541,6 +549,43 @@ public class TelephonyProvider extends ContentProvider
                 }
 
                 oldVersion = 15 << 16 | 6;
+            }
+            if (oldVersion < (16 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    // These columns may already be present in which case execSQL will throw an
+                    // exception
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_ALERT_SPEECH + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                " The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 16 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -711,7 +756,7 @@ public class TelephonyProvider extends ContentProvider
             db.delete(CARRIERS_TABLE, where, whereArgs);
         }
 
-        private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c, int oldVersion) {
+        private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
             // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
             if (c != null) {
                 String[] persistApnsForPlmns = mContext.getResources().getStringArray(
@@ -764,8 +809,9 @@ public class TelephonyProvider extends ContentProvider
                         cv.put(Telephony.Carriers.BEARER_BITMASK, bearer_bitmask);
                     }
 
-                    if (oldVersion == 14) {
-                        String user_edited = c.getString(c.getColumnIndex("user_edited"));
+                    int userEditedColumnIdx = c.getColumnIndex("user_edited");
+                    if (userEditedColumnIdx != -1) {
+                        String user_edited = c.getString(userEditedColumnIdx);
                         if (!TextUtils.isEmpty(user_edited)) {
                             cv.put(Telephony.Carriers.EDITED, new Integer(user_edited));
                         }
@@ -783,10 +829,10 @@ public class TelephonyProvider extends ContentProvider
                                 (!cv.containsKey(Telephony.Carriers.MVNO_TYPE) ||
                                         TextUtils.isEmpty(cv.getAsString(Telephony.Carriers.
                                                 MVNO_TYPE)))) {
-                            if (oldVersion == 13) {
+                            if (userEditedColumnIdx == -1) {
                                 cv.put(Telephony.Carriers.EDITED,
                                         Telephony.Carriers.CARRIER_EDITED);
-                            } else { // if (oldVersion == 14)
+                            } else { // if (oldVersion == 14) -- if db had user_edited column
                                 if (cv.getAsInteger(Telephony.Carriers.EDITED) ==
                                         Telephony.Carriers.USER_EDITED) {
                                     cv.put(Telephony.Carriers.EDITED,
