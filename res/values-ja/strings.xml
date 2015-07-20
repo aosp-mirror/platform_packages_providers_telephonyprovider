@@ -17,5 +17,5 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_label" product="tablet" msgid="9194799012395299737">"モバイルネットワークの設定"</string>
-    <string name="app_label" product="default" msgid="4282451239358791628">"電話/SMS用ストレージ"</string>
+    <string name="app_label" product="default" msgid="8338087656149558019">"電話とSMS用ストレージ"</string>
 </resources>

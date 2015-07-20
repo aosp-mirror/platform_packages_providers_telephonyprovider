@@ -17,5 +17,5 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_label" product="tablet" msgid="9194799012395299737">"ਮੋਬਾਈਲ ਨੈਟਵਰਕ ਕੌਂਫਿਗਰੇਸ਼ਨ"</string>
-    <string name="app_label" product="default" msgid="4282451239358791628">"ਫੋਨ/ਮੈਸੇਜ਼ਿੰਗ ਸਟੋਰੇਜ"</string>
+    <string name="app_label" product="default" msgid="8338087656149558019">"ਫ਼ੋਨ ਅਤੇ ਮੈਸੇਜ਼ਿਗ ਸਟੋਰੇਜ"</string>
 </resources>
