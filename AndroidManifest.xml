@@ -29,7 +29,7 @@
                  android:allowBackup="false"
                  android:label="@string/app_label"
                  android:icon="@mipmap/ic_launcher_phone"
-                 android:usesCleartextTraffic="false">
+                 android:usesCleartextTraffic="true">
 
         <provider android:name="TelephonyProvider"
                   android:authorities="telephony"
