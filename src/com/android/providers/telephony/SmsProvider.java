@@ -594,7 +594,7 @@ public class SmsProvider extends ContentProvider {
                 count = db.delete(TABLE_SMS, where, whereArgs);
                 if (count != 0) {
                     // Don't update threads unless something changed.
-                    MmsSmsDatabaseHelper.updateAllThreads(db, where, whereArgs);
+                    MmsSmsDatabaseHelper.updateThreads(db, where, whereArgs);
                 }
                 break;
 
