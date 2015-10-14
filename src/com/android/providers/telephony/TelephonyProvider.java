@@ -66,7 +66,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 16 << 16;
+    private static final int DATABASE_VERSION = 17 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -265,6 +265,7 @@ public class TelephonyProvider extends ContentProvider
                     "max_conns_time INTEGER DEFAULT 0," +
                     "mtu INTEGER DEFAULT 0," +
                     "edited INTEGER DEFAULT " + Telephony.Carriers.UNEDITED + "," +
+                    "user_visible BOOLEAN DEFAULT 1," +
                     // Uniqueness collisions are used to trigger merge code so if a field is listed
                     // here it means we will accept both (user edited + new apn_conf definition)
                     // Columns not included in UNIQUE constraint: name, current, edited,
@@ -586,6 +587,11 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 16 << 16 | 6;
+            }
+            if (oldVersion < (17 << 16 | 6)) {
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
+                        Telephony.Carriers.USER_VISIBLE + " BOOLEAN DEFAULT 1;");
+                oldVersion = 17 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -932,8 +938,10 @@ public class TelephonyProvider extends ContentProvider
             addIntAttribute(parser, "max_conns_time", map, Telephony.Carriers.MAX_CONNS_TIME);
             addIntAttribute(parser, "mtu", map, Telephony.Carriers.MTU);
 
+
             addBoolAttribute(parser, "carrier_enabled", map, Telephony.Carriers.CARRIER_ENABLED);
             addBoolAttribute(parser, "modem_cognitive", map, Telephony.Carriers.MODEM_COGNITIVE);
+            addBoolAttribute(parser, "user_visible", map, Telephony.Carriers.USER_VISIBLE);
 
             String bearerList = parser.getAttributeValue(null, "bearer_bitmask");
             if (bearerList != null) {
