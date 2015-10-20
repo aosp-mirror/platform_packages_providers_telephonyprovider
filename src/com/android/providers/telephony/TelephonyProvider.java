@@ -59,6 +59,7 @@ import java.lang.NumberFormatException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -91,6 +92,9 @@ public class TelephonyProvider extends ContentProvider
     private static final String PREF_FILE = "preferred-apn";
     private static final String COLUMN_APN_ID = "apn_id";
 
+    private static final String PREF_FILE_FULL_APN = "preferred-full-apn";
+    private static final String DB_VERSION_KEY = "version";
+
     private static final String BUILD_ID_FILE = "build-id";
     private static final String RO_BUILD_ID = "ro_build_id";
 
@@ -103,6 +107,29 @@ public class TelephonyProvider extends ContentProvider
 
     private static final ContentValues s_currentNullMap;
     private static final ContentValues s_currentSetMap;
+
+    private static final int INVALID_APN_ID = -1;
+    private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
+
+    static {
+        // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
+        // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns, wait_time,
+        // max_conns_time, mtu, bearer_bitmask, user_visible
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.NUMERIC);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MCC);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MNC);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.APN);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.PROXY);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.PORT);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MMSPROXY);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MMSPORT);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MMSC);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.CARRIER_ENABLED);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.BEARER);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MVNO_TYPE);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.MVNO_MATCH_DATA);
+        CARRIERS_UNIQUE_FIELDS.add(Telephony.Carriers.PROFILE_ID);
+    }
 
     static {
         s_urlMatcher.addURI("telephony", "carriers", URL_TELEPHONY);
@@ -270,7 +297,8 @@ public class TelephonyProvider extends ContentProvider
                     // here it means we will accept both (user edited + new apn_conf definition)
                     // Columns not included in UNIQUE constraint: name, current, edited,
                     // user, server, password, authtype, type, protocol, roaming_protocol, sub_id,
-                    // modem_cognitive, max_conns, wait_time, max_conns_time, mtu, bearer_bitmask
+                    // modem_cognitive, max_conns, wait_time, max_conns_time, mtu, bearer_bitmask,
+                    // user_visible
                     "UNIQUE (numeric, mcc, mnc, apn, proxy, port, mmsproxy, mmsport, mmsc," +
                     "carrier_enabled, bearer, mvno_type, mvno_match_data, profile_id));");
             if (DBG) log("dbh.createCarriersTable:-");
@@ -1374,25 +1402,120 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private void setPreferredApnId(Long id, int subId) {
-        SharedPreferences sp = getContext().getSharedPreferences(
-                PREF_FILE, Context.MODE_PRIVATE);
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
-        editor.putLong(COLUMN_APN_ID + subId, id != null ? id.longValue() : -1);
+        editor.putLong(COLUMN_APN_ID + subId, id != null ? id.longValue() : INVALID_APN_ID);
         editor.apply();
+        // remove saved apn if apnId is invalid
+        if (id == null || id.longValue() == INVALID_APN_ID) {
+            deletePreferredApn(subId);
+        }
     }
 
-    private long getPreferredApnId(int subId) {
-        SharedPreferences sp = getContext().getSharedPreferences(
-                PREF_FILE, Context.MODE_PRIVATE);
-        return sp.getLong(COLUMN_APN_ID + subId, -1);
+    private long getPreferredApnId(int subId, boolean checkApnSp) {
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        long apnId = sp.getLong(COLUMN_APN_ID + subId, INVALID_APN_ID);
+        if (apnId == INVALID_APN_ID && checkApnSp) {
+            apnId = getPreferredApnIdFromApn(subId);
+            if (apnId != INVALID_APN_ID) {
+                setPreferredApnId(apnId, subId);
+                deletePreferredApn(subId);
+            }
+        }
+        return apnId;
     }
 
     private void deletePreferredApnId() {
-        SharedPreferences sp = getContext().getSharedPreferences(
-                PREF_FILE, Context.MODE_PRIVATE);
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        // before deleting, save actual preferred apns (not the ids) in a separate SP
+        Map<String, ?> allPrefApnId = sp.getAll();
+        for (String key : allPrefApnId.keySet()) {
+            // extract subId from key by removing COLUMN_APN_ID
+            int subId = Integer.parseInt(key.replace(COLUMN_APN_ID, ""));
+            long apnId = getPreferredApnId(subId, false);
+            if (apnId != INVALID_APN_ID) {
+                setPreferredApn(apnId, subId);
+            }
+        }
         SharedPreferences.Editor editor = sp.edit();
         editor.clear();
         editor.apply();
+    }
+
+    private void setPreferredApn(Long id, int subId) {
+        log("setPreferredApn: _id " + id + " subId " + subId);
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        // query all unique fields from id
+        String[] proj = CARRIERS_UNIQUE_FIELDS.toArray(new String[CARRIERS_UNIQUE_FIELDS.size()]);
+        Cursor c = db.query(CARRIERS_TABLE, proj, "_id=" + id, null, null, null, null);
+        if (c != null) {
+            if (c.getCount() == 1) {
+                c.moveToFirst();
+                SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
+                        Context.MODE_PRIVATE);
+                SharedPreferences.Editor editor = sp.edit();
+                // store values of all unique fields to SP
+                for (String key : CARRIERS_UNIQUE_FIELDS) {
+                    editor.putString(key + subId, c.getString(c.getColumnIndex(key)));
+                }
+                // also store the version number
+                editor.putString(DB_VERSION_KEY + subId, "" + DATABASE_VERSION);
+                editor.apply();
+            } else {
+                log("setPreferredApn: # matching APNs found " + c.getCount());
+            }
+            c.close();
+        } else {
+            log("setPreferredApn: No matching APN found");
+        }
+    }
+
+    private long getPreferredApnIdFromApn(int subId) {
+        log("getPreferredApnIdFromApn: for subId " + subId);
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        String where = TextUtils.join("=? and ", CARRIERS_UNIQUE_FIELDS) + "=?";
+        String[] whereArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
+                Context.MODE_PRIVATE);
+        long apnId = INVALID_APN_ID;
+        int i = 0;
+        for (String key : CARRIERS_UNIQUE_FIELDS) {
+            whereArgs[i] = sp.getString(key + subId, null);
+            if (whereArgs[i] == null) {
+                return INVALID_APN_ID;
+            }
+            i++;
+        }
+        Cursor c = db.query(CARRIERS_TABLE, new String[]{"_id"}, where, whereArgs, null, null, null);
+        if (c != null) {
+            if (c.getCount() == 1) {
+                c.moveToFirst();
+                apnId = c.getInt(c.getColumnIndex("_id"));
+            } else {
+                log("getPreferredApnIdFromApn: returning INVALID. # matching APNs found " +
+                        c.getCount());
+            }
+            c.close();
+        } else {
+            log("getPreferredApnIdFromApn: returning INVALID. No matching APN found");
+        }
+        return apnId;
+    }
+
+    private void deletePreferredApn(int subId) {
+        log("deletePreferredApn: for subId " + subId);
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
+                Context.MODE_PRIVATE);
+        if (sp.contains(DB_VERSION_KEY + subId)) {
+            log("deletePreferredApn: apn is stored. Deleting it now for subId " + subId);
+            SharedPreferences.Editor editor = sp.edit();
+            editor.remove(DB_VERSION_KEY + subId);
+            for (String key : CARRIERS_UNIQUE_FIELDS) {
+                editor.remove(key + subId);
+            }
+            editor.remove(DB_VERSION_KEY + subId);
+            editor.apply();
+        }
     }
 
     @Override
@@ -1468,7 +1591,7 @@ public class TelephonyProvider extends ContentProvider
             //intentional fall through from above case
             case URL_PREFERAPN:
             case URL_PREFERAPN_NO_UPDATE: {
-                qb.appendWhere("_id = " + getPreferredApnId(subId));
+                qb.appendWhere("_id = " + getPreferredApnId(subId, true));
                 break;
             }
 
