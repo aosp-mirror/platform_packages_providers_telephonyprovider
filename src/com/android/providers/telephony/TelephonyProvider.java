@@ -533,6 +533,12 @@ public class TelephonyProvider extends ContentProvider
                 // copyPreservedApnsToNewTable()
                 // The only exception if upgrading from version 14 is that EDITED field is already
                 // present (but is called USER_EDITED)
+                /*********************************************************************************
+                 * IMPORTANT NOTE: SINCE CARRIERS TABLE IS RECREATED HERE, IT WILL BE THE LATEST
+                 * VERSION AFTER THIS. AS A RESULT ANY SUBSEQUENT UPDATES TO THE TABLE WILL FAIL
+                 * (DUE TO COLUMN-ALREADY-EXISTS KIND OF EXCEPTION). ALL SUBSEQUENT UPDATES SHOULD
+                 * HANDLE THAT GRACEFULLY.
+                 *********************************************************************************/
                 Cursor c;
                 String[] proj = {"_id"};
                 if (VDBG) {
@@ -617,8 +623,24 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 16 << 16 | 6;
             }
             if (oldVersion < (17 << 16 | 6)) {
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
-                        Telephony.Carriers.USER_VISIBLE + " BOOLEAN DEFAULT 1;");
+                Cursor c = null;
+                try {
+                    c = db.query(CARRIERS_TABLE, null, null, null, null, null, null,
+                            String.valueOf(1));
+                    if (c == null || c.getColumnIndex(Telephony.Carriers.USER_VISIBLE) == -1) {
+                        db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
+                                Telephony.Carriers.USER_VISIBLE + " BOOLEAN DEFAULT 1;");
+                    } else {
+                        if (DBG) {
+                            log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade.  Column " +
+                                    Telephony.Carriers.USER_VISIBLE + " already exists.");
+                        }
+                    }
+                } finally {
+                    if (c != null) {
+                        c.close();
+                    }
+                }
                 oldVersion = 17 << 16 | 6;
             }
             if (DBG) {
