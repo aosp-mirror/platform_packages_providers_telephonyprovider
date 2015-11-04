@@ -17,5 +17,5 @@
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
     <string name="app_label" product="tablet" msgid="9194799012395299737">"ការ​កំណត់​រចនា​សម្ព័ន្ធ​​បណ្ដាញ​​ទូរស័ព្ទ​​ចល័ត"</string>
-    <string name="app_label" product="default" msgid="4282451239358791628">"ឧបករណ៍​ផ្ទុក ទូរស័ព្ទ/ការ​ផ្ញើ​សារ"</string>
+    <string name="app_label" product="default" msgid="8338087656149558019">"ឧបករណ៍ផ្ទុកទូរស័ព្ទ និងសារ"</string>
 </resources>
