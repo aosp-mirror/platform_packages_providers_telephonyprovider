@@ -1453,10 +1453,14 @@ public class TelephonyProvider extends ContentProvider
         Map<String, ?> allPrefApnId = sp.getAll();
         for (String key : allPrefApnId.keySet()) {
             // extract subId from key by removing COLUMN_APN_ID
-            int subId = Integer.parseInt(key.replace(COLUMN_APN_ID, ""));
-            long apnId = getPreferredApnId(subId, false);
-            if (apnId != INVALID_APN_ID) {
-                setPreferredApn(apnId, subId);
+            try {
+                int subId = Integer.parseInt(key.replace(COLUMN_APN_ID, ""));
+                long apnId = getPreferredApnId(subId, false);
+                if (apnId != INVALID_APN_ID) {
+                    setPreferredApn(apnId, subId);
+                }
+            } catch (Exception e) {
+                loge("Skipping over key " + key + " due to exception " + e);
             }
         }
         SharedPreferences.Editor editor = sp.edit();
