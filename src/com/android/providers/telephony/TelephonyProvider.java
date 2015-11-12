@@ -663,12 +663,11 @@ public class TelephonyProvider extends ContentProvider
             } catch (FileNotFoundException e) {
                 // This function is called only when upgrading db to version 15. Details about the
                 // upgrade are mentioned in onUpgrade(). This file missing means user/carrier added
-                // APNs cannot be preserved. Throw an exception so that OEMs know they need to
+                // APNs cannot be preserved. Log an error message so that OEMs know they need to
                 // include old apns file for comparison.
-                loge("preserveUserAndCarrierApns: FileNotFoundException");
-                throw new RuntimeException("preserveUserAndCarrierApns: " + OLD_APNS_PATH +
-                        " not found. It is needed to upgrade from older versions of APN " +
-                        "db while preserving user/carrier added/edited entries.");
+                loge("PRESERVEUSERANDCARRIERAPNS: " + OLD_APNS_PATH +
+                        " NOT FOUND. IT IS NEEDED TO UPGRADE FROM OLDER VERSIONS OF APN " +
+                        "DB WHILE PRESERVING USER/CARRIER ADDED/EDITED ENTRIES.");
             } catch (Exception e) {
                 loge("preserveUserAndCarrierApns: Exception while parsing '" +
                         confFile.getAbsolutePath() + "'" + e);
