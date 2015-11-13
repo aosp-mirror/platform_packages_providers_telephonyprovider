@@ -267,15 +267,15 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                     // Now build a selection string of all the unique recipient ids
                     StringBuilder sb = new StringBuilder();
                     Iterator<Integer> iter = recipientIds.iterator();
+                    sb.append("_id NOT IN (");
                     while (iter.hasNext()) {
-                        sb.append("_id != " + iter.next());
+                        sb.append(iter.next());
                         if (iter.hasNext()) {
-                            sb.append(" AND ");
+                            sb.append(",");
                         }
                     }
-                    if (sb.length() > 0) {
-                        int rows = db.delete("canonical_addresses", sb.toString(), null);
-                    }
+                    sb.append(")");
+                    int rows = db.delete("canonical_addresses", sb.toString(), null);
                 }
             } finally {
                 c.close();
