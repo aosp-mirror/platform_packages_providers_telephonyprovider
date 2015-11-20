@@ -16,10 +16,16 @@
 
 package com.android.providers.telephony;
 
+import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Process;
 import android.provider.Telephony;
+import android.provider.Telephony.Sms;
+import android.text.TextUtils;
+import android.util.Log;
 
 import com.android.internal.telephony.SmsApplication;
 
@@ -27,6 +33,7 @@ import com.android.internal.telephony.SmsApplication;
  * Helpers
  */
 public class ProviderUtil {
+    private final static String TAG = "SmsProvider";
 
     /**
      * Check if a caller of the provider has restricted access,
@@ -68,4 +75,41 @@ public class ProviderUtil {
                 (values.containsKey(Telephony.Sms.CREATOR) ||
                         values.containsKey(Telephony.Mms.CREATOR));
     }
+
+    /**
+     * Notify the default SMS app of an SMS/MMS provider change if the change is being made
+     * by a package other than the default SMS app itself.
+     *
+     * @param uri The uri the provider change applies to
+     * @param callingPackage The package name of the provider caller
+     * @param Context
+     */
+    public static void notifyIfNotDefaultSmsApp(final Uri uri, final String callingPackage,
+            final Context context) {
+        if (TextUtils.equals(callingPackage, Telephony.Sms.getDefaultSmsPackage(context))) {
+            if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                Log.d(TAG, "notifyIfNotDefaultSmsApp - called from default sms app");
+            }
+            return;
+        }
+        // Direct the intent to only the default SMS app, and only if the SMS app has a receiver
+        // for the intent.
+        ComponentName componentName =
+                SmsApplication.getDefaultExternalTelephonyProviderChangedApplication(context, true);
+        if (componentName == null) {
+            return;     // the default sms app doesn't have a receiver for this intent
+        }
+
+        final Intent intent =
+                new Intent(Telephony.Sms.Intents.ACTION_EXTERNAL_PROVIDER_CHANGE);
+        intent.setComponent(componentName);
+        if (uri != null) {
+            intent.setData(uri);
+        }
+        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+            Log.d(TAG, "notifyIfNotDefaultSmsApp - called from " + callingPackage + ", notifying");
+        }
+        context.sendBroadcast(intent);
+    }
+
 }

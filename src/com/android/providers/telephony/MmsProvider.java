@@ -547,7 +547,7 @@ public class MmsProvider extends ContentProvider {
         }
 
         if (notify) {
-            notifyChange();
+            notifyChange(res);
         }
         return res;
     }
@@ -643,7 +643,7 @@ public class MmsProvider extends ContentProvider {
         }
 
         if ((deletedRows > 0) && notify) {
-            notifyChange();
+            notifyChange(uri);
         }
         return deletedRows;
     }
@@ -816,7 +816,7 @@ public class MmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int count = db.update(table, finalValues, finalSelection, selectionArgs);
         if (notify && (count > 0)) {
-            notifyChange();
+            notifyChange(uri);
         }
         return count;
     }
@@ -922,9 +922,11 @@ public class MmsProvider extends ContentProvider {
         values.remove(Mms._ID);
     }
 
-    private void notifyChange() {
-        getContext().getContentResolver().notifyChange(
+    private void notifyChange(final Uri uri) {
+        final Context context = getContext();
+        context.getContentResolver().notifyChange(
                 MmsSms.CONTENT_URI, null, true, UserHandle.USER_ALL);
+        ProviderUtil.notifyIfNotDefaultSmsApp(uri, getCallingPackage(), context);
     }
 
     private final static String TAG = "MmsProvider";

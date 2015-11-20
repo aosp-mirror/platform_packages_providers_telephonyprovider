@@ -17,9 +17,12 @@
 package com.android.providers.telephony;
 
 import android.app.AppOpsManager;
+import android.content.ComponentName;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
@@ -40,6 +43,8 @@ import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.text.TextUtils;
 import android.util.Log;
+
+import com.android.internal.telephony.SmsApplication;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -402,6 +407,7 @@ public class SmsProvider extends ContentProvider {
 
         int match = sURLMatcher.match(url);
         String table = TABLE_SMS;
+        boolean notifyIfNotDefault = true;
 
         switch (match) {
             case SMS_ALL:
@@ -440,6 +446,10 @@ public class SmsProvider extends ContentProvider {
 
             case SMS_RAW_MESSAGE:
                 table = "raw";
+                // The raw table is used by the telephony layer for storing an sms before
+                // sending out a notification that an sms has arrived. We don't want to notify
+                // the default sms app of changes to this table.
+                notifyIfNotDefault = false;
                 break;
 
             case SMS_STATUS_PENDING:
@@ -575,7 +585,7 @@ public class SmsProvider extends ContentProvider {
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "insert " + uri + " succeeded");
             }
-            notifyChange(uri);
+            notifyChange(notifyIfNotDefault, uri, callerPkg);
             return uri;
         } else {
             Log.e(TAG,"insert: failed!");
@@ -589,6 +599,7 @@ public class SmsProvider extends ContentProvider {
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        boolean notifyIfNotDefault = true;
         switch (match) {
             case SMS_ALL:
                 count = db.delete(TABLE_SMS, where, whereArgs);
@@ -627,6 +638,7 @@ public class SmsProvider extends ContentProvider {
 
             case SMS_RAW_MESSAGE:
                 count = db.delete("raw", where, whereArgs);
+                notifyIfNotDefault = false;
                 break;
 
             case SMS_STATUS_PENDING:
@@ -643,7 +655,7 @@ public class SmsProvider extends ContentProvider {
         }
 
         if (count > 0) {
-            notifyChange(url);
+            notifyChange(notifyIfNotDefault, url, getCallingPackage());
         }
         return count;
     }
@@ -678,11 +690,13 @@ public class SmsProvider extends ContentProvider {
         int count = 0;
         String table = TABLE_SMS;
         String extraWhere = null;
+        boolean notifyIfNotDefault = true;
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
         switch (sURLMatcher.match(url)) {
             case SMS_RAW_MESSAGE:
                 table = TABLE_RAW;
+                notifyIfNotDefault = false;
                 break;
 
             case SMS_STATUS_PENDING:
@@ -747,17 +761,21 @@ public class SmsProvider extends ContentProvider {
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "update " + url + " succeeded");
             }
-            notifyChange(url);
+            notifyChange(notifyIfNotDefault, url, callerPkg);
         }
         return count;
     }
 
-    private void notifyChange(Uri uri) {
-        ContentResolver cr = getContext().getContentResolver();
+    private void notifyChange(boolean notifyIfNotDefault, Uri uri, final String callingPackage) {
+        final Context context = getContext();
+        ContentResolver cr = context.getContentResolver();
         cr.notifyChange(uri, null, true, UserHandle.USER_ALL);
         cr.notifyChange(MmsSms.CONTENT_URI, null, true, UserHandle.USER_ALL);
         cr.notifyChange(Uri.parse("content://mms-sms/conversations/"), null, true,
                 UserHandle.USER_ALL);
+        if (notifyIfNotDefault) {
+            ProviderUtil.notifyIfNotDefaultSmsApp(uri, callingPackage, context);
+        }
     }
 
     private SQLiteOpenHelper mOpenHelper;
