@@ -29,7 +29,9 @@
 
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
-                 android:allowBackup="false"
+                 android:fullBackupOnly="true"
+                 android:backupAgent="TelephonyBackupAgent"
+                 android:restoreAnyVersion="true"
                  android:label="@string/app_label"
                  android:icon="@mipmap/ic_launcher_phone"
                  android:usesCleartextTraffic="true"
