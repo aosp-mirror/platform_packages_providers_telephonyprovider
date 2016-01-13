@@ -16,6 +16,9 @@
 
 package com.android.providers.telephony;
 
+import com.google.android.mms.pdu.EncodedStringValue;
+import com.google.android.mms.pdu.PduHeaders;
+
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -37,9 +40,6 @@ import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
-import com.google.android.mms.pdu.EncodedStringValue;
-import com.google.android.mms.pdu.PduHeaders;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -48,6 +48,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 
+/**
+ * Database open helper responsible for tables in the Credentials-Encrypted storage.
+ */
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";
 
@@ -232,6 +235,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      * database.
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstance(Context context) {
+        context = ProviderUtil.getCredentialEncryptedContext(context);
         if (sInstance == null) {
             sInstance = new MmsSmsDatabaseHelper(context);
         }
@@ -854,21 +858,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "seen INTEGER DEFAULT 0" +
                    ");");
 
-        /**
-         * This table is used by the SMS dispatcher to hold
-         * incomplete partial messages until all the parts arrive.
-         */
-        db.execSQL("CREATE TABLE raw (" +
-                   "_id INTEGER PRIMARY KEY," +
-                   "date INTEGER," +
-                   "reference_number INTEGER," + // one per full message
-                   "count INTEGER," + // the number of parts
-                   "sequence INTEGER," + // the part number of this message
-                   "destination_port INTEGER," +
-                   "address TEXT," +
-                   "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-                   "pdu TEXT);"); // the raw PDU for this part
-
         db.execSQL("CREATE TABLE attachments (" +
                    "sms_id INTEGER," +
                    "content_url TEXT," +
@@ -1379,7 +1368,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("DROP TABLE IF EXISTS threads");
         db.execSQL("DROP TABLE IF EXISTS " + MmsSmsProvider.TABLE_PENDING_MSG);
         db.execSQL("DROP TABLE IF EXISTS sms");
-        db.execSQL("DROP TABLE IF EXISTS raw");
         db.execSQL("DROP TABLE IF EXISTS attachments");
         db.execSQL("DROP TABLE IF EXISTS thread_ids");
         db.execSQL("DROP TABLE IF EXISTS sr_pending");
@@ -1573,9 +1561,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_SMS
                 + " ADD COLUMN " + Sms.SUBSCRIPTION_ID
-                + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
-        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW
-                +" ADD COLUMN " + Sms.SUBSCRIPTION_ID
                 + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
     }
 
@@ -1903,6 +1888,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         public LowStorageMonitor() {
         }
 
+        @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
 
