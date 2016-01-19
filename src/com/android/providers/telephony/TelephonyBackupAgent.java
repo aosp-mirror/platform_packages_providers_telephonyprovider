@@ -84,6 +84,8 @@ import java.util.zip.InflaterInputStream;
  *
  *   It deflates the files on the flight.
  *   Every 1000 messages it backs up file, deletes it and creates a new one with the same name.
+ *
+ *   It stores how many bytes we are over the quota and don't backup the oldest messages.
  */
 
 @TargetApi(Build.VERSION_CODES.M)
@@ -137,6 +139,10 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     // Order by ID entries from database.
     private static final String ORDER_BY_ID = BaseColumns._ID + " ASC";
+
+    // Order by Date entries from database. We order it the oldest first in order to throw them if
+    // we are over quota.
+    private static final String ORDER_BY_DATE = "date ASC";
 
     // Columns from SMS database for backup/restore.
     @VisibleForTesting
@@ -196,6 +202,12 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final ContentValues defaultValuesMms = new ContentValues(5);
     private static final ContentValues defaultValuesAddr = new ContentValues(2);
 
+    // Shared preferences for the backup agent.
+    private static final String BACKUP_PREFS = "backup_shared_prefs";
+    // Key for storing bytes over.
+    private static final String BYTES_OVER_QUOTA_PREF_KEY = "bytes_over_quota";
+
+
     static {
         // Consider restored messages read and seen.
         defaultValuesSms.put(Telephony.Sms.READ, 1);
@@ -216,9 +228,12 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private SparseArray<String> subId2phone;
     private Map<String, Integer> phone2subId;
-    private SmsProvider mSmsProvider;
-    private MmsProvider mMmsProvider;
-    private MmsSmsProvider mMmsSmsProvider;
+    private ContentProvider mSmsProvider;
+    private ContentProvider mMmsProvider;
+    private ContentProvider mMmsSmsProvider;
+
+    // How many bytes we have to skip to fit into quota.
+    private long mBytesOverQuota;
 
     @Override
     public void onCreate() {
@@ -240,23 +255,42 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
 
         mSmsProvider = new SmsProvider();
+        mMmsProvider = new MmsProvider();
+        mMmsSmsProvider = new MmsSmsProvider();
+
+        attachAndCreateProviders();
+    }
+
+    private void attachAndCreateProviders() {
         mSmsProvider.attachInfo(this, null);
         mSmsProvider.onCreate();
 
-        mMmsProvider = new MmsProvider();
         mMmsProvider.attachInfo(this, null);
         mMmsProvider.onCreate();
 
-        mMmsSmsProvider = new MmsSmsProvider();
         mMmsSmsProvider.attachInfo(this, null);
         mMmsSmsProvider.onCreate();
     }
 
-
     @Override
     public void onFullBackup(FullBackupDataOutput data) throws IOException {
+        mBytesOverQuota = getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE).
+                getLong(BYTES_OVER_QUOTA_PREF_KEY, 0);
+
+        backupAllSms(data);
+        backupAllMms(data);
+    }
+
+    @Override
+    public void onQuotaExceeded(long backupDataBytes, long quotaBytes) {
+        mBytesOverQuota = (long)((backupDataBytes - quotaBytes)*1.1);
+        getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE).edit()
+                .putLong(BYTES_OVER_QUOTA_PREF_KEY, mBytesOverQuota).apply();
+    }
+
+    private void backupAllSms(FullBackupDataOutput data) throws IOException {
         try (Cursor cursor = mSmsProvider.query(Telephony.Sms.CONTENT_URI, SMS_PROJECTION, null,
-                null, ORDER_BY_ID)) {
+                null, ORDER_BY_DATE)) {
             if (DEBUG) {
                 Log.i(TAG, "Backing up SMS");
             }
@@ -269,9 +303,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                 }
             }
         }
+    }
 
+    private void backupAllMms(FullBackupDataOutput data) throws IOException {
         try (Cursor cursor = mMmsProvider.query(Telephony.Mms.CONTENT_URI, MMS_PROJECTION, null,
-                null, ORDER_BY_ID)) {
+                null, ORDER_BY_DATE)) {
             if (DEBUG) {
                 Log.i(TAG, "Backing up text MMS");
             }
@@ -311,8 +347,15 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private void backupFile(String fileName, FullBackupDataOutput data) {
         final File file = new File(getFilesDir().getPath() + "/" + fileName);
-        super.fullBackupFile(file, data);
-        file.delete();
+        try {
+            if (mBytesOverQuota > 0) {
+                mBytesOverQuota -= file.length();
+                return;
+            }
+            super.fullBackupFile(file, data);
+        } finally {
+            file.delete();
+        }
     }
 
     @Override
