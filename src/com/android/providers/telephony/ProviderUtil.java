@@ -23,7 +23,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Process;
 import android.provider.Telephony;
-import android.provider.Telephony.Sms;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -110,6 +109,14 @@ public class ProviderUtil {
             Log.d(TAG, "notifyIfNotDefaultSmsApp - called from " + callingPackage + ", notifying");
         }
         context.sendBroadcast(intent);
+    }
+
+    public static Context getCredentialEncryptedContext(Context context) {
+        if (context.isCredentialEncryptedStorage()) {
+            return context;
+        }
+        Context ceContext = context.createCredentialEncryptedStorageContext();
+        return ceContext != null ? ceContext : context;
     }
 
 }
