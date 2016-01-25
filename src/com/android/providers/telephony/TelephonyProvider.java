@@ -1069,7 +1069,7 @@ public class TelephonyProvider extends ContentProvider
 
         static public ContentValues setDefaultValue(ContentValues values) {
             if (!values.containsKey(Telephony.Carriers.SUBSCRIPTION_ID)) {
-                int subId = SubscriptionManager.getDefaultSubId();
+                int subId = SubscriptionManager.getDefaultSubscriptionId();
                 values.put(Telephony.Carriers.SUBSCRIPTION_ID, subId);
             }
 
@@ -1550,7 +1550,7 @@ public class TelephonyProvider extends ContentProvider
             + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
         TelephonyManager mTelephonyManager =
                 (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        int subId = SubscriptionManager.getDefaultSubId();
+        int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setStrict(true); // a little protection from injection attacks
@@ -1701,7 +1701,7 @@ public class TelephonyProvider extends ContentProvider
     public synchronized Uri insert(Uri url, ContentValues initialValues)
     {
         Uri result = null;
-        int subId = SubscriptionManager.getDefaultSubId();
+        int subId = SubscriptionManager.getDefaultSubscriptionId();
 
         checkPermission();
 
@@ -1843,7 +1843,7 @@ public class TelephonyProvider extends ContentProvider
     public synchronized int delete(Uri url, String where, String[] whereArgs)
     {
         int count = 0;
-        int subId = SubscriptionManager.getDefaultSubId();
+        int subId = SubscriptionManager.getDefaultSubscriptionId();
         String userOrCarrierEdited = ") and (" +
                 Telephony.Carriers.EDITED + "=" + Telephony.Carriers.USER_EDITED +  " or " +
                 Telephony.Carriers.EDITED + "=" + Telephony.Carriers.CARRIER_EDITED + ")";
@@ -1986,7 +1986,7 @@ public class TelephonyProvider extends ContentProvider
     {
         int count = 0;
         int uriType = URL_UNKNOWN;
-        int subId = SubscriptionManager.getDefaultSubId();
+        int subId = SubscriptionManager.getDefaultSubscriptionId();
 
         checkPermission();
 
