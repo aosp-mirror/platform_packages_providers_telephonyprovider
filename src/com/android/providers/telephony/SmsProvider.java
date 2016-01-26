@@ -17,10 +17,12 @@
 package com.android.providers.telephony;
 
 import android.app.AppOpsManager;
+import android.content.ComponentName;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
@@ -41,6 +43,8 @@ import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
 import android.text.TextUtils;
 import android.util.Log;
+
+import com.android.internal.telephony.SmsApplication;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -87,7 +91,6 @@ public class SmsProvider extends ContentProvider {
     public boolean onCreate() {
         setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
-        mDeOpenHelper = DeviceEncryptedMmsSmsDatabaseHelper.getInstance(getContext());
         return true;
     }
 
@@ -253,7 +256,7 @@ public class SmsProvider extends ContentProvider {
             orderBy = Sms.DEFAULT_SORT_ORDER;
         }
 
-        SQLiteDatabase db = getDBOpenHelper(match).getReadableDatabase();
+        SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor ret = qb.query(db, projectionIn, selection, selectionArgs,
                               null, null, orderBy);
 
@@ -261,13 +264,6 @@ public class SmsProvider extends ContentProvider {
         ret.setNotificationUri(getContext().getContentResolver(),
                 NOTIFICATION_URI);
         return ret;
-    }
-
-    private SQLiteOpenHelper getDBOpenHelper(int match) {
-        if (match == SMS_RAW_MESSAGE) {
-            return mDeOpenHelper;
-        }
-        return mOpenHelper;
     }
 
     private Object[] convertIccToSms(SmsMessage message, int id) {
@@ -473,7 +469,7 @@ public class SmsProvider extends ContentProvider {
                 return null;
         }
 
-        SQLiteDatabase db = getDBOpenHelper(match).getWritableDatabase();
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
         if (table.equals(TABLE_SMS)) {
             boolean addDate = false;
@@ -602,7 +598,7 @@ public class SmsProvider extends ContentProvider {
     public int delete(Uri url, String where, String[] whereArgs) {
         int count;
         int match = sURLMatcher.match(url);
-        SQLiteDatabase db = getDBOpenHelper(match).getWritableDatabase();
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         boolean notifyIfNotDefault = true;
         switch (match) {
             case SMS_ALL:
@@ -695,10 +691,9 @@ public class SmsProvider extends ContentProvider {
         String table = TABLE_SMS;
         String extraWhere = null;
         boolean notifyIfNotDefault = true;
-        int match = sURLMatcher.match(url);
-        SQLiteDatabase db = getDBOpenHelper(match).getWritableDatabase();
+        SQLiteDatabase db = mOpenHelper.getWritableDatabase();
 
-        switch (match) {
+        switch (sURLMatcher.match(url)) {
             case SMS_RAW_MESSAGE:
                 table = TABLE_RAW;
                 notifyIfNotDefault = false;
@@ -784,7 +779,6 @@ public class SmsProvider extends ContentProvider {
     }
 
     private SQLiteOpenHelper mOpenHelper;
-    private SQLiteOpenHelper mDeOpenHelper;
 
     private final static String TAG = "SmsProvider";
     private final static String VND_ANDROID_SMS = "vnd.android.cursor.item/sms";
