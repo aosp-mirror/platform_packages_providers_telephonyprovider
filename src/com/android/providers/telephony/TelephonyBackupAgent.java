@@ -39,6 +39,7 @@ import android.provider.Telephony;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
+import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.JsonReader;
@@ -54,7 +55,6 @@ import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -123,6 +123,8 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final String SELF_PHONE_KEY = "self_phone";
     // JSON key for list of addresses of MMS message.
     private static final String MMS_ADDRESSES_KEY = "mms_addresses";
+    // JSON key for list of recipients of sms message.
+    private static final String SMS_RECIPIENTS = "sms_recipients";
     // JSON key for MMS body.
     private static final String MMS_BODY_KEY = "mms_body";
     // JSON key for MMS charset.
@@ -149,7 +151,14 @@ public class TelephonyBackupAgent extends BackupAgent {
             Telephony.Sms.DATE,
             Telephony.Sms.DATE_SENT,
             Telephony.Sms.STATUS,
-            Telephony.Sms.TYPE
+            Telephony.Sms.TYPE,
+            Telephony.Sms.THREAD_ID
+    };
+
+    // Columns to fetch recepients of SMS.
+    private static final String[] SMS_RECIPIENTS_PROJECTION = {
+            Telephony.Threads._ID,
+            Telephony.Threads.RECIPIENT_IDS
     };
 
     // Columns from MMS database for backup/restore.
@@ -263,7 +272,8 @@ public class TelephonyBackupAgent extends BackupAgent {
             if (cursor != null) {
                 while (!cursor.isLast() && !cursor.isAfterLast()) {
                     try (JsonWriter jsonWriter = getJsonWriter(SMS_BACKUP_FILE)) {
-                        putSmsMessagesToJson(cursor, subId2phone, jsonWriter, MAX_MSG_PER_FILE);
+                        putSmsMessagesToJson(cursor, subId2phone, jsonWriter, mMmsSmsProvider,
+                                MAX_MSG_PER_FILE);
                     }
                     backupFile(SMS_BACKUP_FILE, data);
                 }
@@ -300,11 +310,12 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     @VisibleForTesting
     static void putSmsMessagesToJson(Cursor cursor, SparseArray<String> subId2phone,
-                             JsonWriter jsonWriter, int maxMsgPerFile) throws IOException {
+                                     JsonWriter jsonWriter, ContentProvider threadProvider,
+                                     int maxMsgPerFile) throws IOException {
 
         jsonWriter.beginArray();
         for (int msgCount=0; msgCount<maxMsgPerFile && cursor.moveToNext(); ++msgCount) {
-            writeSmsToWriter(jsonWriter, cursor, subId2phone);
+            writeSmsToWriter(jsonWriter, cursor, threadProvider, subId2phone);
         }
         jsonWriter.endArray();
     }
@@ -421,6 +432,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     }
 
     private static void writeSmsToWriter(JsonWriter jsonWriter, Cursor cursor,
+                                         ContentProvider threadProvider,
                                          SparseArray<String> subId2phone) throws IOException {
         jsonWriter.beginObject();
 
@@ -438,6 +450,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                         jsonWriter.name(SELF_PHONE_KEY).value(selfNumber);
                     }
                     break;
+                case Telephony.Sms.THREAD_ID:
+                    final long threadId = cursor.getLong(i);
+                    writeSmsRecipientsToWriter(jsonWriter.name(SMS_RECIPIENTS),
+                            getRecipientsByThread(threadProvider, threadId));
+                    break;
                 case Telephony.Sms._ID:
                     break;
                 default:
@@ -446,6 +463,18 @@ public class TelephonyBackupAgent extends BackupAgent {
             }
         }
         jsonWriter.endObject();
+
+    }
+
+    private static void writeSmsRecipientsToWriter(JsonWriter jsonWriter, List<String> recipients)
+            throws IOException {
+        jsonWriter.beginArray();
+        if (recipients != null) {
+            for (String s : recipients) {
+                jsonWriter.value(s);
+            }
+        }
+        jsonWriter.endArray();
     }
 
     @VisibleForTesting
@@ -465,13 +494,12 @@ public class TelephonyBackupAgent extends BackupAgent {
                 case Telephony.Sms.STATUS:
                 case Telephony.Sms.TYPE:
                 case Telephony.Sms.SUBJECT:
+                case Telephony.Sms.ADDRESS:
                     values.put(name, jsonReader.nextString());
                     break;
-                case Telephony.Sms.ADDRESS:
-                    final String address = jsonReader.nextString();
-                    values.put(name, address);
+                case SMS_RECIPIENTS:
                     values.put(Telephony.Sms.THREAD_ID,
-                            getOrCreateThreadId(threadProvider, getSmsRecipients(address)));
+                            getOrCreateThreadId(threadProvider, getSmsRecipients(jsonReader)));
                     break;
                 case SELF_PHONE_KEY:
                     final String selfPhone = jsonReader.nextString();
@@ -491,9 +519,13 @@ public class TelephonyBackupAgent extends BackupAgent {
         return values;
     }
 
-    private static Set<String> getSmsRecipients(String address) {
+    private static Set<String> getSmsRecipients(JsonReader jsonReader) throws IOException {
         Set<String> recipients = new ArraySet<String>();
-        recipients.addAll(Arrays.asList(address.split("[\\s,;]+")));
+        jsonReader.beginArray();
+        while (jsonReader.hasNext()) {
+            recipients.add(jsonReader.nextString());
+        }
+        jsonReader.endArray();
         return recipients;
     }
 
@@ -908,6 +940,110 @@ public class TelephonyBackupAgent extends BackupAgent {
         Log.e(TAG, "getOrCreateThreadId failed with " + recipients.size() + " recipients");
         throw new IllegalArgumentException("Unable to find or allocate a thread ID.");
     }
+
+    // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
+    private static List<String> getRecipientsByThread(final ContentProvider threadProvider,
+                                                      final long threadId) {
+        final String spaceSepIds = getRawRecipientIdsForThread(threadProvider, threadId);
+        if (!TextUtils.isEmpty(spaceSepIds)) {
+            return getAddresses(threadProvider, spaceSepIds);
+        }
+        return null;
+    }
+
+    private static final Uri ALL_THREADS_URI =
+            Telephony.Threads.CONTENT_URI.buildUpon().
+                    appendQueryParameter("simple", "true").build();
+    private static final int RECIPIENT_IDS  = 1;
+
+    // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
+    // NOTE: There are phones on which you can't get the recipients from the thread id for SMS
+    // until you have a message in the conversation!
+    private static String getRawRecipientIdsForThread(final ContentProvider threadProvider,
+                                                      final long threadId) {
+        if (threadId <= 0) {
+            return null;
+        }
+        final Cursor thread = threadProvider.query(
+                ALL_THREADS_URI,
+                SMS_RECIPIENTS_PROJECTION, "_id=?", new String[]{String.valueOf(threadId)}, null);
+        if (thread != null) {
+            try {
+                if (thread.moveToFirst()) {
+                    // recipientIds will be a space-separated list of ids into the
+                    // canonical addresses table.
+                    return thread.getString(RECIPIENT_IDS);
+                }
+            } finally {
+                thread.close();
+            }
+        }
+        return null;
+    }
+
+    private static final Uri SINGLE_CANONICAL_ADDRESS_URI =
+            Uri.parse("content://mms-sms/canonical-address");
+
+    // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
+    private static List<String> getAddresses(final ContentProvider threadProvider,
+                                             final String spaceSepIds) {
+        final List<String> numbers = new ArrayList<String>();
+        final String[] ids = spaceSepIds.split(" ");
+        for (final String id : ids) {
+            long longId;
+
+            try {
+                longId = Long.parseLong(id);
+                if (longId < 0) {
+                    if (DEBUG) {
+                        Log.e(TAG, "getAddresses: invalid id " + longId);
+                    }
+                    continue;
+                }
+            } catch (final NumberFormatException ex) {
+                if (DEBUG) {
+                    Log.e(TAG, "getAddresses: invalid id. " + ex, ex);
+                }
+                // skip this id
+                continue;
+            }
+
+            // TODO: build a single query where we get all the addresses at once.
+            Cursor c = null;
+            try {
+                c = threadProvider.query(
+                        ContentUris.withAppendedId(SINGLE_CANONICAL_ADDRESS_URI, longId),
+                        null, null, null, null);
+            } catch (final Exception e) {
+                if (DEBUG) {
+                    Log.e(TAG, "getAddresses: query failed for id " + longId, e);
+                }
+            }
+            if (c != null) {
+                try {
+                    if (c.moveToFirst()) {
+                        final String number = c.getString(0);
+                        if (!TextUtils.isEmpty(number)) {
+                            numbers.add(number);
+                        } else {
+                            if (DEBUG) {
+                                Log.w(TAG, "Canonical MMS/SMS address is empty for id: " + longId);
+                            }
+                        }
+                    }
+                } finally {
+                    c.close();
+                }
+            }
+        }
+        if (numbers.isEmpty()) {
+            if (DEBUG) {
+                Log.w(TAG, "No MMS addresses found from ids string [" + spaceSepIds + "]");
+            }
+        }
+        return numbers;
+    }
+
     @Override
     public void onBackup(ParcelFileDescriptor oldState, BackupDataOutput data,
                          ParcelFileDescriptor newState) throws IOException {
