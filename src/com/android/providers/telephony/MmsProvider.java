@@ -70,7 +70,7 @@ public class MmsProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
         setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
-        mOpenHelper = MmsSmsDatabaseHelper.getInstance(getContext());
+        mOpenHelper = MmsSmsDatabaseHelper.getInstanceForCe(getContext());
         return true;
     }
 
