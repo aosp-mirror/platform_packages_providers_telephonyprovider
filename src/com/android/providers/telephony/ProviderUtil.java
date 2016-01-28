@@ -23,7 +23,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Process;
 import android.provider.Telephony;
-import android.provider.Telephony.Sms;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -112,4 +111,17 @@ public class ProviderUtil {
         context.sendBroadcast(intent);
     }
 
+    public static Context getCredentialEncryptedContext(Context context) {
+        if (context.isCredentialEncryptedStorage()) {
+            return context;
+        }
+        return context.createCredentialEncryptedStorageContext();
+    }
+
+    public static Context getDeviceEncryptedContext(Context context) {
+        if (context.isDeviceEncryptedStorage()) {
+            return context;
+        }
+        return context.createDeviceEncryptedStorageContext();
+    }
 }

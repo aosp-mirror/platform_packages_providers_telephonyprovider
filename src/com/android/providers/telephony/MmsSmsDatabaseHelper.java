@@ -24,6 +24,7 @@ import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.storage.StorageManager;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.provider.Telephony.Mms;
@@ -48,6 +49,23 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
 
+/**
+ * A {@link SQLiteOpenHelper} that handles DB management of SMS and MMS tables.
+ *
+ * From N, SMS and MMS tables are split into two groups with different levels of encryption.
+ *   - the raw table, which lives inside DE(Device Encrypted) storage.
+ *   - all other tables, which lives under CE(Credential Encrypted) storage.
+ *
+ * All tables are created by this class in the same database that can live either in DE or CE
+ * storage. But not all tables in the same database should be used. Only DE tables should be used
+ * in the database created in DE and only CE tables should be used in the database created in CE.
+ * The only exception is a non-FBE device migrating from M to N, in which case the DE and CE tables
+ * will actually live inside the same storage/database.
+ *
+ * This class provides methods to create instances that manage databases in different storage.
+ * It's the responsibility of the clients of this class to make sure the right instance is
+ * used to access tables that are supposed to live inside the intended storage.
+ */
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";
 
@@ -211,7 +229,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         "     AND part.mid = pdu._id);" +
                         " END";
 
-    private static MmsSmsDatabaseHelper sInstance = null;
+    private static MmsSmsDatabaseHelper sDeInstance = null;
+    private static MmsSmsDatabaseHelper sCeInstance = null;
     private static boolean sTriedAutoIncrement = false;
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
@@ -228,14 +247,29 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     /**
-     * Return a singleton helper for the combined MMS and SMS
-     * database.
+     * Returns a singleton helper for the combined MMS and SMS database in device encrypted storage.
      */
-    /* package */ static synchronized MmsSmsDatabaseHelper getInstance(Context context) {
-        if (sInstance == null) {
-            sInstance = new MmsSmsDatabaseHelper(context);
+    /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForDe(Context context) {
+        if (sDeInstance == null) {
+            sDeInstance = new MmsSmsDatabaseHelper(ProviderUtil.getDeviceEncryptedContext(context));
         }
-        return sInstance;
+        return sDeInstance;
+    }
+
+    /**
+     * Returns a singleton helper for the combined MMS and SMS database in credential encrypted
+     * storage. If FBE is not available, use the device encrypted storage instead.
+     */
+    /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForCe(Context context) {
+        if (sCeInstance == null) {
+            if (StorageManager.isFileBasedEncryptionEnabled()) {
+                sCeInstance = new MmsSmsDatabaseHelper(
+                    ProviderUtil.getCredentialEncryptedContext(context));
+            } else {
+                sCeInstance = getInstanceForDe(context);
+            }
+        }
+        return sCeInstance;
     }
 
     /**
