@@ -16,6 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label" product="tablet" msgid="9194799012395299737">"Configuratie mobiel netwerk"</string>
-    <string name="app_label" product="default" msgid="8338087656149558019">"Opslag telefoon/berichten"</string>
+    <string name="app_label" product="tablet" msgid="9194799012395299737">"Мобилдик тармактын конфигурациясы"</string>
+    <string name="app_label" product="default" msgid="8338087656149558019">"Телфн ж-а SMS/MMS сактгч"</string>
 </resources>
