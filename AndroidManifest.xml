@@ -87,5 +87,9 @@
                   android:singleUser="true"
                   android:multiprocess="false"
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
+
+        <service
+            android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
+            android:exported="false" />
     </application>
 </manifest>

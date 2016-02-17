@@ -22,6 +22,8 @@ import com.google.android.mms.pdu.CharacterSets;
 import com.android.internal.annotations.VisibleForTesting;
 
 import android.annotation.TargetApi;
+import android.app.AlarmManager;
+import android.app.IntentService;
 import android.app.backup.BackupAgent;
 import android.app.backup.BackupDataInput;
 import android.app.backup.BackupDataOutput;
@@ -29,6 +31,9 @@ import android.app.backup.FullBackupDataOutput;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.net.Uri;
@@ -47,18 +52,23 @@ import android.util.JsonWriter;
 import android.util.Log;
 import android.util.SparseArray;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
-import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.DeflaterOutputStream;
 import java.util.zip.InflaterInputStream;
 
@@ -132,9 +142,13 @@ public class TelephonyBackupAgent extends BackupAgent {
     // JSON key for MMS charset.
     private static final String MMS_BODY_CHARSET_KEY = "mms_charset";
 
-    // File names for backup/restore.
-    private static final String SMS_BACKUP_FILE = "sms_backup";
-    private static final String MMS_BACKUP_FILE = "mms_backup";
+    // File names suffixes for backup/restore.
+    private static final String SMS_BACKUP_FILE_SUFFIX = "_sms_backup";
+    private static final String MMS_BACKUP_FILE_SUFFIX = "_mms_backup";
+
+    // File name formats for backup. It looks like 000000_sms_backup, 000001_sms_backup, etc.
+    private static final String SMS_BACKUP_FILE_FORMAT = "%06d"+SMS_BACKUP_FILE_SUFFIX;
+    private static final String MMS_BACKUP_FILE_FORMAT = "%06d"+MMS_BACKUP_FILE_SUFFIX;
 
     // Charset being used for reading/writing backup files.
     private static final String CHARSET_UTF8 = "UTF-8";
@@ -142,8 +156,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     // Order by ID entries from database.
     private static final String ORDER_BY_ID = BaseColumns._ID + " ASC";
 
-    // Order by Date entries from database. We order it the oldest first in order to throw them if
-    // we are over quota.
+    // Order by Date entries from database. We start backup from the oldest.
     private static final String ORDER_BY_DATE = "date ASC";
 
     // Columns from SMS database for backup/restore.
@@ -178,7 +191,6 @@ public class TelephonyBackupAgent extends BackupAgent {
             Telephony.Mms.DATE_SENT,
             Telephony.Mms.MESSAGE_TYPE,
             Telephony.Mms.MMS_VERSION,
-            Telephony.Mms.TEXT_ONLY,
             Telephony.Mms.MESSAGE_BOX,
             Telephony.Mms.CONTENT_LOCATION,
             Telephony.Mms.THREAD_ID
@@ -197,60 +209,82 @@ public class TelephonyBackupAgent extends BackupAgent {
     // and charset for MMS message.
     @VisibleForTesting
     static final String[] MMS_TEXT_PROJECTION = new String[] {
-            Telephony.Mms.Part.CONTENT_TYPE,
             Telephony.Mms.Part.TEXT,
             Telephony.Mms.Part.CHARSET
     };
+    static final int MMS_TEXT_IDX = 0;
+    static final int MMS_TEXT_CHARSET_IDX = 1;
+
+    // Buffer size for Json writer.
+    public static final int WRITER_BUFFER_SIZE = 32*1024; //32Kb
+
+    // We increase how many bytes backup size over quota by 10%, so we will fit into quota on next
+    // backup
+    public static final double BYTES_OVER_QUOTA_MULTIPLIER = 1.1;
 
     // Maximum messages for one backup file. After reaching the limit the agent backs up the file,
     // deletes it and creates a new one with the same name.
-    private static final int MAX_MSG_PER_FILE = 1000;
+    @VisibleForTesting
+    static int MAX_MSG_PER_FILE = 1000;
 
 
     // Default values for SMS, MMS, Addresses restore.
-    private static final ContentValues defaultValuesSms = new ContentValues(3);
-    private static final ContentValues defaultValuesMms = new ContentValues(5);
-    private static final ContentValues defaultValuesAddr = new ContentValues(2);
+    private static final ContentValues sDefaultValuesSms = new ContentValues(3);
+    private static final ContentValues sDefaultValuesMms = new ContentValues(5);
+    private static final ContentValues sDefaultValuesAddr = new ContentValues(2);
 
     // Shared preferences for the backup agent.
     private static final String BACKUP_PREFS = "backup_shared_prefs";
-    // Key for storing bytes over.
-    private static final String BYTES_OVER_QUOTA_PREF_KEY = "bytes_over_quota";
+    // Key for storing quota bytes.
+    private static final String QUOTA_BYTES = "backup_quota_bytes";
+    // Key for storing backup data size.
+    private static final String BACKUP_DATA_BYTES = "backup_data_bytes";
+    // Key for storing timestamp when backup agent resets quota. It does that to get onQuotaExceeded
+    // call so it could get the new quota if it changed.
+    private static final String QUOTA_RESET_TIME = "reset_quota_time";
+    private static final long QUOTA_RESET_INTERVAL = 30 * AlarmManager.INTERVAL_DAY; // 30 days.
 
 
     static {
         // Consider restored messages read and seen.
-        defaultValuesSms.put(Telephony.Sms.READ, 1);
-        defaultValuesSms.put(Telephony.Sms.SEEN, 1);
+        sDefaultValuesSms.put(Telephony.Sms.READ, 1);
+        sDefaultValuesSms.put(Telephony.Sms.SEEN, 1);
         // If there is no sub_id with self phone number on restore set it to -1.
-        defaultValuesSms.put(Telephony.Sms.SUBSCRIPTION_ID, -1);
+        sDefaultValuesSms.put(Telephony.Sms.SUBSCRIPTION_ID, -1);
 
-        defaultValuesMms.put(Telephony.Mms.READ, 1);
-        defaultValuesMms.put(Telephony.Mms.SEEN, 1);
-        defaultValuesMms.put(Telephony.Mms.SUBSCRIPTION_ID, -1);
-        defaultValuesMms.put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_ALL);
-        defaultValuesMms.put(Telephony.Mms.TEXT_ONLY, 1);
+        sDefaultValuesMms.put(Telephony.Mms.READ, 1);
+        sDefaultValuesMms.put(Telephony.Mms.SEEN, 1);
+        sDefaultValuesMms.put(Telephony.Mms.SUBSCRIPTION_ID, -1);
+        sDefaultValuesMms.put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_ALL);
+        sDefaultValuesMms.put(Telephony.Mms.TEXT_ONLY, 1);
 
-        defaultValuesAddr.put(Telephony.Mms.Addr.TYPE, 0);
-        defaultValuesAddr.put(Telephony.Mms.Addr.CHARSET, CharacterSets.DEFAULT_CHARSET);
+        sDefaultValuesAddr.put(Telephony.Mms.Addr.TYPE, 0);
+        sDefaultValuesAddr.put(Telephony.Mms.Addr.CHARSET, CharacterSets.DEFAULT_CHARSET);
     }
 
 
-    private SparseArray<String> subId2phone;
-    private Map<String, Integer> phone2subId;
+    private final SparseArray<String> subId2phone = new SparseArray<String>();
+
+    // It's static cause it's used by DeferredSmsMmsRestoreService.
+    private static final Map<String, Integer> sPhone2subId = new ArrayMap<String, Integer>();
     private ContentProvider mSmsProvider;
     private ContentProvider mMmsProvider;
     private ContentProvider mMmsSmsProvider;
 
-    // How many bytes we have to skip to fit into quota.
+    // How many bytes we can backup to fit into quota.
     private long mBytesOverQuota;
+
+    // Cache list of recipients by threadId. It reduces db requests heavily. Used during backup.
+    @VisibleForTesting
+    static Map<Long, List<String>> sCacheRecipientsByThread;
+    // Cache threadId by list of recipients. Used during restore.
+    @VisibleForTesting
+    static Map<Set<String>, Long> sCacheGetOrCreateThreadId;
 
     @Override
     public void onCreate() {
         super.onCreate();
 
-        subId2phone = new SparseArray<String>();
-        phone2subId = new ArrayMap<String, Integer>();
         final SubscriptionManager subscriptionManager = SubscriptionManager.from(this);
         if (subscriptionManager != null) {
             final List<SubscriptionInfo> subInfo =
@@ -259,145 +293,280 @@ public class TelephonyBackupAgent extends BackupAgent {
                 for (SubscriptionInfo sub : subInfo) {
                     final String phoneNumber = getNormalizedNumber(sub);
                     subId2phone.append(sub.getSubscriptionId(), phoneNumber);
-                    phone2subId.put(phoneNumber, sub.getSubscriptionId());
+                    sPhone2subId.put(phoneNumber, sub.getSubscriptionId());
                 }
             }
         }
 
         mSmsProvider = new SmsProvider();
-        mMmsProvider = new MmsProvider();
-        mMmsSmsProvider = new MmsSmsProvider();
-
-        attachAndCreateProviders();
-    }
-
-    private void attachAndCreateProviders() {
         mSmsProvider.attachInfo(this, null);
         mSmsProvider.onCreate();
 
+        mMmsProvider = new MmsProvider();
         mMmsProvider.attachInfo(this, null);
         mMmsProvider.onCreate();
 
+        mMmsSmsProvider = new MmsSmsProvider();
         mMmsSmsProvider.attachInfo(this, null);
         mMmsSmsProvider.onCreate();
+
+        sCacheRecipientsByThread = null;
+        sCacheGetOrCreateThreadId = null;
+    }
+
+    @VisibleForTesting
+    void setProviders(ContentProvider smsProvider,
+                      ContentProvider mmsProvider,
+                      ContentProvider mmsSmsProvider) {
+        mSmsProvider = smsProvider;
+        mMmsProvider = mmsProvider;
+        mMmsSmsProvider = mmsSmsProvider;
     }
 
     @Override
     public void onFullBackup(FullBackupDataOutput data) throws IOException {
-        mBytesOverQuota = getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE).
-                getLong(BYTES_OVER_QUOTA_PREF_KEY, 0);
+        SharedPreferences sharedPreferences = getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE);
+        if (sharedPreferences.getLong(QUOTA_RESET_TIME, Long.MAX_VALUE) <
+                System.currentTimeMillis()) {
+            clearSharedPreferences();
+        }
 
-        backupAllSms(data);
-        backupAllMms(data);
+        mBytesOverQuota = sharedPreferences.getLong(BACKUP_DATA_BYTES, 0) -
+                sharedPreferences.getLong(QUOTA_BYTES, Long.MAX_VALUE);
+        if (mBytesOverQuota > 0) {
+            mBytesOverQuota *= BYTES_OVER_QUOTA_MULTIPLIER;
+        }
+
+        try (
+                Cursor smsCursor = mSmsProvider.query(Telephony.Sms.CONTENT_URI, SMS_PROJECTION,
+                        null, null, ORDER_BY_DATE);
+                // Do not backup non text-only MMS's.
+                Cursor mmsCursor = mMmsProvider.query(Telephony.Mms.CONTENT_URI, MMS_PROJECTION,
+                        Telephony.Mms.TEXT_ONLY+"=1", null, ORDER_BY_DATE)) {
+
+            if (smsCursor != null) {
+                smsCursor.moveToFirst();
+            }
+            if (mmsCursor != null) {
+                mmsCursor.moveToFirst();
+            }
+
+            // It backs up messages from the oldest to newest. First it looks at the timestamp of
+            // the next SMS messages and MMS message. If the SMS is older it backs up 1000 SMS
+            // messages, otherwise 1000 MMS messages. Repeat until out of SMS's or MMS's.
+            // It ensures backups are incremental.
+            int fileNum = 0;
+            while (smsCursor != null && !smsCursor.isAfterLast() &&
+                    mmsCursor != null && !mmsCursor.isAfterLast()) {
+                final long smsDate = TimeUnit.MILLISECONDS.toSeconds(getMessageDate(smsCursor));
+                final long mmsDate = getMessageDate(mmsCursor);
+                if (smsDate < mmsDate) {
+                    backupAll(data, smsCursor, String.format(SMS_BACKUP_FILE_FORMAT, fileNum++));
+                } else {
+                    backupAll(data, mmsCursor, String.format(MMS_BACKUP_FILE_FORMAT, fileNum++));
+                }
+            }
+
+            while (smsCursor != null && !smsCursor.isAfterLast()) {
+                backupAll(data, smsCursor, String.format(SMS_BACKUP_FILE_FORMAT, fileNum++));
+            }
+
+            while (mmsCursor != null && !mmsCursor.isAfterLast()) {
+                backupAll(data, mmsCursor, String.format(MMS_BACKUP_FILE_FORMAT, fileNum++));
+            }
+        }
+    }
+
+    @VisibleForTesting
+    void clearSharedPreferences() {
+        getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE).edit()
+                .remove(BACKUP_DATA_BYTES)
+                .remove(QUOTA_BYTES)
+                .remove(QUOTA_RESET_TIME)
+                .apply();
+    }
+
+    private static long getMessageDate(Cursor cursor) {
+        return cursor.getLong(cursor.getColumnIndex(Telephony.Sms.DATE));
     }
 
     @Override
     public void onQuotaExceeded(long backupDataBytes, long quotaBytes) {
-        mBytesOverQuota = (long)((backupDataBytes - quotaBytes)*1.1);
-        getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE).edit()
-                .putLong(BYTES_OVER_QUOTA_PREF_KEY, mBytesOverQuota).apply();
+        SharedPreferences sharedPreferences = getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE);
+        if (sharedPreferences.contains(BACKUP_DATA_BYTES)
+                && sharedPreferences.contains(QUOTA_BYTES)) {
+            // Increase backup size by the size we skipped during previous backup.
+            backupDataBytes += (sharedPreferences.getLong(BACKUP_DATA_BYTES, 0)
+                    - sharedPreferences.getLong(QUOTA_BYTES, 0)) * BYTES_OVER_QUOTA_MULTIPLIER;
+        }
+        sharedPreferences.edit()
+                .putLong(BACKUP_DATA_BYTES, backupDataBytes)
+                .putLong(QUOTA_BYTES, quotaBytes)
+                .putLong(QUOTA_RESET_TIME, System.currentTimeMillis() + QUOTA_RESET_INTERVAL)
+                .apply();
     }
 
-    private void backupAllSms(FullBackupDataOutput data) throws IOException {
-        try (Cursor cursor = mSmsProvider.query(Telephony.Sms.CONTENT_URI, SMS_PROJECTION, null,
-                null, ORDER_BY_DATE)) {
-            if (DEBUG) {
-                Log.i(TAG, "Backing up SMS");
-            }
-            if (cursor != null) {
-                while (!cursor.isLast() && !cursor.isAfterLast()) {
-                    try (JsonWriter jsonWriter = getJsonWriter(SMS_BACKUP_FILE)) {
-                        putSmsMessagesToJson(cursor, subId2phone, jsonWriter, mMmsSmsProvider,
-                                MAX_MSG_PER_FILE);
-                    }
-                    backupFile(SMS_BACKUP_FILE, data);
-                }
-            }
+    private void backupAll(FullBackupDataOutput data, Cursor cursor, String fileName)
+            throws IOException {
+        if (cursor == null || cursor.isAfterLast()) {
+            return;
         }
-    }
 
-    private void backupAllMms(FullBackupDataOutput data) throws IOException {
-        try (Cursor cursor = mMmsProvider.query(Telephony.Mms.CONTENT_URI, MMS_PROJECTION, null,
-                null, ORDER_BY_DATE)) {
-            if (DEBUG) {
-                Log.i(TAG, "Backing up text MMS");
-            }
-            if (cursor != null) {
-                while (!cursor.isLast() && !cursor.isAfterLast()) {
-                    try (JsonWriter jsonWriter = getJsonWriter(MMS_BACKUP_FILE)) {
-                        putMmsMessagesToJson(cursor, mMmsProvider, mMmsSmsProvider, subId2phone,
-                                jsonWriter, MAX_MSG_PER_FILE);
-                    }
-                    backupFile(MMS_BACKUP_FILE, data);
-                }
+        int messagesWritten = 0;
+        try (JsonWriter jsonWriter = getJsonWriter(fileName)) {
+            if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
+                messagesWritten = putSmsMessagesToJson(cursor, mMmsSmsProvider,
+                        subId2phone, jsonWriter, MAX_MSG_PER_FILE);
+            } else {
+                messagesWritten = putMmsMessagesToJson(cursor, mMmsProvider,
+                        mMmsSmsProvider, subId2phone, jsonWriter, MAX_MSG_PER_FILE);
             }
         }
+        backupFile(messagesWritten, fileName, data);
     }
 
     @VisibleForTesting
-    static void putMmsMessagesToJson(Cursor cursor, ContentProvider mmsProvider,
-                                     ContentProvider threadProvider,
-                                     SparseArray<String> subId2phone, JsonWriter jsonWriter,
-                                     int maxMsgPerFile) throws IOException {
+    static int putMmsMessagesToJson(Cursor cursor, ContentProvider mmsProvider,
+                                    ContentProvider threadProvider,
+                                    SparseArray<String> subId2phone, JsonWriter jsonWriter,
+                                    int maxMsgPerFile) throws IOException {
         jsonWriter.beginArray();
-        for (int msgCount=0; msgCount<maxMsgPerFile && cursor.moveToNext();) {
+        int msgCount;
+        for (msgCount = 0; msgCount < maxMsgPerFile && !cursor.isAfterLast(); cursor.moveToNext()) {
             msgCount +=
                     writeMmsToWriter(cursor, mmsProvider, threadProvider, subId2phone, jsonWriter);
         }
         jsonWriter.endArray();
+        return msgCount;
     }
 
     @VisibleForTesting
-    static void putSmsMessagesToJson(Cursor cursor, SparseArray<String> subId2phone,
-                                     JsonWriter jsonWriter, ContentProvider threadProvider,
-                                     int maxMsgPerFile) throws IOException {
+    static int putSmsMessagesToJson(Cursor cursor, ContentProvider threadProvider,
+                                    SparseArray<String> subId2phone, JsonWriter jsonWriter,
+                                    int maxMsgPerFile) throws IOException {
 
         jsonWriter.beginArray();
-        for (int msgCount=0; msgCount<maxMsgPerFile && cursor.moveToNext(); ++msgCount) {
+        int msgCount;
+        for (msgCount = 0; msgCount < maxMsgPerFile && !cursor.isAfterLast();
+                ++msgCount, cursor.moveToNext()) {
             writeSmsToWriter(jsonWriter, cursor, threadProvider, subId2phone);
         }
         jsonWriter.endArray();
+        return msgCount;
     }
 
-    private void backupFile(String fileName, FullBackupDataOutput data) {
+    private void backupFile(int messagesWritten, String fileName, FullBackupDataOutput data)
+            throws IOException {
         final File file = new File(getFilesDir().getPath() + "/" + fileName);
         try {
-            if (mBytesOverQuota > 0) {
-                mBytesOverQuota -= file.length();
-                return;
+            if (messagesWritten > 0) {
+                if (mBytesOverQuota > 0) {
+                    mBytesOverQuota -= file.length();
+                    return;
+                }
+                super.fullBackupFile(file, data);
             }
-            super.fullBackupFile(file, data);
         } finally {
             file.delete();
         }
     }
 
-    @Override
-    public void onRestoreFile(ParcelFileDescriptor data, long size, File destination, int type,
-                              long mode, long mtime) throws IOException {
-        if (DEBUG) {
-            Log.i(TAG, "Restoring file " + destination.getName());
+    public static class DeferredSmsMmsRestoreService extends IntentService {
+        private static final String TAG = "DeferredSmsMmsRestoreService";
+
+        private ContentProvider mSmsProvider, mMmsProvider, mMmsSmsProvider;
+
+        private final Comparator<File> mFileComparator = new Comparator<File>() {
+            @Override
+            public int compare(File lhs, File rhs) {
+                return rhs.getName().compareTo(lhs.getName());
+            }
+        };
+
+        public DeferredSmsMmsRestoreService() {
+            super(TAG);
+            setIntentRedelivery(true);
         }
 
-        if (destination.getName().equals(SMS_BACKUP_FILE)) {
-            if (DEBUG) {
-                Log.i(TAG, "Restoring SMS");
+        @Override
+        protected void onHandleIntent(Intent intent) {
+            File[] files = getFilesDir().listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File file) {
+                    return file.getName().endsWith(SMS_BACKUP_FILE_SUFFIX) ||
+                            file.getName().endsWith(MMS_BACKUP_FILE_SUFFIX);
+                }
+            });
+
+            if (files == null) {
+                return;
             }
-            try (JsonReader jsonReader = getJsonReader(data.getFileDescriptor())) {
-                putSmsMessagesToProvider(jsonReader, mSmsProvider, mMmsSmsProvider, phone2subId);
+            Arrays.sort(files, mFileComparator);
+
+            for (File file : files) {
+                final String fileName = file.getName();
+                try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                    TelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD(),
+                            mSmsProvider, mMmsProvider, mMmsSmsProvider);
+                    file.delete();
+                } catch (IOException e) {
+                    if (DEBUG) {
+                        Log.e(TAG, e.toString());
+                    }
+                }
             }
-        } else if (destination.getName().equals(MMS_BACKUP_FILE)) {
-            if (DEBUG) {
-                Log.i(TAG, "Restoring text MMS");
-            }
-            try (JsonReader jsonReader = getJsonReader(data.getFileDescriptor())) {
-                putMmsMessagesToProvider(jsonReader, mMmsProvider, mMmsSmsProvider, phone2subId);
-            }
-        } else {
-            super.onRestoreFile(data, size, destination, type, mode, mtime);
         }
+
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            mSmsProvider = new SmsProvider();
+            mSmsProvider.attachInfo(this, null);
+            mSmsProvider.onCreate();
+
+            mMmsProvider = new MmsProvider();
+            mMmsProvider.attachInfo(this, null);
+            mMmsProvider.onCreate();
+
+            mMmsSmsProvider = new MmsSmsProvider();
+            mMmsSmsProvider.attachInfo(this, null);
+            mMmsSmsProvider.onCreate();
+        }
+
+        public static Intent getIntent(Context context) {
+            return new Intent(context, DeferredSmsMmsRestoreService.class);
+        }
+    }
+
+    @Override
+    public void onRestoreFinished() {
+        super.onRestoreFinished();
+        startService(DeferredSmsMmsRestoreService.getIntent(this));
+    }
+
+    private static void doRestoreFile(String fileName, FileDescriptor fd,
+                                      ContentProvider smsProvider, ContentProvider mmsProvider,
+                                      ContentProvider mmsSmsProvider) throws IOException {
         if (DEBUG) {
-            Log.i(TAG, "Finished restore");
+            Log.i(TAG, "Restoring file " + fileName);
+        }
+
+        try (JsonReader jsonReader = getJsonReader(fd)) {
+            if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
+                if (DEBUG) {
+                    Log.i(TAG, "Restoring SMS");
+                }
+                putSmsMessagesToProvider(jsonReader, smsProvider, mmsSmsProvider, sPhone2subId);
+            } else if (fileName.endsWith(MMS_BACKUP_FILE_SUFFIX)) {
+                if (DEBUG) {
+                    Log.i(TAG, "Restoring text MMS");
+                }
+                putMmsMessagesToProvider(jsonReader, mmsProvider, mmsSmsProvider, sPhone2subId);
+            } else {
+                if (DEBUG) {
+                    Log.e(TAG, "Unknown file to restore:" + fileName);
+                }
+            }
         }
     }
 
@@ -406,16 +575,22 @@ public class TelephonyBackupAgent extends BackupAgent {
                                          ContentProvider threadProvider,
                                          Map<String, Integer> phone2subId) throws IOException {
         jsonReader.beginArray();
+        int msgCount = 0;
+        final int bulkInsertSize = MAX_MSG_PER_FILE;
+        ContentValues[] values = new ContentValues[bulkInsertSize];
         while (jsonReader.hasNext()) {
-            ContentValues smsValues =
-                    readSmsValuesFromReader(jsonReader, threadProvider, phone2subId);
-            if (doesSmsExist(smsProvider, smsValues)) {
-                if (DEBUG) {
-                    Log.e(TAG, String.format("Sms: %s already exists", smsValues.toString()));
-                }
+            ContentValues cv = readSmsValuesFromReader(jsonReader, threadProvider, phone2subId);
+            if (doesSmsExist(smsProvider, cv)) {
                 continue;
             }
-            smsProvider.insert(Telephony.Sms.CONTENT_URI, smsValues);
+            values[(msgCount++) % bulkInsertSize] = cv;
+            if (msgCount % bulkInsertSize == 0) {
+                smsProvider.bulkInsert(Telephony.Sms.CONTENT_URI, values);
+            }
+        }
+        if (msgCount % bulkInsertSize > 0) {
+            smsProvider.bulkInsert(Telephony.Sms.CONTENT_URI,
+                    Arrays.copyOf(values, msgCount % bulkInsertSize));
         }
         jsonReader.endArray();
     }
@@ -439,6 +614,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     @VisibleForTesting
     static final String[] PROJECTION_ID = {BaseColumns._ID};
+    private static final int ID_IDX = 0;
 
     private static boolean doesSmsExist(ContentProvider smsProvider, ContentValues smsValues) {
         final String where = String.format("%s = %d and %s = %s",
@@ -458,7 +634,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 null, null)) {
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    final int mmsId = cursor.getInt(0);
+                    final int mmsId = cursor.getInt(ID_IDX);
                     final MmsBody body = getMmsBody(mmsProvider, mmsId);
                     if (body != null && body.equals(mms.body)) {
                         return true;
@@ -528,8 +704,8 @@ public class TelephonyBackupAgent extends BackupAgent {
                                                  ContentProvider threadProvider,
                                                  Map<String, Integer> phone2id)
             throws IOException {
-        ContentValues values = new ContentValues(8+defaultValuesSms.size());
-        values.putAll(defaultValuesSms);
+        ContentValues values = new ContentValues(8+sDefaultValuesSms.size());
+        values.putAll(sDefaultValuesSms);
         jsonReader.beginObject();
         while (jsonReader.hasNext()) {
             String name = jsonReader.nextName();
@@ -579,11 +755,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                                         ContentProvider threadProvider,
                                         SparseArray<String> subId2phone,
                                         JsonWriter jsonWriter) throws IOException {
-        // Do not backup non text-only MMS's.
-        if (cursor.getInt(cursor.getColumnIndex(Telephony.Mms.TEXT_ONLY)) != 1) {
-            return 0;
-        }
-        final int mmsId = cursor.getInt(0);
+        final int mmsId = cursor.getInt(ID_IDX);
         final MmsBody body = getMmsBody(mmsProvider, mmsId);
         if (body == null || body.text == null) {
             return 0;
@@ -611,7 +783,6 @@ public class TelephonyBackupAgent extends BackupAgent {
                             getRecipientsByThread(threadProvider, threadId));
                     break;
                 case Telephony.Mms._ID:
-                case Telephony.Mms.TEXT_ONLY:
                 case Telephony.Mms.SUBJECT_CHARSET:
                     break;
                 case Telephony.Mms.SUBJECT:
@@ -639,8 +810,8 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static Mms readMmsFromReader(JsonReader jsonReader, ContentProvider threadProvider,
                                          Map<String, Integer> phone2id) throws IOException {
         Mms mms = new Mms();
-        mms.values = new ContentValues(6+defaultValuesMms.size());
-        mms.values.putAll(defaultValuesMms);
+        mms.values = new ContentValues(6+sDefaultValuesMms.size());
+        mms.values.putAll(sDefaultValuesMms);
         jsonReader.beginObject();
         String bodyText = null;
         int bodyCharset = CharacterSets.DEFAULT_CHARSET;
@@ -707,14 +878,13 @@ public class TelephonyBackupAgent extends BackupAgent {
         int charSet = 0;
 
         try (Cursor cursor = mmsProvider.query(MMS_PART_CONTENT_URI, MMS_TEXT_PROJECTION,
-                null, null/*selectionArgs*/, ORDER_BY_ID)) {
+                Telephony.Mms.Part.CONTENT_TYPE + "=?", new String[]{ContentType.TEXT_PLAIN},
+                ORDER_BY_ID)) {
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    if (ContentType.TEXT_PLAIN.equals(cursor.getString(0))) {
-                        body = (body == null ? cursor.getString(1)
-                                             : body.concat(cursor.getString(1)));
-                        charSet = cursor.getInt(2);
-                    }
+                    body = (body == null ? cursor.getString(MMS_TEXT_IDX)
+                            : body.concat(cursor.getString(MMS_TEXT_IDX)));
+                    charSet = cursor.getInt(MMS_TEXT_CHARSET_IDX);
                 } while (cursor.moveToNext());
             }
         }
@@ -752,7 +922,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         jsonReader.beginArray();
         while (jsonReader.hasNext()) {
             jsonReader.beginObject();
-            ContentValues addrValues = new ContentValues(defaultValuesAddr);
+            ContentValues addrValues = new ContentValues(sDefaultValuesAddr);
             while (jsonReader.hasNext()) {
                 final String name = jsonReader.nextName();
                 switch (name) {
@@ -887,11 +1057,12 @@ public class TelephonyBackupAgent extends BackupAgent {
     }
 
     private JsonWriter getJsonWriter(final String fileName) throws IOException {
-        return new JsonWriter(new OutputStreamWriter(new DeflaterOutputStream(
-                openFileOutput(fileName, MODE_PRIVATE)), CHARSET_UTF8));
+        return new JsonWriter(new BufferedWriter(new OutputStreamWriter(new DeflaterOutputStream(
+                openFileOutput(fileName, MODE_PRIVATE)), CHARSET_UTF8), WRITER_BUFFER_SIZE));
     }
 
-    private JsonReader getJsonReader(final FileDescriptor fileDescriptor) throws IOException {
+    private static JsonReader getJsonReader(final FileDescriptor fileDescriptor)
+            throws IOException {
         return new JsonReader(new InputStreamReader(new InflaterInputStream(
                 new FileInputStream(fileDescriptor)), CHARSET_UTF8));
     }
@@ -912,50 +1083,21 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
     }
 
-    // Copied from packages/apps/Messaging/src/com/android/messaging/sms/DatabaseMessages.java.
-    /**
-     * Decoded string by character set
-     */
-    private static String getDecodedString(final byte[] data, final int charset)  {
-        if (CharacterSets.ANY_CHARSET == charset) {
-            return new String(data); // system default encoding.
-        } else {
-            try {
-                final String name = CharacterSets.getMimeName(charset);
-                return new String(data, name);
-            } catch (final UnsupportedEncodingException e) {
-                try {
-                    return new String(data, CharacterSets.MIMENAME_ISO_8859_1);
-                } catch (final UnsupportedEncodingException exception) {
-                    return new String(data); // system default encoding.
-                }
-            }
-        }
-    }
-
-    // Copied from packages/apps/Messaging/src/com/android/messaging/sms/DatabaseMessages.java.
-    /**
-     * Unpack a given String into a byte[].
-     */
-    private static byte[] getStringBytes(final String data, final int charset) {
-        if (CharacterSets.ANY_CHARSET == charset) {
-            return data.getBytes();
-        } else {
-            try {
-                final String name = CharacterSets.getMimeName(charset);
-                return data.getBytes(name);
-            } catch (final UnsupportedEncodingException e) {
-                return data.getBytes();
-            }
-        }
-    }
-
     @VisibleForTesting
     static final Uri THREAD_ID_CONTENT_URI = Uri.parse("content://mms-sms/threadID");
+
     // Copied from frameworks/opt/telephony/src/java/android/provider/Telephony.java because we
     // can't use ContentResolver during backup/restore.
     private static long getOrCreateThreadId(
             ContentProvider contentProvider, Set<String> recipients) {
+        if (sCacheGetOrCreateThreadId == null) {
+            sCacheGetOrCreateThreadId = new HashMap<>();
+        }
+
+        if (sCacheGetOrCreateThreadId.containsKey(recipients)) {
+            return sCacheGetOrCreateThreadId.get(recipients);
+        }
+
         Uri.Builder uriBuilder = THREAD_ID_CONTENT_URI.buildUpon();
 
         for (String recipient : recipients) {
@@ -971,25 +1113,40 @@ public class TelephonyBackupAgent extends BackupAgent {
         try (Cursor cursor = contentProvider.query(uri, PROJECTION_ID, null, null, null)) {
             if (cursor != null) {
                 if (cursor.moveToFirst()) {
-                    return cursor.getLong(0);
+                    final long threadId = cursor.getLong(ID_IDX);
+                    sCacheGetOrCreateThreadId.put(recipients, threadId);
+                    return threadId;
                 } else {
-                    Log.e(TAG, "getOrCreateThreadId returned no rows!");
+                    if (DEBUG) {
+                        Log.e(TAG, "getOrCreateThreadId returned no rows!");
+                    }
                 }
             }
         }
 
-        Log.e(TAG, "getOrCreateThreadId failed with " + recipients.size() + " recipients");
+        if (DEBUG) {
+            Log.e(TAG, "getOrCreateThreadId failed with " + recipients.size() + " recipients");
+        }
         throw new IllegalArgumentException("Unable to find or allocate a thread ID.");
     }
 
-    // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
+    // Mostly copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
     private static List<String> getRecipientsByThread(final ContentProvider threadProvider,
                                                       final long threadId) {
-        final String spaceSepIds = getRawRecipientIdsForThread(threadProvider, threadId);
-        if (!TextUtils.isEmpty(spaceSepIds)) {
-            return getAddresses(threadProvider, spaceSepIds);
+        if (sCacheRecipientsByThread == null) {
+            sCacheRecipientsByThread = new HashMap<>();
         }
-        return null;
+
+        if (!sCacheRecipientsByThread.containsKey(threadId)) {
+            final String spaceSepIds = getRawRecipientIdsForThread(threadProvider, threadId);
+            if (!TextUtils.isEmpty(spaceSepIds)) {
+                sCacheRecipientsByThread.put(threadId, getAddresses(threadProvider, spaceSepIds));
+            } else {
+                sCacheRecipientsByThread.put(threadId, new ArrayList<String>());
+            }
+        }
+
+        return sCacheRecipientsByThread.get(threadId);
     }
 
     @VisibleForTesting
