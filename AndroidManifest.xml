@@ -30,6 +30,7 @@
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
                  android:fullBackupOnly="true"
+                 android:backupInForeground="true"
                  android:backupAgent="TelephonyBackupAgent"
                  android:restoreAnyVersion="true"
                  android:label="@string/app_label"
