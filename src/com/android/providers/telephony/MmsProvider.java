@@ -65,7 +65,7 @@ public class MmsProvider extends ContentProvider {
     static final String VIEW_PDU_RESTRICTED = "pdu_restricted";
 
     // The name of parts directory. The full dir is "app_parts".
-    private static final String PARTS_DIR_NAME = "parts";
+    static final String PARTS_DIR_NAME = "parts";
 
     @Override
     public boolean onCreate() {
