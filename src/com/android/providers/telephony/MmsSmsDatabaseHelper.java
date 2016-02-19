@@ -235,7 +235,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 61;
+    static final int DATABASE_VERSION = 62;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -1397,7 +1397,23 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-            return;
+            // fall through
+        case 61:
+          if (currentVersion <= 61) {
+              return;
+          }
+
+          db.beginTransaction();
+          try {
+              upgradeDatabaseToVersion62(db);
+              db.setTransactionSuccessful();
+          } catch (Throwable ex) {
+              Log.e(TAG, ex.getMessage(), ex);
+              break;
+          } finally {
+              db.endTransaction();
+          }
+          return;
         }
 
         Log.e(TAG, "Destroying all old data.");
@@ -1639,6 +1655,36 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    " AND " +
                    "(" + Mms.MESSAGE_TYPE + "!=" + PduHeaders.MESSAGE_TYPE_NOTIFICATION_IND + ");");
 
+    }
+
+    private void upgradeDatabaseToVersion62(SQLiteDatabase db) {
+        // When a non-FBE device is upgraded to N, all MMS attachment files are moved from
+        // /data/data to /data/user_de. We need to update the paths stored in the parts table to
+        // reflect this change.
+        String newPartsDirPath;
+        try {
+            newPartsDirPath = mContext.getDir(MmsProvider.PARTS_DIR_NAME, 0).getCanonicalPath();
+        }
+        catch (IOException e){
+            Log.e(TAG, "openFile: check file path failed " + e, e);
+            return;
+        }
+
+        // The old path of the part files will be something like this:
+        //   /data/data/0/com.android.providers.telephony/app_parts
+        // The new path of the part files will be something like this:
+        //   /data/user_de/0/com.android.providers.telephony/app_parts
+        int partsDirIndex = newPartsDirPath.lastIndexOf(
+            File.separator, newPartsDirPath.lastIndexOf(MmsProvider.PARTS_DIR_NAME));
+        String partsDirName = newPartsDirPath.substring(partsDirIndex) + File.separator;
+        // The query to update the part path will be:
+        //   UPDATE part SET _data = '/data/user_de/0/com.android.providers.telephony' ||
+        //                           SUBSTR(_data, INSTR(_data, '/app_parts/'))
+        //   WHERE INSTR(_data, '/app_parts/') > 0
+        db.execSQL("UPDATE " + MmsProvider.TABLE_PART +
+            " SET " + Part._DATA + " = '" + newPartsDirPath.substring(0, partsDirIndex) + "' ||" +
+            " SUBSTR(" + Part._DATA + ", INSTR(" + Part._DATA + ", '" + partsDirName + "'))" +
+            " WHERE INSTR(" + Part._DATA + ", '" + partsDirName + "') > 0");
     }
 
     @Override
