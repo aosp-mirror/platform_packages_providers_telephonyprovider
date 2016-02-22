@@ -17,6 +17,7 @@
 package com.android.providers.telephony;
 
 import android.annotation.TargetApi;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
@@ -27,6 +28,7 @@ import android.test.AndroidTestCase;
 import android.test.mock.MockContentProvider;
 import android.test.mock.MockCursor;
 import android.util.ArrayMap;
+import android.util.ArraySet;
 import android.util.JsonReader;
 import android.util.JsonWriter;
 import android.util.SparseArray;
@@ -38,6 +40,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -47,20 +50,32 @@ import java.util.Map;
  */
 @TargetApi(Build.VERSION_CODES.M)
 public class TelephonyBackupAgentTest extends AndroidTestCase {
+    /* Map subscriptionId -> phone number */
     private SparseArray<String> mSubId2Phone;
+    /* Map phone number -> subscriptionId */
     private ArrayMap<String, Integer> mPhone2SubId;
+    /* Table being used for sms cursor */
     private final List<ContentValues> mSmsTable = new ArrayList<>();
+    /* Table begin used for mms cursor */
     private final List<ContentValues> mMmsTable = new ArrayList<>();
+    /* Table contains parts, addresses of mms */
     private final List<ContentValues> mMmsAllContentValues = new ArrayList<>();
+    /* Cursors being used to access sms, mms tables */
     private FakeCursor mSmsCursor, mMmsCursor;
+    /* Test data with sms and mms */
     private ContentValues[] mSmsRows, mMmsRows;
+    /* Non-text mms for testing it is not being backed up */
     private ContentValues mMmsNonText;
+    /* Json representation for the test data */
     private String[] mSmsJson, mMmsJson;
+    /* sms, mms json concatenated as json array */
     private String mAllSmsJson, mAllMmsJson;
 
-
     private StringWriter mStringWriter;
+
+    /* Map uri -> cursors. Being used for contentprovider. */
     private Map<Uri, FakeCursor> mCursors;
+    /* Content provider passed to the backupAgent */
     private MockContentProvider mContentProvider;
 
     private static final String EMPTY_JSON_ARRAY = "[]";
@@ -68,6 +83,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
+        /* Filling up subscription maps */
         mStringWriter = new StringWriter();
         mSubId2Phone = new SparseArray<String>();
         mSubId2Phone.append(1, "+111111111111111");
@@ -78,31 +95,37 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             mPhone2SubId.put(mSubId2Phone.valueAt(i), mSubId2Phone.keyAt(i));
         }
 
+        /* Bind tables to the cursors */
         mSmsCursor = new FakeCursor(mSmsTable, TelephonyBackupAgent.SMS_PROJECTION);
         mMmsCursor = new FakeCursor(mMmsTable, TelephonyBackupAgent.MMS_PROJECTION);
+
         mCursors = new HashMap<Uri, FakeCursor>();
 
+        /* Generating test data */
         mSmsRows = new ContentValues[3];
         mSmsJson = new String[3];
         mSmsRows[0] = createSmsRow(1, 1, "+1232132214124", "sms 1", "sms subject", 9087978987l,
                 999999999, 3, 44, 1);
         mSmsJson[0] = "{\"self_phone\":\"+111111111111111\",\"address\":" +
                 "\"+1232132214124\",\"body\":\"sms 1\",\"subject\":\"sms subject\",\"date\":" +
-                "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"3\",\"type\":\"44\"}";
+                "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"3\",\"type\":\"44\"," +
+                "\"sms_recipients\":[\"+123 (213) 2214124\"]}";
 
         mSmsRows[1] = createSmsRow(2, 2, "+1232132214124", "sms 2", null, 9087978987l, 999999999,
                 0, 4, 1);
         mSmsJson[1] = "{\"address\":\"+1232132214124\",\"body\":\"sms 2\",\"date\":" +
-                "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"0\",\"type\":\"4\"}";
+                "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"0\",\"type\":\"4\"," +
+                "\"sms_recipients\":[\"+123 (213) 2214124\"]}";
 
         mSmsRows[2] = createSmsRow(4, 3, "+1232221412433 +1232221412444", "sms 3", null,
                 111111111111l, 999999999, 2, 3, 2);
         mSmsJson[2] =  "{\"self_phone\":\"+333333333333333\",\"address\":" +
                 "\"+1232221412433 +1232221412444\",\"body\":\"sms 3\",\"date\":\"111111111111\"," +
                 "\"date_sent\":" +
-                "\"999999999\",\"status\":\"2\",\"type\":\"3\"}";
+                "\"999999999\",\"status\":\"2\",\"type\":\"3\"," +
+                "\"sms_recipients\":[\"+1232221412433\",\"+1232221412444\"]}";
 
-        mAllSmsJson = concatJson(mSmsJson);
+        mAllSmsJson = makeJsonArray(mSmsJson);
 
 
 
@@ -147,7 +170,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 "\"msg_box\":\"333\",\"mms_addresses\":[{\"type\":10,\"address\":\"+8888888888\"," +
                 "\"charset\":100}],\"mms_body\":\"MMs body 3\",\"mms_charset\":131," +
                 "\"sub_cs\":\"10\"}";
-        mAllMmsJson = concatJson(mMmsJson);
+        mAllMmsJson = makeJsonArray(mMmsJson);
 
 
         // Should not be backed up. Cause flag text_only is false.
@@ -174,7 +197,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
     }
 
-    private static String concatJson(String[] json) {
+    private static String makeJsonArray(String[] json) {
         StringBuilder stringBuilder = new StringBuilder("[");
         for (int i=0; i<json.length; ++i) {
             if (i > 0) {
@@ -308,47 +331,45 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * Test with 3 sms in the provider with the limit per file 4.
      * @throws Exception
      */
-
-    public void DISABLED_testBackupSms_AllSms() throws Exception {
+    public void testBackupSms_AllSms() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), new ThreadProvider(), 4);
-        final String expected =
-                "[" + mSmsJson[0] + "," + mSmsJson[1] + "," + mSmsJson[2] + "]";
-        assertEquals(expected, mStringWriter.toString());
+                new JsonWriter(mStringWriter), getThreadProviderForSmsBackup(), 4);
+        assertEquals(mAllSmsJson, mStringWriter.toString());
     }
 
     /**
      * Test with 3 sms in the provider with the limit per file 3.
      * @throws Exception
      */
-    public void DISABLED_testBackupSms_AllSmsWithExactFileLimit() throws Exception {
+    public void testBackupSms_AllSmsWithExactFileLimit() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), new ThreadProvider(), 3);
-        final String expected =
-                "[" + mSmsJson[0] + "," + mSmsJson[1] + "," + mSmsJson[2] + "]";
-        assertEquals(expected, mStringWriter.toString());
+                new JsonWriter(mStringWriter), getThreadProviderForSmsBackup(), 3);
+        assertEquals(mAllSmsJson, mStringWriter.toString());
     }
 
     /**
      * Test with 3 sms in the provider with the limit per file 1.
      * @throws Exception
      */
-    public void DISABLED_testBackupSms_AllSmsOneMessagePerFile() throws Exception {
+    public void testBackupSms_AllSmsOneMessagePerFile() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
+
+        ThreadProvider threadProvider = getThreadProviderForSmsBackup();
+
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), new ThreadProvider(), 1);
+                new JsonWriter(mStringWriter), threadProvider, 1);
         assertEquals("[" + mSmsJson[0] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), new ThreadProvider(), 1);
+                new JsonWriter(mStringWriter), threadProvider, 1);
         assertEquals("[" + mSmsJson[1] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), new ThreadProvider(), 1);
+                new JsonWriter(mStringWriter), threadProvider, 1);
         assertEquals("[" + mSmsJson[2] + "]", mStringWriter.toString());
     }
 
@@ -371,9 +392,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMmsTable.add(mMmsNonText);
         TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
                 new JsonWriter(mStringWriter), 4);
-        final String expected =
-                "[" + mMmsJson[0] + "," + mMmsJson[1] + "," + mMmsJson[2] + "]";
-        assertEquals(expected, mStringWriter.toString());
+        assertEquals(mAllMmsJson, mStringWriter.toString());
     }
 
     /**
@@ -405,9 +424,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMmsTable.addAll(Arrays.asList(mMmsRows));
         TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
                 new JsonWriter(mStringWriter), 3);
-        final String expected =
-                "[" + mMmsJson[0] + "," + mMmsJson[1] + "," + mMmsJson[2] + "]";
-        assertEquals(expected, mStringWriter.toString());
+        assertEquals(mAllMmsJson, mStringWriter.toString());
     }
 
     /**
@@ -426,7 +443,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * Test restore sms with three sms json object in the array.
      * @throws Exception
      */
-    public void DISABLED_testRestoreSms_AllSms() throws Exception {
+    public void testRestoreSms_AllSms() throws Exception {
         JsonReader jsonReader = new JsonReader(new StringReader(mAllSmsJson));
         FakeSmsProvider smsProvider = new FakeSmsProvider(mSmsRows);
         TelephonyBackupAgent.putSmsMessagesToProvider(jsonReader, smsProvider,
@@ -456,6 +473,13 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         TelephonyBackupAgent.putMmsMessagesToProvider(jsonReader, mmsProvider,
                 new ThreadProvider(), mPhone2SubId);
         assertEquals(15, mmsProvider.getRowsAdded());
+    }
+
+    private ThreadProvider getThreadProviderForSmsBackup() {
+        ThreadProvider threadProvider = new ThreadProvider();
+        threadProvider.getOrCreateThreadId(new String[]{"+123 (213) 2214124"});
+        threadProvider.getOrCreateThreadId(new String[]{"+1232221412433", "+1232221412444"});
+        return threadProvider;
     }
 
     /**
@@ -594,29 +618,72 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * class that implements MmsSms provider for thread ids.
      */
     private static class ThreadProvider extends MockContentProvider {
+        ArrayList<Set<Integer> > id2Thread = new ArrayList<>();
+        ArrayList<String> id2Recipient = new ArrayList<>();
 
-        Map<List<String>, Integer> threadIds;
+        public int getOrCreateThreadId(final String[] recipients) {
+            Set<Integer> ids = new ArraySet<>();
+            for (String rec : recipients) {
+                if (!id2Recipient.contains(rec)) {
+                    id2Recipient.add(rec);
+                }
+                ids.add(id2Recipient.indexOf(rec)+1);
+            }
+            if (!id2Thread.contains(ids)) {
+                id2Thread.add(ids);
+            }
+            return id2Thread.indexOf(ids)+1;
+        }
 
-        public ThreadProvider() {
-            threadIds = new ArrayMap<>();
+        private String getSpaceSepIds(int threadId) {
+            String spaceSepIds = null;
+            for (Integer id : id2Thread.get(threadId-1)) {
+                spaceSepIds = (spaceSepIds == null ? "" : spaceSepIds + " ") + String.valueOf(id);
+            }
+            return spaceSepIds;
+        }
+
+        private String getRecipient(int recipientId) {
+            return id2Recipient.get(recipientId-1);
         }
 
         @Override
         public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
                             String sortOrder) {
-            List<String> recipients = uri.getQueryParameters("recipient");
-            int threadId = threadIds.size() + 1;
-            if (threadIds.containsKey(recipients)) {
-                threadId = threadIds.get(recipients);
-            } else {
-                threadIds.put(recipients, threadId);
-            }
+            if (uri.equals(TelephonyBackupAgent.ALL_THREADS_URI)) {
+                final int threadId = Integer.parseInt(selectionArgs[0]);
+                final String spaceSepIds = getSpaceSepIds(threadId);
+                List<ContentValues> table = new ArrayList<>();
+                ContentValues row = new ContentValues();
+                row.put(Telephony.Threads.RECIPIENT_IDS, spaceSepIds);
+                table.add(row);
+                return new FakeCursor(table, projection);
+            } else if (uri.toString().startsWith(
+                    TelephonyBackupAgent.SINGLE_CANONICAL_ADDRESS_URI.toString())) {
+                final int recipientId = (int)ContentUris.parseId(uri);
+                final String recipient = getRecipient(recipientId);
+                List<ContentValues> table = new ArrayList<>();
+                ContentValues row = new ContentValues();
+                row.put(Telephony.CanonicalAddressesColumns.ADDRESS, recipient);
+                table.add(row);
 
-            List<ContentValues> table = new ArrayList<>();
-            ContentValues row = new ContentValues();
-            row.put(BaseColumns._ID, String.valueOf(threadId));
-            table.add(row);
-            return new FakeCursor(table, projection);
+                return new FakeCursor(table,
+                        projection != null
+                                ? projection
+                                : new String[] { Telephony.CanonicalAddressesColumns.ADDRESS });
+            } else if (uri.toString().startsWith(
+                    TelephonyBackupAgent.THREAD_ID_CONTENT_URI.toString())) {
+                List<String> recipients = uri.getQueryParameters("recipient");
+
+                final int threadId =
+                        getOrCreateThreadId(recipients.toArray(new String[recipients.size()]));
+                List<ContentValues> table = new ArrayList<>();
+                ContentValues row = new ContentValues();
+                row.put(BaseColumns._ID, String.valueOf(threadId));
+                table.add(row);
+                return new FakeCursor(table, projection);
+            };
+            return null;
         }
     }
 

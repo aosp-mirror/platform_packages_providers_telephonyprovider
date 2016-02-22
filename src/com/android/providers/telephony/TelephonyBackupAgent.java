@@ -953,7 +953,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
     }
 
-    private static final Uri THREAD_ID_CONTENT_URI = Uri.parse("content://mms-sms/threadID");
+    @VisibleForTesting
+    static final Uri THREAD_ID_CONTENT_URI = Uri.parse("content://mms-sms/threadID");
     // Copied from frameworks/opt/telephony/src/java/android/provider/Telephony.java because we
     // can't use ContentResolver during backup/restore.
     private static long getOrCreateThreadId(
@@ -994,7 +995,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         return null;
     }
 
-    private static final Uri ALL_THREADS_URI =
+    @VisibleForTesting
+    static final Uri ALL_THREADS_URI =
             Telephony.Threads.CONTENT_URI.buildUpon().
                     appendQueryParameter("simple", "true").build();
     private static final int RECIPIENT_IDS  = 1;
@@ -1024,7 +1026,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         return null;
     }
 
-    private static final Uri SINGLE_CANONICAL_ADDRESS_URI =
+    @VisibleForTesting
+    static final Uri SINGLE_CANONICAL_ADDRESS_URI =
             Uri.parse("content://mms-sms/canonical-address");
 
     // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
