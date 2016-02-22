@@ -77,9 +77,10 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private Map<Uri, FakeCursor> mCursors;
     /* Content provider passed to the backupAgent */
     private MockContentProvider mContentProvider;
+    /* Content provider with threadIds.*/
+    private ThreadProvider mThreadProvider = new ThreadProvider();
 
     private static final String EMPTY_JSON_ARRAY = "[]";
-
     @Override
     protected void setUp() throws Exception {
         super.setUp();
@@ -109,13 +110,14 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mSmsJson[0] = "{\"self_phone\":\"+111111111111111\",\"address\":" +
                 "\"+1232132214124\",\"body\":\"sms 1\",\"subject\":\"sms subject\",\"date\":" +
                 "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"3\",\"type\":\"44\"," +
-                "\"sms_recipients\":[\"+123 (213) 2214124\"]}";
+                "\"recipients\":[\"+123 (213) 2214124\"]}";
+        mThreadProvider.getOrCreateThreadId(new String[]{"+123 (213) 2214124"});
 
         mSmsRows[1] = createSmsRow(2, 2, "+1232132214124", "sms 2", null, 9087978987l, 999999999,
                 0, 4, 1);
         mSmsJson[1] = "{\"address\":\"+1232132214124\",\"body\":\"sms 2\",\"date\":" +
                 "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"0\",\"type\":\"4\"," +
-                "\"sms_recipients\":[\"+123 (213) 2214124\"]}";
+                "\"recipients\":[\"+123 (213) 2214124\"]}";
 
         mSmsRows[2] = createSmsRow(4, 3, "+1232221412433 +1232221412444", "sms 3", null,
                 111111111111l, 999999999, 2, 3, 2);
@@ -123,7 +125,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 "\"+1232221412433 +1232221412444\",\"body\":\"sms 3\",\"date\":\"111111111111\"," +
                 "\"date_sent\":" +
                 "\"999999999\",\"status\":\"2\",\"type\":\"3\"," +
-                "\"sms_recipients\":[\"+1232221412433\",\"+1232221412444\"]}";
+                "\"recipients\":[\"+1232221412433\",\"+1232221412444\"]}";
+        mThreadProvider.getOrCreateThreadId(new String[]{"+1232221412433", "+1232221412444"});
 
         mAllSmsJson = makeJsonArray(mSmsJson);
 
@@ -136,39 +139,55 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 17 /*version*/, 1 /*textonly*/,
                 11 /*msgBox*/, "location 1" /*contentLocation*/, "MMs body 1" /*body*/,
                 111 /*body charset*/,
-                new String[]{"+11121212", "example@example.com", "+999999999"} /*addresses*/,
-                1 /*threadId*/);
+                new String[]{"+111 (111) 11111111", "+11121212", "example@example.com",
+                        "+999999999"} /*addresses*/,
+                3 /*threadId*/);
 
         mMmsJson[0] = "{\"self_phone\":\"+111111111111111\",\"sub\":\"Subject 1\"," +
                 "\"date\":\"111111\",\"date_sent\":\"111112\",\"m_type\":\"3\",\"v\":\"17\"," +
-                "\"msg_box\":\"11\",\"ct_l\":\"location 1\",\"mms_addresses\":[{\"type\":10," +
-                "\"address\":\"+11121212\",\"charset\":100},{\"type\":11,\"address\":" +
-                "\"example@example.com\",\"charset\":101},{\"type\":12,\"address\":\"+999999999\"" +
-                ",\"charset\":102}],\"mms_body\":\"MMs body 1\",\"mms_charset\":111,\"" +
+                "\"msg_box\":\"11\",\"ct_l\":\"location 1\"," +
+                "\"recipients\":[\"+11121212\",\"example@example.com\",\"+999999999\"]," +
+                "\"mms_addresses\":" +
+                "[{\"type\":10,\"address\":\"+111 (111) 11111111\",\"charset\":100}," +
+                "{\"type\":11,\"address\":\"+11121212\",\"charset\":101},{\"type\":12,\"address\":"+
+                "\"example@example.com\",\"charset\":102},{\"type\":13,\"address\":\"+999999999\"" +
+                ",\"charset\":103}],\"mms_body\":\"MMs body 1\",\"mms_charset\":111,\"" +
                 "sub_cs\":\"100\"}";
+        mThreadProvider.getOrCreateThreadId(new String[]{"+11121212", "example@example.com",
+                "+999999999"});
 
         mMmsRows[1] = createMmsRow(2 /*id*/, 2 /*subid*/, null /*subject*/, 100 /*subcharset*/,
                 111122 /*date*/, 1111112 /*datesent*/, 4 /*type*/, 18 /*version*/, 1 /*textonly*/,
                 222 /*msgBox*/, "location 2" /*contentLocation*/, "MMs body 2" /*body*/,
                 121 /*body charset*/,
-                new String[]{"example@example.com", "+999999999"} /*addresses*/, 2 /*threadId*/);
-
+                new String[]{"+7 (333) ", "example@example.com", "+999999999"} /*addresses*/,
+                4 /*threadId*/);
         mMmsJson[1] = "{\"date\":\"111122\",\"date_sent\":\"1111112\",\"m_type\":\"4\"," +
-                "\"v\":\"18\",\"msg_box\":\"222\",\"ct_l\":\"location 2\",\"mms_addresses\":" +
-                "[{\"type\":10,\"address\":\"example@example.com\",\"charset\":100}," +
-                "{\"type\":11,\"address\":\"+999999999\",\"charset\":101}]," +
+                "\"v\":\"18\",\"msg_box\":\"222\",\"ct_l\":\"location 2\"," +
+                "\"recipients\":[\"example@example.com\",\"+999999999\"]," +
+                "\"mms_addresses\":" +
+                "[{\"type\":10,\"address\":\"+7 (333) \",\"charset\":100}," +
+                "{\"type\":11,\"address\":\"example@example.com\",\"charset\":101}," +
+                "{\"type\":12,\"address\":\"+999999999\",\"charset\":102}]," +
                 "\"mms_body\":\"MMs body 2\",\"mms_charset\":121}";
+        mThreadProvider.getOrCreateThreadId(new String[]{"example@example.com", "+999999999"});
 
-        mMmsRows[2] = createMmsRow(10 /*id*/, 3 /*subid*/, "Subject 10" /*subject*/,
+        mMmsRows[2] = createMmsRow(9 /*id*/, 3 /*subid*/, "Subject 10" /*subject*/,
                 10 /*subcharset*/, 111133 /*date*/, 1111132 /*datesent*/, 5 /*type*/,
                 19 /*version*/, 1 /*textonly*/,
                 333 /*msgBox*/, null /*contentLocation*/, "MMs body 3" /*body*/,
-                131 /*body charset*/, new String[]{"+8888888888"} /*addresses*/, 3 /*threadId*/);
+                131 /*body charset*/,
+                new String[]{"333 333333333333", "+1232132214124"} /*addresses*/,
+                1 /*threadId*/);
 
         mMmsJson[2] = "{\"self_phone\":\"+333333333333333\",\"sub\":\"Subject 10\"," +
                 "\"date\":\"111133\",\"date_sent\":\"1111132\",\"m_type\":\"5\",\"v\":\"19\"," +
-                "\"msg_box\":\"333\",\"mms_addresses\":[{\"type\":10,\"address\":\"+8888888888\"," +
-                "\"charset\":100}],\"mms_body\":\"MMs body 3\",\"mms_charset\":131," +
+                "\"msg_box\":\"333\"," +
+                "\"recipients\":[\"+123 (213) 2214124\"]," +
+                "\"mms_addresses\":" +
+                "[{\"type\":10,\"address\":\"333 333333333333\",\"charset\":100}," +
+                "{\"type\":11,\"address\":\"+1232132214124\",\"charset\":101}]," +
+                "\"mms_body\":\"MMs body 3\",\"mms_charset\":131," +
                 "\"sub_cs\":\"10\"}";
         mAllMmsJson = makeJsonArray(mMmsJson);
 
@@ -334,7 +353,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupSms_AllSms() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), getThreadProviderForSmsBackup(), 4);
+                new JsonWriter(mStringWriter), mThreadProvider, 4);
         assertEquals(mAllSmsJson, mStringWriter.toString());
     }
 
@@ -345,7 +364,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupSms_AllSmsWithExactFileLimit() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), getThreadProviderForSmsBackup(), 3);
+                new JsonWriter(mStringWriter), mThreadProvider, 3);
         assertEquals(mAllSmsJson, mStringWriter.toString());
     }
 
@@ -356,20 +375,18 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupSms_AllSmsOneMessagePerFile() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
 
-        ThreadProvider threadProvider = getThreadProviderForSmsBackup();
-
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), threadProvider, 1);
+                new JsonWriter(mStringWriter), mThreadProvider, 1);
         assertEquals("[" + mSmsJson[0] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), threadProvider, 1);
+                new JsonWriter(mStringWriter), mThreadProvider, 1);
         assertEquals("[" + mSmsJson[1] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
         TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), threadProvider, 1);
+                new JsonWriter(mStringWriter), mThreadProvider, 1);
         assertEquals("[" + mSmsJson[2] + "]", mStringWriter.toString());
     }
 
@@ -378,8 +395,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * @throws Exception
      */
     public void testBackupMms_NoMms() throws Exception {
-        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
-                new JsonWriter(mStringWriter), 4);
+        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
+                mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 4);
         assertEquals(EMPTY_JSON_ARRAY, mStringWriter.toString());
     }
 
@@ -390,8 +407,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupMms_AllMms() throws Exception {
         mMmsTable.addAll(Arrays.asList(mMmsRows));
         mMmsTable.add(mMmsNonText);
-        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
-                new JsonWriter(mStringWriter), 4);
+        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
+                mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 4);
         assertEquals(mAllMmsJson, mStringWriter.toString());
     }
 
@@ -401,18 +418,18 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testBackupMms_OneMessagePerFile() throws Exception {
         mMmsTable.addAll(Arrays.asList(mMmsRows));
-        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
-                new JsonWriter(mStringWriter), 1);
+        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
+                mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 1);
         assertEquals("[" + mMmsJson[0] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
-        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
-                new JsonWriter(mStringWriter), 1);
+        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
+                mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 1);
         assertEquals("[" + mMmsJson[1] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
-        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
-                new JsonWriter(mStringWriter), 2);
+        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
+                mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 1);
         assertEquals("[" + mMmsJson[2] + "]", mStringWriter.toString());
     }
 
@@ -422,8 +439,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testBackupMms_WithExactFileLimit() throws Exception {
         mMmsTable.addAll(Arrays.asList(mMmsRows));
-        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider, mSubId2Phone,
-                new JsonWriter(mStringWriter), 3);
+        TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
+                mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 3);
         assertEquals(mAllMmsJson, mStringWriter.toString());
     }
 
@@ -471,15 +488,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         JsonReader jsonReader = new JsonReader(new StringReader(mAllMmsJson));
         FakeMmsProvider mmsProvider = new FakeMmsProvider(mMmsAllContentValues);
         TelephonyBackupAgent.putMmsMessagesToProvider(jsonReader, mmsProvider,
-                new ThreadProvider(), mPhone2SubId);
-        assertEquals(15, mmsProvider.getRowsAdded());
-    }
-
-    private ThreadProvider getThreadProviderForSmsBackup() {
-        ThreadProvider threadProvider = new ThreadProvider();
-        threadProvider.getOrCreateThreadId(new String[]{"+123 (213) 2214124"});
-        threadProvider.getOrCreateThreadId(new String[]{"+1232221412433", "+1232221412444"});
-        return threadProvider;
+                mThreadProvider, mPhone2SubId);
+        assertEquals(18, mmsProvider.getRowsAdded());
     }
 
     /**
@@ -584,7 +594,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             }
 
             for (String key : modifiedValues.keySet()) {
-                assertEquals(modifiedValues.get(key), values.get(key));
+                assertEquals("Key:"+key, modifiedValues.get(key), values.get(key));
             }
             assertEquals(modifiedValues.size(), values.size());
             return retUri;
