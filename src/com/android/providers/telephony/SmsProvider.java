@@ -16,6 +16,7 @@
 
 package com.android.providers.telephony;
 
+import android.annotation.NonNull;
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -393,12 +394,44 @@ public class SmsProvider extends ContentProvider {
     }
 
     @Override
+    public int bulkInsert(@NonNull Uri url, @NonNull ContentValues[] values) {
+        final int callerUid = Binder.getCallingUid();
+        final String callerPkg = getCallingPackage();
+        long token = Binder.clearCallingIdentity();
+        try {
+            int messagesInserted = 0;
+            for (ContentValues initialValues : values) {
+                Uri insertUri = insertInner(url, initialValues, callerUid, callerPkg);
+                if (insertUri != null) {
+                    messagesInserted++;
+                }
+            }
+
+            // The raw table is used by the telephony layer for storing an sms before
+            // sending out a notification that an sms has arrived. We don't want to notify
+            // the default sms app of changes to this table.
+            final boolean notifyIfNotDefault = sURLMatcher.match(url) != SMS_RAW_MESSAGE;
+            notifyChange(notifyIfNotDefault, url, callerPkg);
+            return messagesInserted;
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
+
+    @Override
     public Uri insert(Uri url, ContentValues initialValues) {
         final int callerUid = Binder.getCallingUid();
         final String callerPkg = getCallingPackage();
         long token = Binder.clearCallingIdentity();
         try {
-            return insertInner(url, initialValues, callerUid, callerPkg);
+            Uri insertUri = insertInner(url, initialValues, callerUid, callerPkg);
+
+            // The raw table is used by the telephony layer for storing an sms before
+            // sending out a notification that an sms has arrived. We don't want to notify
+            // the default sms app of changes to this table.
+            final boolean notifyIfNotDefault = sURLMatcher.match(url) != SMS_RAW_MESSAGE;
+            notifyChange(notifyIfNotDefault, insertUri, callerPkg);
+            return insertUri;
         } finally {
             Binder.restoreCallingIdentity(token);
         }
@@ -589,7 +622,6 @@ public class SmsProvider extends ContentProvider {
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "insert " + uri + " succeeded");
             }
-            notifyChange(notifyIfNotDefault, uri, callerPkg);
             return uri;
         } else {
             Log.e(TAG,"insert: failed!");
