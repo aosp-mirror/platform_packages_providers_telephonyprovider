@@ -101,6 +101,7 @@ public class ProviderUtil {
 
         final Intent intent =
                 new Intent(Telephony.Sms.Intents.ACTION_EXTERNAL_PROVIDER_CHANGE);
+        intent.setFlags(Intent.FLAG_RECEIVER_REPLACE_PENDING);
         intent.setComponent(componentName);
         if (uri != null) {
             intent.setData(uri);
