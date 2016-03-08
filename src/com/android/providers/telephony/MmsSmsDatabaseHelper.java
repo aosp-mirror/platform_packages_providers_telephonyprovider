@@ -262,7 +262,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForCe(Context context) {
         if (sCeInstance == null) {
-            if (StorageManager.isFileBasedEncryptionEnabled()) {
+            if (StorageManager.isFileEncryptedNativeOrEmulated()) {
                 sCeInstance = new MmsSmsDatabaseHelper(
                     ProviderUtil.getCredentialEncryptedContext(context));
             } else {
