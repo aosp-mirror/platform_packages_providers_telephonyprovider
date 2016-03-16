@@ -504,7 +504,7 @@ public class MmsProvider extends ContentProvider {
                 // we're using the row id of the part table row but we're also using ids
                 // from the sms table so this divides the space into two large chunks.
                 // The row ids from the part table start at 2 << 32.
-                cv.put(Telephony.MmsSms.WordsTable.ID, (2 << 32) + rowId);
+                cv.put(Telephony.MmsSms.WordsTable.ID, (2L << 32) + rowId);
                 cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, values.getAsString("text"));
                 cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, rowId);
                 cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 2);
@@ -994,4 +994,3 @@ public class MmsProvider extends ContentProvider {
         }
     }
 }
-
