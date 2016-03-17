@@ -17,6 +17,7 @@
 package com.android.providers.telephony;
 
 import android.annotation.TargetApi;
+import android.app.backup.FullBackupDataOutput;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.database.Cursor;
@@ -64,8 +65,6 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private FakeCursor mSmsCursor, mMmsCursor;
     /* Test data with sms and mms */
     private ContentValues[] mSmsRows, mMmsRows;
-    /* Non-text mms for testing it is not being backed up */
-    private ContentValues mMmsNonText;
     /* Json representation for the test data */
     private String[] mSmsJson, mMmsJson;
     /* sms, mms json concatenated as json array */
@@ -81,9 +80,16 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private ThreadProvider mThreadProvider = new ThreadProvider();
 
     private static final String EMPTY_JSON_ARRAY = "[]";
+    private int mStoredMaxMsgPerFile;
+
+    TelephonyBackupAgent mTelephonyBackupAgent;
+
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+
+        mTelephonyBackupAgent = new TelephonyBackupAgent();
+        mTelephonyBackupAgent.attach(getContext());
 
         /* Filling up subscription maps */
         mStringWriter = new StringWriter();
@@ -96,11 +102,13 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             mPhone2SubId.put(mSubId2Phone.valueAt(i), mSubId2Phone.keyAt(i));
         }
 
+        mCursors = new HashMap<Uri, FakeCursor>();
         /* Bind tables to the cursors */
         mSmsCursor = new FakeCursor(mSmsTable, TelephonyBackupAgent.SMS_PROJECTION);
+        mCursors.put(Telephony.Sms.CONTENT_URI, mSmsCursor);
         mMmsCursor = new FakeCursor(mMmsTable, TelephonyBackupAgent.MMS_PROJECTION);
+        mCursors.put(Telephony.Mms.CONTENT_URI, mMmsCursor);
 
-        mCursors = new HashMap<Uri, FakeCursor>();
 
         /* Generating test data */
         mSmsRows = new ContentValues[3];
@@ -191,14 +199,6 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 "\"sub_cs\":\"10\"}";
         mAllMmsJson = makeJsonArray(mMmsJson);
 
-
-        // Should not be backed up. Cause flag text_only is false.
-        mMmsNonText = createMmsRow(10 /*id*/, 3 /*subid*/, "Subject 10" /*subject*/,
-                10 /*subcharset*/,
-                111133 /*date*/, 1111132 /*datesent*/, 5 /*type*/, 19 /*version*/, 0 /*textonly*/,
-                333 /*msgBox*/, null /*contentLocation*/, "MMs body 3" /*body*/,
-                131 /*body charset*/, new String[]{"+8888888888"} /*addresses*/, 3 /*threadId*/);
-
         mContentProvider = new MockContentProvider() {
             @Override
             public Cursor query(Uri uri, String[] projection, String selection,
@@ -208,12 +208,24 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                     if (projection != null) {
                         fakeCursor.setProjection(projection);
                     }
+                    fakeCursor.nextRow = 0;
                     return fakeCursor;
                 }
                 return super.query(uri, projection, selection, selectionArgs, sortOrder);
             }
         };
 
+        mStoredMaxMsgPerFile = TelephonyBackupAgent.MAX_MSG_PER_FILE;
+        TelephonyBackupAgent.sCacheGetOrCreateThreadId = null;
+        TelephonyBackupAgent.sCacheRecipientsByThread = null;
+        mTelephonyBackupAgent.clearSharedPreferences();
+    }
+
+    @Override
+    protected void tearDown() throws Exception {
+        TelephonyBackupAgent.MAX_MSG_PER_FILE = mStoredMaxMsgPerFile;
+        mTelephonyBackupAgent.clearSharedPreferences();
+        super.tearDown();
     }
 
     private static String makeJsonArray(String[] json) {
@@ -293,7 +305,6 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     // Cursor with parts of Mms.
     private FakeCursor createBodyCursor(String body, int charset) {
         List<ContentValues> table = new ArrayList<>();
-
         final String srcName = String.format("text.%06d.txt", 0);
         final String smilBody = String.format(TelephonyBackupAgent.sSmilTextPart, srcName);
         final String smil = String.format(TelephonyBackupAgent.sSmilTextOnly, smilBody);
@@ -305,7 +316,6 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         smilPart.put(Telephony.Mms.Part.CONTENT_ID, "<smil>");
         smilPart.put(Telephony.Mms.Part.CONTENT_LOCATION, "smil.xml");
         smilPart.put(Telephony.Mms.Part.TEXT, smil);
-        table.add(smilPart); // This part should not be backed up.
         mMmsAllContentValues.add(smilPart);
 
         final ContentValues bodyPart = new ContentValues();
@@ -341,8 +351,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * @throws Exception
      */
     public void testBackupSms_NoSms() throws Exception {
-        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), new ThreadProvider(), 1);
+        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, new ThreadProvider(), mSubId2Phone,
+                new JsonWriter(mStringWriter), 1);
         assertEquals(EMPTY_JSON_ARRAY, mStringWriter.toString());
     }
 
@@ -352,8 +362,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testBackupSms_AllSms() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
-        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), mThreadProvider, 4);
+        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mThreadProvider, mSubId2Phone,
+                new JsonWriter(mStringWriter), 4);
         assertEquals(mAllSmsJson, mStringWriter.toString());
     }
 
@@ -363,8 +373,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testBackupSms_AllSmsWithExactFileLimit() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
-        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), mThreadProvider, 3);
+        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mThreadProvider, mSubId2Phone,
+                new JsonWriter(mStringWriter), 3);
         assertEquals(mAllSmsJson, mStringWriter.toString());
     }
 
@@ -375,18 +385,18 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupSms_AllSmsOneMessagePerFile() throws Exception {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
 
-        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), mThreadProvider, 1);
+        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mThreadProvider, mSubId2Phone,
+                new JsonWriter(mStringWriter), 1);
         assertEquals("[" + mSmsJson[0] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
-        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), mThreadProvider, 1);
+        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mThreadProvider, mSubId2Phone,
+                new JsonWriter(mStringWriter), 1);
         assertEquals("[" + mSmsJson[1] + "]", mStringWriter.toString());
 
         mStringWriter = new StringWriter();
-        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mSubId2Phone,
-                new JsonWriter(mStringWriter), mThreadProvider, 1);
+        TelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, mThreadProvider, mSubId2Phone,
+                new JsonWriter(mStringWriter), 1);
         assertEquals("[" + mSmsJson[2] + "]", mStringWriter.toString());
     }
 
@@ -406,7 +416,6 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testBackupMms_AllMms() throws Exception {
         mMmsTable.addAll(Arrays.asList(mMmsRows));
-        mMmsTable.add(mMmsNonText);
         TelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, mContentProvider,
                 mThreadProvider, mSubId2Phone, new JsonWriter(mStringWriter), 4);
         assertEquals(mAllMmsJson, mStringWriter.toString());
@@ -481,6 +490,38 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     }
 
     /**
+     * Test with quota exceeded. Checking size of the backup before it hits quota and after.
+     * It still backs up more than a quota since there is meta-info which matters with small amounts
+     * of data. The agent does not take backup meta-info into consideration.
+     * @throws Exception
+     */
+    public void testBackup_WithQuotaExceeded() throws Exception {
+        TelephonyBackupAgent.MAX_MSG_PER_FILE = 1;
+        final int backupSize = 6144;
+        final int backupSizeAfterFirstQuotaHit = 5120;
+        final int backupSizeAfterSecondQuotaHit = 4096;
+
+        mSmsTable.addAll(Arrays.asList(mSmsRows));
+        mMmsTable.addAll(Arrays.asList(mMmsRows));
+        mTelephonyBackupAgent.setProviders(mContentProvider, mContentProvider, mThreadProvider);
+
+        FullBackupDataOutput fullBackupDataOutput = new FullBackupDataOutput();
+        mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
+        assertEquals(backupSize, fullBackupDataOutput.getSize());
+
+        mTelephonyBackupAgent.onQuotaExceeded(backupSize, backupSize - 100);
+        fullBackupDataOutput = new FullBackupDataOutput();
+        mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
+        assertEquals(backupSizeAfterFirstQuotaHit, fullBackupDataOutput.getSize());
+
+        mTelephonyBackupAgent.onQuotaExceeded(backupSizeAfterFirstQuotaHit,
+                backupSizeAfterFirstQuotaHit - 200);
+        fullBackupDataOutput = new FullBackupDataOutput();
+        mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
+        assertEquals(backupSizeAfterSecondQuotaHit, fullBackupDataOutput.getSize());
+    }
+
+    /**
      * Test restore sms with three mms json object in the array.
      * @throws Exception
      */
@@ -517,6 +558,14 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
             assertEquals(modifiedValues, values);
             return null;
+        }
+
+        @Override
+        public int bulkInsert(Uri uri, ContentValues[] values) {
+            for (ContentValues cv : values) {
+                insert(uri, cv);
+            }
+            return values.length;
         }
 
         @Override
@@ -703,7 +752,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private static class FakeCursor extends MockCursor {
         String[] projection;
         List<ContentValues> rows;
-        int nextRow = -1;
+        int nextRow = 0;
 
         public FakeCursor(List<ContentValues> rows, String[] projection) {
             this.projection = projection;
