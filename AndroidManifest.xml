@@ -37,8 +37,8 @@
                  android:label="@string/app_label"
                  android:icon="@mipmap/ic_launcher_phone"
                  android:usesCleartextTraffic="true"
-                 android:forceDeviceEncrypted="true"
-                 android:encryptionAware="true">
+                 android:defaultToDeviceProtectedStorage="true"
+                 android:directBootAware="true">
 
         <provider android:name="TelephonyProvider"
                   android:authorities="telephony"
