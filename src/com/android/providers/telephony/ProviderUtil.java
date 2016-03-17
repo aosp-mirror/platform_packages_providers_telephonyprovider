@@ -113,16 +113,16 @@ public class ProviderUtil {
     }
 
     public static Context getCredentialEncryptedContext(Context context) {
-        if (context.isCredentialEncryptedStorage()) {
+        if (context.isCredentialProtectedStorage()) {
             return context;
         }
-        return context.createCredentialEncryptedStorageContext();
+        return context.createCredentialProtectedStorageContext();
     }
 
     public static Context getDeviceEncryptedContext(Context context) {
-        if (context.isDeviceEncryptedStorage()) {
+        if (context.isDeviceProtectedStorage()) {
             return context;
         }
-        return context.createDeviceEncryptedStorageContext();
+        return context.createDeviceProtectedStorageContext();
     }
 }
