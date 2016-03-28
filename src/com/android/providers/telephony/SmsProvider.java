@@ -62,7 +62,7 @@ public class SmsProvider extends ContentProvider {
     private static final int PERSON_ID_COLUMN = 0;
 
     /** Delete any raw messages or message segments marked deleted that are older than an hour. */
-    static final long RAW_MESSAGE_EXPIRE_AGE = (long) (60 * 60 * 1000);
+    static final long RAW_MESSAGE_EXPIRE_AGE_MS = (long) (60 * 60 * 1000);
 
     /**
      * These are the columns that are available when reading SMS
@@ -270,8 +270,8 @@ public class SmsProvider extends ContentProvider {
     }
 
     private void purgeDeletedMessagesInRawTable(SQLiteDatabase db) {
-        long oldTimestamp = System.currentTimeMillis() - RAW_MESSAGE_EXPIRE_AGE;
-        int num = db.delete("raw", "deleted = 1 AND date < " + oldTimestamp, null);
+        long oldTimestamp = System.currentTimeMillis() - RAW_MESSAGE_EXPIRE_AGE_MS;
+        int num = db.delete(TABLE_RAW, "deleted = 1 AND date < " + oldTimestamp, null);
         if (Log.isLoggable(TAG, Log.VERBOSE)) {
             Log.d(TAG, "purgeDeletedMessagesInRawTable: num rows older than " + oldTimestamp +
                     " purged: " + num);
@@ -689,7 +689,7 @@ public class SmsProvider extends ContentProvider {
             case SMS_RAW_MESSAGE:
                 ContentValues cv = new ContentValues();
                 cv.put("deleted", 1);
-                count = db.update("raw", cv, where, whereArgs);
+                count = db.update(TABLE_RAW, cv, where, whereArgs);
                 if (Log.isLoggable(TAG, Log.VERBOSE)) {
                     Log.d(TAG, "delete: num rows marked deleted in raw table: " + count);
                 }
@@ -697,7 +697,7 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_RAW_MESSAGE_PERMANENT_DELETE:
-                count = db.delete("raw", where, whereArgs);
+                count = db.delete(TABLE_RAW, where, whereArgs);
                 if (Log.isLoggable(TAG, Log.VERBOSE)) {
                     Log.d(TAG, "delete: num rows permanently deleted in raw table: " + count);
                 }
