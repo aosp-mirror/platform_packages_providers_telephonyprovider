@@ -235,7 +235,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 62;
+    static final int DATABASE_VERSION = 63;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -901,7 +901,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "destination_port INTEGER," +
                    "address TEXT," +
                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-                   "pdu TEXT);"); // the raw PDU for this part
+                   "pdu TEXT," + // the raw PDU for this part
+                   "deleted INTEGER DEFAULT 0);"); // bool to indicate if row is deleted
 
         db.execSQL("CREATE TABLE attachments (" +
                    "sms_id INTEGER," +
@@ -1399,21 +1400,38 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             }
             // fall through
         case 61:
-          if (currentVersion <= 61) {
-              return;
-          }
+            if (currentVersion <= 61) {
+                return;
+            }
 
-          db.beginTransaction();
-          try {
-              upgradeDatabaseToVersion62(db);
-              db.setTransactionSuccessful();
-          } catch (Throwable ex) {
-              Log.e(TAG, ex.getMessage(), ex);
-              break;
-          } finally {
-              db.endTransaction();
-          }
-          return;
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion62(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+            // fall through
+        case 62:
+            if (currentVersion <= 62) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion63(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+
+            return;
         }
 
         Log.e(TAG, "Destroying all old data.");
@@ -1685,6 +1703,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             " SET " + Part._DATA + " = '" + newPartsDirPath.substring(0, partsDirIndex) + "' ||" +
             " SUBSTR(" + Part._DATA + ", INSTR(" + Part._DATA + ", '" + partsDirName + "'))" +
             " WHERE INSTR(" + Part._DATA + ", '" + partsDirName + "') > 0");
+    }
+
+    private void upgradeDatabaseToVersion63(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN deleted INTEGER DEFAULT 0");
     }
 
     @Override
