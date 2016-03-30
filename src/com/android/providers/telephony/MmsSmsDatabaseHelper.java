@@ -238,7 +238,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 63;
+    static final int DATABASE_VERSION = 64;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -891,7 +891,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "destination_port INTEGER," +
                    "address TEXT," +
                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-                   "pdu TEXT);"); // the raw PDU for this part
+                   "pdu TEXT," + // the raw PDU for this part
+                   "deleted INTEGER DEFAULT 0);"); // bool to indicate if row is deleted
 
         db.execSQL("CREATE TABLE attachments (" +
                    "sms_id INTEGER," +
@@ -1420,6 +1421,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+        case 63:
+            if (currentVersion <= 63) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion64(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
+
             return;
         }
 
@@ -1692,6 +1709,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             " SET " + Part._DATA + " = '" + newPartsDirPath.substring(0, partsDirIndex) + "' ||" +
             " SUBSTR(" + Part._DATA + ", INSTR(" + Part._DATA + ", '" + partsDirName + "'))" +
             " WHERE INSTR(" + Part._DATA + ", '" + partsDirName + "') > 0");
+    }
+
+    private void upgradeDatabaseToVersion64(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN deleted INTEGER DEFAULT 0");
     }
 
     @Override

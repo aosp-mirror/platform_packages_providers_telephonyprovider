@@ -61,6 +61,9 @@ public class SmsProvider extends ContentProvider {
             new String[] { Contacts.Phones.PERSON_ID };
     private static final int PERSON_ID_COLUMN = 0;
 
+    /** Delete any raw messages or message segments marked deleted that are older than an hour. */
+    static final long RAW_MESSAGE_EXPIRE_AGE = (long) (60 * 60 * 1000);
+
     /**
      * These are the columns that are available when reading SMS
      * messages from the ICC.  Columns whose names begin with "is_"
@@ -116,6 +119,7 @@ public class SmsProvider extends ContentProvider {
 
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
+        SQLiteDatabase db = getDBOpenHelper(match).getReadableDatabase();
         switch (match) {
             case SMS_ALL:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_ALL, smsTable);
@@ -204,6 +208,8 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_RAW_MESSAGE:
+                // before querying purge old entries with deleted = 1
+                purgeDeletedMessagesInRawTable(db);
                 qb.setTables("raw");
                 break;
 
@@ -254,7 +260,6 @@ public class SmsProvider extends ContentProvider {
             orderBy = Sms.DEFAULT_SORT_ORDER;
         }
 
-        SQLiteDatabase db = getDBOpenHelper(match).getReadableDatabase();
         Cursor ret = qb.query(db, projectionIn, selection, selectionArgs,
                               null, null, orderBy);
 
@@ -262,6 +267,15 @@ public class SmsProvider extends ContentProvider {
         ret.setNotificationUri(getContext().getContentResolver(),
                 NOTIFICATION_URI);
         return ret;
+    }
+
+    private void purgeDeletedMessagesInRawTable(SQLiteDatabase db) {
+        long oldTimestamp = System.currentTimeMillis() - RAW_MESSAGE_EXPIRE_AGE;
+        int num = db.delete("raw", "deleted = 1 AND date < " + oldTimestamp, null);
+        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+            Log.d(TAG, "purgeDeletedMessagesInRawTable: num rows older than " + oldTimestamp +
+                    " purged: " + num);
+        }
     }
 
     private SQLiteOpenHelper getDBOpenHelper(int match) {
@@ -624,7 +638,7 @@ public class SmsProvider extends ContentProvider {
             }
             return uri;
         } else {
-            Log.e(TAG,"insert: failed!");
+            Log.e(TAG, "insert: failed!");
         }
 
         return null;
@@ -673,7 +687,20 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_RAW_MESSAGE:
+                ContentValues cv = new ContentValues();
+                cv.put("deleted", 1);
+                count = db.update("raw", cv, where, whereArgs);
+                if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                    Log.d(TAG, "delete: num rows marked deleted in raw table: " + count);
+                }
+                notifyIfNotDefault = false;
+                break;
+
+            case SMS_RAW_MESSAGE_PERMANENT_DELETE:
                 count = db.delete("raw", where, whereArgs);
+                if (Log.isLoggable(TAG, Log.VERBOSE)) {
+                    Log.d(TAG, "delete: num rows permanently deleted in raw table: " + count);
+                }
                 notifyIfNotDefault = false;
                 break;
 
@@ -854,6 +881,7 @@ public class SmsProvider extends ContentProvider {
     private static final int SMS_FAILED_ID = 25;
     private static final int SMS_QUEUED = 26;
     private static final int SMS_UNDELIVERED = 27;
+    private static final int SMS_RAW_MESSAGE_PERMANENT_DELETE = 28;
 
     private static final UriMatcher sURLMatcher =
             new UriMatcher(UriMatcher.NO_MATCH);
@@ -876,6 +904,7 @@ public class SmsProvider extends ContentProvider {
         sURLMatcher.addURI("sms", "conversations", SMS_CONVERSATIONS);
         sURLMatcher.addURI("sms", "conversations/*", SMS_CONVERSATIONS_ID);
         sURLMatcher.addURI("sms", "raw", SMS_RAW_MESSAGE);
+        sURLMatcher.addURI("sms", "raw/permanentDelete", SMS_RAW_MESSAGE_PERMANENT_DELETE);
         sURLMatcher.addURI("sms", "attachments", SMS_ATTACHMENT);
         sURLMatcher.addURI("sms", "attachments/#", SMS_ATTACHMENT_ID);
         sURLMatcher.addURI("sms", "threadID", SMS_NEW_THREAD_ID);
