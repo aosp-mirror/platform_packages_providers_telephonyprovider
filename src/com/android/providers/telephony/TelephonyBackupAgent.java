@@ -39,6 +39,7 @@ import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.os.PowerManager;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.telephony.PhoneNumberUtils;
@@ -465,32 +466,38 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
 
         private TelephonyBackupAgent mTelephonyBackupAgent;
+        private PowerManager.WakeLock mWakeLock;
 
         @Override
         protected void onHandleIntent(Intent intent) {
-            File[] files = getFilesDir().listFiles(new FileFilter() {
-                @Override
-                public boolean accept(File file) {
-                    return file.getName().endsWith(SMS_BACKUP_FILE_SUFFIX) ||
-                            file.getName().endsWith(MMS_BACKUP_FILE_SUFFIX);
+            try {
+                mWakeLock.acquire();
+                File[] files = getFilesDir().listFiles(new FileFilter() {
+                    @Override
+                    public boolean accept(File file) {
+                        return file.getName().endsWith(SMS_BACKUP_FILE_SUFFIX) ||
+                                file.getName().endsWith(MMS_BACKUP_FILE_SUFFIX);
+                    }
+                });
+
+                if (files == null) {
+                    return;
                 }
-            });
+                Arrays.sort(files, mFileComparator);
 
-            if (files == null) {
-                return;
-            }
-            Arrays.sort(files, mFileComparator);
-
-            for (File file : files) {
-                final String fileName = file.getName();
-                try (FileInputStream fileInputStream = new FileInputStream(file)) {
-                    mTelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD());
-                    file.delete();
-                } catch (IOException e) {
-                    if (DEBUG) {
-                        Log.e(TAG, e.toString());
+                for (File file : files) {
+                    final String fileName = file.getName();
+                    try (FileInputStream fileInputStream = new FileInputStream(file)) {
+                        mTelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD());
+                        file.delete();
+                    } catch (IOException e) {
+                        if (DEBUG) {
+                            Log.e(TAG, e.toString());
+                        }
                     }
                 }
+            } finally {
+                mWakeLock.release();
             }
         }
 
@@ -500,6 +507,9 @@ public class TelephonyBackupAgent extends BackupAgent {
             mTelephonyBackupAgent = new TelephonyBackupAgent();
             mTelephonyBackupAgent.attach(this);
             mTelephonyBackupAgent.onCreate();
+
+            PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
+            mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
         }
 
         @Override
