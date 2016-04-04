@@ -209,7 +209,7 @@ public class SmsProvider extends ContentProvider {
 
             case SMS_RAW_MESSAGE:
                 // before querying purge old entries with deleted = 1
-                purgeDeletedMessagesInRawTable(db);
+                // purgeDeletedMessagesInRawTable(db);
                 qb.setTables("raw");
                 break;
 
@@ -687,14 +687,14 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_RAW_MESSAGE:
-                ContentValues cv = new ContentValues();
+            /*    ContentValues cv = new ContentValues();
                 cv.put("deleted", 1);
                 count = db.update("raw", cv, where, whereArgs);
                 if (Log.isLoggable(TAG, Log.VERBOSE)) {
                     Log.d(TAG, "delete: num rows marked deleted in raw table: " + count);
                 }
                 notifyIfNotDefault = false;
-                break;
+                break;*/
 
             case SMS_RAW_MESSAGE_PERMANENT_DELETE:
                 count = db.delete("raw", where, whereArgs);
