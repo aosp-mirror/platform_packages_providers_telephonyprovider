@@ -48,6 +48,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -125,8 +126,9 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mSmsJson[0] = "{\"self_phone\":\"+111111111111111\",\"address\":" +
                 "\"+1232132214124\",\"body\":\"sms 1\",\"subject\":\"sms subject\",\"date\":" +
                 "\"9087978987\",\"date_sent\":\"999999999\",\"status\":\"3\",\"type\":\"44\"," +
-                "\"recipients\":[\"+123 (213) 2214124\"]}";
-        mThreadProvider.getOrCreateThreadId(new String[]{"+123 (213) 2214124"});
+                "\"recipients\":[\"+123 (213) 2214124\"],\"archived\":true}";
+        mThreadProvider.setArchived(
+                mThreadProvider.getOrCreateThreadId(new String[]{"+123 (213) 2214124"}));
 
         mSmsRows[1] = createSmsRow(2, 2, "+1232132214124", "sms 2", null, 9087978987l, 999999999,
                 0, 4, 1);
@@ -198,7 +200,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMmsJson[2] = "{\"self_phone\":\"+333333333333333\",\"sub\":\"Subject 10\"," +
                 "\"date\":\"111133\",\"date_sent\":\"1111132\",\"m_type\":\"5\",\"v\":\"19\"," +
                 "\"msg_box\":\"333\"," +
-                "\"recipients\":[\"+123 (213) 2214124\"]," +
+                "\"recipients\":[\"+123 (213) 2214124\"],\"archived\":true," +
                 "\"mms_addresses\":" +
                 "[{\"type\":10,\"address\":\"333 333333333333\",\"charset\":100}," +
                 "{\"type\":11,\"address\":\"+1232132214124\",\"charset\":101}]," +
@@ -488,6 +490,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMockContentResolver.addProvider("sms", smsProvider);
         mTelephonyBackupAgent.putSmsMessagesToProvider(jsonReader);
         assertEquals(mSmsRows.length, smsProvider.getRowsAdded());
+        assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
     }
 
     /**
@@ -512,6 +515,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMockContentResolver.addProvider("mms", mmsProvider);
         mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
         assertEquals(18, mmsProvider.getRowsAdded());
+        assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
     }
 
     /**
@@ -703,6 +707,9 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private static class ThreadProvider extends MockContentProvider {
         ArrayList<Set<Integer> > id2Thread = new ArrayList<>();
         ArrayList<String> id2Recipient = new ArrayList<>();
+        Set<Integer> mIsThreadArchived = new HashSet<>();
+        Set<Integer> mUpdateThreadsArchived = new HashSet<>();
+
 
         public int getOrCreateThreadId(final String[] recipients) {
             Set<Integer> ids = new ArraySet<>();
@@ -716,6 +723,10 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 id2Thread.add(ids);
             }
             return id2Thread.indexOf(ids)+1;
+        }
+
+        public void setArchived(int threadId) {
+            mIsThreadArchived.add(threadId);
         }
 
         private String getSpaceSepIds(int threadId) {
@@ -739,6 +750,16 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 List<ContentValues> table = new ArrayList<>();
                 ContentValues row = new ContentValues();
                 row.put(Telephony.Threads.RECIPIENT_IDS, spaceSepIds);
+                table.add(row);
+                return new FakeCursor(table, projection);
+            } else if (uri.toString().startsWith(Telephony.Threads.CONTENT_URI.toString())) {
+                assertEquals(1, projection.length);
+                assertEquals(Telephony.Threads.ARCHIVED, projection[0]);
+                List<String> segments = uri.getPathSegments();
+                final int threadId = Integer.parseInt(segments.get(segments.size() - 2));
+                List<ContentValues> table = new ArrayList<>();
+                ContentValues row = new ContentValues();
+                row.put(Telephony.Threads.ARCHIVED, mIsThreadArchived.contains(threadId) ? 1 : 0);
                 table.add(row);
                 return new FakeCursor(table, projection);
             } else if (uri.toString().startsWith(
@@ -765,8 +786,19 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 row.put(BaseColumns._ID, String.valueOf(threadId));
                 table.add(row);
                 return new FakeCursor(table, projection);
-            };
+            } else {
+                fail("Unknown URI");
+            }
             return null;
+        }
+
+        @Override
+        public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
+            assertEquals(uri, Telephony.Threads.CONTENT_URI);
+            assertEquals(values.getAsInteger(Telephony.Threads.ARCHIVED).intValue(), 1);
+            final int threadId = Integer.parseInt(selectionArgs[0]);
+            mUpdateThreadsArchived.add(threadId);
+            return 1;
         }
     }
 
