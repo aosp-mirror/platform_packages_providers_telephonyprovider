@@ -194,7 +194,8 @@ public class TelephonyBackupAgent extends BackupAgent {
             Telephony.Mms.MMS_VERSION,
             Telephony.Mms.MESSAGE_BOX,
             Telephony.Mms.CONTENT_LOCATION,
-            Telephony.Mms.THREAD_ID
+            Telephony.Mms.THREAD_ID,
+            Telephony.Mms.TRANSACTION_ID
     };
 
     // Columns from addr database for backup/restore. This database is used for fetching addresses
@@ -267,6 +268,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private SparseArray<String> mSubId2phone = new SparseArray<String>();
     private Map<String, Integer> mPhone2subId = new ArrayMap<String, Integer>();
+    private Map<Long, Boolean> mThreadArchived = new HashMap<>();
 
     private ContentResolver mContentResolver;
     // How many bytes we can backup to fit into quota.
@@ -360,6 +362,8 @@ public class TelephonyBackupAgent extends BackupAgent {
                 backupAll(data, mmsCursor, String.format(MMS_BACKUP_FILE_FORMAT, fileNum++));
             }
         }
+
+        mThreadArchived = new HashMap<>();
     }
 
     @VisibleForTesting
@@ -654,8 +658,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                     break;
                 case Telephony.Sms.THREAD_ID:
                     final long threadId = cursor.getLong(i);
-                    writeRecipientsToWriter(jsonWriter.name(RECIPIENTS),
-                            getRecipientsByThread(threadId));
+                    handleThreadId(jsonWriter, threadId);
                     break;
                 case Telephony.Sms._ID:
                     break;
@@ -666,6 +669,36 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
         jsonWriter.endObject();
 
+    }
+
+    private void handleThreadId(JsonWriter jsonWriter, long threadId) throws IOException {
+        writeRecipientsToWriter(jsonWriter.name(RECIPIENTS),
+                getRecipientsByThread(threadId));
+        if (!mThreadArchived.containsKey(threadId)) {
+            boolean isArchived = isThreadArchived(threadId);
+            if (isArchived) {
+                jsonWriter.name(Telephony.Threads.ARCHIVED).value(true);
+            }
+            mThreadArchived.put(threadId, isArchived);
+        }
+    }
+
+    private static String[] THREAD_ARCHIVED_PROJECTION =
+            new String[] { Telephony.Threads.ARCHIVED };
+    private static int THREAD_ARCHIVED_IDX = 0;
+
+    private boolean isThreadArchived(long threadId) {
+        Uri.Builder builder = Telephony.Threads.CONTENT_URI.buildUpon();
+        builder.appendPath(String.valueOf(threadId)).appendPath("recipients");
+        Uri uri = builder.build();
+
+        try (Cursor cursor = getContentResolver().query(uri, THREAD_ARCHIVED_PROJECTION, null, null,
+                null)) {
+            if (cursor.moveToFirst()) {
+                return cursor.getInt(THREAD_ARCHIVED_IDX) == 1;
+            }
+        }
+        return false;
     }
 
     private static void writeRecipientsToWriter(JsonWriter jsonWriter, List<String> recipients)
@@ -683,6 +716,8 @@ public class TelephonyBackupAgent extends BackupAgent {
             throws IOException {
         ContentValues values = new ContentValues(8+sDefaultValuesSms.size());
         values.putAll(sDefaultValuesSms);
+        long threadId = -1;
+        boolean isArchived = false;
         jsonReader.beginObject();
         while (jsonReader.hasNext()) {
             String name = jsonReader.nextName();
@@ -697,8 +732,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                     values.put(name, jsonReader.nextString());
                     break;
                 case RECIPIENTS:
-                    values.put(Telephony.Sms.THREAD_ID,
-                            getOrCreateThreadId(getRecipients(jsonReader)));
+                    threadId = getOrCreateThreadId(getRecipients(jsonReader));
+                    values.put(Telephony.Sms.THREAD_ID, threadId);
+                    break;
+                case Telephony.Threads.ARCHIVED:
+                    isArchived = jsonReader.nextBoolean();
                     break;
                 case SELF_PHONE_KEY:
                     final String selfPhone = jsonReader.nextString();
@@ -715,6 +753,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             }
         }
         jsonReader.endObject();
+        archiveThread(threadId, isArchived);
         return values;
     }
 
@@ -753,8 +792,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                     break;
                 case Telephony.Mms.THREAD_ID:
                     final long threadId = cursor.getLong(i);
-                    writeRecipientsToWriter(jsonWriter.name(RECIPIENTS),
-                            getRecipientsByThread(threadId));
+                    handleThreadId(jsonWriter, threadId);
                     break;
                 case Telephony.Mms._ID:
                 case Telephony.Mms.SUBJECT_CHARSET:
@@ -787,6 +825,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         mms.values.putAll(sDefaultValuesMms);
         jsonReader.beginObject();
         String bodyText = null;
+        long threadId = -1;
+        boolean isArchived = false;
         int bodyCharset = CharacterSets.DEFAULT_CHARSET;
         while (jsonReader.hasNext()) {
             String name = jsonReader.nextName();
@@ -807,8 +847,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                     bodyCharset = jsonReader.nextInt();
                     break;
                 case RECIPIENTS:
-                    mms.values.put(Telephony.Sms.THREAD_ID,
-                            getOrCreateThreadId(getRecipients(jsonReader)));
+                    threadId = getOrCreateThreadId(getRecipients(jsonReader));
+                    mms.values.put(Telephony.Sms.THREAD_ID, threadId);
+                    break;
+                case Telephony.Threads.ARCHIVED:
+                    isArchived = jsonReader.nextBoolean();
                     break;
                 case Telephony.Mms.SUBJECT:
                 case Telephony.Mms.SUBJECT_CHARSET:
@@ -818,6 +861,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 case Telephony.Mms.MMS_VERSION:
                 case Telephony.Mms.MESSAGE_BOX:
                 case Telephony.Mms.CONTENT_LOCATION:
+                case Telephony.Mms.TRANSACTION_ID:
                     mms.values.put(name, jsonReader.nextString());
                     break;
                 default:
@@ -840,7 +884,28 @@ public class TelephonyBackupAgent extends BackupAgent {
             mms.values.put(Telephony.Mms.SUBJECT_CHARSET, CharacterSets.DEFAULT_CHARSET);
         }
 
+        archiveThread(threadId, isArchived);
+
         return mms;
+    }
+
+    private static final String ARCHIVE_THREAD_SELECTION = Telephony.Threads._ID + "=?";
+
+    private void archiveThread(long threadId, boolean isArchived) {
+        if (threadId < 0 || !isArchived) {
+            return;
+        }
+        final ContentValues values = new ContentValues(1);
+        values.put(Telephony.Threads.ARCHIVED, 1);
+        if (mContentResolver.update(
+                Telephony.Threads.CONTENT_URI,
+                values,
+                ARCHIVE_THREAD_SELECTION,
+                new String[] { Long.toString(threadId)}) != 1) {
+            if (DEBUG) {
+                Log.e(TAG, "archiveThread: failed to update database");
+            }
+        }
     }
 
     private MmsBody getMmsBody(int mmsId) {
