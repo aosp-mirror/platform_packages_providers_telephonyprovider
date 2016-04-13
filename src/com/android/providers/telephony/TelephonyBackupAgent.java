@@ -476,15 +476,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         protected void onHandleIntent(Intent intent) {
             try {
                 mWakeLock.acquire();
-                File[] files = getFilesDir().listFiles(new FileFilter() {
-                    @Override
-                    public boolean accept(File file) {
-                        return file.getName().endsWith(SMS_BACKUP_FILE_SUFFIX) ||
-                                file.getName().endsWith(MMS_BACKUP_FILE_SUFFIX);
-                    }
-                });
+                File[] files = getFilesToRestore(this);
 
-                if (files == null) {
+                if (files == null || files.length == 0) {
                     return;
                 }
                 Arrays.sort(files, mFileComparator);
@@ -525,15 +519,29 @@ public class TelephonyBackupAgent extends BackupAgent {
             super.onDestroy();
         }
 
-        public static Intent getIntent(Context context) {
-            return new Intent(context, DeferredSmsMmsRestoreService.class);
+        static void startIfFilesExist(Context context) {
+            File[] files = getFilesToRestore(context);
+            if (files == null || files.length == 0) {
+                return;
+            }
+            context.startService(new Intent(context, DeferredSmsMmsRestoreService.class));
+        }
+
+        private static File[] getFilesToRestore(Context context) {
+            return context.getFilesDir().listFiles(new FileFilter() {
+                @Override
+                public boolean accept(File file) {
+                    return file.getName().endsWith(SMS_BACKUP_FILE_SUFFIX) ||
+                            file.getName().endsWith(MMS_BACKUP_FILE_SUFFIX);
+                }
+            });
         }
     }
 
     @Override
     public void onRestoreFinished() {
         super.onRestoreFinished();
-        startService(DeferredSmsMmsRestoreService.getIntent(this));
+        DeferredSmsMmsRestoreService.startIfFilesExist(this);
     }
 
     private void doRestoreFile(String fileName, FileDescriptor fd) throws IOException {

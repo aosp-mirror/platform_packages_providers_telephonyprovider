@@ -92,6 +92,7 @@ public class SmsProvider extends ContentProvider {
         setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         mDeOpenHelper = MmsSmsDatabaseHelper.getInstanceForDe(getContext());
         mCeOpenHelper = MmsSmsDatabaseHelper.getInstanceForCe(getContext());
+        TelephonyBackupAgent.DeferredSmsMmsRestoreService.startIfFilesExist(getContext());
         return true;
     }
 
