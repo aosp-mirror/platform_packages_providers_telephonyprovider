@@ -1436,6 +1436,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 63:
+            if (currentVersion <= 63) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion64(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
 
             return;
         }
@@ -1713,6 +1729,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private void upgradeDatabaseToVersion64(SQLiteDatabase db) {
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN deleted INTEGER DEFAULT 0");
+    }
+
+    private void upgradeDatabaseToVersion64(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN message_body TEXT");
     }
 
     @Override
