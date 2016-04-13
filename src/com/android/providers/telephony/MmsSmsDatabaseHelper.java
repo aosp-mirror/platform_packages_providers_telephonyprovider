@@ -238,7 +238,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 64;
+    static final int DATABASE_VERSION = 65;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -1421,6 +1421,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
         case 63:
             if (currentVersion <= 63) {
                 return;
@@ -1437,14 +1438,14 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.endTransaction();
             }
             // fall through
-        case 63:
-            if (currentVersion <= 63) {
+        case 64:
+            if (currentVersion <= 64) {
                 return;
             }
 
             db.beginTransaction();
             try {
-                upgradeDatabaseToVersion64(db);
+                upgradeDatabaseToVersion65(db);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
@@ -1731,7 +1732,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN deleted INTEGER DEFAULT 0");
     }
 
-    private void upgradeDatabaseToVersion64(SQLiteDatabase db) {
+    private void upgradeDatabaseToVersion65(SQLiteDatabase db) {
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN message_body TEXT");
     }
 
