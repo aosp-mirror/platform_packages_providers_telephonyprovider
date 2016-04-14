@@ -1081,11 +1081,12 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "modem_cognitive", map, MODEM_COGNITIVE);
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
 
+            int bearerBitmask = 0;
             String bearerList = parser.getAttributeValue(null, "bearer_bitmask");
             if (bearerList != null) {
-                int bearerBitmask = ServiceState.getBitmaskFromString(bearerList);
-                map.put(BEARER_BITMASK, bearerBitmask);
+                bearerBitmask = ServiceState.getBitmaskFromString(bearerList);
             }
+            map.put(BEARER_BITMASK, bearerBitmask);
 
             String mvno_type = parser.getAttributeValue(null, "mvno_type");
             if (mvno_type != null) {
