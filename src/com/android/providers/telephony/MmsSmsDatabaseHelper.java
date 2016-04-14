@@ -902,7 +902,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "address TEXT," +
                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
                    "pdu TEXT," + // the raw PDU for this part
-                   "deleted INTEGER DEFAULT 0);"); // bool to indicate if row is deleted
+                   "deleted INTEGER DEFAULT 0," + // bool to indicate if row is deleted
+                   "message_body TEXT);"); // message body
 
         db.execSQL("CREATE TABLE attachments (" +
                    "sms_id INTEGER," +
