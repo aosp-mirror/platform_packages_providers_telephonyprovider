@@ -36,7 +36,6 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.JsonReader;
 import android.util.JsonWriter;
-import android.util.Log;
 import android.util.SparseArray;
 
 import org.json.JSONArray;
@@ -119,8 +118,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
 
         /* Generating test data */
-        mSmsRows = new ContentValues[3];
-        mSmsJson = new String[3];
+        mSmsRows = new ContentValues[4];
+        mSmsJson = new String[4];
         mSmsRows[0] = createSmsRow(1, 1, "+1232132214124", "sms 1", "sms subject", 9087978987l,
                 999999999, 3, 44, 1);
         mSmsJson[0] = "{\"self_phone\":\"+111111111111111\",\"address\":" +
@@ -144,6 +143,14 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 "\"999999999\",\"status\":\"2\",\"type\":\"3\"," +
                 "\"recipients\":[\"+1232221412433\",\"+1232221412444\"]}";
         mThreadProvider.getOrCreateThreadId(new String[]{"+1232221412433", "+1232221412444"});
+
+
+        mSmsRows[3] = createSmsRow(5, 3, null, "sms 4", null,
+                111111111111l, 999999999, 2, 3, 5);
+        mSmsJson[3] = "{\"self_phone\":\"+333333333333333\"," +
+                "\"body\":\"sms 4\",\"date\":\"111111111111\"," +
+                "\"date_sent\":" +
+                "\"999999999\",\"status\":\"2\",\"type\":\"3\"}";
 
         mAllSmsJson = makeJsonArray(mSmsJson);
 
@@ -392,7 +399,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * @throws Exception
      */
     public void testBackupSms_AllSmsWithExactFileLimit() throws Exception {
-        mTelephonyBackupAgent.mMaxMsgPerFile = 3;
+        mTelephonyBackupAgent.mMaxMsgPerFile = 4;
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         mTelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, new JsonWriter(mStringWriter));
         assertEquals(mAllSmsJson, mStringWriter.toString());
@@ -416,6 +423,10 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mStringWriter = new StringWriter();
         mTelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, new JsonWriter(mStringWriter));
         assertEquals("[" + mSmsJson[2] + "]", mStringWriter.toString());
+
+        mStringWriter = new StringWriter();
+        mTelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, new JsonWriter(mStringWriter));
+        assertEquals("[" + mSmsJson[3] + "]", mStringWriter.toString());
     }
 
     /**
@@ -485,6 +496,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      * @throws Exception
      */
     public void testRestoreSms_AllSms() throws Exception {
+        mTelephonyBackupAgent.initUnknownSender();
         JsonReader jsonReader = new JsonReader(new StringReader(addRandomDataToJson(mAllSmsJson)));
         FakeSmsProvider smsProvider = new FakeSmsProvider(mSmsRows);
         mMockContentResolver.addProvider("sms", smsProvider);
@@ -526,9 +538,9 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testBackup_WithQuotaExceeded() throws Exception {
         mTelephonyBackupAgent.mMaxMsgPerFile = 1;
-        final int backupSize = 6144;
-        final int backupSizeAfterFirstQuotaHit = 5120;
-        final int backupSizeAfterSecondQuotaHit = 4096;
+        final int backupSize = 7168;
+        final int backupSizeAfterFirstQuotaHit = 6144;
+        final int backupSizeAfterSecondQuotaHit = 5120;
 
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         mMmsTable.addAll(Arrays.asList(mMmsRows));
@@ -582,6 +594,10 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             if (mSubId2Phone.get(modifiedValues.getAsInteger(Telephony.Sms.SUBSCRIPTION_ID))
                     == null) {
                 modifiedValues.put(Telephony.Sms.SUBSCRIPTION_ID, -1);
+            }
+
+            if (modifiedValues.get(Telephony.Sms.ADDRESS) == null) {
+                modifiedValues.put(Telephony.Sms.ADDRESS, TelephonyBackupAgent.UNKNOWN_SENDER);
             }
 
             assertEquals(modifiedValues, values);
@@ -712,6 +728,10 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
 
         public int getOrCreateThreadId(final String[] recipients) {
+            if (recipients == null || recipients.length == 0) {
+                throw new IllegalArgumentException("Unable to find or allocate a thread ID.");
+            }
+
             Set<Integer> ids = new ArraySet<>();
             for (String rec : recipients) {
                 if (!id2Recipient.contains(rec)) {
@@ -730,6 +750,10 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         }
 
         private String getSpaceSepIds(int threadId) {
+            if (id2Thread.size() < threadId) {
+                return null;
+            }
+
             String spaceSepIds = null;
             for (Integer id : id2Thread.get(threadId-1)) {
                 spaceSepIds = (spaceSepIds == null ? "" : spaceSepIds + " ") + String.valueOf(id);
