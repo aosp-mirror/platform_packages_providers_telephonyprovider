@@ -160,6 +160,14 @@ public class TelephonyBackupAgent extends BackupAgent {
     // Order by Date entries from database. We start backup from the oldest.
     private static final String ORDER_BY_DATE = "date ASC";
 
+    // This is a hard coded string rather than a localized one because we don't want it to
+    // change when you change locale.
+    @VisibleForTesting
+    static final String UNKNOWN_SENDER = "\u02BCUNKNOWN_SENDER!\u02BC";
+
+    // Thread id for UNKNOWN_SENDER.
+    private long mUnknownSenderThreadId;
+
     // Columns from SMS database for backup/restore.
     @VisibleForTesting
     static final String[] SMS_PROJECTION = new String[] {
@@ -230,10 +238,9 @@ public class TelephonyBackupAgent extends BackupAgent {
     @VisibleForTesting
     int mMaxMsgPerFile = 1000;
 
-
     // Default values for SMS, MMS, Addresses restore.
-    private static final ContentValues sDefaultValuesSms = new ContentValues(3);
-    private static final ContentValues sDefaultValuesMms = new ContentValues(5);
+    private static ContentValues sDefaultValuesSms = new ContentValues(5);
+    private static ContentValues sDefaultValuesMms = new ContentValues(6);
     private static final ContentValues sDefaultValuesAddr = new ContentValues(2);
 
     // Shared preferences for the backup agent.
@@ -252,6 +259,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         // Consider restored messages read and seen.
         sDefaultValuesSms.put(Telephony.Sms.READ, 1);
         sDefaultValuesSms.put(Telephony.Sms.SEEN, 1);
+        sDefaultValuesSms.put(Telephony.Sms.ADDRESS, UNKNOWN_SENDER);
         // If there is no sub_id with self phone number on restore set it to -1.
         sDefaultValuesSms.put(Telephony.Sms.SUBSCRIPTION_ID, -1);
 
@@ -298,6 +306,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             }
         }
         mContentResolver = getContentResolver();
+        initUnknownSender();
     }
 
     @VisibleForTesting
@@ -308,6 +317,13 @@ public class TelephonyBackupAgent extends BackupAgent {
     void setSubId(SparseArray<String> subId2Phone, Map<String, Integer> phone2subId) {
         mSubId2phone = subId2Phone;
         mPhone2subId = phone2subId;
+    }
+
+    @VisibleForTesting
+    void initUnknownSender() {
+        mUnknownSenderThreadId = getOrCreateThreadId(null);
+        sDefaultValuesSms.put(Telephony.Sms.THREAD_ID, mUnknownSenderThreadId);
+        sDefaultValuesMms.put(Telephony.Mms.THREAD_ID, mUnknownSenderThreadId);
     }
 
     @Override
@@ -348,18 +364,22 @@ public class TelephonyBackupAgent extends BackupAgent {
                 final long smsDate = TimeUnit.MILLISECONDS.toSeconds(getMessageDate(smsCursor));
                 final long mmsDate = getMessageDate(mmsCursor);
                 if (smsDate < mmsDate) {
-                    backupAll(data, smsCursor, String.format(SMS_BACKUP_FILE_FORMAT, fileNum++));
+                    backupAll(data, smsCursor,
+                            String.format(Locale.US, SMS_BACKUP_FILE_FORMAT, fileNum++));
                 } else {
-                    backupAll(data, mmsCursor, String.format(MMS_BACKUP_FILE_FORMAT, fileNum++));
+                    backupAll(data, mmsCursor, String.format(Locale.US,
+                            MMS_BACKUP_FILE_FORMAT, fileNum++));
                 }
             }
 
             while (smsCursor != null && !smsCursor.isAfterLast()) {
-                backupAll(data, smsCursor, String.format(SMS_BACKUP_FILE_FORMAT, fileNum++));
+                backupAll(data, smsCursor,
+                        String.format(Locale.US, SMS_BACKUP_FILE_FORMAT, fileNum++));
             }
 
             while (mmsCursor != null && !mmsCursor.isAfterLast()) {
-                backupAll(data, mmsCursor, String.format(MMS_BACKUP_FILE_FORMAT, fileNum++));
+                backupAll(data, mmsCursor,
+                        String.format(Locale.US, MMS_BACKUP_FILE_FORMAT, fileNum++));
             }
         }
 
@@ -487,11 +507,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                     final String fileName = file.getName();
                     try (FileInputStream fileInputStream = new FileInputStream(file)) {
                         mTelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD());
+                    } catch (Exception e) {
+                        // Either IOException or RuntimeException.
+                        Log.e(TAG, e.toString());
+                    } finally {
                         file.delete();
-                    } catch (IOException e) {
-                        if (DEBUG) {
-                            Log.e(TAG, e.toString());
-                        }
                     }
                 }
             } finally {
@@ -611,7 +631,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final int ID_IDX = 0;
 
     private boolean doesSmsExist(ContentValues smsValues) {
-        final String where = String.format("%s = %d and %s = %s",
+        final String where = String.format(Locale.US, "%s = %d and %s = %s",
                 Telephony.Sms.DATE, smsValues.getAsLong(Telephony.Sms.DATE),
                 Telephony.Sms.BODY,
                 DatabaseUtils.sqlEscapeString(smsValues.getAsString(Telephony.Sms.BODY)));
@@ -622,7 +642,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     }
 
     private boolean doesMmsExist(Mms mms) {
-        final String where = String.format("%s = %d",
+        final String where = String.format(Locale.US, "%s = %d",
                 Telephony.Sms.DATE, mms.values.getAsLong(Telephony.Mms.DATE));
         try (Cursor cursor = mContentResolver.query(Telephony.Mms.CONTENT_URI, PROJECTION_ID, where,
                 null, null)) {
@@ -680,8 +700,12 @@ public class TelephonyBackupAgent extends BackupAgent {
     }
 
     private void handleThreadId(JsonWriter jsonWriter, long threadId) throws IOException {
-        writeRecipientsToWriter(jsonWriter.name(RECIPIENTS),
-                getRecipientsByThread(threadId));
+        final List<String> recipients = getRecipientsByThread(threadId);
+        if (recipients == null || recipients.isEmpty()) {
+            return;
+        }
+
+        writeRecipientsToWriter(jsonWriter.name(RECIPIENTS), recipients);
         if (!mThreadArchived.containsKey(threadId)) {
             boolean isArchived = isThreadArchived(threadId);
             if (isArchived) {
@@ -702,7 +726,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
         try (Cursor cursor = getContentResolver().query(uri, THREAD_ARCHIVED_PROJECTION, null, null,
                 null)) {
-            if (cursor.moveToFirst()) {
+            if (cursor != null && cursor.moveToFirst()) {
                 return cursor.getInt(THREAD_ARCHIVED_IDX) == 1;
             }
         }
@@ -722,7 +746,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private ContentValues readSmsValuesFromReader(JsonReader jsonReader)
             throws IOException {
-        ContentValues values = new ContentValues(8+sDefaultValuesSms.size());
+        ContentValues values = new ContentValues(6+sDefaultValuesSms.size());
         values.putAll(sDefaultValuesSms);
         long threadId = -1;
         boolean isArchived = false;
@@ -829,7 +853,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private Mms readMmsFromReader(JsonReader jsonReader) throws IOException {
         Mms mms = new Mms();
-        mms.values = new ContentValues(6+sDefaultValuesMms.size());
+        mms.values = new ContentValues(5+sDefaultValuesMms.size());
         mms.values.putAll(sDefaultValuesMms);
         jsonReader.beginObject();
         String bodyText = null;
@@ -1002,7 +1026,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         final Uri partUri = Telephony.Mms.CONTENT_URI.buildUpon()
                 .appendPath(String.valueOf(dummyId)).appendPath("part").build();
 
-        final String srcName = String.format("text.%06d.txt", 0);
+        final String srcName = String.format(Locale.US, "text.%06d.txt", 0);
         { // Insert SMIL part.
             final String smilBody = String.format(sSmilTextPart, srcName);
             final String smil = String.format(sSmilTextOnly, smilBody);
@@ -1129,13 +1153,29 @@ public class TelephonyBackupAgent extends BackupAgent {
     }
 
     private long getOrCreateThreadId(Set<String> recipients) {
+        if (recipients == null) {
+            recipients = new ArraySet<String>();
+        }
+
+        if (recipients.isEmpty()) {
+            recipients.add(UNKNOWN_SENDER);
+        }
+
         if (mCacheGetOrCreateThreadId == null) {
             mCacheGetOrCreateThreadId = new HashMap<>();
         }
 
         if (!mCacheGetOrCreateThreadId.containsKey(recipients)) {
-            mCacheGetOrCreateThreadId.put(recipients,
-                    Telephony.Threads.getOrCreateThreadId(this, recipients));
+            long threadId = mUnknownSenderThreadId;
+            try {
+                threadId = Telephony.Threads.getOrCreateThreadId(this, recipients);
+            } catch (RuntimeException e) {
+                if (DEBUG) {
+                    Log.e(TAG, e.toString());
+                }
+            }
+            mCacheGetOrCreateThreadId.put(recipients, threadId);
+            return threadId;
         }
 
         return mCacheGetOrCreateThreadId.get(recipients);
