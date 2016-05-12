@@ -2235,7 +2235,21 @@ public class TelephonyProvider extends ContentProvider
         } catch (SQLException e) {
             loge("got exception when deleting to restore: " + e);
         }
-        setPreferredApnId((long) INVALID_APN_ID, subId);
+
+        // delete preferred apn ids and preferred apns (both stored in diff SharedPref) for all
+        // subIds
+        SharedPreferences spApnId = getContext().getSharedPreferences(PREF_FILE_APN,
+                Context.MODE_PRIVATE);
+        SharedPreferences.Editor editorApnId = spApnId.edit();
+        editorApnId.clear();
+        editorApnId.apply();
+
+        SharedPreferences spApn = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
+                Context.MODE_PRIVATE);
+        SharedPreferences.Editor editorApn = spApn.edit();
+        editorApn.clear();
+        editorApn.apply();
+
         mOpenHelper.initDatabase(db);
     }
 
