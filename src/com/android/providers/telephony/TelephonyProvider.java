@@ -1671,6 +1671,7 @@ public class TelephonyProvider extends ContentProvider
             }
             result.addRow(values);
         } while (c.moveToNext());
+        c.close();
         return result;
     }
 
