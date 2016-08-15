@@ -27,7 +27,6 @@ import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.content.res.XmlResourceParser;
 import android.database.Cursor;
-import android.database.MatrixCursor;
 import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
@@ -1626,55 +1625,6 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
-    final static int LTE_BITMASK =
-            ServiceState.getBitmaskForTech(ServiceState.RIL_RADIO_TECHNOLOGY_LTE);
-    final static int LTE_CA_BITMASK =
-            ServiceState.getBitmaskForTech(ServiceState.RIL_RADIO_TECHNOLOGY_LTE_CA);
-
-    // Short term fix to adding LTE_CA
-    private Cursor makeLteUpcastingCursor(Cursor c) {
-        if (c == null || c.getCount() == 0) return c;
-
-        final String[] columnNames = c.getColumnNames();
-        int bitmaskIndex = -1;
-        for (int i = 0; i < columnNames.length; i++) {
-            if (BEARER_BITMASK.equals(columnNames[i])) {
-                bitmaskIndex = i;
-                break;
-            }
-        }
-        if (bitmaskIndex == -1) return c;
-
-        final MatrixCursor result = new MatrixCursor(columnNames, c.getCount());
-        c.moveToFirst();
-        do {
-            Object[] values = new Object[c.getColumnCount()];
-            for (int i=0; i < c.getColumnCount(); i++) {
-                switch (c.getType(i)) {
-                    case Cursor.FIELD_TYPE_NULL:    values[i] = null;           break;
-                    case Cursor.FIELD_TYPE_INTEGER: values[i] = c.getInt(i);    break;
-                    case Cursor.FIELD_TYPE_FLOAT:   values[i] = c.getFloat(i);  break;
-                    case Cursor.FIELD_TYPE_STRING:  values[i] = c.getString(i); break;
-                    case Cursor.FIELD_TYPE_BLOB:    values[i] = c.getBlob(i);   break;
-                    default:
-                        log("Unexpected type for field #" + i + ": " + c.getType(i));
-                        values[i] = null;
-                        break;
-                }
-            }
-            if (values[bitmaskIndex] != null && values[bitmaskIndex] instanceof Integer) {
-                int v = ((Integer)(values[bitmaskIndex])).intValue();
-                if ((v & LTE_BITMASK) == LTE_BITMASK) {
-                    v |= LTE_CA_BITMASK;
-                    values[bitmaskIndex] = new Integer(v);
-                }
-            }
-            result.addRow(values);
-        } while (c.moveToNext());
-        c.close();
-        return result;
-    }
-
     @Override
     public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
@@ -1798,8 +1748,7 @@ public class TelephonyProvider extends ContentProvider
                         IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML;
                 if (VDBG) log("query: selection modified to " + selection);
             }
-            ret = makeLteUpcastingCursor(
-                    qb.query(db, projectionIn, selection, selectionArgs, null, null, sort));
+            ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
         } catch (SQLException e) {
             loge("got exception when querying: " + e);
         }
