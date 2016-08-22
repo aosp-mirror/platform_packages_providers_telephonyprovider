@@ -268,7 +268,11 @@ public class MmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        // Don't let anyone insert anything with the _data column
+        // The _data column is filled internally in MmsProvider, so this check is just to avoid
+        // it from being inadvertently set. This is not supposed to be a protection against
+        // malicious attack, since sql injection could still be attempted to bypass the check. On
+        // the other hand, the MmsProvider does verify that the _data column has an allowed value
+        // before opening any uri/files.
         if (values != null && values.containsKey(Part._DATA)) {
             return null;
         }
@@ -686,7 +690,11 @@ public class MmsProvider extends ContentProvider {
     @Override
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
-        // Don't let anyone update the _data column
+        // The _data column is filled internally in MmsProvider, so this check is just to avoid
+        // it from being inadvertently set. This is not supposed to be a protection against
+        // malicious attack, since sql injection could still be attempted to bypass the check. On
+        // the other hand, the MmsProvider does verify that the _data column has an allowed value
+        // before opening any uri/files.
         if (values != null && values.containsKey(Part._DATA)) {
             return 0;
         }
@@ -785,7 +793,11 @@ public class MmsProvider extends ContentProvider {
             return null;
         }
 
-        // Verify that the _data path points to mms data
+        return safeOpenFileHelper(uri, mode);
+    }
+
+    private ParcelFileDescriptor safeOpenFileHelper(
+            Uri uri, String mode) throws FileNotFoundException {
         Cursor c = query(uri, new String[]{"_data"}, null, null, null);
         int count = (c != null) ? c.getCount() : 0;
         if (count != 1) {
@@ -806,19 +818,32 @@ public class MmsProvider extends ContentProvider {
         c.close();
 
         if (path == null) {
-            return null;
+            throw new FileNotFoundException("Column _data not found.");
         }
+
+        File filePath = new File(path);
         try {
-            File filePath = new File(path);
+            // The MmsProvider shouldn't open a file that isn't MMS data, so we verify that the
+            // _data path actually points to MMS data. That safeguards ourselves from callers who
+            // inserted or updated a URI (more specifically the _data column) with disallowed paths.
+            // TODO(afurtado): provide a more robust mechanism to avoid disallowed _data paths to
+            // be inserted/updated in the first place, including via SQL injection.
             if (!filePath.getCanonicalPath()
                     .startsWith(getContext().getApplicationInfo().dataDir + "/app_parts/")) {
+                Log.e(TAG, "openFile: path "
+                        + filePath.getCanonicalPath()
+                        + " does not start with "
+                        + getContext().getApplicationInfo().dataDir + "/app_parts/");
+                // Don't care return value
                 return null;
             }
         } catch (IOException e) {
+            Log.e(TAG, "openFile: create path failed " + e, e);
             return null;
         }
 
-        return openFileHelper(uri, mode);
+        int modeBits = ParcelFileDescriptor.parseMode(mode);
+        return ParcelFileDescriptor.open(filePath, modeBits);
     }
 
     private void filterUnsupportedKeys(ContentValues values) {
