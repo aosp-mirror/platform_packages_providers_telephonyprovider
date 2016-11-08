@@ -23,6 +23,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.os.storage.StorageManager;
 import android.provider.BaseColumns;
@@ -1734,7 +1735,17 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void upgradeDatabaseToVersion65(SQLiteDatabase db) {
-        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN message_body TEXT");
+        // aosp and internal code diverged at version 63. Aosp did createThreadIdDateIndex() on
+        // upgrading to 63, whereas internal (nyc) added column 'deleted'. A device upgrading from
+        // nyc will have columns deleted and message_body in raw table with version 64, but not
+        // createThreadIdDateIndex()
+        try {
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW + " ADD COLUMN message_body TEXT");
+        } catch (SQLiteException e) {
+            Log.w(TAG, "[upgradeDatabaseToVersion65] Exception adding column message_body; " +
+                    "trying createThreadIdDateIndex() instead: " + e);
+            createThreadIdDateIndex(db);
+        }
     }
 
     @Override
