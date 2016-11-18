@@ -38,6 +38,7 @@ import android.test.AndroidTestCase;
 import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
+import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -147,6 +148,7 @@ public class TelephonyProviderTest extends TestCase {
      * Verify that the inserted values match the result of the query and are deleted.
      */
     @Test
+    @SmallTest
     public void testInsertCarriers() {
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
@@ -208,6 +210,7 @@ public class TelephonyProviderTest extends TestCase {
      * Verify that the inserted values match the result of the query and are deleted.
      */
     @Test
+    @SmallTest
     public void testSimTable() {
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
