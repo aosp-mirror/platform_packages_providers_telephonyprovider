@@ -1078,7 +1078,14 @@ public class TelephonyProvider extends ContentProvider
             addStringAttribute(parser, "mmsproxy", map, MMSPROXY);
             addStringAttribute(parser, "mmsport", map, MMSPORT);
             addStringAttribute(parser, "mmsc", map, MMSC);
-            addStringAttribute(parser, "type", map, TYPE);
+
+            String apnType = parser.getAttributeValue(null, "type");
+            if (apnType != null) {
+                // Remove spaces before putting it in the map.
+                apnType = apnType.replaceAll("\\s+", "");
+                map.put(TYPE, apnType);
+            }
+
             addStringAttribute(parser, "protocol", map, PROTOCOL);
             addStringAttribute(parser, "roaming_protocol", map, ROAMING_PROTOCOL);
 
