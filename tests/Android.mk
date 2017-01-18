@@ -3,7 +3,7 @@ include $(CLEAR_VARS)
 
 LOCAL_MODULE_TAGS := tests
 
-LOCAL_STATIC_JAVA_LIBRARIES := mockito-target
+LOCAL_STATIC_JAVA_LIBRARIES := mockito-target legacy-android-test
 
 LOCAL_JAVA_LIBRARIES := android.test.runner telephony-common
 
