@@ -235,7 +235,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 64;
+    static final int DATABASE_VERSION = 65;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -903,7 +903,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
                    "pdu TEXT," + // the raw PDU for this part
                    "deleted INTEGER DEFAULT 0," + // bool to indicate if row is deleted
-                   "message_body TEXT);"); // message body
+                   "message_body TEXT," + // message body
+                   "display_originating_addr TEXT);"
+                   // email address if from an email gateway, otherwise same as address
+        );
 
         db.execSQL("CREATE TABLE attachments (" +
                    "sms_id INTEGER," +
@@ -1447,6 +1450,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+         case 64:
+            if (currentVersion <= 64) {
+                return;
+            }
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion65(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
 
             return;
         }
@@ -1728,6 +1746,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private void upgradeDatabaseToVersion64(SQLiteDatabase db) {
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN message_body TEXT");
+    }
+
+    private void upgradeDatabaseToVersion65(SQLiteDatabase db) {
+        db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW + " ADD COLUMN display_originating_addr TEXT");
     }
 
     @Override
