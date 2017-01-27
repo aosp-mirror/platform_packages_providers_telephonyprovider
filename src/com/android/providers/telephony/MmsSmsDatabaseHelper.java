@@ -239,7 +239,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 65;
+    static final int DATABASE_VERSION = 66;
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
@@ -894,7 +894,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
                    "pdu TEXT," + // the raw PDU for this part
                    "deleted INTEGER DEFAULT 0," + // bool to indicate if row is deleted
-                   "message_body TEXT);"); // message body
+                   "message_body TEXT," + // message body
+                   "display_originating_addr TEXT);"
+                   // email address if from an email gateway, otherwise same as address
+        );
 
         db.execSQL("CREATE TABLE attachments (" +
                    "sms_id INTEGER," +
@@ -1455,6 +1458,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 65:
+            if (currentVersion <= 65) {
+                return;
+            }
+
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion66(db);
+                db.setTransactionSuccessful();
+            } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break;
+            } finally {
+                db.endTransaction();
+            }
 
             return;
         }
@@ -1745,6 +1764,16 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             Log.w(TAG, "[upgradeDatabaseToVersion65] Exception adding column message_body; " +
                     "trying createThreadIdDateIndex() instead: " + e);
             createThreadIdDateIndex(db);
+        }
+    }
+
+    private void upgradeDatabaseToVersion66(SQLiteDatabase db) {
+        try {
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW
+                    + " ADD COLUMN display_originating_addr TEXT");
+        } catch (SQLiteException e) {
+            Log.e(TAG, "[upgradeDatabaseToVersion66] Exception adding column "
+                    + "display_originating_addr; " + e);
         }
     }
 
