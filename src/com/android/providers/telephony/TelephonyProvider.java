@@ -69,7 +69,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 18 << 16;
+    private static final int DATABASE_VERSION = 19 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -151,51 +151,54 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS.add(MVNO_TYPE);
         CARRIERS_UNIQUE_FIELDS.add(MVNO_MATCH_DATA);
         CARRIERS_UNIQUE_FIELDS.add(PROFILE_ID);
+        CARRIERS_UNIQUE_FIELDS.add(PROTOCOL);
+        CARRIERS_UNIQUE_FIELDS.add(ROAMING_PROTOCOL);
     }
 
     @VisibleForTesting
-    public static final String CREATE_CARRIERS_TABLE_STRING = "CREATE TABLE " + CARRIERS_TABLE +
-            "(_id INTEGER PRIMARY KEY," +
-            NAME + " TEXT DEFAULT ''," +
-            NUMERIC + " TEXT DEFAULT ''," +
-            MCC + " TEXT DEFAULT ''," +
-            MNC + " TEXT DEFAULT ''," +
-            APN + " TEXT DEFAULT ''," +
-            USER + " TEXT DEFAULT ''," +
-            SERVER + " TEXT DEFAULT ''," +
-            PASSWORD + " TEXT DEFAULT ''," +
-            PROXY + " TEXT DEFAULT ''," +
-            PORT + " TEXT DEFAULT ''," +
-            MMSPROXY + " TEXT DEFAULT ''," +
-            MMSPORT + " TEXT DEFAULT ''," +
-            MMSC + " TEXT DEFAULT ''," +
-            AUTH_TYPE + " INTEGER DEFAULT -1," +
-            TYPE + " TEXT DEFAULT ''," +
-            CURRENT + " INTEGER," +
-            PROTOCOL + " TEXT DEFAULT 'IP'," +
-            ROAMING_PROTOCOL + " TEXT DEFAULT 'IP'," +
-            CARRIER_ENABLED + " BOOLEAN DEFAULT 1," +
-            BEARER + " INTEGER DEFAULT 0," +
-            BEARER_BITMASK + " INTEGER DEFAULT 0," +
-            MVNO_TYPE + " TEXT DEFAULT ''," +
-            MVNO_MATCH_DATA + " TEXT DEFAULT ''," +
-            SUBSCRIPTION_ID + " INTEGER DEFAULT "
-            + SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
-            PROFILE_ID + " INTEGER DEFAULT 0," +
-            MODEM_COGNITIVE + " BOOLEAN DEFAULT 0," +
-            MAX_CONNS + " INTEGER DEFAULT 0," +
-            WAIT_TIME + " INTEGER DEFAULT 0," +
-            MAX_CONNS_TIME + " INTEGER DEFAULT 0," +
-            MTU + " INTEGER DEFAULT 0," +
-            EDITED + " INTEGER DEFAULT " + UNEDITED + "," +
-            USER_VISIBLE + " BOOLEAN DEFAULT 1," +
-            // Uniqueness collisions are used to trigger merge code so if a field is listed
-            // here it means we will accept both (user edited + new apn_conf definition)
-            // Columns not included in UNIQUE constraint: name, current, edited,
-            // user, server, password, authtype, type, protocol, roaming_protocol, sub_id,
-            // modem_cognitive, max_conns, wait_time, max_conns_time, mtu, bearer_bitmask,
-            // user_visible
-            "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
+    public static String getStringForCarrierTableCreation(String tableName) {
+        return "CREATE TABLE " + tableName +
+                "(_id INTEGER PRIMARY KEY," +
+                NAME + " TEXT DEFAULT ''," +
+                NUMERIC + " TEXT DEFAULT ''," +
+                MCC + " TEXT DEFAULT ''," +
+                MNC + " TEXT DEFAULT ''," +
+                APN + " TEXT DEFAULT ''," +
+                USER + " TEXT DEFAULT ''," +
+                SERVER + " TEXT DEFAULT ''," +
+                PASSWORD + " TEXT DEFAULT ''," +
+                PROXY + " TEXT DEFAULT ''," +
+                PORT + " TEXT DEFAULT ''," +
+                MMSPROXY + " TEXT DEFAULT ''," +
+                MMSPORT + " TEXT DEFAULT ''," +
+                MMSC + " TEXT DEFAULT ''," +
+                AUTH_TYPE + " INTEGER DEFAULT -1," +
+                TYPE + " TEXT DEFAULT ''," +
+                CURRENT + " INTEGER," +
+                PROTOCOL + " TEXT DEFAULT 'IP'," +
+                ROAMING_PROTOCOL + " TEXT DEFAULT 'IP'," +
+                CARRIER_ENABLED + " BOOLEAN DEFAULT 1," +
+                BEARER + " INTEGER DEFAULT 0," +
+                BEARER_BITMASK + " INTEGER DEFAULT 0," +
+                MVNO_TYPE + " TEXT DEFAULT ''," +
+                MVNO_MATCH_DATA + " TEXT DEFAULT ''," +
+                SUBSCRIPTION_ID + " INTEGER DEFAULT "
+                + SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
+                PROFILE_ID + " INTEGER DEFAULT 0," +
+                MODEM_COGNITIVE + " BOOLEAN DEFAULT 0," +
+                MAX_CONNS + " INTEGER DEFAULT 0," +
+                WAIT_TIME + " INTEGER DEFAULT 0," +
+                MAX_CONNS_TIME + " INTEGER DEFAULT 0," +
+                MTU + " INTEGER DEFAULT 0," +
+                EDITED + " INTEGER DEFAULT " + UNEDITED + "," +
+                USER_VISIBLE + " BOOLEAN DEFAULT 1," +
+                // Uniqueness collisions are used to trigger merge code so if a field is listed
+                // here it means we will accept both (user edited + new apn_conf definition)
+                // Columns not included in UNIQUE constraint: name, current, edited,
+                // user, server, password, authtype, type, sub_id, modem_cognitive, max_conns,
+                // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible.
+                "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
+    }
 
     @VisibleForTesting
     public static final String CREATE_SIMINFO_TABLE_STRING = "CREATE TABLE " + SIMINFO_TABLE + "("
@@ -335,7 +338,7 @@ public class TelephonyProvider extends ContentProvider
         private void createCarriersTable(SQLiteDatabase db, String tableName) {
             // Set up the database schema
             if (DBG) log("dbh.createCarriersTable: " + tableName);
-            db.execSQL(CREATE_CARRIERS_TABLE_STRING);
+            db.execSQL(getStringForCarrierTableCreation(tableName));
             if (DBG) log("dbh.createCarriersTable:-");
         }
 
@@ -739,6 +742,54 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 18 << 16 | 6;
             }
+            if (oldVersion < (19 << 16 | 6)) {
+                // Upgrade steps from version 18 are:
+                // 1. Create a temp table- done in createCarriersTable()
+                // 2. copy over APNs from old table to new table - done in copyDataToTmpTable()
+                // 3. Drop the existing table.
+                // 4. Copy over the tmp table.
+                Cursor c;
+                String[] proj = {"_id"};
+                if (VDBG) {
+                    c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
+                    log("dbh.onUpgrade:- before upgrading total number of rows: " + c.getCount());
+                    c.close();
+                }
+
+                c = db.query(CARRIERS_TABLE, null, null, null, null, null, null);
+
+                if (VDBG) {
+                    log("dbh.onUpgrade:- starting data copy of existing rows: " +
+                            + ((c == null) ? 0 : c.getCount()));
+                }
+
+                db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE_TMP);
+
+                createCarriersTable(db, CARRIERS_TABLE_TMP);
+
+                copyDataToTmpTable(db, c);
+                c.close();
+
+                db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
+
+                db.execSQL("ALTER TABLE " + CARRIERS_TABLE_TMP + " rename to " + CARRIERS_TABLE +
+                        ";");
+
+                if (VDBG) {
+                    c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
+                    c.close();
+                    c = db.query(CARRIERS_TABLE, proj, IS_UNEDITED, null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows with " + IS_UNEDITED +
+                            ": " + c.getCount());
+                    c.close();
+                    c = db.query(CARRIERS_TABLE, proj, IS_EDITED, null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows with " + IS_EDITED +
+                            ": " + c.getCount());
+                    c.close();
+                }
+                oldVersion = 19 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -932,6 +983,70 @@ public class TelephonyProvider extends ContentProvider
             db.delete(CARRIERS_TABLE, where, whereArgs);
         }
 
+        private void copyDataToTmpTable(SQLiteDatabase db, Cursor c) {
+            // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
+            if (c != null) {
+                while (c.moveToNext()) {
+                    ContentValues cv = new ContentValues();
+                    String val;
+                    copyApnValues(cv, c);
+                    try {
+                        db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
+                                SQLiteDatabase.CONFLICT_ABORT);
+                        if (VDBG) {
+                            log("dbh.copyPreservedApnsToNewTable: db.insert returned >= 0; " +
+                                    "insert successful for cv " + cv);
+                        }
+                    } catch (SQLException e) {
+                        if (VDBG)
+                            log("dbh.copyPreservedApnsToNewTable insertWithOnConflict exception " +
+                                    e + " for cv " + cv);
+                    }
+                }
+            }
+        }
+
+        private void copyApnValues(ContentValues cv, Cursor c) {
+            // Include only non-null values in cv so that null values can be replaced
+            // with default if there's a default value for the field
+
+            // String vals
+            getStringValueFromCursor(cv, c, NAME);
+            getStringValueFromCursor(cv, c, NUMERIC);
+            getStringValueFromCursor(cv, c, MCC);
+            getStringValueFromCursor(cv, c, MNC);
+            getStringValueFromCursor(cv, c, APN);
+            getStringValueFromCursor(cv, c, USER);
+            getStringValueFromCursor(cv, c, SERVER);
+            getStringValueFromCursor(cv, c, PASSWORD);
+            getStringValueFromCursor(cv, c, PROXY);
+            getStringValueFromCursor(cv, c, PORT);
+            getStringValueFromCursor(cv, c, MMSPROXY);
+            getStringValueFromCursor(cv, c, MMSPORT);
+            getStringValueFromCursor(cv, c, MMSC);
+            getStringValueFromCursor(cv, c, TYPE);
+            getStringValueFromCursor(cv, c, PROTOCOL);
+            getStringValueFromCursor(cv, c, ROAMING_PROTOCOL);
+            getStringValueFromCursor(cv, c, MVNO_TYPE);
+            getStringValueFromCursor(cv, c, MVNO_MATCH_DATA);
+
+            // bool/int vals
+            getIntValueFromCursor(cv, c, AUTH_TYPE);
+            getIntValueFromCursor(cv, c, CURRENT);
+            getIntValueFromCursor(cv, c, CARRIER_ENABLED);
+            getIntValueFromCursor(cv, c, BEARER);
+            getIntValueFromCursor(cv, c, SUBSCRIPTION_ID);
+            getIntValueFromCursor(cv, c, PROFILE_ID);
+            getIntValueFromCursor(cv, c, MODEM_COGNITIVE);
+            getIntValueFromCursor(cv, c, MAX_CONNS);
+            getIntValueFromCursor(cv, c, WAIT_TIME);
+            getIntValueFromCursor(cv, c, MAX_CONNS_TIME);
+            getIntValueFromCursor(cv, c, MTU);
+            getIntValueFromCursor(cv, c, BEARER_BITMASK);
+            getIntValueFromCursor(cv, c, EDITED);
+        }
+
+
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
             // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
             if (c != null) {
@@ -940,43 +1055,7 @@ public class TelephonyProvider extends ContentProvider
                 while (c.moveToNext()) {
                     ContentValues cv = new ContentValues();
                     String val;
-
-                    // Include only non-null values in cv so that null values can be replaced
-                    // with default if there's a default value for the field
-
-                    // String vals
-                    getStringValueFromCursor(cv, c, NAME);
-                    getStringValueFromCursor(cv, c, NUMERIC);
-                    getStringValueFromCursor(cv, c, MCC);
-                    getStringValueFromCursor(cv, c, MNC);
-                    getStringValueFromCursor(cv, c, APN);
-                    getStringValueFromCursor(cv, c, USER);
-                    getStringValueFromCursor(cv, c, SERVER);
-                    getStringValueFromCursor(cv, c, PASSWORD);
-                    getStringValueFromCursor(cv, c, PROXY);
-                    getStringValueFromCursor(cv, c, PORT);
-                    getStringValueFromCursor(cv, c, MMSPROXY);
-                    getStringValueFromCursor(cv, c, MMSPORT);
-                    getStringValueFromCursor(cv, c, MMSC);
-                    getStringValueFromCursor(cv, c, TYPE);
-                    getStringValueFromCursor(cv, c, PROTOCOL);
-                    getStringValueFromCursor(cv, c, ROAMING_PROTOCOL);
-                    getStringValueFromCursor(cv, c, MVNO_TYPE);
-                    getStringValueFromCursor(cv, c, MVNO_MATCH_DATA);
-
-                    // bool/int vals
-                    getIntValueFromCursor(cv, c, AUTH_TYPE);
-                    getIntValueFromCursor(cv, c, CURRENT);
-                    getIntValueFromCursor(cv, c, CARRIER_ENABLED);
-                    getIntValueFromCursor(cv, c, BEARER);
-                    getIntValueFromCursor(cv, c, SUBSCRIPTION_ID);
-                    getIntValueFromCursor(cv, c, PROFILE_ID);
-                    getIntValueFromCursor(cv, c, MODEM_COGNITIVE);
-                    getIntValueFromCursor(cv, c, MAX_CONNS);
-                    getIntValueFromCursor(cv, c, WAIT_TIME);
-                    getIntValueFromCursor(cv, c, MAX_CONNS_TIME);
-                    getIntValueFromCursor(cv, c, MTU);
-
+                    copyApnValues(cv, c);
                     // Change bearer to a bitmask
                     String bearerStr = c.getString(c.getColumnIndex(BEARER));
                     if (!TextUtils.isEmpty(bearerStr)) {
