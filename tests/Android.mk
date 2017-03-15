@@ -10,6 +10,7 @@ LOCAL_JAVA_LIBRARIES := android.test.runner telephony-common
 LOCAL_SRC_FILES := $(call all-java-files-under,src)
 
 LOCAL_PACKAGE_NAME := TelephonyProviderTests
+LOCAL_COMPATIBILITY_SUITE := device-tests
 LOCAL_CERTIFICATE := platform
 
 LOCAL_INSTRUMENTATION_FOR := TelephonyProvider
