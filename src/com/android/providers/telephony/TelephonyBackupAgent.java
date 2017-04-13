@@ -278,12 +278,15 @@ public class TelephonyBackupAgent extends BackupAgent {
 
 
     static {
-        // Consider restored messages seen, but use the read value from the data.
+        // Consider restored messages read and seen by default. The actual data can override
+        // these values.
+        sDefaultValuesSms.put(Telephony.Sms.READ, 1);
         sDefaultValuesSms.put(Telephony.Sms.SEEN, 1);
         sDefaultValuesSms.put(Telephony.Sms.ADDRESS, UNKNOWN_SENDER);
         // If there is no sub_id with self phone number on restore set it to -1.
         sDefaultValuesSms.put(Telephony.Sms.SUBSCRIPTION_ID, -1);
 
+        sDefaultValuesMms.put(Telephony.Mms.READ, 1);
         sDefaultValuesMms.put(Telephony.Mms.SEEN, 1);
         sDefaultValuesMms.put(Telephony.Mms.SUBSCRIPTION_ID, -1);
         sDefaultValuesMms.put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_ALL);
@@ -363,9 +366,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         try (
                 Cursor smsCursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, SMS_PROJECTION,
                         null, null, ORDER_BY_DATE);
-                // Do not backup non text-only MMS's.
                 Cursor mmsCursor = mContentResolver.query(Telephony.Mms.CONTENT_URI, MMS_PROJECTION,
-                        Telephony.Mms.TEXT_ONLY+"=1", null, ORDER_BY_DATE)) {
+                        null, null, ORDER_BY_DATE)) {
 
             if (smsCursor != null) {
                 smsCursor.moveToFirst();
@@ -832,6 +834,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     private int writeMmsToWriter(JsonWriter jsonWriter, Cursor cursor) throws IOException {
         final int mmsId = cursor.getInt(ID_IDX);
         final MmsBody body = getMmsBody(mmsId);
+        // We backup any message that contains text, but only backup the text part.
         if (body == null || body.text == null) {
             return 0;
         }
@@ -952,6 +955,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (bodyText != null) {
             mms.body = new MmsBody(bodyText, bodyCharset);
         }
+        // Set the text_only flag
+        mms.values.put(Telephony.Mms.TEXT_ONLY, (mms.attachments == null
+                || mms.attachments.size() == 0) && bodyText != null ? 1 : 0);
 
         // Set default charset for subject.
         if (mms.values.get(Telephony.Mms.SUBJECT) != null &&
@@ -1186,7 +1192,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             mContentResolver.update(partUri, values, null, null);
         }
 
-        { // Insert adderesses into "addr".
+        { // Insert addresses into "addr".
             final Uri addrUri = Uri.withAppendedPath(mmsUri, "addr");
             for (ContentValues mmsAddress : mms.addresses) {
                 ContentValues values = new ContentValues(mmsAddress);

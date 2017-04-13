@@ -59,6 +59,8 @@ import java.util.UUID;
  * Tests for testing backup/restore of SMS and text MMS messages.
  * For backup it creates fake provider and checks resulting json array.
  * For restore provides json array and checks inserts of the messages into provider.
+ *
+ * To run this test from the android root: runtest --path packages/providers/TelephonyProvider/
  */
 @TargetApi(Build.VERSION_CODES.O)
 public class TelephonyBackupAgentTest extends AndroidTestCase {
@@ -227,7 +229,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMmsAttachmentJson = new String[1];
         mMmsAttachmentRows[0] = createMmsRow(1 /*id*/, 1 /*subid*/, "Subject 1" /*subject*/,
                 100 /*subcharset*/, 111111 /*date*/, 111112 /*datesent*/, 3 /*type*/,
-                17 /*version*/, 1 /*textonly*/,
+                17 /*version*/, 0 /*textonly*/,
                 11 /*msgBox*/, "location 1" /*contentLocation*/, "MMs body 1" /*body*/,
                 111 /*body charset*/,
                 new String[]{"+111 (111) 11111111", "+11121212", "example@example.com",
@@ -250,6 +252,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 "\"example@example.com\",\"charset\":102},{\"type\":13,\"address\":\"+999999999\"" +
                 ",\"charset\":103}],\"mms_body\":\"MMs body 1\",\"mms_charset\":111,\"" +
                 "sub_cs\":\"100\"}";
+
         mMmsAllAttachmentJson = makeJsonArray(mMmsAttachmentJson);
 
 
@@ -512,6 +515,17 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMmsTable.addAll(Arrays.asList(mMmsRows));
         mTelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, new JsonWriter(mStringWriter));
         assertEquals(mAllMmsJson, mStringWriter.toString());
+    }
+
+    /**
+     * Test with attachment mms.
+     * @throws Exception
+     */
+    public void testBackupMmsWithAttachmentMms() throws Exception {
+        mTelephonyBackupAgent.mMaxMsgPerFile = 4;
+        mMmsTable.addAll(Arrays.asList(mMmsAttachmentRows));
+        mTelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, new JsonWriter(mStringWriter));
+        assertEquals(mMmsAllAttachmentJson, mStringWriter.toString());
     }
 
     /**
