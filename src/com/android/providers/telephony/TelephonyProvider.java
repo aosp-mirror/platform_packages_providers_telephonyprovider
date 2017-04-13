@@ -988,8 +988,7 @@ public class TelephonyProvider extends ContentProvider
             if (c != null) {
                 while (c.moveToNext()) {
                     ContentValues cv = new ContentValues();
-                    String val;
-                    copyApnValues(cv, c);
+                    copyApnValuesV17(cv, c);
                     try {
                         db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
                                 SQLiteDatabase.CONFLICT_ABORT);
@@ -1006,7 +1005,7 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        private void copyApnValues(ContentValues cv, Cursor c) {
+        private void copyApnValuesV17(ContentValues cv, Cursor c) {
             // Include only non-null values in cv so that null values can be replaced
             // with default if there's a default value for the field
 
@@ -1044,6 +1043,7 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, MTU);
             getIntValueFromCursor(cv, c, BEARER_BITMASK);
             getIntValueFromCursor(cv, c, EDITED);
+            getIntValueFromCursor(cv, c, USER_VISIBLE);
         }
 
 
@@ -1055,7 +1055,10 @@ public class TelephonyProvider extends ContentProvider
                 while (c.moveToNext()) {
                     ContentValues cv = new ContentValues();
                     String val;
-                    copyApnValues(cv, c);
+                    // Using V17 copy function for V15 upgrade. This should be fine since it handles
+                    // columns that may not exist properly (getStringValueFromCursor() and
+                    // getIntValueFromCursor() handle column index -1)
+                    copyApnValuesV17(cv, c);
                     // Change bearer to a bitmask
                     String bearerStr = c.getString(c.getColumnIndex(BEARER));
                     if (!TextUtils.isEmpty(bearerStr)) {
@@ -1122,19 +1125,25 @@ public class TelephonyProvider extends ContentProvider
         }
 
         private void getStringValueFromCursor(ContentValues cv, Cursor c, String key) {
-            String fromCursor = c.getString(c.getColumnIndex(key));
-            if (!TextUtils.isEmpty(fromCursor)) {
-                cv.put(key, fromCursor);
+            int columnIndex = c.getColumnIndex(key);
+            if (columnIndex != -1) {
+                String fromCursor = c.getString(columnIndex);
+                if (!TextUtils.isEmpty(fromCursor)) {
+                    cv.put(key, fromCursor);
+                }
             }
         }
 
         private void getIntValueFromCursor(ContentValues cv, Cursor c, String key) {
-            String fromCursor = c.getString(c.getColumnIndex(key));
-            if (!TextUtils.isEmpty(fromCursor)) {
-                try {
-                    cv.put(key, new Integer(fromCursor));
-                } catch (NumberFormatException nfe) {
-                    // do nothing
+            int columnIndex = c.getColumnIndex(key);
+            if (columnIndex != -1) {
+                String fromCursor = c.getString(columnIndex);
+                if (!TextUtils.isEmpty(fromCursor)) {
+                    try {
+                        cv.put(key, new Integer(fromCursor));
+                    } catch (NumberFormatException nfe) {
+                        // do nothing
+                    }
                 }
             }
         }
