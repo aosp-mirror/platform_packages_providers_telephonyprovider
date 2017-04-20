@@ -38,8 +38,8 @@ import java.lang.NumberFormatException;
 import java.util.HashMap;
 import java.util.Objects;
 
-import static android.provider.Telephony.ServiceStateTable.getUriForSubId;
-import static android.provider.Telephony.ServiceStateTable.getUriForSubIdAndField;
+import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionId;
+import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionIdAndField;
 
 import static android.provider.Telephony.ServiceStateTable;
 import static android.provider.Telephony.ServiceStateTable.CONTENT_URI;
@@ -314,20 +314,20 @@ public class ServiceStateProvider extends ContentProvider {
         // for every field, if the field has changed values, notify via the provider
         if (firstUpdate || voiceRegStateChanged(oldSS, newSS)) {
             context.getContentResolver().notifyChange(
-                    getUriForSubIdAndField(subId, VOICE_REG_STATE),
+                    getUriForSubscriptionIdAndField(subId, VOICE_REG_STATE),
                     /* observer= */ null, /* syncToNetwork= */ false);
         }
         if (firstUpdate || dataRegStateChanged(oldSS, newSS)) {
             context.getContentResolver().notifyChange(
-                    getUriForSubIdAndField(subId, DATA_REG_STATE), null, false);
+                    getUriForSubscriptionIdAndField(subId, DATA_REG_STATE), null, false);
         }
         if (firstUpdate || voiceRoamingTypeChanged(oldSS, newSS)) {
             context.getContentResolver().notifyChange(
-                    getUriForSubIdAndField(subId, VOICE_ROAMING_TYPE), null, false);
+                    getUriForSubscriptionIdAndField(subId, VOICE_ROAMING_TYPE), null, false);
         }
         if (firstUpdate || dataRoamingTypeChanged(oldSS, newSS)) {
             context.getContentResolver().notifyChange(
-                    getUriForSubIdAndField(subId, DATA_ROAMING_TYPE), null, false);
+                    getUriForSubscriptionIdAndField(subId, DATA_ROAMING_TYPE), null, false);
         }
     }
 
@@ -367,7 +367,7 @@ public class ServiceStateProvider extends ContentProvider {
         // notify
         if (oldSS == null || voiceRegStateChanged(oldSS, newSS) || dataRegStateChanged(oldSS, newSS)
                 || voiceRoamingTypeChanged(oldSS, newSS) || dataRoamingTypeChanged(oldSS, newSS)) {
-            context.getContentResolver().notifyChange(getUriForSubId(subId), null, false);
+            context.getContentResolver().notifyChange(getUriForSubscriptionId(subId), null, false);
         }
     }
 }
