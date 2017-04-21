@@ -52,7 +52,7 @@ import org.mockito.Spy;
 import static android.app.job.JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS;
 import static android.Manifest.permission.MODIFY_PHONE_STATE;
 import static android.provider.Telephony.ServiceStateTable;
-import static android.provider.Telephony.ServiceStateTable.getUriForSubId;
+import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionId;
 import static android.provider.Telephony.ServiceStateTable.getContentValuesForServiceState;
 
 import static org.junit.Assert.assertEquals;
@@ -170,8 +170,8 @@ public class ServiceStateProviderTest {
     }
 
     private void verifyServiceStateForSubId(int subId, ServiceState ss) {
-        Cursor cursor = mContentResolver.query(getUriForSubId(subId), testProjection, "", null,
-                null);
+        Cursor cursor = mContentResolver.query(getUriForSubscriptionId(subId), testProjection, "",
+                null, null);
         assertNotNull(cursor);
         cursor.moveToFirst();
 
