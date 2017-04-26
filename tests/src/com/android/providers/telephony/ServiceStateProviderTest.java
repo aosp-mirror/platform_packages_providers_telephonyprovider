@@ -149,12 +149,24 @@ public class ServiceStateProviderTest {
 
     @Test
     @SmallTest
+    public void testQueryServiceStateWithNoSubId() {
+        // Verify that when calling query with no subId in the uri the default ServiceState is
+        // returned.
+        // In this case the subId is set to 0 and the expected service state is
+        // testServiceState.
+        verifyServiceStateForSubId(ServiceStateTable.CONTENT_URI, testServiceState);
+    }
+
+    @Test
+    @SmallTest
     public void testGetServiceStateWithDefaultSubId() {
         // Verify that when calling with the DEFAULT_SUBSCRIPTION_ID the correct ServiceState is
         // returned
         // In this case the subId is set to 0 and the expected service state is
-        // testServiceState
-        verifyServiceStateForSubId(SubscriptionManager.DEFAULT_SUBSCRIPTION_ID, testServiceState);
+        // testServiceState.
+        verifyServiceStateForSubId(
+                getUriForSubscriptionId(SubscriptionManager.DEFAULT_SUBSCRIPTION_ID),
+                testServiceState);
     }
 
     /**
@@ -166,11 +178,11 @@ public class ServiceStateProviderTest {
         // Verify that when calling with a specific subId the correct ServiceState is returned
         // In this case the subId is set to 1 and the expected service state is
         // testServiceStateForSubId1
-        verifyServiceStateForSubId(1, testServiceStateForSubId1);
+        verifyServiceStateForSubId(getUriForSubscriptionId(1), testServiceStateForSubId1);
     }
 
-    private void verifyServiceStateForSubId(int subId, ServiceState ss) {
-        Cursor cursor = mContentResolver.query(getUriForSubscriptionId(subId), testProjection, "",
+    private void verifyServiceStateForSubId(Uri uri, ServiceState ss) {
+        Cursor cursor = mContentResolver.query(uri, testProjection, "",
                 null, null);
         assertNotNull(cursor);
         cursor.moveToFirst();
