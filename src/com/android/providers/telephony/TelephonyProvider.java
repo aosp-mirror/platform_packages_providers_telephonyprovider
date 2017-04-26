@@ -85,6 +85,7 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_PREFERAPN_NO_UPDATE_USING_SUBID = 12;
     private static final int URL_SIMINFO_USING_SUBID = 13;
     private static final int URL_UPDATE_DB = 14;
+    private static final int URL_DELETE = 15;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -116,6 +117,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String IS_UNEDITED = EDITED + "=" + UNEDITED;
     private static final String IS_EDITED = EDITED + "!=" + UNEDITED;
     private static final String IS_USER_EDITED = EDITED + "=" + USER_EDITED;
+    private static final String IS_NOT_USER_EDITED = EDITED + "!=" + USER_EDITED;
     private static final String IS_USER_DELETED = EDITED + "=" + USER_DELETED;
     private static final String IS_NOT_USER_DELETED = EDITED + "!=" + USER_DELETED;
     private static final String IS_USER_DELETED_BUT_PRESENT_IN_XML =
@@ -123,6 +125,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML =
             EDITED + "!=" + USER_DELETED_BUT_PRESENT_IN_XML;
     private static final String IS_CARRIER_EDITED = EDITED + "=" + CARRIER_EDITED;
+    private static final String IS_NOT_CARRIER_EDITED = EDITED + "!=" + CARRIER_EDITED;
     private static final String IS_CARRIER_DELETED = EDITED + "=" + CARRIER_DELETED;
     private static final String IS_NOT_CARRIER_DELETED = EDITED + "!=" + CARRIER_DELETED;
     private static final String IS_CARRIER_DELETED_BUT_PRESENT_IN_XML =
@@ -253,6 +256,7 @@ public class TelephonyProvider extends ContentProvider
                 URL_PREFERAPN_NO_UPDATE_USING_SUBID);
 
         s_urlMatcher.addURI("telephony", "carriers/update_db", URL_UPDATE_DB);
+        s_urlMatcher.addURI("telephony", "carriers/delete", URL_DELETE);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put(CURRENT, "0");
@@ -2054,11 +2058,12 @@ public class TelephonyProvider extends ContentProvider
         int count = 0;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String userOrCarrierEdited = ") and (" +
-                EDITED + "=" + USER_EDITED +  " or " +
-                EDITED + "=" + CARRIER_EDITED + ")";
+                IS_USER_EDITED +  " or " +
+                IS_CARRIER_EDITED + ")";
         String notUserOrCarrierEdited = ") and (" +
-                EDITED + "!=" + USER_EDITED +  " and " +
-                EDITED + "!=" + CARRIER_EDITED + ")";
+                IS_NOT_USER_EDITED +  " and " +
+                IS_NOT_CARRIER_EDITED + ")";
+        String unedited = ") and " + IS_UNEDITED;
         ContentValues cv = new ContentValues();
         cv.put(EDITED, USER_DELETED);
 
@@ -2068,6 +2073,13 @@ public class TelephonyProvider extends ContentProvider
         int match = s_urlMatcher.match(url);
         switch (match)
         {
+            case URL_DELETE:
+            {
+                // Delete unedited entries
+                count = db.delete(CARRIERS_TABLE, "(" + where + unedited, whereArgs);
+                break;
+            }
+
             case URL_TELEPHONY_USING_SUBID:
             {
                  String subIdString = url.getLastPathSegment();
