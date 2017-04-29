@@ -545,18 +545,18 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mSmsTable.addAll(Arrays.asList(mSmsRows));
         mMmsTable.addAll(Arrays.asList(mMmsRows));
 
-        FullBackupDataOutput fullBackupDataOutput = new FullBackupDataOutput();
+        FullBackupDataOutput fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSize, fullBackupDataOutput.getSize());
 
         mTelephonyBackupAgent.onQuotaExceeded(backupSize, backupSize - 100);
-        fullBackupDataOutput = new FullBackupDataOutput();
+        fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSizeAfterFirstQuotaHit, fullBackupDataOutput.getSize());
 
         mTelephonyBackupAgent.onQuotaExceeded(backupSizeAfterFirstQuotaHit,
                 backupSizeAfterFirstQuotaHit - 200);
-        fullBackupDataOutput = new FullBackupDataOutput();
+        fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSizeAfterSecondQuotaHit, fullBackupDataOutput.getSize());
     }
