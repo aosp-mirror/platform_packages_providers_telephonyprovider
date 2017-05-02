@@ -200,8 +200,8 @@ public class ServiceStateProvider extends ContentProvider {
             try {
                 subId = Integer.parseInt(uri.getLastPathSegment());
             } catch (NumberFormatException e) {
-                Log.e(TAG, "query: no subId provided in uri");
-                throw e;
+                Log.d(TAG, "query: no subId provided in uri, using default.");
+                subId = getDefaultSubId();
             }
             Log.d(TAG, "subId=" + subId);
 
