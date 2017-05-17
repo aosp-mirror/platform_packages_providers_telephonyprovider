@@ -17,6 +17,48 @@
 
 package com.android.providers.telephony;
 
+import static android.provider.Telephony.Carriers.APN;
+import static android.provider.Telephony.Carriers.AUTH_TYPE;
+import static android.provider.Telephony.Carriers.BEARER;
+import static android.provider.Telephony.Carriers.BEARER_BITMASK;
+import static android.provider.Telephony.Carriers.CARRIER_DELETED;
+import static android.provider.Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
+import static android.provider.Telephony.Carriers.CARRIER_EDITED;
+import static android.provider.Telephony.Carriers.CARRIER_ENABLED;
+import static android.provider.Telephony.Carriers.CONTENT_URI;
+import static android.provider.Telephony.Carriers.CURRENT;
+import static android.provider.Telephony.Carriers.EDITED;
+import static android.provider.Telephony.Carriers.MAX_CONNS;
+import static android.provider.Telephony.Carriers.MAX_CONNS_TIME;
+import static android.provider.Telephony.Carriers.MCC;
+import static android.provider.Telephony.Carriers.MMSC;
+import static android.provider.Telephony.Carriers.MMSPORT;
+import static android.provider.Telephony.Carriers.MMSPROXY;
+import static android.provider.Telephony.Carriers.MNC;
+import static android.provider.Telephony.Carriers.MODEM_COGNITIVE;
+import static android.provider.Telephony.Carriers.MTU;
+import static android.provider.Telephony.Carriers.MVNO_MATCH_DATA;
+import static android.provider.Telephony.Carriers.MVNO_TYPE;
+import static android.provider.Telephony.Carriers.NAME;
+import static android.provider.Telephony.Carriers.NUMERIC;
+import static android.provider.Telephony.Carriers.PASSWORD;
+import static android.provider.Telephony.Carriers.PORT;
+import static android.provider.Telephony.Carriers.PROFILE_ID;
+import static android.provider.Telephony.Carriers.PROTOCOL;
+import static android.provider.Telephony.Carriers.PROXY;
+import static android.provider.Telephony.Carriers.ROAMING_PROTOCOL;
+import static android.provider.Telephony.Carriers.SERVER;
+import static android.provider.Telephony.Carriers.SUBSCRIPTION_ID;
+import static android.provider.Telephony.Carriers.TYPE;
+import static android.provider.Telephony.Carriers.UNEDITED;
+import static android.provider.Telephony.Carriers.USER;
+import static android.provider.Telephony.Carriers.USER_DELETED;
+import static android.provider.Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XML;
+import static android.provider.Telephony.Carriers.USER_EDITED;
+import static android.provider.Telephony.Carriers.USER_VISIBLE;
+import static android.provider.Telephony.Carriers.WAIT_TIME;
+import static android.provider.Telephony.Carriers._ID;
+
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -46,8 +88,8 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.util.Xml;
 
-import com.android.internal.util.XmlUtils;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -61,15 +103,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import static android.provider.Telephony.Carriers.*;
-
 public class TelephonyProvider extends ContentProvider
 {
     private static final String DATABASE_NAME = "telephony.db";
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 19 << 16;
+    private static final int DATABASE_VERSION = 20 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -85,6 +125,7 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_PREFERAPN_NO_UPDATE_USING_SUBID = 12;
     private static final int URL_SIMINFO_USING_SUBID = 13;
     private static final int URL_UPDATE_DB = 14;
+    private static final int URL_DELETE = 15;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -116,6 +157,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String IS_UNEDITED = EDITED + "=" + UNEDITED;
     private static final String IS_EDITED = EDITED + "!=" + UNEDITED;
     private static final String IS_USER_EDITED = EDITED + "=" + USER_EDITED;
+    private static final String IS_NOT_USER_EDITED = EDITED + "!=" + USER_EDITED;
     private static final String IS_USER_DELETED = EDITED + "=" + USER_DELETED;
     private static final String IS_NOT_USER_DELETED = EDITED + "!=" + USER_DELETED;
     private static final String IS_USER_DELETED_BUT_PRESENT_IN_XML =
@@ -123,6 +165,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML =
             EDITED + "!=" + USER_DELETED_BUT_PRESENT_IN_XML;
     private static final String IS_CARRIER_EDITED = EDITED + "=" + CARRIER_EDITED;
+    private static final String IS_NOT_CARRIER_EDITED = EDITED + "!=" + CARRIER_EDITED;
     private static final String IS_CARRIER_DELETED = EDITED + "=" + CARRIER_DELETED;
     private static final String IS_NOT_CARRIER_DELETED = EDITED + "!=" + CARRIER_DELETED;
     private static final String IS_CARRIER_DELETED_BUT_PRESENT_IN_XML =
@@ -221,6 +264,9 @@ public class TelephonyProvider extends ContentProvider
             + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
             + SubscriptionManager.SIM_PROVISIONING_STATUS
                 + " INTEGER DEFAULT " + SubscriptionManager.SIM_PROVISIONED + ","
+            + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
+            + SubscriptionManager.ACCESS_RULES + " BLOB,"
+            + SubscriptionManager.IS_REMOVABLE + " INTEGER DEFAULT 0,"
             + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
             + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
             + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
@@ -253,6 +299,7 @@ public class TelephonyProvider extends ContentProvider
                 URL_PREFERAPN_NO_UPDATE_USING_SUBID);
 
         s_urlMatcher.addURI("telephony", "carriers/update_db", URL_UPDATE_DB);
+        s_urlMatcher.addURI("telephony", "carriers/delete", URL_DELETE);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put(CURRENT, "0");
@@ -789,6 +836,23 @@ public class TelephonyProvider extends ContentProvider
                     c.close();
                 }
                 oldVersion = 19 << 16 | 6;
+            }
+            if (oldVersion < (20 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
+                            SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
+                            SubscriptionManager.ACCESS_RULES + " BLOB;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
+                            SubscriptionManager.IS_REMOVABLE + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                " The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 20 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -2054,11 +2118,12 @@ public class TelephonyProvider extends ContentProvider
         int count = 0;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String userOrCarrierEdited = ") and (" +
-                EDITED + "=" + USER_EDITED +  " or " +
-                EDITED + "=" + CARRIER_EDITED + ")";
+                IS_USER_EDITED +  " or " +
+                IS_CARRIER_EDITED + ")";
         String notUserOrCarrierEdited = ") and (" +
-                EDITED + "!=" + USER_EDITED +  " and " +
-                EDITED + "!=" + CARRIER_EDITED + ")";
+                IS_NOT_USER_EDITED +  " and " +
+                IS_NOT_CARRIER_EDITED + ")";
+        String unedited = ") and " + IS_UNEDITED;
         ContentValues cv = new ContentValues();
         cv.put(EDITED, USER_DELETED);
 
@@ -2068,6 +2133,13 @@ public class TelephonyProvider extends ContentProvider
         int match = s_urlMatcher.match(url);
         switch (match)
         {
+            case URL_DELETE:
+            {
+                // Delete unedited entries
+                count = db.delete(CARRIERS_TABLE, "(" + where + unedited, whereArgs);
+                break;
+            }
+
             case URL_TELEPHONY_USING_SUBID:
             {
                  String subIdString = url.getLastPathSegment();
