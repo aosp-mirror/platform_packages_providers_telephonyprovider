@@ -44,6 +44,7 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 import android.util.Xml;
 
 import com.android.internal.util.XmlUtils;
@@ -1820,16 +1821,44 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public synchronized Uri insert(Uri url, ContentValues initialValues)
-    {
+    public synchronized int bulkInsert(Uri url, ContentValues[] values) {
+        int count = 0;
+        boolean notify = false;
+        for (ContentValues value : values) {
+            Pair<Uri, Boolean> rowAndNotify = insertSingleRow(url, value);
+            if (rowAndNotify.first != null) {
+                count++;
+            }
+            if (rowAndNotify.second == true) {
+                notify = true;
+            }
+        }
+        if (notify) {
+            getContext().getContentResolver().notifyChange(CONTENT_URI, null,
+                    true, UserHandle.USER_ALL);
+        }
+        return count;
+    }
+
+    @Override
+    public synchronized Uri insert(Uri url, ContentValues initialValues) {
+        Pair<Uri, Boolean> rowAndNotify = insertSingleRow(url, initialValues);
+        if (rowAndNotify.second) {
+            getContext().getContentResolver().notifyChange(CONTENT_URI, null,
+                    true, UserHandle.USER_ALL);
+        }
+        return rowAndNotify.first;
+    }
+
+    private Pair<Uri, Boolean> insertSingleRow(Uri url, ContentValues initialValues) {
         Uri result = null;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
         checkPermission();
 
+        boolean notify = false;
         SQLiteDatabase db = getWritableDatabase();
         int match = s_urlMatcher.match(url);
-        boolean notify = false;
         switch (match)
         {
             case URL_TELEPHONY_USING_SUBID:
@@ -1839,7 +1868,7 @@ public class TelephonyProvider extends ContentProvider
                     subId = Integer.parseInt(subIdString);
                 } catch (NumberFormatException e) {
                     loge("NumberFormatException" + e);
-                    return result;
+                    return Pair.create(result, notify);
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
@@ -1894,7 +1923,7 @@ public class TelephonyProvider extends ContentProvider
                     subId = Integer.parseInt(subIdString);
                 } catch (NumberFormatException e) {
                     loge("NumberFormatException" + e);
-                    return result;
+                    return Pair.create(result, notify);
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // FIXME use subId in the query
@@ -1929,7 +1958,7 @@ public class TelephonyProvider extends ContentProvider
                     subId = Integer.parseInt(subIdString);
                 } catch (NumberFormatException e) {
                     loge("NumberFormatException" + e);
-                    return result;
+                    return Pair.create(result, notify);
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
@@ -1953,12 +1982,7 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        if (notify) {
-            getContext().getContentResolver().notifyChange(CONTENT_URI, null,
-                    true, UserHandle.USER_ALL);
-        }
-
-        return result;
+        return Pair.create(result, notify);
     }
 
     @Override
