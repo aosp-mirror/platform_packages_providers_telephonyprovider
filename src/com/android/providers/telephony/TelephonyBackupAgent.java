@@ -527,6 +527,8 @@ public class TelephonyBackupAgent extends BackupAgent {
                 }
                 Arrays.sort(files, mFileComparator);
 
+                boolean didRestore = false;
+
                 for (File file : files) {
                     final String fileName = file.getName();
                     if (DEBUG) {
@@ -534,12 +536,22 @@ public class TelephonyBackupAgent extends BackupAgent {
                     }
                     try (FileInputStream fileInputStream = new FileInputStream(file)) {
                         mTelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD());
+                        didRestore = true;
                     } catch (Exception e) {
                         // Either IOException or RuntimeException.
                         Log.e(TAG, "onHandleIntent", e);
                     } finally {
                         file.delete();
                     }
+                }
+                if (didRestore) {
+                  // Tell the default sms app to do a full sync now that the messages have been
+                  // restored.
+                  if (DEBUG) {
+                    Log.d(TAG, "onHandleIntent done - notifying default sms app");
+                  }
+                  ProviderUtil.notifyIfNotDefaultSmsApp(null /*uri*/, null /*calling package*/,
+                      this);
                 }
            } finally {
                 sIsRestoring = false;
