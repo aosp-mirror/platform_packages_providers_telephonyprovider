@@ -21,6 +21,8 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.text.TextUtils;
+import android.util.Log;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -30,7 +32,7 @@ public class CarrierDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "CarrierInformation.db";
     public static final String CARRIER_KEY_TABLE = "carrier_key";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     /**
      * CarrierDatabaseHelper carrier database helper class.
@@ -40,14 +42,15 @@ public class CarrierDatabaseHelper extends SQLiteOpenHelper {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
     }
 
-    static final String KEY_TYPE = "key_type";
-    static final String KEY = "key";
-    static final String MCC = "mcc";
-    static final String MNC = "mnc";
-    static final String MVNO_TYPE = "mvno_type";
-    static final String MVNO_MATCH_DATA = "mvno_match_data";
-    static final String PUBLIC_CERTIFICATE = "public_certificate";
-    static final String LAST_MODIFIED = "last_modified";
+    public static final String KEY_TYPE = "key_type";
+    public static final String MCC = "mcc";
+    public static final String MNC = "mnc";
+    public static final String MVNO_TYPE = "mvno_type";
+    public static final String MVNO_MATCH_DATA = "mvno_match_data";
+    public static final String PUBLIC_KEY = "public_key";
+    public static final String KEY_IDENTIFIER = "key_identifier";
+    public static final String EXPIRATION_TIME = "expiration_time";
+    public static final String LAST_MODIFIED = "last_modified";
 
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
 
@@ -67,8 +70,9 @@ public class CarrierDatabaseHelper extends SQLiteOpenHelper {
                 MVNO_TYPE + " TEXT DEFAULT ''," +
                 MVNO_MATCH_DATA + " TEXT DEFAULT ''," +
                 KEY_TYPE + " TEXT DEFAULT ''," +
-                KEY + " TEXT DEFAULT ''," +
-                PUBLIC_CERTIFICATE + " TEXT DEFAULT ''," +
+                KEY_IDENTIFIER + " TEXT DEFAULT ''," +
+                PUBLIC_KEY + " BLOB DEFAULT ''," +
+                EXPIRATION_TIME + " INTEGER DEFAULT 0," +
                 LAST_MODIFIED + " INTEGER DEFAULT 0," +
                 "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
     }
@@ -78,8 +82,20 @@ public class CarrierDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL(getStringForCarrierKeyTableCreation(CARRIER_KEY_TABLE));
     }
 
+    public void createCarrierTable(SQLiteDatabase db) {
+        db.execSQL(getStringForCarrierKeyTableCreation(CARRIER_KEY_TABLE));
+    }
+
+    public void dropCarrierTable(SQLiteDatabase db) {
+        db.execSQL("DROP TABLE IF EXISTS " + CARRIER_KEY_TABLE + ";");
+    }
+
     @Override
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-        // do nothing
+        Log.d(TAG, "dbh.onUpgrade:+ db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
+        if (oldVersion < 2) {
+            dropCarrierTable(db);
+            createCarrierTable(db);
+        }
     }
 }
