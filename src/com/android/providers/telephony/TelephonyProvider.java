@@ -17,10 +17,13 @@
 
 package com.android.providers.telephony;
 
+import android.content.ComponentName;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
 import android.content.pm.PackageManager;
@@ -36,6 +39,8 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Environment;
 import android.os.FileUtils;
+import android.os.IBinder;
+import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.telephony.ServiceState;
@@ -48,7 +53,9 @@ import android.util.Pair;
 import android.util.Xml;
 
 import com.android.internal.util.XmlUtils;
+import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.IApnSourceService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -133,6 +140,12 @@ public class TelephonyProvider extends ContentProvider
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
+
+    private static Boolean s_apnSourceServiceExists;
+
+    protected final Object mLock = new Object();
+    @GuardedBy("mLock")
+    private IApnSourceService mIApnSourceService;
 
     static {
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
@@ -299,7 +312,13 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) log("dbh.onCreate:+ db=" + db);
             createSimInfoTable(db);
             createCarriersTable(db, CARRIERS_TABLE);
-            initDatabase(db);
+            // if CarrierSettings app is installed, we expect it to do the initializiation instead
+            if (apnSourceServiceExists(mContext)) {
+                log("dbh.onCreate: Skipping apply APNs from xml.");
+            } else {
+                log("dbh.onCreate: Apply apns from xml.");
+                initDatabase(db);
+            }
             if (DBG) log("dbh.onCreate:- db=" + db);
         }
 
@@ -1492,49 +1511,137 @@ public class TelephonyProvider extends ContentProvider
         return mOpenHelper.apnDbUpdateNeeded();
     }
 
+    private static boolean apnSourceServiceExists(Context context) {
+        if (s_apnSourceServiceExists != null) {
+            return s_apnSourceServiceExists;
+        }
+        try {
+            String service = context.getResources().getString(R.string.apn_source_service);
+            if (TextUtils.isEmpty(service)) {
+                s_apnSourceServiceExists = false;
+            } else {
+                s_apnSourceServiceExists = context.getPackageManager().getServiceInfo(
+                        ComponentName.unflattenFromString(service), 0)
+                        != null;
+            }
+        } catch (PackageManager.NameNotFoundException e) {
+            s_apnSourceServiceExists = false;
+        }
+        return s_apnSourceServiceExists;
+    }
+
+    private void restoreApnsWithService() {
+        Context context = getContext();
+        Resources r = context.getResources();
+        ServiceConnection connection = new ServiceConnection() {
+            @Override
+            public void onServiceConnected(ComponentName className,
+                    IBinder service) {
+                log("restoreApnsWithService: onServiceConnected");
+                synchronized (mLock) {
+                    mIApnSourceService = IApnSourceService.Stub.asInterface(service);
+                    mLock.notifyAll();
+                }
+            }
+
+            @Override
+            public void onServiceDisconnected(ComponentName arg0) {
+                loge("mIApnSourceService has disconnected unexpectedly");
+                synchronized (mLock) {
+                    mIApnSourceService = null;
+                }
+            }
+        };
+
+        Intent intent = new Intent(IApnSourceService.class.getName());
+        intent.setComponent(ComponentName.unflattenFromString(
+                r.getString(R.string.apn_source_service)));
+        log("binding to service to restore apns, intent=" + intent);
+        try {
+            // When the api is available, instead of startService we should use:
+            // context.startForegroundService(intent);
+            context.startService(intent);
+            if (context.bindService(intent, connection, Context.BIND_IMPORTANT)) {
+                synchronized (mLock) {
+                    while (mIApnSourceService == null) {
+                        try {
+                            mLock.wait();
+                        } catch (InterruptedException e) {
+                            loge("Error while waiting for service connection: " + e);
+                        }
+                    }
+                    try {
+                        ContentValues[] values = mIApnSourceService.getApns();
+                        if (values != null) {
+                            // we use the unsynchronized insert because this function is called
+                            // within the syncrhonized function delete()
+                            unsynchronizedBulkInsert(CONTENT_URI, values);
+                            log("restoreApnsWithService: restored");
+                        }
+                    } catch (RemoteException e) {
+                        loge("Error applying apns from service: " + e);
+                    }
+                }
+            } else {
+                loge("unable to bind to service from intent=" + intent);
+            }
+        } catch (SecurityException e) {
+            loge("Error applying apns from service: " + e);
+        } finally {
+            if (connection != null) {
+                context.unbindService(connection);
+            }
+            synchronized (mLock) {
+                mIApnSourceService = null;
+            }
+        }
+    }
+
 
     @Override
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
 
-        // Call getReadableDatabase() to make sure onUpgrade is called
-        if (VDBG) log("onCreate: calling getReadableDatabase to trigger onUpgrade");
-        SQLiteDatabase db = getReadableDatabase();
+        if (!apnSourceServiceExists(getContext())) {
+            // Call getReadableDatabase() to make sure onUpgrade is called
+            if (VDBG) log("onCreate: calling getReadableDatabase to trigger onUpgrade");
+            SQLiteDatabase db = getReadableDatabase();
 
-        // Update APN db on build update
-        String newBuildId = SystemProperties.get("ro.build.id", null);
-        if (!TextUtils.isEmpty(newBuildId)) {
-            // Check if build id has changed
-            SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
-                    Context.MODE_PRIVATE);
-            String oldBuildId = sp.getString(RO_BUILD_ID, "");
-            if (!newBuildId.equals(oldBuildId)) {
-                if (DBG) log("onCreate: build id changed from " + oldBuildId + " to " +
-                        newBuildId);
+            // Update APN db on build update
+            String newBuildId = SystemProperties.get("ro.build.id", null);
+            if (!TextUtils.isEmpty(newBuildId)) {
+                // Check if build id has changed
+                SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
+                        Context.MODE_PRIVATE);
+                String oldBuildId = sp.getString(RO_BUILD_ID, "");
+                if (!newBuildId.equals(oldBuildId)) {
+                    if (DBG) log("onCreate: build id changed from " + oldBuildId + " to " +
+                            newBuildId);
 
-                // Get rid of old preferred apn shared preferences
-                SubscriptionManager sm = SubscriptionManager.from(getContext());
-                if (sm != null) {
-                    List<SubscriptionInfo> subInfoList = sm.getAllSubscriptionInfoList();
-                    for (SubscriptionInfo subInfo : subInfoList) {
-                        SharedPreferences spPrefFile = getContext().getSharedPreferences(
-                                PREF_FILE_APN + subInfo.getSubscriptionId(), Context.MODE_PRIVATE);
-                        if (spPrefFile != null) {
-                            SharedPreferences.Editor editor = spPrefFile.edit();
-                            editor.clear();
-                            editor.apply();
+                    // Get rid of old preferred apn shared preferences
+                    SubscriptionManager sm = SubscriptionManager.from(getContext());
+                    if (sm != null) {
+                        List<SubscriptionInfo> subInfoList = sm.getAllSubscriptionInfoList();
+                        for (SubscriptionInfo subInfo : subInfoList) {
+                            SharedPreferences spPrefFile = getContext().getSharedPreferences(
+                                    PREF_FILE_APN + subInfo.getSubscriptionId(), Context.MODE_PRIVATE);
+                            if (spPrefFile != null) {
+                                SharedPreferences.Editor editor = spPrefFile.edit();
+                                editor.clear();
+                                editor.apply();
+                            }
                         }
                     }
-                }
 
-                // Update APN DB
-                updateApnDb();
+                    // Update APN DB
+                    updateApnDb();
+                } else {
+                    if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
+                }
+                sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
             } else {
-                if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
+                if (VDBG) log("onCreate: newBuildId is empty");
             }
-            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
-        } else {
-            if (VDBG) log("onCreate: newBuildId is empty");
         }
 
         if (VDBG) log("onCreate:- ret true");
@@ -1820,8 +1927,19 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
+    /**
+     * Insert an array of ContentValues and call notifyChange at the end.
+     */
     @Override
     public synchronized int bulkInsert(Uri url, ContentValues[] values) {
+        return unsynchronizedBulkInsert(url, values);
+    }
+
+    /**
+     * Do a bulk insert while inside a synchronized function. This is typically not safe and should
+     * only be done when you are sure there will be no conflict.
+     */
+    private int unsynchronizedBulkInsert(Uri url, ContentValues[] values) {
         int count = 0;
         boolean notify = false;
         for (ContentValues value : values) {
@@ -2299,10 +2417,20 @@ public class TelephonyProvider extends ContentProvider
             loge("got exception when deleting to restore: " + e);
         }
         setPreferredApnId((long) INVALID_APN_ID, subId);
-        initDatabaseWithDatabaseHelper(db);
+
+        if (apnSourceServiceExists(getContext())) {
+            restoreApnsWithService();
+        } else {
+            initDatabaseWithDatabaseHelper(db);
+        }
     }
 
     private synchronized void updateApnDb() {
+        if (apnSourceServiceExists(getContext())) {
+            loge("called updateApnDb when apn source service exists");
+            return;
+        }
+
         if (!needApnDbUpdate()) {
             log("Skipping apn db update since apn-conf has not changed.");
             return;
