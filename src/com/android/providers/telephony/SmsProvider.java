@@ -120,7 +120,7 @@ public class SmsProvider extends ContentProvider {
 
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
-        SQLiteDatabase db = getDBOpenHelper(match).getReadableDatabase();
+        SQLiteDatabase db = getReadableDatabase(match);
         switch (match) {
             case SMS_ALL:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_ALL, smsTable);
@@ -521,7 +521,7 @@ public class SmsProvider extends ContentProvider {
                 return null;
         }
 
-        SQLiteDatabase db = getDBOpenHelper(match).getWritableDatabase();
+        SQLiteDatabase db = getWritableDatabase(match);
 
         if (table.equals(TABLE_SMS)) {
             boolean addDate = false;
@@ -632,12 +632,7 @@ public class SmsProvider extends ContentProvider {
             db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
         }
         if (rowID > 0) {
-            Uri uri;
-            if (table == TABLE_SMS) {
-                uri = Uri.withAppendedPath(url, "/" + rowID);
-            } else {
-                uri = Uri.withAppendedPath(url, "/" + table + "/" + rowID );
-            }
+            Uri uri = Uri.withAppendedPath(url, String.valueOf(rowID));
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "insert " + uri + " succeeded");
             }
@@ -653,7 +648,7 @@ public class SmsProvider extends ContentProvider {
     public int delete(Uri url, String where, String[] whereArgs) {
         int count;
         int match = sURLMatcher.match(url);
-        SQLiteDatabase db = getDBOpenHelper(match).getWritableDatabase();
+        SQLiteDatabase db = getWritableDatabase(match);
         boolean notifyIfNotDefault = true;
         switch (match) {
             case SMS_ALL:
@@ -760,7 +755,7 @@ public class SmsProvider extends ContentProvider {
         String extraWhere = null;
         boolean notifyIfNotDefault = true;
         int match = sURLMatcher.match(url);
-        SQLiteDatabase db = getDBOpenHelper(match).getWritableDatabase();
+        SQLiteDatabase db = getWritableDatabase(match);
 
         switch (match) {
             case SMS_RAW_MESSAGE:
@@ -921,5 +916,17 @@ public class SmsProvider extends ContentProvider {
         //we keep these for not breaking old applications
         sURLMatcher.addURI("sms", "sim", SMS_ALL_ICC);
         sURLMatcher.addURI("sms", "sim/#", SMS_ICC);
+    }
+
+    /**
+     * These methods can be overridden in a subclass for testing SmsProvider using an
+     * in-memory database.
+     */
+    SQLiteDatabase getReadableDatabase(int match) {
+        return getDBOpenHelper(match).getReadableDatabase();
+    }
+
+    SQLiteDatabase getWritableDatabase(int match) {
+        return  getDBOpenHelper(match).getWritableDatabase();
     }
 }
