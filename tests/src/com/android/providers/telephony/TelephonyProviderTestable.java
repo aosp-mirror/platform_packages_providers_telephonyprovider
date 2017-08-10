@@ -89,7 +89,7 @@ public class TelephonyProviderTestable extends TelephonyProvider {
         public void onCreate(SQLiteDatabase db) {
             // Set up the carriers table
             Log.d(TAG, "InMemoryTelephonyProviderDbHelper onCreate creating the carriers table");
-            db.execSQL(CREATE_CARRIERS_TABLE_STRING);
+            db.execSQL(getStringForCarrierTableCreation("carriers"));
 
             // set up the siminfo table
             Log.d(TAG, "InMemoryTelephonyProviderDbHelper onCreate creating the siminfo table");
