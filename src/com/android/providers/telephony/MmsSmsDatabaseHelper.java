@@ -241,14 +241,17 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "mmssms.db";
     static final int DATABASE_VERSION = 66;
+    private static final int IDLE_CONNECTION_TIMEOUT_MS = 30000;
+
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-
         mContext = context;
+        // Memory optimization - close idle connections after 30s of inactivity
+        setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
     }
 
     /**
