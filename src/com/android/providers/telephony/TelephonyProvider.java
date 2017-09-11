@@ -95,6 +95,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static final String PREF_FILE_APN = "preferred-apn";
     private static final String COLUMN_APN_ID = "apn_id";
+    private static final String EXPLICIT_SET_CALLED = "explicit_set_called";
 
     private static final String PREF_FILE_FULL_APN = "preferred-full-apn";
     private static final String DB_VERSION_KEY = "version";
@@ -1632,15 +1633,23 @@ public class TelephonyProvider extends ContentProvider
         return true;
     }
 
-    private void setPreferredApnId(Long id, int subId) {
+    private void setPreferredApnId(Long id, int subId, boolean saveApn) {
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_APN,
                 Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
-        editor.putLong(COLUMN_APN_ID + subId, id != null ? id.longValue() : INVALID_APN_ID);
+        editor.putLong(COLUMN_APN_ID + subId, id != null ? id : INVALID_APN_ID);
+        // This is for debug purposes. It indicates if this APN was set by DcTracker or user (true)
+        // or if this was restored from APN saved in PREF_FILE_FULL_APN (false).
+        editor.putBoolean(EXPLICIT_SET_CALLED + subId, saveApn);
         editor.apply();
-        // remove saved apn if apnId is invalid
         if (id == null || id.longValue() == INVALID_APN_ID) {
             deletePreferredApn(subId);
+        } else {
+            // If id is not invalid, and saveApn is true, save the actual APN in PREF_FILE_FULL_APN
+            // too.
+            if (saveApn) {
+                setPreferredApn(id, subId);
+            }
         }
     }
 
@@ -1651,8 +1660,7 @@ public class TelephonyProvider extends ContentProvider
         if (apnId == INVALID_APN_ID && checkApnSp) {
             apnId = getPreferredApnIdFromApn(subId);
             if (apnId != INVALID_APN_ID) {
-                setPreferredApnId(apnId, subId);
-                deletePreferredApn(subId);
+                setPreferredApnId(apnId, subId, false);
             }
         }
         return apnId;
@@ -1661,7 +1669,12 @@ public class TelephonyProvider extends ContentProvider
     private void deletePreferredApnId() {
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_APN,
                 Context.MODE_PRIVATE);
-        // before deleting, save actual preferred apns (not the ids) in a separate SP
+
+        // Before deleting, save actual preferred apns (not the ids) in a separate SP.
+        // NOTE: This code to call setPreferredApn() can be removed since the function is now called
+        // from setPreferredApnId(). However older builds (pre oc-mr1) do not have that change, so
+        // when devices upgrade from those builds and this function is called, this code is needed
+        // otherwise the preferred APN will be lost.
         Map<String, ?> allPrefApnId = sp.getAll();
         for (String key : allPrefApnId.keySet()) {
             // extract subId from key by removing COLUMN_APN_ID
@@ -1675,6 +1688,7 @@ public class TelephonyProvider extends ContentProvider
                 loge("Skipping over key " + key + " due to exception " + e);
             }
         }
+
         SharedPreferences.Editor editor = sp.edit();
         editor.clear();
         editor.apply();
@@ -1752,7 +1766,6 @@ public class TelephonyProvider extends ContentProvider
             for (String key : CARRIERS_UNIQUE_FIELDS) {
                 editor.remove(key + subId);
             }
-            editor.remove(DB_VERSION_KEY + subId);
             editor.apply();
         }
     }
@@ -2060,7 +2073,7 @@ public class TelephonyProvider extends ContentProvider
             {
                 if (initialValues != null) {
                     if(initialValues.containsKey(COLUMN_APN_ID)) {
-                        setPreferredApnId(initialValues.getAsLong(COLUMN_APN_ID), subId);
+                        setPreferredApnId(initialValues.getAsLong(COLUMN_APN_ID), subId, true);
                     }
                 }
                 break;
@@ -2099,6 +2112,8 @@ public class TelephonyProvider extends ContentProvider
         {
             case URL_DELETE:
             {
+                // Delete preferred APN for all subIds
+                deletePreferredApnId();
                 // Delete unedited entries
                 count = db.delete(CARRIERS_TABLE, "(" + where + unedited, whereArgs);
                 break;
@@ -2197,7 +2212,7 @@ public class TelephonyProvider extends ContentProvider
             case URL_PREFERAPN:
             case URL_PREFERAPN_NO_UPDATE:
             {
-                setPreferredApnId((long)INVALID_APN_ID, subId);
+                setPreferredApnId((long)INVALID_APN_ID, subId, true);
                 if ((match == URL_PREFERAPN) || (match == URL_PREFERAPN_USING_SUBID)) count = 1;
                 break;
             }
@@ -2330,7 +2345,7 @@ public class TelephonyProvider extends ContentProvider
             {
                 if (values != null) {
                     if (values.containsKey(COLUMN_APN_ID)) {
-                        setPreferredApnId(values.getAsLong(COLUMN_APN_ID), subId);
+                        setPreferredApnId(values.getAsLong(COLUMN_APN_ID), subId, true);
                         if ((match == URL_PREFERAPN) ||
                                 (match == URL_PREFERAPN_USING_SUBID)) {
                             count = 1;
