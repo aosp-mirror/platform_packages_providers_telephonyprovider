@@ -109,6 +109,7 @@ public class ProviderUtil {
         if (Log.isLoggable(TAG, Log.VERBOSE)) {
             Log.d(TAG, "notifyIfNotDefaultSmsApp - called from " + callingPackage + ", notifying");
         }
+        intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
         context.sendBroadcast(intent);
     }
 
