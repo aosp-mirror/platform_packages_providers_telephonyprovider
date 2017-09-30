@@ -288,4 +288,38 @@ public class CarrierProviderTest extends TestCase {
             Log.d(TAG, "Error inserting certificates:: " + e);
         }
     }
+
+    /**
+     * Test delete.
+     */
+    @Test
+    @SmallTest
+    public void testDelete() {
+        int numRowsDeleted = -1;
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, dummy_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, dummy_mnc);
+        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
+        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, dummy_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key1.getBytes());
+        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, dummy_key_expiration);
+
+        try {
+            mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
+        } catch (Exception e) {
+            Log.d(TAG, "Error inserting certificates:" + e);
+        }
+
+        try {
+            String whereClause = "mcc=? and mnc=?";
+            String[] whereArgs = new String[] { dummy_mcc, dummy_mnc };
+            numRowsDeleted = mContentResolver.delete(CarrierProvider.CONTENT_URI, whereClause, whereArgs);
+        } catch (Exception e) {
+            Log.d(TAG, "Error updating values:" + e);
+        }
+        assertEquals(numRowsDeleted, 1);
+    }
+
 }
