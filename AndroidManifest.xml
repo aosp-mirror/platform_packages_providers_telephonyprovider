@@ -105,6 +105,13 @@
                   android:multiprocess="false"
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
 
+        <provider android:name="CarrierIdProvider"
+                  android:authorities="carrier_identification"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:multiprocess="false"
+                  android:writePermission="android.permission.MODIFY_PHONE_STATE" />
+
         <service
             android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
             android:exported="false" />
