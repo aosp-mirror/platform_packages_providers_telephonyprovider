@@ -25,6 +25,7 @@ import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.database.ContentObserver;
 import android.database.DatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -70,6 +71,8 @@ public class TelephonyProviderTest extends TestCase {
     private MockContentResolver mContentResolver;
     private TelephonyProviderTestable mTelephonyProviderTestable;
 
+    private int notifyChangeCount;
+
 
     /**
      * This is used to give the TelephonyProviderTest a mocked context which takes a
@@ -80,7 +83,13 @@ public class TelephonyProviderTest extends TestCase {
         private final MockContentResolver mResolver;
 
         public MockContextWithProvider(TelephonyProvider telephonyProvider) {
-            mResolver = new MockContentResolver();
+            mResolver = new MockContentResolver() {
+                @Override
+                public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork,
+                        int userHandle) {
+                    notifyChangeCount++;
+                }
+            };
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
@@ -135,12 +144,75 @@ public class TelephonyProviderTest extends TestCase {
         mTelephonyProviderTestable = new TelephonyProviderTestable();
         mContext = new MockContextWithProvider(mTelephonyProviderTestable);
         mContentResolver = (MockContentResolver) mContext.getContentResolver();
+        notifyChangeCount = 0;
     }
 
     @Override
     protected void tearDown() throws Exception {
         super.tearDown();
         mTelephonyProviderTestable.closeDatabase();
+    }
+
+    /**
+     * Test bulk inserting, querying;
+     * Verify that the inserted values match the result of the query.
+     */
+    @Test
+    @SmallTest
+    public void testBulkInsertCarriers() {
+        // insert 2 test contentValues
+        ContentValues contentValues = new ContentValues();
+        final String insertApn = "exampleApnName";
+        final String insertName = "exampleName";
+        final Integer insertCurrent = 1;
+        final String insertNumeric = "123456";
+        contentValues.put(Carriers.APN, insertApn);
+        contentValues.put(Carriers.NAME, insertName);
+        contentValues.put(Carriers.CURRENT, insertCurrent);
+        contentValues.put(Carriers.NUMERIC, insertNumeric);
+
+        ContentValues contentValues2 = new ContentValues();
+        final String insertApn2 = "exampleApnName2";
+        final String insertName2 = "exampleName2";
+        final Integer insertCurrent2 = 1;
+        final String insertNumeric2 = "789123";
+        contentValues2.put(Carriers.APN, insertApn2);
+        contentValues2.put(Carriers.NAME, insertName2);
+        contentValues2.put(Carriers.CURRENT, insertCurrent2);
+        contentValues2.put(Carriers.NUMERIC, insertNumeric2);
+
+        Log.d(TAG, "testInsertCarriers: Bulk inserting contentValues=" + contentValues
+                + ", " + contentValues2);
+        ContentValues[] values = new ContentValues[]{ contentValues, contentValues2 };
+        int rows = mContentResolver.bulkInsert(Carriers.CONTENT_URI, values);
+        assertEquals(2, rows);
+        assertEquals(1, notifyChangeCount);
+
+        // get values in table
+        final String[] testProjection =
+        {
+            Carriers.APN,
+            Carriers.NAME,
+            Carriers.CURRENT,
+        };
+        final String selection = Carriers.NUMERIC + "=?";
+        String[] selectionArgs = { insertNumeric };
+        Log.d(TAG, "testInsertCarriers query projection: " + testProjection
+                + "\ntestInsertCarriers selection: " + selection
+                + "\ntestInsertCarriers selectionArgs: " + selectionArgs);
+        Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI,
+                testProjection, selection, selectionArgs, null);
+
+        // verify that inserted values match results of query
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        final String resultApn = cursor.getString(0);
+        final String resultName = cursor.getString(1);
+        final Integer resultCurrent = cursor.getInt(2);
+        assertEquals(insertApn, resultApn);
+        assertEquals(insertName, resultName);
+        assertEquals(insertCurrent, resultCurrent);
     }
 
     /**

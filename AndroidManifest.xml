@@ -48,6 +48,13 @@
                   android:singleUser="true"
                   android:multiprocess="false" />
 
+        <provider android:name="ServiceStateProvider"
+                  android:authorities="service-state"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:writePermission="android.permission.MODIFY_PHONE_STATE"
+                  android:multiprocess="false" />
+
         <!-- This is a singleton provider that is used by all users.
              A new instance is not created for each user. And the db is shared
              as well. -->
@@ -84,8 +91,22 @@
                   android:singleUser="true"
                   android:readPermission="android.permission.READ_SMS" />
 
+        <provider android:name="CarrierProvider"
+                  android:authorities="carrier_information"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:multiprocess="false"
+                  android:writePermission="android.permission.MODIFY_PHONE_STATE" />
+
         <provider android:name="HbpcdLookupProvider"
                   android:authorities="hbpcd_lookup"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:multiprocess="false"
+                  android:writePermission="android.permission.MODIFY_PHONE_STATE" />
+
+        <provider android:name="CarrierIdProvider"
+                  android:authorities="carrier_identification"
                   android:exported="true"
                   android:singleUser="true"
                   android:multiprocess="false"
