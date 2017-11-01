@@ -302,14 +302,6 @@ public class MmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
-        // The _data column is filled internally in MmsProvider, so this check is just to avoid
-        // it from being inadvertently set. This is not supposed to be a protection against
-        // malicious attack, since sql injection could still be attempted to bypass the check. On
-        // the other hand, the MmsProvider does verify that the _data column has an allowed value
-        // before opening any uri/files.
-        if (values != null && values.containsKey(Part._DATA)) {
-            return null;
-        }
         final int callerUid = Binder.getCallingUid();
         final String callerPkg = getCallingPackage();
         int msgBox = Mms.MESSAGE_BOX_ALL;
@@ -429,6 +421,7 @@ public class MmsProvider extends ContentProvider {
 
             res = Uri.parse(res + "/addr/" + rowId);
         } else if (table.equals(TABLE_PART)) {
+            boolean containsDataPath = values != null && values.containsKey(Part._DATA);
             finalValues = new ContentValues(values);
 
             if (match == MMS_MSG_PART) {
@@ -442,29 +435,67 @@ public class MmsProvider extends ContentProvider {
             boolean plainText = false;
             boolean smilText = false;
             if ("text/plain".equals(contentType)) {
+                if (containsDataPath) {
+                    Log.e(TAG, "insert: can't insert text/plain with _data");
+                    return null;
+                }
                 plainText = true;
             } else if ("application/smil".equals(contentType)) {
+                if (containsDataPath) {
+                    Log.e(TAG, "insert: can't insert application/smil with _data");
+                    return null;
+                }
                 smilText = true;
             }
             if (!plainText && !smilText) {
-                // Use the filename if possible, otherwise use the current time as the name.
-                String contentLocation = values.getAsString("cl");
-                if (!TextUtils.isEmpty(contentLocation)) {
-                    File f = new File(contentLocation);
-                    contentLocation = "_" + f.getName();
+                String path;
+                if (containsDataPath) {
+                    // The _data column is filled internally in MmsProvider or from the
+                    // TelephonyBackupAgent, so this check is just to avoid it from being
+                    // inadvertently set. This is not supposed to be a protection against malicious
+                    // attack, since sql injection could still be attempted to bypass the check.
+                    // On the other hand, the MmsProvider does verify that the _data column has an
+                    // allowed value before opening any uri/files.
+                    if (!"com.android.providers.telephony".equals(callerPkg)) {
+                        Log.e(TAG, "insert: can't insert _data");
+                        return null;
+                    }
+                    try {
+                        path = values.getAsString(Part._DATA);
+                        final String partsDirPath = getContext()
+                                .getDir(PARTS_DIR_NAME, 0).getCanonicalPath();
+                        if (!new File(path).getCanonicalPath().startsWith(partsDirPath)) {
+                            Log.e(TAG, "insert: path "
+                                    + path
+                                    + " does not start with "
+                                    + partsDirPath);
+                            // Don't care return value
+                            return null;
+                        }
+                    } catch (IOException e) {
+                        Log.e(TAG, "insert part: create path failed " + e, e);
+                        return null;
+                    }
                 } else {
-                    contentLocation = "";
-                }
+                    // Use the filename if possible, otherwise use the current time as the name.
+                    String contentLocation = values.getAsString("cl");
+                    if (!TextUtils.isEmpty(contentLocation)) {
+                        File f = new File(contentLocation);
+                        contentLocation = "_" + f.getName();
+                    } else {
+                        contentLocation = "";
+                    }
 
-                // Generate the '_data' field of the part with default
-                // permission settings.
-                String path = getContext().getDir(PARTS_DIR_NAME, 0).getPath()
-                        + "/PART_" + System.currentTimeMillis() + contentLocation;
+                    // Generate the '_data' field of the part with default
+                    // permission settings.
+                    path = getContext().getDir(PARTS_DIR_NAME, 0).getPath()
+                            + "/PART_" + System.currentTimeMillis() + contentLocation;
 
-                if (DownloadDrmHelper.isDrmConvertNeeded(contentType)) {
-                    // Adds the .fl extension to the filename if contentType is
-                    // "application/vnd.oma.drm.message"
-                    path = DownloadDrmHelper.modifyDrmFwLockFileExtension(path);
+                    if (DownloadDrmHelper.isDrmConvertNeeded(contentType)) {
+                        // Adds the .fl extension to the filename if contentType is
+                        // "application/vnd.oma.drm.message"
+                        path = DownloadDrmHelper.modifyDrmFwLockFileExtension(path);
+                    }
                 }
 
                 finalValues.put(Part._DATA, path);

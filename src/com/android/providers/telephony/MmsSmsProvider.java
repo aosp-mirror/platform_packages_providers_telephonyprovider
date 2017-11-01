@@ -28,6 +28,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.UserHandle;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
@@ -304,6 +305,9 @@ public class MmsSmsProvider extends ContentProvider {
     private SQLiteOpenHelper mOpenHelper;
 
     private boolean mUseStrictPhoneNumberComparation;
+
+    private static final String METHOD_IS_RESTORING = "is_restoring";
+    private static final String IS_RESTORING_KEY = "restoring";
 
     @Override
     public boolean onCreate() {
@@ -1388,5 +1392,16 @@ public class MmsSmsProvider extends ContentProvider {
             defaultSmsApp = "None";
         }
         writer.println("Default SMS app: " + defaultSmsApp);
+    }
+
+    @Override
+    public Bundle call(String method, String arg, Bundle extras) {
+        if (METHOD_IS_RESTORING.equals(method)) {
+            Bundle result = new Bundle();
+            result.putBoolean(IS_RESTORING_KEY, TelephonyBackupAgent.getIsRestoring());
+            return result;
+        }
+        Log.w(LOG_TAG, "Ignored unsupported " + method + " call");
+        return null;
     }
 }

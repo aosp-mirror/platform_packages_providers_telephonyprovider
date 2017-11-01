@@ -91,18 +91,27 @@ import java.util.zip.InflaterInputStream;
  *  "m_type":"132","v":"17","msg_box":"1","ct_l":"http://promms/servlets/NOK5BBqgUHAqugrQNM",
  *  "mms_addresses":[{"type":151,"address":"+1234567891011","charset":106}],
  *  "mms_body":"Mms\nBody\r\n",
+ *  "attachments":[{"mime_type":"image/jpeg","filename":"image000000.jpg"}],
+ *  "smil":"<smil><head><layout><root-layout/><region id='Image' fit='meet' top='0' left='0'
+ *   height='100%' width='100%'/></layout></head><body><par dur='5000ms'><img src='image000000.jpg'
+ *   region='Image' /></par></body></smil>",
  *  "mms_charset":106,"sub_cs":"106"}]
  *
  *   It deflates the files on the flight.
  *   Every 1000 messages it backs up file, deletes it and creates a new one with the same name.
  *
  *   It stores how many bytes we are over the quota and don't backup the oldest messages.
+ *
+ *   NOTE: presently, only MMS's with text are backed up. However, MMS's with attachments are
+ *   restored. In other words, this code can restore MMS attachments if the attachment data
+ *   is in the json, but it doesn't currently backup the attachment data in the json.
  */
 
 @TargetApi(Build.VERSION_CODES.M)
 public class TelephonyBackupAgent extends BackupAgent {
     private static final String TAG = "TelephonyBackupAgent";
     private static final boolean DEBUG = false;
+    private static volatile boolean sIsRestoring;
 
 
     // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
@@ -136,12 +145,20 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final String SELF_PHONE_KEY = "self_phone";
     // JSON key for list of addresses of MMS message.
     private static final String MMS_ADDRESSES_KEY = "mms_addresses";
+    // JSON key for list of attachments of MMS message.
+    private static final String MMS_ATTACHMENTS_KEY = "attachments";
+    // JSON key for SMIL part of the MMS.
+    private static final String MMS_SMIL_KEY = "smil";
     // JSON key for list of recipients of the message.
     private static final String RECIPIENTS = "recipients";
     // JSON key for MMS body.
     private static final String MMS_BODY_KEY = "mms_body";
     // JSON key for MMS charset.
     private static final String MMS_BODY_CHARSET_KEY = "mms_charset";
+    // JSON key for mime type.
+    private static final String MMS_MIME_TYPE = "mime_type";
+    // JSON key for attachment filename.
+    private static final String MMS_ATTACHMENT_FILENAME = "filename";
 
     // File names suffixes for backup/restore.
     private static final String SMS_BACKUP_FILE_SUFFIX = "_sms_backup";
@@ -165,6 +182,8 @@ public class TelephonyBackupAgent extends BackupAgent {
     @VisibleForTesting
     static final String UNKNOWN_SENDER = "\u02BCUNKNOWN_SENDER!\u02BC";
 
+    private static String ATTACHMENT_DATA_PATH = "/app_parts/";
+
     // Thread id for UNKNOWN_SENDER.
     private long mUnknownSenderThreadId;
 
@@ -180,7 +199,8 @@ public class TelephonyBackupAgent extends BackupAgent {
             Telephony.Sms.DATE_SENT,
             Telephony.Sms.STATUS,
             Telephony.Sms.TYPE,
-            Telephony.Sms.THREAD_ID
+            Telephony.Sms.THREAD_ID,
+            Telephony.Sms.READ
     };
 
     // Columns to fetch recepients of SMS.
@@ -203,7 +223,8 @@ public class TelephonyBackupAgent extends BackupAgent {
             Telephony.Mms.MESSAGE_BOX,
             Telephony.Mms.CONTENT_LOCATION,
             Telephony.Mms.THREAD_ID,
-            Telephony.Mms.TRANSACTION_ID
+            Telephony.Mms.TRANSACTION_ID,
+            Telephony.Mms.READ
     };
 
     // Columns from addr database for backup/restore. This database is used for fetching addresses
@@ -242,6 +263,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static ContentValues sDefaultValuesSms = new ContentValues(5);
     private static ContentValues sDefaultValuesMms = new ContentValues(6);
     private static final ContentValues sDefaultValuesAddr = new ContentValues(2);
+    private static final ContentValues sDefaultValuesAttachments = new ContentValues(2);
 
     // Shared preferences for the backup agent.
     private static final String BACKUP_PREFS = "backup_shared_prefs";
@@ -256,7 +278,8 @@ public class TelephonyBackupAgent extends BackupAgent {
 
 
     static {
-        // Consider restored messages read and seen.
+        // Consider restored messages read and seen by default. The actual data can override
+        // these values.
         sDefaultValuesSms.put(Telephony.Sms.READ, 1);
         sDefaultValuesSms.put(Telephony.Sms.SEEN, 1);
         sDefaultValuesSms.put(Telephony.Sms.ADDRESS, UNKNOWN_SENDER);
@@ -343,9 +366,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         try (
                 Cursor smsCursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, SMS_PROJECTION,
                         null, null, ORDER_BY_DATE);
-                // Do not backup non text-only MMS's.
                 Cursor mmsCursor = mContentResolver.query(Telephony.Mms.CONTENT_URI, MMS_PROJECTION,
-                        Telephony.Mms.TEXT_ONLY+"=1", null, ORDER_BY_DATE)) {
+                        null, null, ORDER_BY_DATE)) {
 
             if (smsCursor != null) {
                 smsCursor.moveToFirst();
@@ -496,6 +518,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         protected void onHandleIntent(Intent intent) {
             try {
                 mWakeLock.acquire();
+                sIsRestoring = true;
+
                 File[] files = getFilesToRestore(this);
 
                 if (files == null || files.length == 0) {
@@ -503,18 +527,34 @@ public class TelephonyBackupAgent extends BackupAgent {
                 }
                 Arrays.sort(files, mFileComparator);
 
+                boolean didRestore = false;
+
                 for (File file : files) {
                     final String fileName = file.getName();
+                    if (DEBUG) {
+                        Log.d(TAG, "onHandleIntent restoring file " + fileName);
+                    }
                     try (FileInputStream fileInputStream = new FileInputStream(file)) {
                         mTelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD());
+                        didRestore = true;
                     } catch (Exception e) {
                         // Either IOException or RuntimeException.
-                        Log.e(TAG, e.toString());
+                        Log.e(TAG, "onHandleIntent", e);
                     } finally {
                         file.delete();
                     }
                 }
-            } finally {
+                if (didRestore) {
+                  // Tell the default sms app to do a full sync now that the messages have been
+                  // restored.
+                  if (DEBUG) {
+                    Log.d(TAG, "onHandleIntent done - notifying default sms app");
+                  }
+                  ProviderUtil.notifyIfNotDefaultSmsApp(null /*uri*/, null /*calling package*/,
+                      this);
+                }
+           } finally {
+                sIsRestoring = false;
                 mWakeLock.release();
             }
         }
@@ -566,18 +606,18 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private void doRestoreFile(String fileName, FileDescriptor fd) throws IOException {
         if (DEBUG) {
-            Log.i(TAG, "Restoring file " + fileName);
+            Log.d(TAG, "Restoring file " + fileName);
         }
 
         try (JsonReader jsonReader = getJsonReader(fd)) {
             if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
                 if (DEBUG) {
-                    Log.i(TAG, "Restoring SMS");
+                    Log.d(TAG, "Restoring SMS");
                 }
                 putSmsMessagesToProvider(jsonReader);
             } else if (fileName.endsWith(MMS_BACKUP_FILE_SUFFIX)) {
                 if (DEBUG) {
-                    Log.i(TAG, "Restoring text MMS");
+                    Log.d(TAG, "Restoring text MMS");
                 }
                 putMmsMessagesToProvider(jsonReader);
             } else {
@@ -616,6 +656,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         jsonReader.beginArray();
         while (jsonReader.hasNext()) {
             final Mms mms = readMmsFromReader(jsonReader);
+            if (DEBUG) {
+                Log.d(TAG, "putMmsMessagesToProvider " + mms);
+            }
             if (doesMmsExist(mms)) {
                 if (DEBUG) {
                     Log.e(TAG, String.format("Mms: %s already exists", mms.toString()));
@@ -761,6 +804,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 case Telephony.Sms.TYPE:
                 case Telephony.Sms.SUBJECT:
                 case Telephony.Sms.ADDRESS:
+                case Telephony.Sms.READ:
                     values.put(name, jsonReader.nextString());
                     break;
                 case RECIPIENTS:
@@ -778,7 +822,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                     break;
                 default:
                     if (DEBUG) {
-                        Log.w(TAG, "Unknown name:" + name);
+                        Log.w(TAG, "readSmsValuesFromReader Unknown name:" + name);
                     }
                     jsonReader.skipValue();
                     break;
@@ -802,6 +846,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     private int writeMmsToWriter(JsonWriter jsonWriter, Cursor cursor) throws IOException {
         final int mmsId = cursor.getInt(ID_IDX);
         final MmsBody body = getMmsBody(mmsId);
+        // We backup any message that contains text, but only backup the text part.
         if (body == null || body.text == null) {
             return 0;
         }
@@ -811,6 +856,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         for (int i=0; i<cursor.getColumnCount(); ++i) {
             final String name = cursor.getColumnName(i);
             final String value = cursor.getString(i);
+            if (DEBUG) {
+                Log.d(TAG, "writeMmsToWriter name: " + name + " value: " + value);
+            }
             if (value == null) {
                 continue;
             }
@@ -862,6 +910,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         int bodyCharset = CharacterSets.DEFAULT_CHARSET;
         while (jsonReader.hasNext()) {
             String name = jsonReader.nextName();
+            if (DEBUG) {
+                Log.d(TAG, "readMmsFromReader " + name);
+            }
             switch (name) {
                 case SELF_PHONE_KEY:
                     final String selfPhone = jsonReader.nextString();
@@ -871,6 +922,12 @@ public class TelephonyBackupAgent extends BackupAgent {
                     break;
                 case MMS_ADDRESSES_KEY:
                     getMmsAddressesFromReader(jsonReader, mms);
+                    break;
+                case MMS_ATTACHMENTS_KEY:
+                    getMmsAttachmentsFromReader(jsonReader, mms);
+                    break;
+                case MMS_SMIL_KEY:
+                    mms.smil = jsonReader.nextString();
                     break;
                 case MMS_BODY_KEY:
                     bodyText = jsonReader.nextString();
@@ -894,11 +951,12 @@ public class TelephonyBackupAgent extends BackupAgent {
                 case Telephony.Mms.MESSAGE_BOX:
                 case Telephony.Mms.CONTENT_LOCATION:
                 case Telephony.Mms.TRANSACTION_ID:
+                case Telephony.Mms.READ:
                     mms.values.put(name, jsonReader.nextString());
                     break;
                 default:
                     if (DEBUG) {
-                        Log.w(TAG, "Unknown name:" + name);
+                        Log.d(TAG, "Unknown name:" + name);
                     }
                     jsonReader.skipValue();
                     break;
@@ -909,6 +967,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (bodyText != null) {
             mms.body = new MmsBody(bodyText, bodyCharset);
         }
+        // Set the text_only flag
+        mms.values.put(Telephony.Mms.TEXT_ONLY, (mms.attachments == null
+                || mms.attachments.size() == 0) && bodyText != null ? 1 : 0);
 
         // Set default charset for subject.
         if (mms.values.get(Telephony.Mms.SUBJECT) != null &&
@@ -952,9 +1013,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                 ORDER_BY_ID)) {
             if (cursor != null && cursor.moveToFirst()) {
                 do {
-                    body = (body == null ? cursor.getString(MMS_TEXT_IDX)
-                            : body.concat(cursor.getString(MMS_TEXT_IDX)));
-                    charSet = cursor.getInt(MMS_TEXT_CHARSET_IDX);
+                    String text = cursor.getString(MMS_TEXT_IDX);
+                    if (text != null) {
+                        body = (body == null ? text : body.concat(text));
+                        charSet = cursor.getInt(MMS_TEXT_CHARSET_IDX);
+                    }
                 } while (cursor.moveToNext());
             }
         }
@@ -1004,7 +1067,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                         break;
                     default:
                         if (DEBUG) {
-                            Log.w(TAG, "Unknown name:" + name);
+                            Log.d(TAG, "Unknown name:" + name);
                         }
                         jsonReader.skipValue();
                         break;
@@ -1018,9 +1081,46 @@ public class TelephonyBackupAgent extends BackupAgent {
         jsonReader.endArray();
     }
 
+    private static void getMmsAttachmentsFromReader(JsonReader jsonReader, Mms mms)
+            throws IOException {
+        if (DEBUG) {
+            Log.d(TAG, "Add getMmsAttachmentsFromReader");
+        }
+        mms.attachments = new ArrayList<ContentValues>();
+        jsonReader.beginArray();
+        while (jsonReader.hasNext()) {
+            jsonReader.beginObject();
+            ContentValues attachmentValues = new ContentValues(sDefaultValuesAttachments);
+            while (jsonReader.hasNext()) {
+                final String name = jsonReader.nextName();
+                switch (name) {
+                    case MMS_MIME_TYPE:
+                    case MMS_ATTACHMENT_FILENAME:
+                        attachmentValues.put(name, jsonReader.nextString());
+                        break;
+                    default:
+                        if (DEBUG) {
+                            Log.d(TAG, "getMmsAttachmentsFromReader Unknown name:" + name);
+                        }
+                        jsonReader.skipValue();
+                        break;
+                }
+            }
+            jsonReader.endObject();
+            if (attachmentValues.containsKey(MMS_ATTACHMENT_FILENAME)) {
+                mms.attachments.add(attachmentValues);
+            } else {
+                if (DEBUG) {
+                    Log.d(TAG, "Attachment json with no filenames");
+                }
+            }
+        }
+        jsonReader.endArray();
+    }
+
     private void addMmsMessage(Mms mms) {
         if (DEBUG) {
-            Log.e(TAG, "Add mms:\n" + mms.toString());
+            Log.d(TAG, "Add mms:\n" + mms);
         }
         final long dummyId = System.currentTimeMillis(); // Dummy ID of the msg.
         final Uri partUri = Telephony.Mms.CONTENT_URI.buildUpon()
@@ -1029,7 +1129,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         final String srcName = String.format(Locale.US, "text.%06d.txt", 0);
         { // Insert SMIL part.
             final String smilBody = String.format(sSmilTextPart, srcName);
-            final String smil = String.format(sSmilTextOnly, smilBody);
+            final String smil = TextUtils.isEmpty(mms.smil) ?
+                    String.format(sSmilTextOnly, smilBody) : mms.smil;
             final ContentValues values = new ContentValues(7);
             values.put(Telephony.Mms.Part.MSG_ID, dummyId);
             values.put(Telephony.Mms.Part.SEQ, -1);
@@ -1064,6 +1165,29 @@ public class TelephonyBackupAgent extends BackupAgent {
             }
         }
 
+        if (mms.attachments != null) {
+            // Insert the attachment parts.
+            for (ContentValues mmsAttachment : mms.attachments) {
+                final ContentValues values = new ContentValues(6);
+                values.put(Telephony.Mms.Part.MSG_ID, dummyId);
+                values.put(Telephony.Mms.Part.SEQ, 0);
+                values.put(Telephony.Mms.Part.CONTENT_TYPE,
+                        mmsAttachment.getAsString(MMS_MIME_TYPE));
+                String filename = mmsAttachment.getAsString(MMS_ATTACHMENT_FILENAME);
+                values.put(Telephony.Mms.Part.CONTENT_ID, "<"+filename+">");
+                values.put(Telephony.Mms.Part.CONTENT_LOCATION, filename);
+                values.put(Telephony.Mms.Part._DATA,
+                        getDataDir() + ATTACHMENT_DATA_PATH + filename);
+                Uri newPartUri = mContentResolver.insert(partUri, values);
+                if (newPartUri == null) {
+                    if (DEBUG) {
+                        Log.e(TAG, "Could not insert attachment part");
+                    }
+                    return;
+                }
+            }
+        }
+
         // Insert mms.
         final Uri mmsUri = mContentResolver.insert(Telephony.Mms.CONTENT_URI, mms.values);
         if (mmsUri == null) {
@@ -1080,7 +1204,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             mContentResolver.update(partUri, values, null, null);
         }
 
-        { // Insert adderesses into "addr".
+        { // Insert addresses into "addr".
             final Uri addrUri = Uri.withAppendedPath(mmsUri, "addr");
             for (ContentValues mmsAddress : mms.addresses) {
                 ContentValues values = new ContentValues(mmsAddress);
@@ -1117,10 +1241,13 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final class Mms {
         public ContentValues values;
         public List<ContentValues> addresses;
+        public List<ContentValues> attachments;
+        public String smil;
         public MmsBody body;
         @Override
         public String toString() {
-            return "Values:" + values.toString() + "\nRecipients:"+addresses.toString()
+            return "Values:" + values.toString() + "\nRecipients:" + addresses.toString()
+                    + "\nAttachments:" + (attachments == null ? "none" : attachments.toString())
                     + "\nBody:" + body;
         }
     }
@@ -1278,7 +1405,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                             numbers.add(number);
                         } else {
                             if (DEBUG) {
-                                Log.w(TAG, "Canonical MMS/SMS address is empty for id: " + longId);
+                                Log.d(TAG, "Canonical MMS/SMS address is empty for id: " + longId);
                             }
                         }
                     }
@@ -1289,7 +1416,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
         if (numbers.isEmpty()) {
             if (DEBUG) {
-                Log.w(TAG, "No MMS addresses found from ids string [" + spaceSepIds + "]");
+                Log.d(TAG, "No MMS addresses found from ids string [" + spaceSepIds + "]");
             }
         }
         return numbers;
@@ -1305,5 +1432,9 @@ public class TelephonyBackupAgent extends BackupAgent {
     public void onRestore(BackupDataInput data, int appVersionCode,
                           ParcelFileDescriptor newState) throws IOException {
         // Empty because is not used during full restore.
+    }
+
+    public static boolean getIsRestoring() {
+        return sIsRestoring;
     }
 }
