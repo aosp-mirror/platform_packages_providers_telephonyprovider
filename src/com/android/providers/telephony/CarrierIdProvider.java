@@ -25,6 +25,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.provider.Telephony.CarrierIdentification;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -55,31 +56,23 @@ public class CarrierIdProvider extends ContentProvider {
     private static final String TAG = CarrierIdProvider.class.getSimpleName();
 
     private static final String DATABASE_NAME = "carrierIdentification.db";
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
     /**
      * The authority string for the CarrierIdProvider
      */
     @VisibleForTesting
     public static final String AUTHORITY = "carrier_identification";
 
-    /**
-     * The {@code content://} style URL for the CarrierIdProvider
-     */
-    public static final Uri CONTENT_URI = Uri.parse("content://" + AUTHORITY);
     public static final String CARRIER_ID_TABLE = "carrier_id";
 
-    public static final String MCCMNC = "mccmnc";
-    public static final String GID1 = "gid1";
-    public static final String GID2 = "gid2";
-    public static final String PLMN = "plmn";
-    public static final String IMSI_PREFIX = "imsi_prefix";
-    public static final String SPN = "spn";
-    public static final String APN = "apn";
-    public static final String NAME = "carrier_name";
-    public static final String CID = "carrier_id";
-
-    private static final List<String> CARRIERS_ID_UNIQUE_FIELDS = new ArrayList<>(
-            Arrays.asList(MCCMNC, GID1, GID2, PLMN, IMSI_PREFIX, SPN, APN));
+    private static final List<String> CARRIERS_ID_UNIQUE_FIELDS = new ArrayList<>(Arrays.asList(
+            CarrierIdentification.MCCMNC,
+            CarrierIdentification.GID1,
+            CarrierIdentification.GID2,
+            CarrierIdentification.PLMN,
+            CarrierIdentification.IMSI_PREFIX_XPATTERN,
+            CarrierIdentification.SPN,
+            CarrierIdentification.APN));
 
     private CarrierIdDatabaseHelper mDbHelper;
 
@@ -87,21 +80,22 @@ public class CarrierIdProvider extends ContentProvider {
     public static String getStringForCarrierIdTableCreation(String tableName) {
         return "CREATE TABLE " + tableName
                 + "(_id INTEGER PRIMARY KEY,"
-                + MCCMNC + " TEXT NOT NULL,"
-                + GID1 + " TEXT,"
-                + GID2 + " TEXT,"
-                + PLMN + " TEXT,"
-                + IMSI_PREFIX + " TEXT,"
-                + SPN + " TEXT,"
-                + APN + " TEXT,"
-                + NAME + " TEXT,"
-                + CID + " INTEGER DEFAULT -1,"
+                + CarrierIdentification.MCCMNC + " TEXT NOT NULL,"
+                + CarrierIdentification.GID1 + " TEXT,"
+                + CarrierIdentification.GID2 + " TEXT,"
+                + CarrierIdentification.PLMN + " TEXT,"
+                + CarrierIdentification.IMSI_PREFIX_XPATTERN + " TEXT,"
+                + CarrierIdentification.SPN + " TEXT,"
+                + CarrierIdentification.APN + " TEXT,"
+                + CarrierIdentification.NAME + " TEXT,"
+                + CarrierIdentification.CID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
     }
 
     @VisibleForTesting
     public static String getStringForIndexCreation(String tableName) {
-        return "CREATE INDEX IF NOT EXISTS mccmncIndex ON " + tableName + " (" + MCCMNC + ");";
+        return "CREATE INDEX IF NOT EXISTS mccmncIndex ON " + tableName + " ("
+                + CarrierIdentification.MCCMNC + ");";
     }
 
     @Override
@@ -139,7 +133,7 @@ public class CarrierIdProvider extends ContentProvider {
     public Uri insert(Uri uri, ContentValues values) {
         final long row = getWritableDatabase().insertOrThrow(CARRIER_ID_TABLE, null, values);
         if (row > 0) {
-            final Uri newUri = ContentUris.withAppendedId(CONTENT_URI, row);
+            final Uri newUri = ContentUris.withAppendedId(CarrierIdentification.CONTENT_URI, row);
             getContext().getContentResolver().notifyChange(newUri, null);
             return newUri;
         }
@@ -158,7 +152,7 @@ public class CarrierIdProvider extends ContentProvider {
         final int count = getWritableDatabase().delete(CARRIER_ID_TABLE, selection, selectionArgs);
         Log.d(TAG, "  delete.count=" + count);
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(CONTENT_URI, null);
+            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI, null);
         }
         return count;
     }
@@ -176,7 +170,7 @@ public class CarrierIdProvider extends ContentProvider {
                 selectionArgs);
         Log.d(TAG, "  update.count=" + count);
         if (count > 0) {
-            getContext().getContentResolver().notifyChange(CONTENT_URI, null);
+            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI, null);
         }
         return count;
     }
