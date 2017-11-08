@@ -228,10 +228,13 @@ public class TelephonyProviderTest extends TestCase {
         final String insertName = "exampleName";
         final Integer insertCurrent = 1;
         final String insertNumeric = "123456";
+        final Integer insertOwnedby = Carriers.OWNED_BY_DPC;
+        final Integer expectedOwnedby = Carriers.OWNED_BY_OTHERS;
         contentValues.put(Carriers.APN, insertApn);
         contentValues.put(Carriers.NAME, insertName);
         contentValues.put(Carriers.CURRENT, insertCurrent);
         contentValues.put(Carriers.NUMERIC, insertNumeric);
+        contentValues.put(Carriers.OWNED_BY, insertOwnedby);
 
         Log.d(TAG, "testInsertCarriers Inserting contentValues: " + contentValues);
         mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
@@ -242,6 +245,7 @@ public class TelephonyProviderTest extends TestCase {
             Carriers.APN,
             Carriers.NAME,
             Carriers.CURRENT,
+            Carriers.OWNED_BY,
         };
         final String selection = Carriers.NUMERIC + "=?";
         String[] selectionArgs = { insertNumeric };
@@ -258,9 +262,12 @@ public class TelephonyProviderTest extends TestCase {
         final String resultApn = cursor.getString(0);
         final String resultName = cursor.getString(1);
         final Integer resultCurrent = cursor.getInt(2);
+        final Integer resultOwnedby = cursor.getInt(3);
         assertEquals(insertApn, resultApn);
         assertEquals(insertName, resultName);
         assertEquals(insertCurrent, resultCurrent);
+        // Verify that OWNED_BY is force set to OWNED_BY_OTHERS when inserted with general uri.
+        assertEquals(expectedOwnedby, resultOwnedby);
 
         // delete test content
         final String selectionToDelete = Carriers.NUMERIC + "=?";
