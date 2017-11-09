@@ -36,6 +36,16 @@ public class TelephonyProviderTestable extends TelephonyProvider {
     private static final String TAG = "TelephonyProviderTestable";
 
     private InMemoryTelephonyProviderDbHelper mDbHelper;
+    private MockInjector mMockInjector;
+
+    public TelephonyProviderTestable() {
+        this(new MockInjector());
+    }
+
+    private TelephonyProviderTestable(MockInjector mockInjector) {
+        super(mockInjector);
+        mMockInjector = mockInjector;
+    }
 
     @Override
     public boolean onCreate() {
@@ -72,6 +82,10 @@ public class TelephonyProviderTestable extends TelephonyProvider {
         return false;
     }
 
+    public void fakeCallingUid(int uid) {
+        mMockInjector.fakeCallingUid(uid);
+    }
+
     /**
      * An in memory DB for TelephonyProviderTestable to use
      */
@@ -101,6 +115,19 @@ public class TelephonyProviderTestable extends TelephonyProvider {
         public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
             Log.d(TAG, "InMemoryTelephonyProviderDbHelper onUpgrade doing nothing");
             return;
+        }
+    }
+
+    static class MockInjector extends Injector {
+        private int callingUid = 0;
+
+        @Override
+        int binderGetCallingUid() {
+            return callingUid;
+        }
+
+        void fakeCallingUid(int uid) {
+            callingUid = uid;
         }
     }
 }
