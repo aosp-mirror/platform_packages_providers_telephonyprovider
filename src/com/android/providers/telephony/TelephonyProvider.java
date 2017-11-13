@@ -112,6 +112,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -189,6 +190,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
+    private static final Map<String, String> CARRIERS_UNIQUE_FIELDS_DEFAULTS = new HashMap();
 
     private static Boolean s_apnSourceServiceExists;
 
@@ -200,24 +202,26 @@ public class TelephonyProvider extends ContentProvider
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
         // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible
-        CARRIERS_UNIQUE_FIELDS.add(NUMERIC);
-        CARRIERS_UNIQUE_FIELDS.add(MCC);
-        CARRIERS_UNIQUE_FIELDS.add(MNC);
-        CARRIERS_UNIQUE_FIELDS.add(APN);
-        CARRIERS_UNIQUE_FIELDS.add(PROXY);
-        CARRIERS_UNIQUE_FIELDS.add(PORT);
-        CARRIERS_UNIQUE_FIELDS.add(MMSPROXY);
-        CARRIERS_UNIQUE_FIELDS.add(MMSPORT);
-        CARRIERS_UNIQUE_FIELDS.add(MMSC);
-        CARRIERS_UNIQUE_FIELDS.add(CARRIER_ENABLED);
-        CARRIERS_UNIQUE_FIELDS.add(BEARER);
-        CARRIERS_UNIQUE_FIELDS.add(MVNO_TYPE);
-        CARRIERS_UNIQUE_FIELDS.add(MVNO_MATCH_DATA);
-        CARRIERS_UNIQUE_FIELDS.add(PROFILE_ID);
-        CARRIERS_UNIQUE_FIELDS.add(PROTOCOL);
-        CARRIERS_UNIQUE_FIELDS.add(ROAMING_PROTOCOL);
-        CARRIERS_UNIQUE_FIELDS.add(USER_EDITABLE);
-        CARRIERS_UNIQUE_FIELDS.add(OWNED_BY);
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(PROXY, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(PORT, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MMSPROXY, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MMSPORT, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MMSC, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ENABLED, "1");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(BEARER, "0");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MVNO_TYPE, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MVNO_MATCH_DATA, "");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(PROFILE_ID, "0");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(PROTOCOL, "IP");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(ROAMING_PROTOCOL, "IP");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(USER_EDITABLE, "1");
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(OWNED_BY, String.valueOf(OWNED_BY_OTHERS));
+
+        CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
     }
 
     @VisibleForTesting
@@ -1638,32 +1642,19 @@ public class TelephonyProvider extends ContentProvider
                     PROFILE_ID };
             String selection = TextUtils.join("=? AND ", CARRIERS_UNIQUE_FIELDS) + "=?";
             int i = 0;
-            String[] selectionArgs = new String[18];
-            selectionArgs[i++] = row.getAsString(NUMERIC);
-            selectionArgs[i++] = row.getAsString(MCC);
-            selectionArgs[i++] = row.getAsString(MNC);
-            selectionArgs[i++] = row.containsKey(APN) ? row.getAsString(APN) : "";
-            selectionArgs[i++] = row.containsKey(PROXY) ? row.getAsString(PROXY) : "";
-            selectionArgs[i++] = row.containsKey(PORT) ? row.getAsString(PORT) : "";
-            selectionArgs[i++] = row.containsKey(MMSPROXY) ? row.getAsString(MMSPROXY) : "";
-            selectionArgs[i++] = row.containsKey(MMSPORT) ? row.getAsString(MMSPORT) : "";
-            selectionArgs[i++] = row.containsKey(MMSC) ? row.getAsString(MMSC) : "";
-            selectionArgs[i++] = row.containsKey(CARRIER_ENABLED) &&
-                    (row.getAsString(CARRIER_ENABLED).equals("0") ||
-                            row.getAsString(CARRIER_ENABLED).equals("false")) ?
-                    "0" : "1";
-            selectionArgs[i++] = row.containsKey(BEARER) ? row.getAsString(BEARER) : "0";
-            selectionArgs[i++] = row.containsKey(MVNO_TYPE) ? row.getAsString(MVNO_TYPE) : "";
-            selectionArgs[i++] = row.containsKey(MVNO_MATCH_DATA) ?
-                    row.getAsString(MVNO_MATCH_DATA) : "";
-            selectionArgs[i++] = row.containsKey(PROFILE_ID) ? row.getAsString(PROFILE_ID) : "0";
-            selectionArgs[i++] = row.containsKey(PROTOCOL) ? row.getAsString(PROTOCOL) : "IP";
-            selectionArgs[i++] = row.containsKey(ROAMING_PROTOCOL) ? row.getAsString(
-                    ROAMING_PROTOCOL) : "IP";
-            selectionArgs[i++] = row.containsKey(USER_EDITABLE) ? row.getAsString(
-                    USER_EDITABLE) : "1";
-            selectionArgs[i++] = row.containsKey(OWNED_BY) ? row.getAsString(
-                    OWNED_BY) : Integer.toString(OWNED_BY_OTHERS);
+            String[] selectionArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
+            for (String field : CARRIERS_UNIQUE_FIELDS) {
+                if (CARRIER_ENABLED.equals(field)) {
+                    // for CARRIER_ENABLED we overwrite the value "false" with "0"
+                    selectionArgs[i++] = row.containsKey(CARRIER_ENABLED) &&
+                            (row.getAsString(CARRIER_ENABLED).equals("0") ||
+                                    row.getAsString(CARRIER_ENABLED).equals("false")) ?
+                            "0" : CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(CARRIER_ENABLED);
+                } else {
+                    selectionArgs[i++] = row.containsKey(field) ?
+                            row.getAsString(field) : CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
+                }
+            }
 
             Cursor c = db.query(table, columns, selection, selectionArgs, null, null, null);
 
