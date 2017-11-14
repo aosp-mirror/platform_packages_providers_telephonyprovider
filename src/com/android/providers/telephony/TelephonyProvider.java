@@ -41,6 +41,9 @@ import static android.provider.Telephony.Carriers.MVNO_MATCH_DATA;
 import static android.provider.Telephony.Carriers.MVNO_TYPE;
 import static android.provider.Telephony.Carriers.NAME;
 import static android.provider.Telephony.Carriers.NUMERIC;
+import static android.provider.Telephony.Carriers.OWNED_BY;
+import static android.provider.Telephony.Carriers.OWNED_BY_OTHERS;
+import static android.provider.Telephony.Carriers.OWNED_BY_DPC;
 import static android.provider.Telephony.Carriers.PASSWORD;
 import static android.provider.Telephony.Carriers.PORT;
 import static android.provider.Telephony.Carriers.PROFILE_ID;
@@ -119,7 +122,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 21 << 16;
+    private static final int DATABASE_VERSION = 22 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -183,6 +186,7 @@ public class TelephonyProvider extends ContentProvider
             EDITED + "=" + CARRIER_DELETED_BUT_PRESENT_IN_XML;
     private static final String IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML =
             EDITED + "!=" + CARRIER_DELETED_BUT_PRESENT_IN_XML;
+    private static final String NOT_OWNED_BY_DPC = OWNED_BY + "!=" + OWNED_BY_DPC;
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
@@ -214,6 +218,7 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS.add(PROTOCOL);
         CARRIERS_UNIQUE_FIELDS.add(ROAMING_PROTOCOL);
         CARRIERS_UNIQUE_FIELDS.add(USER_EDITABLE);
+        CARRIERS_UNIQUE_FIELDS.add(OWNED_BY);
     }
 
     @VisibleForTesting
@@ -254,6 +259,7 @@ public class TelephonyProvider extends ContentProvider
                 EDITED + " INTEGER DEFAULT " + UNEDITED + "," +
                 USER_VISIBLE + " BOOLEAN DEFAULT 1," +
                 USER_EDITABLE + " BOOLEAN DEFAULT 1," +
+                OWNED_BY + " INTEGER DEFAULT " + OWNED_BY_OTHERS + "," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
@@ -883,7 +889,7 @@ public class TelephonyProvider extends ContentProvider
             }
             if (oldVersion < (21 << 16 | 6)) {
                 try {
-                    // Try to update the siminfo table. It might not be there.
+                    // Try to update the carriers table. It might not be there.
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
                             USER_EDITABLE + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
@@ -895,6 +901,18 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 21 << 16 | 6;
+            }
+            if (oldVersion < (22 << 16 | 6)) {
+                try {
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
+                            OWNED_BY + " INTEGER DEFAULT " + OWNED_BY_OTHERS + ";");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 22 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -1623,7 +1641,7 @@ public class TelephonyProvider extends ContentProvider
                     PROFILE_ID };
             String selection = TextUtils.join("=? AND ", CARRIERS_UNIQUE_FIELDS) + "=?";
             int i = 0;
-            String[] selectionArgs = new String[14];
+            String[] selectionArgs = new String[18];
             selectionArgs[i++] = row.getAsString(NUMERIC);
             selectionArgs[i++] = row.getAsString(MCC);
             selectionArgs[i++] = row.getAsString(MNC);
@@ -1642,6 +1660,13 @@ public class TelephonyProvider extends ContentProvider
             selectionArgs[i++] = row.containsKey(MVNO_MATCH_DATA) ?
                     row.getAsString(MVNO_MATCH_DATA) : "";
             selectionArgs[i++] = row.containsKey(PROFILE_ID) ? row.getAsString(PROFILE_ID) : "0";
+            selectionArgs[i++] = row.containsKey(PROTOCOL) ? row.getAsString(PROTOCOL) : "IP";
+            selectionArgs[i++] = row.containsKey(ROAMING_PROTOCOL) ? row.getAsString(
+                    ROAMING_PROTOCOL) : "IP";
+            selectionArgs[i++] = row.containsKey(USER_EDITABLE) ? row.getAsString(
+                    USER_EDITABLE) : "1";
+            selectionArgs[i++] = row.containsKey(OWNED_BY) ? row.getAsString(
+                    OWNED_BY) : Integer.toString(OWNED_BY_OTHERS);
 
             Cursor c = db.query(table, columns, selection, selectionArgs, null, null, null);
 
@@ -1987,6 +2012,7 @@ public class TelephonyProvider extends ContentProvider
             // intentional fall through from above case
             // do nothing
             case URL_TELEPHONY: {
+                qb.appendWhere(NOT_OWNED_BY_DPC);
                 break;
             }
 
@@ -2005,6 +2031,7 @@ public class TelephonyProvider extends ContentProvider
             //intentional fall through from above case
             case URL_CURRENT: {
                 qb.appendWhere("current IS NOT NULL");
+                qb.appendWhere(NOT_OWNED_BY_DPC);
                 // do not ignore the selection since MMS may use it.
                 //selection = null;
                 break;
@@ -2012,6 +2039,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_ID: {
                 qb.appendWhere("_id = " + url.getPathSegments().get(1));
+                qb.appendWhere(NOT_OWNED_BY_DPC);
                 break;
             }
 
@@ -2189,6 +2217,9 @@ public class TelephonyProvider extends ContentProvider
                     values.put(EDITED, USER_EDITED);
                 }
 
+                // Owned_by should be others if inserted via general uri.
+                values.put(OWNED_BY, OWNED_BY_OTHERS);
+
                 try {
                     // Replace on conflict so that if same APN is present in db with edited
                     // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
@@ -2312,7 +2343,8 @@ public class TelephonyProvider extends ContentProvider
                 // Delete preferred APN for all subIds
                 deletePreferredApnId();
                 // Delete unedited entries
-                count = db.delete(CARRIERS_TABLE, "(" + where + unedited, whereArgs);
+                count = db.delete(CARRIERS_TABLE, "(" + where + unedited + " and " +
+                        NOT_OWNED_BY_DPC, whereArgs);
                 break;
             }
 
@@ -2333,10 +2365,11 @@ public class TelephonyProvider extends ContentProvider
             case URL_TELEPHONY:
             {
                 // Delete user/carrier edited entries
-                count = db.delete(CARRIERS_TABLE, "(" + where + userOrCarrierEdited, whereArgs);
+                count = db.delete(CARRIERS_TABLE, "(" + where + userOrCarrierEdited
+                        + " and " + NOT_OWNED_BY_DPC, whereArgs);
                 // Otherwise mark as user deleted instead of deleting
-                count += db.update(CARRIERS_TABLE, cv, "(" + where + notUserOrCarrierEdited,
-                        whereArgs);
+                count += db.update(CARRIERS_TABLE, cv, "(" + where +
+                        notUserOrCarrierEdited + " and " + NOT_OWNED_BY_DPC, whereArgs);
                 break;
             }
 
@@ -2356,10 +2389,11 @@ public class TelephonyProvider extends ContentProvider
             case URL_CURRENT:
             {
                 // Delete user/carrier edited entries
-                count = db.delete(CARRIERS_TABLE, "(" + where + userOrCarrierEdited, whereArgs);
+                count = db.delete(CARRIERS_TABLE, "(" + where + userOrCarrierEdited
+                        + " and " + NOT_OWNED_BY_DPC, whereArgs);
                 // Otherwise mark as user deleted instead of deleting
-                count += db.update(CARRIERS_TABLE, cv, "(" + where + notUserOrCarrierEdited,
-                        whereArgs);
+                count += db.update(CARRIERS_TABLE, cv, "(" + where +
+                        notUserOrCarrierEdited + " and " + NOT_OWNED_BY_DPC, whereArgs);
                 break;
             }
 
@@ -2367,11 +2401,13 @@ public class TelephonyProvider extends ContentProvider
             {
                 // Delete user/carrier edited entries
                 count = db.delete(CARRIERS_TABLE,
-                        "(" + _ID + "=?" + userOrCarrierEdited,
+                        "(" + _ID + "=?" + userOrCarrierEdited +
+                                " and " + NOT_OWNED_BY_DPC,
                         new String[] { url.getLastPathSegment() });
                 // Otherwise mark as user deleted instead of deleting
                 count += db.update(CARRIERS_TABLE, cv,
-                        "(" + _ID + "=?" + notUserOrCarrierEdited,
+                        "(" + _ID + "=?" + notUserOrCarrierEdited +
+                                " and " + NOT_OWNED_BY_DPC,
                         new String[]{url.getLastPathSegment() });
                 break;
             }
@@ -2474,7 +2510,8 @@ public class TelephonyProvider extends ContentProvider
                 // Replace on conflict so that if same APN is present in db with edited
                 // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
                 // edited USER/CARRIER_EDITED
-                count = db.updateWithOnConflict(CARRIERS_TABLE, values, where, whereArgs,
+                count = db.updateWithOnConflict(CARRIERS_TABLE, values, where +
+                                " and " + NOT_OWNED_BY_DPC, whereArgs,
                         SQLiteDatabase.CONFLICT_REPLACE);
                 break;
             }
@@ -2501,8 +2538,9 @@ public class TelephonyProvider extends ContentProvider
                 // Replace on conflict so that if same APN is present in db with edited
                 // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
                 // edited USER/CARRIER_EDITED
-                count = db.updateWithOnConflict(CARRIERS_TABLE, values, where, whereArgs,
-                        SQLiteDatabase.CONFLICT_REPLACE);
+                count = db.updateWithOnConflict(CARRIERS_TABLE, values, where +
+                                " and " + NOT_OWNED_BY_DPC,
+                        whereArgs, SQLiteDatabase.CONFLICT_REPLACE);
                 break;
             }
 
@@ -2519,8 +2557,8 @@ public class TelephonyProvider extends ContentProvider
                 // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
                 // edited USER/CARRIER_EDITED
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values,
-                        _ID + "=?", new String[] { url.getLastPathSegment() },
-                        SQLiteDatabase.CONFLICT_REPLACE);
+                        _ID + "=?" + " and " + NOT_OWNED_BY_DPC,
+                        new String[] { url.getLastPathSegment() }, SQLiteDatabase.CONFLICT_REPLACE);
                 break;
             }
 
@@ -2605,7 +2643,7 @@ public class TelephonyProvider extends ContentProvider
         SQLiteDatabase db = getWritableDatabase();
 
         try {
-            db.delete(CARRIERS_TABLE, null, null);
+            db.delete(CARRIERS_TABLE, NOT_OWNED_BY_DPC, null);
         } catch (SQLException e) {
             loge("got exception when deleting to restore: " + e);
         }
@@ -2650,7 +2688,7 @@ public class TelephonyProvider extends ContentProvider
         // Delete entries in db
         try {
             if (VDBG) log("updateApnDb: deleting edited=UNEDITED entries");
-            db.delete(CARRIERS_TABLE, IS_UNEDITED, null);
+            db.delete(CARRIERS_TABLE, IS_UNEDITED + " and " + NOT_OWNED_BY_DPC, null);
         } catch (SQLException e) {
             loge("got exception when deleting to update: " + e);
         }
