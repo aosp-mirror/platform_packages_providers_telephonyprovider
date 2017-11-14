@@ -78,24 +78,34 @@ public class CarrierProvider extends ContentProvider {
     @Override
     public Uri insert(Uri uri, ContentValues values) {
         values.put(CarrierDatabaseHelper.LAST_MODIFIED, System.currentTimeMillis());
-        long row = getWritableDatabase().insert(CarrierDatabaseHelper.CARRIER_KEY_TABLE,
+        long row = getWritableDatabase().insertOrThrow(CarrierDatabaseHelper.CARRIER_KEY_TABLE,
                 null, values);
         if (row > 0) {
             Uri newUri = ContentUris.withAppendedId(CONTENT_URI, row);
             getContext().getContentResolver().notifyChange(newUri, null);
             return newUri;
         }
-        throw new SQLException("Fail to add a new record into " + uri);
+        return null;
     }
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        throw new UnsupportedOperationException("Cannot delete URL: " + uri);
+        if (VDBG) {
+            Log.d(TAG, "delete:"
+                    + " uri=" + uri
+                    + " selection={" + selection + "}"
+                    + " selection=" + selection
+                    + " selectionArgs=" + Arrays.toString(selectionArgs));
+        }
+        final int count = getWritableDatabase().delete(CarrierDatabaseHelper.CARRIER_KEY_TABLE,
+                selection, selectionArgs);
+        Log.d(TAG, "  delete.count=" + count);
+        return count;
     }
 
     @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
-
+        values.put(CarrierDatabaseHelper.LAST_MODIFIED, System.currentTimeMillis());
         if (VDBG) {
             Log.d(TAG, "update:"
                     + " uri=" + uri
