@@ -2025,6 +2025,8 @@ public class TelephonyProvider extends ContentProvider
         qb.setStrict(true); // a little protection from injection attacks
         qb.setTables(CARRIERS_TABLE);
 
+        List<String> constraints = new ArrayList<String>();
+
         int match = s_urlMatcher.match(url);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
@@ -2036,15 +2038,12 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                qb.appendWhere(NUMERIC + " = '" + mTelephonyManager.getSimOperator(subId) + "'");
-                qb.appendWhere(" AND " + NOT_OWNED_BY_DPC);
-                // FIXME alter the selection to pass subId
-                // selection = selection + "and subId = "
-                break;
+                constraints.add(NUMERIC + " = '" + mTelephonyManager.getSimOperator(subId) + "'");
+                constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
-            // URL_TELEPHONY behavior should be a subset of URL_TELEPHONY_USING_SUBID
+            // intentional fall through from above case
             case URL_TELEPHONY: {
-                qb.appendWhere(NOT_OWNED_BY_DPC);
+                constraints.add(NOT_OWNED_BY_DPC);
                 break;
             }
 
@@ -2057,21 +2056,20 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                // FIXME alter the selection to pass subId
-                // selection = selection + "and subId = "
+                constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
             //intentional fall through from above case
             case URL_CURRENT: {
-                qb.appendWhere("current IS NOT NULL");
-                qb.appendWhere(" AND " + NOT_OWNED_BY_DPC);
+                constraints.add("current IS NOT NULL");
+                constraints.add(NOT_OWNED_BY_DPC);
                 // do not ignore the selection since MMS may use it.
                 //selection = null;
                 break;
             }
 
             case URL_ID: {
-                qb.appendWhere("_id = " + url.getPathSegments().get(1));
-                qb.appendWhere(" AND " + NOT_OWNED_BY_DPC);
+                constraints.add("_id = " + url.getPathSegments().get(1));
+                constraints.add(NOT_OWNED_BY_DPC);
                 break;
             }
 
@@ -2085,11 +2083,12 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
+                constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
             //intentional fall through from above case
             case URL_PREFERAPN:
             case URL_PREFERAPN_NO_UPDATE: {
-                qb.appendWhere("_id = " + getPreferredApnId(subId, true));
+                constraints.add("_id = " + getPreferredApnId(subId, true));
                 break;
             }
 
@@ -2101,6 +2100,11 @@ public class TelephonyProvider extends ContentProvider
             default: {
                 return null;
             }
+        }
+
+        // appendWhere doesn't add ANDs so we do it ourselves
+        if (constraints.size() > 0) {
+            qb.appendWhere(TextUtils.join(" AND ", constraints));
         }
 
         if (match != URL_SIMINFO) {
@@ -2243,6 +2247,8 @@ public class TelephonyProvider extends ContentProvider
                 } else {
                     values = new ContentValues();
                 }
+
+                values.put(SUBSCRIPTION_ID, subId);
 
                 values = DatabaseHelper.setDefaultValue(values);
                 if (!values.containsKey(EDITED)) {
