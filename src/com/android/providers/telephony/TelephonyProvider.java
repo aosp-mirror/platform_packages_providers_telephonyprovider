@@ -2037,11 +2037,12 @@ public class TelephonyProvider extends ContentProvider
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 qb.appendWhere(NUMERIC + " = '" + mTelephonyManager.getSimOperator(subId) + "'");
+                qb.appendWhere(" AND " + NOT_OWNED_BY_DPC);
                 // FIXME alter the selection to pass subId
                 // selection = selection + "and subId = "
+                break;
             }
-            // intentional fall through from above case
-            // do nothing
+            // URL_TELEPHONY behavior should be a subset of URL_TELEPHONY_USING_SUBID
             case URL_TELEPHONY: {
                 qb.appendWhere(NOT_OWNED_BY_DPC);
                 break;
@@ -2062,7 +2063,7 @@ public class TelephonyProvider extends ContentProvider
             //intentional fall through from above case
             case URL_CURRENT: {
                 qb.appendWhere("current IS NOT NULL");
-                qb.appendWhere(NOT_OWNED_BY_DPC);
+                qb.appendWhere(" AND " + NOT_OWNED_BY_DPC);
                 // do not ignore the selection since MMS may use it.
                 //selection = null;
                 break;
@@ -2070,7 +2071,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_ID: {
                 qb.appendWhere("_id = " + url.getPathSegments().get(1));
-                qb.appendWhere(NOT_OWNED_BY_DPC);
+                qb.appendWhere(" AND " + NOT_OWNED_BY_DPC);
                 break;
             }
 
