@@ -19,6 +19,7 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.Telephony;
+import android.support.test.InstrumentationRegistry;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -78,7 +79,7 @@ public class TelephonyProviderTestable extends TelephonyProvider {
 
 
         public InMemoryTelephonyProviderDbHelper() {
-            super(null,      // no context is needed for in-memory db
+            super(InstrumentationRegistry.getTargetContext(),
                     null,    // db file name is null for in-memory db
                     null,    // CursorFactory is null by default
                     1);      // db version is no-op for tests
