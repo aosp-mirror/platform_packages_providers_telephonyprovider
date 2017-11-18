@@ -47,6 +47,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import libcore.io.IoUtils;
+
 /**
  * This class provides the ability to query the Carrier Identification databases
  * (A.K.A. cid) which is stored in a SQLite database.
@@ -281,16 +283,20 @@ public class CarrierIdProvider extends ContentProvider {
     private void updateFromAssetsIfNeeded(SQLiteDatabase db) {
         //TODO skip update from assets if OTA update is available.
         final File assets;
+        OutputStream outputStream = null;
+        InputStream inputStream = null;
         try {
             // create a temp file to compute check sum.
             assets = new File(getContext().getCacheDir(), ASSETS_PB_FILE);
-            final OutputStream outputStream = new FileOutputStream(assets);
-            final byte[] bytes = readInputStreamToByteArray(
-                    getContext().getAssets().open(ASSETS_PB_FILE));
-            outputStream.write(bytes);
+            outputStream = new FileOutputStream(assets);
+            inputStream = getContext().getAssets().open(ASSETS_PB_FILE);
+            outputStream.write(readInputStreamToByteArray(inputStream));
         } catch (IOException ex) {
             Log.e(TAG, "assets file not found: " + ex);
             return;
+        } finally {
+            IoUtils.closeQuietly(outputStream);
+            IoUtils.closeQuietly(inputStream);
         }
         long checkSum = getChecksum(assets);
         if (checkSum != getAssetsChecksum()) {
@@ -304,8 +310,10 @@ public class CarrierIdProvider extends ContentProvider {
      */
     private void initDatabaseFromPb(File pb, SQLiteDatabase db) {
         Log.d(TAG, "init database from pb file");
+        InputStream inputStream = null;
         try {
-            byte[] bytes = readInputStreamToByteArray(new FileInputStream(pb));
+            inputStream = new FileInputStream(pb);
+            byte[] bytes = readInputStreamToByteArray(inputStream);
             CarrierIdProto.CarrierList carrierList = CarrierIdProto.CarrierList.parseFrom(bytes);
             List<ContentValues> cvs = new ArrayList<>();
             for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
@@ -329,6 +337,8 @@ public class CarrierIdProvider extends ContentProvider {
             }
         } catch (IOException ex) {
             Log.e(TAG, "init database from pb failure: " + ex);
+        } finally {
+            IoUtils.closeQuietly(inputStream);
         }
     }
 
