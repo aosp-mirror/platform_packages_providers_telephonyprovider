@@ -90,7 +90,17 @@ public class CarrierProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
-        throw new UnsupportedOperationException("Cannot delete URL: " + uri);
+        if (VDBG) {
+            Log.d(TAG, "delete:"
+                    + " uri=" + uri
+                    + " selection={" + selection + "}"
+                    + " selection=" + selection
+                    + " selectionArgs=" + Arrays.toString(selectionArgs));
+        }
+        final int count = getWritableDatabase().delete(CarrierDatabaseHelper.CARRIER_KEY_TABLE,
+                selection, selectionArgs);
+        Log.d(TAG, "  delete.count=" + count);
+        return count;
     }
 
     @Override
