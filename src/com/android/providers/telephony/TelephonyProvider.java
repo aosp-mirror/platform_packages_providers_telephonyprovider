@@ -119,6 +119,7 @@ import java.util.Map;
 public class TelephonyProvider extends ContentProvider
 {
     private static final String DATABASE_NAME = "telephony.db";
+    private static final int IDLE_CONNECTION_TIMEOUT_MS = 30000;
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
@@ -348,6 +349,8 @@ public class TelephonyProvider extends ContentProvider
         public DatabaseHelper(Context context) {
             super(context, DATABASE_NAME, null, getVersion(context));
             mContext = context;
+            // Memory optimization - close idle connections after 30s of inactivity
+            setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         }
 
         private static int getVersion(Context context) {
