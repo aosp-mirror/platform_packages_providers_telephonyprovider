@@ -4,11 +4,15 @@ include $(CLEAR_VARS)
 LOCAL_MODULE_TAGS := tests
 
 LOCAL_STATIC_JAVA_LIBRARIES := mockito-target \
-                               legacy-android-test \
                                compatibility-device-util \
                                android-support-test
 
-LOCAL_JAVA_LIBRARIES := android.test.runner telephony-common
+LOCAL_JAVA_LIBRARIES := \
+    android.test.runner \
+    telephony-common \
+    android.test.base \
+    android.test.mock \
+
 
 LOCAL_SRC_FILES := $(call all-java-files-under,src)
 
