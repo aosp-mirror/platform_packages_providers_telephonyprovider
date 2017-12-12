@@ -86,6 +86,7 @@ public class HbpcdLookupDatabaseHelper extends SQLiteOpenHelper {
 
     private static final String DATABASE_NAME = "HbpcdLookup.db";
     private static final int DATABASE_VERSION = 1;
+    private static final int IDLE_CONNECTION_TIMEOUT_MS = 30000;
 
     // Context to access resources with
     private Context mContext;
@@ -99,6 +100,8 @@ public class HbpcdLookupDatabaseHelper extends SQLiteOpenHelper {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
 
         mContext = context;
+        // Memory optimization - close idle connections after 30s of inactivity
+        setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
     }
 
     @Override
