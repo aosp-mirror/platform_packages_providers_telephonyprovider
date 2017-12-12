@@ -39,6 +39,7 @@ import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
 
@@ -240,14 +241,17 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     static final String DATABASE_NAME = "mmssms.db";
     static final int DATABASE_VERSION = 66;
+    private static final int IDLE_CONNECTION_TIMEOUT_MS = 30000;
+
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
 
 
     private MmsSmsDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-
         mContext = context;
+        // Memory optimization - close idle connections after 30s of inactivity
+        setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
     }
 
     /**
@@ -851,33 +855,44 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "END;");
     }
 
+    @VisibleForTesting
+    public static String CREATE_SMS_TABLE_STRING =
+            "CREATE TABLE sms (" +
+            "_id INTEGER PRIMARY KEY," +
+            "thread_id INTEGER," +
+            "address TEXT," +
+            "person INTEGER," +
+            "date INTEGER," +
+            "date_sent INTEGER DEFAULT 0," +
+            "protocol INTEGER," +
+            "read INTEGER DEFAULT 0," +
+            "status INTEGER DEFAULT -1," + // a TP-Status value
+            // or -1 if it
+            // status hasn't
+            // been received
+            "type INTEGER," +
+            "reply_path_present INTEGER," +
+            "subject TEXT," +
+            "body TEXT," +
+            "service_center TEXT," +
+            "locked INTEGER DEFAULT 0," +
+            "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
+            "error_code INTEGER DEFAULT 0," +
+            "creator TEXT," +
+            "seen INTEGER DEFAULT 0" +
+            ");";
+
+    @VisibleForTesting
+    public static String CREATE_ATTACHMENTS_TABLE_STRING =
+            "CREATE TABLE attachments (" +
+            "sms_id INTEGER," +
+            "content_url TEXT," +
+            "offset INTEGER);";
+
     private void createSmsTables(SQLiteDatabase db) {
         // N.B.: Whenever the columns here are changed, the columns in
         // {@ref MmsSmsProvider} must be changed to match.
-        db.execSQL("CREATE TABLE sms (" +
-                   "_id INTEGER PRIMARY KEY," +
-                   "thread_id INTEGER," +
-                   "address TEXT," +
-                   "person INTEGER," +
-                   "date INTEGER," +
-                   "date_sent INTEGER DEFAULT 0," +
-                   "protocol INTEGER," +
-                   "read INTEGER DEFAULT 0," +
-                   "status INTEGER DEFAULT -1," + // a TP-Status value
-                                                  // or -1 if it
-                                                  // status hasn't
-                                                  // been received
-                   "type INTEGER," +
-                   "reply_path_present INTEGER," +
-                   "subject TEXT," +
-                   "body TEXT," +
-                   "service_center TEXT," +
-                   "locked INTEGER DEFAULT 0," +
-                   "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-                   "error_code INTEGER DEFAULT 0," +
-                   "creator TEXT," +
-                   "seen INTEGER DEFAULT 0" +
-                   ");");
+        db.execSQL(CREATE_SMS_TABLE_STRING);
 
         /**
          * This table is used by the SMS dispatcher to hold
@@ -899,10 +914,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    // email address if from an email gateway, otherwise same as address
         );
 
-        db.execSQL("CREATE TABLE attachments (" +
-                   "sms_id INTEGER," +
-                   "content_url TEXT," +
-                   "offset INTEGER);");
+        db.execSQL(CREATE_ATTACHMENTS_TABLE_STRING);
 
         /**
          * This table is used by the SMS dispatcher to hold pending

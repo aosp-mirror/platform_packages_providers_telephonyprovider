@@ -35,6 +35,7 @@ import android.os.Build;
 import android.os.FileUtils;
 import android.provider.Telephony.Carriers;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
 import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
@@ -50,6 +51,10 @@ import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 
 /**
@@ -73,6 +78,12 @@ public class TelephonyProviderTest extends TestCase {
 
     private int notifyChangeCount;
 
+    private static final String TEST_SUBID = "1";
+    private static final String TEST_OPERATOR = "123456";
+    // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 0
+    private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
+            "content://telephony/carriers/subId/" + TEST_SUBID);
+
 
     /**
      * This is used to give the TelephonyProviderTest a mocked context which takes a
@@ -81,6 +92,7 @@ public class TelephonyProviderTest extends TestCase {
      */
     private class MockContextWithProvider extends MockContext {
         private final MockContentResolver mResolver;
+        private TelephonyManager mTelephonyManager = mock(TelephonyManager.class);
 
         public MockContextWithProvider(TelephonyProvider telephonyProvider) {
             mResolver = new MockContentResolver() {
@@ -90,6 +102,9 @@ public class TelephonyProviderTest extends TestCase {
                     notifyChangeCount++;
                 }
             };
+
+            // return test subId 0 for all operators
+            doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator(anyInt());
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
@@ -108,8 +123,13 @@ public class TelephonyProviderTest extends TestCase {
 
         @Override
         public Object getSystemService(String name) {
-            Log.d(TAG, "getSystemService: returning null");
-            return null;
+            if (name.equals(Context.TELEPHONY_SERVICE)) {
+                Log.d(TAG, "getSystemService: returning mock TM");
+                return mTelephonyManager;
+            } else {
+                Log.d(TAG, "getSystemService: returning null");
+                return null;
+            }
         }
 
         @Override
@@ -165,7 +185,7 @@ public class TelephonyProviderTest extends TestCase {
         final String insertApn = "exampleApnName";
         final String insertName = "exampleName";
         final Integer insertCurrent = 1;
-        final String insertNumeric = "123456";
+        final String insertNumeric = TEST_OPERATOR;
         contentValues.put(Carriers.APN, insertApn);
         contentValues.put(Carriers.NAME, insertName);
         contentValues.put(Carriers.CURRENT, insertCurrent);
@@ -222,16 +242,80 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testInsertCarriers() {
+        doSimpleTestForUri(Carriers.CONTENT_URI);
+    }
+
+    /**
+     * Test inserting, querying, and deleting values in carriers table.
+     * Verify that the inserted values match the result of the query and are deleted.
+     */
+    @Test
+    @SmallTest
+    public void testInsertCarriersWithSubId() {
+        doSimpleTestForUri(CONTENT_URI_WITH_SUBID);
+    }
+
+    private void doSimpleTestForUri(Uri uri) {
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
         final String insertApn = "exampleApnName";
         final String insertName = "exampleName";
-        final Integer insertCurrent = 1;
-        final String insertNumeric = "123456";
+        final String insertNumeric = TEST_OPERATOR;
         contentValues.put(Carriers.APN, insertApn);
         contentValues.put(Carriers.NAME, insertName);
-        contentValues.put(Carriers.CURRENT, insertCurrent);
         contentValues.put(Carriers.NUMERIC, insertNumeric);
+
+        Log.d(TAG, "testInsertCarriers Inserting contentValues: " + contentValues);
+        mContentResolver.insert(uri, contentValues);
+
+        // get values in table
+        final String[] testProjection =
+        {
+            Carriers.APN,
+            Carriers.NAME,
+        };
+        final String selection = Carriers.NUMERIC + "=?";
+        String[] selectionArgs = { insertNumeric };
+        Log.d(TAG, "testInsertCarriers query projection: " + testProjection
+                + "\ntestInsertCarriers selection: " + selection
+                + "\ntestInsertCarriers selectionArgs: " + selectionArgs);
+        Cursor cursor = mContentResolver.query(uri, testProjection, selection, selectionArgs, null);
+
+        // verify that inserted values match results of query
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        final String resultApn = cursor.getString(0);
+        final String resultName = cursor.getString(1);
+        assertEquals(insertApn, resultApn);
+        assertEquals(insertName, resultName);
+
+        // delete test content
+        final String selectionToDelete = Carriers.NUMERIC + "=?";
+        String[] selectionArgsToDelete = { insertNumeric };
+        Log.d(TAG, "testInsertCarriers deleting selection: " + selectionToDelete
+                + "testInsertCarriers selectionArgs: " + selectionArgs);
+        int numRowsDeleted = mContentResolver.delete(uri, selectionToDelete, selectionArgsToDelete);
+        assertEquals(1, numRowsDeleted);
+
+        // verify that deleted values are gone
+        cursor = mContentResolver.query(uri, testProjection, selection, selectionArgs, null);
+        assertEquals(0, cursor.getCount());
+    }
+
+    @Test
+    @SmallTest
+    public void testOwnedBy() {
+        // insert test contentValues
+        ContentValues contentValues = new ContentValues();
+        final String insertApn = "exampleApnName";
+        final String insertName = "exampleName";
+        final String insertNumeric = TEST_OPERATOR;
+        final Integer insertOwnedBy = Carriers.OWNED_BY_OTHERS;
+        contentValues.put(Carriers.APN, insertApn);
+        contentValues.put(Carriers.NAME, insertName);
+        contentValues.put(Carriers.NUMERIC, insertNumeric);
+        contentValues.put(Carriers.OWNED_BY, insertOwnedBy);
 
         Log.d(TAG, "testInsertCarriers Inserting contentValues: " + contentValues);
         mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
@@ -241,7 +325,7 @@ public class TelephonyProviderTest extends TestCase {
         {
             Carriers.APN,
             Carriers.NAME,
-            Carriers.CURRENT,
+            Carriers.OWNED_BY,
         };
         final String selection = Carriers.NUMERIC + "=?";
         String[] selectionArgs = { insertNumeric };
@@ -257,10 +341,11 @@ public class TelephonyProviderTest extends TestCase {
         cursor.moveToFirst();
         final String resultApn = cursor.getString(0);
         final String resultName = cursor.getString(1);
-        final Integer resultCurrent = cursor.getInt(2);
+        final Integer resultOwnedBy = cursor.getInt(2);
         assertEquals(insertApn, resultApn);
         assertEquals(insertName, resultName);
-        assertEquals(insertCurrent, resultCurrent);
+        // Verify that OWNED_BY is force set to OWNED_BY_OTHERS when inserted with general uri
+        assertEquals(insertOwnedBy, resultOwnedBy);
 
         // delete test content
         final String selectionToDelete = Carriers.NUMERIC + "=?";

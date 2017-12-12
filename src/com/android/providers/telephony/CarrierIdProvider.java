@@ -20,20 +20,34 @@ import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.FileUtils;
+import android.os.UserHandle;
 import android.provider.Telephony.CarrierIdentification;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.nano.CarrierIdProto;
 
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+
+import libcore.io.IoUtils;
 
 /**
  * This class provides the ability to query the Carrier Identification databases
@@ -57,6 +71,43 @@ public class CarrierIdProvider extends ContentProvider {
 
     private static final String DATABASE_NAME = "carrierIdentification.db";
     private static final int DATABASE_VERSION = 2;
+
+    private static final String ASSETS_PB_FILE = "carrier_list.pb";
+    private static final String ASSETS_FILE_CHECKSUM_PREF_KEY = "assets_checksum";
+    private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
+
+    /**
+     * index 0: {@link CarrierIdentification#MCCMNC}
+     */
+    private static final int MCCMNC_INDEX                = 0;
+    /**
+     * index 1: {@link CarrierIdentification#IMSI_PREFIX_XPATTERN}
+     */
+    private static final int IMSI_PREFIX_INDEX           = 1;
+    /**
+     * index 2: {@link CarrierIdentification#GID1}
+     */
+    private static final int GID1_INDEX                  = 2;
+    /**
+     * index 3: {@link CarrierIdentification#GID2}
+     */
+    private static final int GID2_INDEX                  = 3;
+    /**
+     * index 4: {@link CarrierIdentification#PLMN}
+     */
+    private static final int PLMN_INDEX                  = 4;
+    /**
+     * index 5: {@link CarrierIdentification#SPN}
+     */
+    private static final int SPN_INDEX                   = 5;
+    /**
+     * index 6: {@link CarrierIdentification#APN}
+     */
+    private static final int APN_INDEX                   = 6;
+    /**
+     * ending index of carrier attribute list.
+     */
+    private static final int CARRIER_ATTR_END_IDX        = APN_INDEX;
     /**
      * The authority string for the CarrierIdProvider
      */
@@ -103,6 +154,7 @@ public class CarrierIdProvider extends ContentProvider {
         Log.d(TAG, "onCreate");
         mDbHelper = new CarrierIdDatabaseHelper(getContext());
         mDbHelper.getReadableDatabase();
+        updateFromAssetsIfNeeded(mDbHelper.getWritableDatabase());
         return true;
     }
 
@@ -221,5 +273,192 @@ public class CarrierIdProvider extends ContentProvider {
                 createCarrierTable(db);
             }
         }
+    }
+
+    /**
+     * use check sum to detect assets file update.
+     * update database with data from assets only if checksum has been changed
+     * and OTA update is unavailable.
+     */
+    private void updateFromAssetsIfNeeded(SQLiteDatabase db) {
+        //TODO skip update from assets if OTA update is available.
+        final File assets;
+        OutputStream outputStream = null;
+        InputStream inputStream = null;
+        try {
+            // create a temp file to compute check sum.
+            assets = new File(getContext().getCacheDir(), ASSETS_PB_FILE);
+            outputStream = new FileOutputStream(assets);
+            inputStream = getContext().getAssets().open(ASSETS_PB_FILE);
+            outputStream.write(readInputStreamToByteArray(inputStream));
+        } catch (IOException ex) {
+            Log.e(TAG, "assets file not found: " + ex);
+            return;
+        } finally {
+            IoUtils.closeQuietly(outputStream);
+            IoUtils.closeQuietly(inputStream);
+        }
+        long checkSum = getChecksum(assets);
+        if (checkSum != getAssetsChecksum()) {
+            initDatabaseFromPb(assets, db);
+            setAssetsChecksum(checkSum);
+        }
+    }
+
+    /**
+     * parse and persist pb file as database default values.
+     */
+    private void initDatabaseFromPb(File pb, SQLiteDatabase db) {
+        Log.d(TAG, "init database from pb file");
+        InputStream inputStream = null;
+        try {
+            inputStream = new FileInputStream(pb);
+            byte[] bytes = readInputStreamToByteArray(inputStream);
+            CarrierIdProto.CarrierList carrierList = CarrierIdProto.CarrierList.parseFrom(bytes);
+            List<ContentValues> cvs = new ArrayList<>();
+            for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
+                for (CarrierIdProto.CarrierAttribute attr: id.carrierAttribute) {
+                    ContentValues cv = new ContentValues();
+                    cv.put(CarrierIdentification.CID, id.canonicalId);
+                    cv.put(CarrierIdentification.NAME, id.carrierName);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, 0);
+                }
+            }
+            db.delete(CARRIER_ID_TABLE, null, null);
+            int rows = 0;
+            for (ContentValues cv : cvs) {
+                if (db.insertOrThrow(CARRIER_ID_TABLE, null, cv) > 0) rows++;
+            }
+            Log.d(TAG, "init database from pb. inserted rows = " + rows);
+            if (rows > 0) {
+                // Notify listener of DB change
+                getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
+                        null);
+            }
+        } catch (IOException ex) {
+            Log.e(TAG, "init database from pb failure: " + ex);
+        } finally {
+            IoUtils.closeQuietly(inputStream);
+        }
+    }
+
+    /**
+     * recursively loop through carrier attribute list to get all combinations.
+     */
+    private void convertCarrierAttrToContentValues(ContentValues cv, List<ContentValues> cvs,
+            CarrierIdProto.CarrierAttribute attr, int index) {
+        if (index > CARRIER_ATTR_END_IDX) {
+            cvs.add(new ContentValues(cv));
+            return;
+        }
+        boolean found = false;
+        switch(index) {
+            case MCCMNC_INDEX:
+                for (String str : attr.mccmncTuple) {
+                    cv.put(CarrierIdentification.MCCMNC, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.MCCMNC);
+                    found = true;
+                }
+                break;
+            case IMSI_PREFIX_INDEX:
+                for (String str : attr.imsiPrefixXpattern) {
+                    cv.put(CarrierIdentification.IMSI_PREFIX_XPATTERN, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.IMSI_PREFIX_XPATTERN);
+                    found = true;
+                }
+                break;
+            case GID1_INDEX:
+                for (String str : attr.gid1) {
+                    cv.put(CarrierIdentification.GID1, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.GID1);
+                    found = true;
+                }
+                break;
+            case GID2_INDEX:
+                for (String str : attr.gid2) {
+                    cv.put(CarrierIdentification.GID2, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.GID2);
+                    found = true;
+                }
+                break;
+            case PLMN_INDEX:
+                for (String str : attr.plmn) {
+                    cv.put(CarrierIdentification.PLMN, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.PLMN);
+                    found = true;
+                }
+                break;
+            case SPN_INDEX:
+                for (String str : attr.spn) {
+                    cv.put(CarrierIdentification.SPN, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.SPN);
+                    found = true;
+                }
+                break;
+            case APN_INDEX:
+                for (String str : attr.preferredApn) {
+                    cv.put(CarrierIdentification.APN, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.APN);
+                    found = true;
+                }
+                break;
+            default:
+                Log.e(TAG, "unsupported index: " + index);
+                break;
+        }
+        // if attribute at index is empty, move forward to the next attribute
+        if (!found) {
+            convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+        }
+    }
+
+    /**
+     * util function to convert inputStream to byte array before parsing proto data.
+     */
+    private static byte[] readInputStreamToByteArray(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int nRead;
+        int size = 16 * 1024; // Read 16k chunks
+        byte[] data = new byte[size];
+        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+        buffer.flush();
+        return buffer.toByteArray();
+    }
+
+    /**
+     * util function to calculate checksum of a file
+     */
+    private long getChecksum(File file) {
+        long checksum = -1;
+        try {
+            checksum = FileUtils.checksumCrc32(file);
+            if (VDBG) Log.d(TAG, "Checksum for " + file.getAbsolutePath() + " is " + checksum);
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "FileNotFoundException for " + file.getAbsolutePath() + ":" + e);
+        } catch (IOException e) {
+            Log.e(TAG, "IOException for " + file.getAbsolutePath() + ":" + e);
+        }
+        return checksum;
+    }
+
+    private long getAssetsChecksum() {
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        return sp.getLong(ASSETS_FILE_CHECKSUM_PREF_KEY, -1);
+    }
+
+    private void setAssetsChecksum(long checksum) {
+        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putLong(ASSETS_FILE_CHECKSUM_PREF_KEY, checksum);
+        editor.apply();
     }
 }
