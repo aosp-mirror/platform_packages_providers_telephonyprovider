@@ -56,7 +56,8 @@ public class CarrierIdProviderTest extends TestCase {
     private static final String dummy_imsi_prefix = "IMSI_PREFIX_DUMMY";
     private static final String dummy_spn = "SPN_DUMMY";
     private static final String dummy_apn = "APN_DUMMY";
-    private static final String  dummy_name = "NAME_DUMMY";
+    private static final String dummy_iccid_prefix = "ICCID_PREFIX_DUMMY";
+    private static final String dummy_name = "NAME_DUMMY";
     private static final int dummy_cid = 0;
 
     private MockContextWithProvider mContext;
@@ -271,7 +272,7 @@ public class CarrierIdProviderTest extends TestCase {
         }
 
         Cursor findEntry = null;
-        String[] columns = {CarrierIdentification.CID};
+        String[] columns = {CarrierIdentification.CID, CarrierIdentification.ICCID_PREFIX};
         try {
             findEntry = mContentResolver.query(CarrierIdentification.CONTENT_URI, columns,
                     CarrierIdentification.MCCMNC + "=?", new String[] { dummy_mccmnc },
@@ -282,16 +283,18 @@ public class CarrierIdProviderTest extends TestCase {
         assertEquals(2, findEntry.getCount());
 
         try {
-            // query based on mccmnc & gid1
+            // query based on mccmnc & gid1 & iccid_prefix
             findEntry = mContentResolver.query(CarrierIdentification.CONTENT_URI, columns,
-                    CarrierIdentification.MCCMNC + "=? and " + CarrierIdentification.GID1 + "=?",
-                    new String[] { dummy_mccmnc, dummy_gid1 }, null);
+                    CarrierIdentification.MCCMNC + "=? and " + CarrierIdentification.GID1 + "=? and "
+                    + CarrierIdentification.ICCID_PREFIX + "=?",
+                    new String[] { dummy_mccmnc, dummy_gid1, dummy_iccid_prefix }, null);
         } catch (Exception e) {
             Log.d(TAG, "Query failed:" + e);
         }
         assertEquals(1, findEntry.getCount());
         findEntry.moveToFirst();
         assertEquals(dummy_cid, findEntry.getInt(0));
+        assertEquals(dummy_iccid_prefix, findEntry.getString(1));
     }
 
     private static ContentValues createCarrierInfoInternal() {
@@ -303,6 +306,7 @@ public class CarrierIdProviderTest extends TestCase {
         contentValues.put(CarrierIdentification.IMSI_PREFIX_XPATTERN, dummy_imsi_prefix);
         contentValues.put(CarrierIdentification.SPN, dummy_spn);
         contentValues.put(CarrierIdentification.APN, dummy_apn);
+        contentValues.put(CarrierIdentification.ICCID_PREFIX, dummy_iccid_prefix);
         contentValues.put(CarrierIdentification.NAME, dummy_name);
         contentValues.put(CarrierIdentification.CID, dummy_cid);
         return contentValues;
