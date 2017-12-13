@@ -164,6 +164,9 @@ public class TelephonyProvider extends ContentProvider
     private static final String OTA_UPDATED_APNS_PATH = "misc/apns-conf.xml";
     private static final String OLD_APNS_PATH = "etc/old-apns-conf.xml";
 
+    private static final String DEFAULT_PROTOCOL = "IP";
+    private static final String DEFAULT_ROAMING_PROTOCOL = "IP";
+
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
     private static final ContentValues s_currentNullMap;
@@ -245,8 +248,8 @@ public class TelephonyProvider extends ContentProvider
                 AUTH_TYPE + " INTEGER DEFAULT -1," +
                 TYPE + " TEXT DEFAULT ''," +
                 CURRENT + " INTEGER," +
-                PROTOCOL + " TEXT DEFAULT 'IP'," +
-                ROAMING_PROTOCOL + " TEXT DEFAULT 'IP'," +
+                PROTOCOL + " TEXT DEFAULT " + DEFAULT_PROTOCOL + "," +
+                ROAMING_PROTOCOL + " TEXT DEFAULT " + DEFAULT_ROAMING_PROTOCOL + "," +
                 CARRIER_ENABLED + " BOOLEAN DEFAULT 1," +
                 BEARER + " INTEGER DEFAULT 0," +
                 BEARER_BITMASK + " INTEGER DEFAULT 0," +
@@ -1054,9 +1057,9 @@ public class TelephonyProvider extends ContentProvider
             whereArgs[i++] = values.containsKey(TYPE) ?
                     values.getAsString(TYPE) : "";
             whereArgs[i++] = values.containsKey(PROTOCOL) ?
-                    values.getAsString(PROTOCOL) : "IP";
+                    values.getAsString(PROTOCOL) : DEFAULT_PROTOCOL;
             whereArgs[i++] = values.containsKey(ROAMING_PROTOCOL) ?
-                    values.getAsString(ROAMING_PROTOCOL) : "IP";
+                    values.getAsString(ROAMING_PROTOCOL) : DEFAULT_ROAMING_PROTOCOL;
 
             if (values.containsKey(CARRIER_ENABLED) &&
                     (values.getAsString(CARRIER_ENABLED).
@@ -1901,6 +1904,7 @@ public class TelephonyProvider extends ContentProvider
         SQLiteDatabase db = getWritableDatabase();
         // query all unique fields from id
         String[] proj = CARRIERS_UNIQUE_FIELDS.toArray(new String[CARRIERS_UNIQUE_FIELDS.size()]);
+
         Cursor c = db.query(CARRIERS_TABLE, proj, "_id=" + id, null, null, null, null);
         if (c != null) {
             if (c.getCount() == 1) {
@@ -2557,6 +2561,21 @@ public class TelephonyProvider extends ContentProvider
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values,
                         _ID + "=?" + " and " + NOT_OWNED_BY_DPC,
                         new String[] { url.getLastPathSegment() }, SQLiteDatabase.CONFLICT_REPLACE);
+                try {
+                    count = db.updateWithOnConflict(CARRIERS_TABLE, values,
+                        _ID + "=?" + " and " + NOT_OWNED_BY_DPC,
+                        new String[] { url.getLastPathSegment() }, SQLiteDatabase.CONFLICT_ABORT);
+                } catch (SQLException e) {
+                    // Update failed which could be due to a conflict. Check if that is
+                    // the case and merge the entries
+                    Cursor oldRow = DatabaseHelper.selectConflictingRow(db, CARRIERS_TABLE, values);
+                    if (oldRow != null) {
+                        ContentValues mergedValues = new ContentValues();
+                        DatabaseHelper.mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
+                                mergedValues, false, getContext());
+                        oldRow.close();
+                    }
+                }
                 break;
             }
 
