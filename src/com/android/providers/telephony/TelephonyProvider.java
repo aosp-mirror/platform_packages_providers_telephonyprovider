@@ -1248,7 +1248,7 @@ public class TelephonyProvider extends ContentProvider
                             cv.put(EDITED, new Integer(user_edited));
                         }
                     } else {
-                        cv.put(EDITED, USER_EDITED);
+                        cv.put(EDITED, CARRIER_EDITED);
                     }
 
                     // New EDITED column. Default value (UNEDITED) will
@@ -2352,7 +2352,7 @@ public class TelephonyProvider extends ContentProvider
                 values.put(SUBSCRIPTION_ID, subId);
                 values = DatabaseHelper.setDefaultValue(values);
                 if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, USER_EDITED);
+                    values.put(EDITED, CARRIER_EDITED);
                 }
                 // Owned_by should be others if inserted via general uri.
                 values.put(OWNED_BY, OWNED_BY_OTHERS);
@@ -2647,7 +2647,7 @@ public class TelephonyProvider extends ContentProvider
             case URL_TELEPHONY:
             {
                 if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, USER_EDITED);
+                    values.put(EDITED, CARRIER_EDITED);
                 }
 
                 // Replace on conflict so that if same APN is present in db with edited
@@ -2676,7 +2676,7 @@ public class TelephonyProvider extends ContentProvider
             case URL_CURRENT:
             {
                 if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, USER_EDITED);
+                    values.put(EDITED, CARRIER_EDITED);
                 }
                 // Replace on conflict so that if same APN is present in db with edited
                 // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
@@ -2694,7 +2694,7 @@ public class TelephonyProvider extends ContentProvider
                             "Cannot update URL " + url + " with a where clause");
                 }
                 if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, USER_EDITED);
+                    values.put(EDITED, CARRIER_EDITED);
                 }
 
                 try {
