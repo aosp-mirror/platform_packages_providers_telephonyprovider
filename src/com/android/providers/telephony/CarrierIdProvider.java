@@ -70,7 +70,7 @@ public class CarrierIdProvider extends ContentProvider {
     private static final String TAG = CarrierIdProvider.class.getSimpleName();
 
     private static final String DATABASE_NAME = "carrierIdentification.db";
-    private static final int DATABASE_VERSION = 2;
+    private static final int DATABASE_VERSION = 3;
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
     private static final String ASSETS_FILE_CHECKSUM_PREF_KEY = "assets_checksum";
@@ -105,6 +105,10 @@ public class CarrierIdProvider extends ContentProvider {
      */
     private static final int APN_INDEX                   = 6;
     /**
+    * index 7: {@link CarrierIdentification#ICCID_PREFIX}
+    */
+    private static final int ICCID_PREFIX_INDEX          = 7;
+    /**
      * ending index of carrier attribute list.
      */
     private static final int CARRIER_ATTR_END_IDX        = APN_INDEX;
@@ -123,7 +127,8 @@ public class CarrierIdProvider extends ContentProvider {
             CarrierIdentification.PLMN,
             CarrierIdentification.IMSI_PREFIX_XPATTERN,
             CarrierIdentification.SPN,
-            CarrierIdentification.APN));
+            CarrierIdentification.APN,
+            CarrierIdentification.ICCID_PREFIX));
 
     private CarrierIdDatabaseHelper mDbHelper;
 
@@ -138,6 +143,7 @@ public class CarrierIdProvider extends ContentProvider {
                 + CarrierIdentification.IMSI_PREFIX_XPATTERN + " TEXT,"
                 + CarrierIdentification.SPN + " TEXT,"
                 + CarrierIdentification.APN + " TEXT,"
+                + CarrierIdentification.ICCID_PREFIX + " TEXT,"
                 + CarrierIdentification.NAME + " TEXT,"
                 + CarrierIdentification.CID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
@@ -407,6 +413,14 @@ public class CarrierIdProvider extends ContentProvider {
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierIdentification.APN);
                     found = true;
+                }
+                break;
+            case ICCID_PREFIX_INDEX:
+                for (String str : attr.iccidPrefix) {
+                     cv.put(CarrierIdentification.ICCID_PREFIX, str);
+                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                     cv.remove(CarrierIdentification.ICCID_PREFIX);
+                     found = true;
                 }
                 break;
             default:
