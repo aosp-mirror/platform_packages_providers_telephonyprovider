@@ -103,6 +103,7 @@ import android.util.Xml;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.IApnSourceService;
+import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -125,7 +126,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 22 << 16;
+    private static final int DATABASE_VERSION = 23 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -324,7 +325,13 @@ public class TelephonyProvider extends ContentProvider
             + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
             + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
             + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1"
+            + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
+            + SubscriptionManager.ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
+            + SubscriptionManager.VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
+            + SubscriptionManager.WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
+            + SubscriptionManager.WFC_IMS_MODE + " INTEGER DEFAULT -1,"
+            + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
+            + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1"
             + ");";
 
     static {
@@ -954,6 +961,30 @@ public class TelephonyProvider extends ContentProvider
             }
             if (oldVersion < (22 << 16 | 6)) {
                 try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.ENHANCED_4G_MODE_ENABLED
+                            + " INTEGER DEFAULT -1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.VT_IMS_ENABLED + " INTEGER DEFAULT -1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.WFC_IMS_ENABLED + " INTEGER DEFAULT -1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.WFC_IMS_MODE + " INTEGER DEFAULT -1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 22 << 16 | 6;
+            }
+            if (oldVersion < (23 << 16 | 6)) {
+                try {
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
                             OWNED_BY + " INTEGER DEFAULT " + OWNED_BY_OTHERS + ";");
                 } catch (SQLiteException e) {
@@ -962,7 +993,7 @@ public class TelephonyProvider extends ContentProvider
                                 "The table will get created in onOpen.");
                     }
                 }
-                oldVersion = 22 << 16 | 6;
+                oldVersion = 23 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
