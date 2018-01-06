@@ -21,13 +21,13 @@ import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
-import android.os.FileUtils;
-import android.os.UserHandle;
+import android.os.Environment;
 import android.provider.Telephony.CarrierIdentification;
 import android.text.TextUtils;
 import android.util.Log;
@@ -38,11 +38,8 @@ import com.android.internal.telephony.nano.CarrierIdProto;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -73,8 +70,12 @@ public class CarrierIdProvider extends ContentProvider {
     private static final int DATABASE_VERSION = 3;
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
-    private static final String ASSETS_FILE_CHECKSUM_PREF_KEY = "assets_checksum";
+    private static final String VERSION_PREF_KEY = "version";
+    private static final String OTA_UPDATED_PB_PATH = "misc/carrierid/" + ASSETS_PB_FILE;
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
+
+    private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
+    private static final int URL_UPDATE_FROM_PB = 1;
 
     /**
      * index 0: {@link CarrierIdentification#MCCMNC}
@@ -160,7 +161,8 @@ public class CarrierIdProvider extends ContentProvider {
         Log.d(TAG, "onCreate");
         mDbHelper = new CarrierIdDatabaseHelper(getContext());
         mDbHelper.getReadableDatabase();
-        updateFromAssetsIfNeeded(mDbHelper.getWritableDatabase());
+        s_urlMatcher.addURI(AUTHORITY, "update_db", URL_UPDATE_FROM_PB);
+        initDatabaseFromPb(mDbHelper.getWritableDatabase());
         return true;
     }
 
@@ -224,13 +226,21 @@ public class CarrierIdProvider extends ContentProvider {
                     + " selection=" + selection
                     + " selectionArgs=" + Arrays.toString(selectionArgs));
         }
-        final int count = getWritableDatabase().update(CARRIER_ID_TABLE, values, selection,
-                selectionArgs);
-        Log.d(TAG, "  update.count=" + count);
-        if (count > 0) {
-            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI, null);
+
+        final int match = s_urlMatcher.match(uri);
+        switch (match) {
+            case URL_UPDATE_FROM_PB:
+                return initDatabaseFromPb(getWritableDatabase());
+            default:
+                final int count = getWritableDatabase().update(CARRIER_ID_TABLE, values, selection,
+                        selectionArgs);
+                Log.d(TAG, "  update.count=" + count);
+                if (count > 0) {
+                    getContext().getContentResolver().notifyChange(
+                            CarrierIdentification.CONTENT_URI, null);
+                }
+                return count;
         }
-        return count;
     }
 
     /**
@@ -282,74 +292,40 @@ public class CarrierIdProvider extends ContentProvider {
     }
 
     /**
-     * use check sum to detect assets file update.
-     * update database with data from assets only if checksum has been changed
-     * and OTA update is unavailable.
+     * Parse and persist pb file as database default values.
+     * Use version number to detect file update.
+     * Update database with data from assets or ota only if version jumps.
      */
-    private void updateFromAssetsIfNeeded(SQLiteDatabase db) {
-        //TODO skip update from assets if OTA update is available.
-        final File assets;
-        OutputStream outputStream = null;
-        InputStream inputStream = null;
-        try {
-            // create a temp file to compute check sum.
-            assets = new File(getContext().getCacheDir(), ASSETS_PB_FILE);
-            outputStream = new FileOutputStream(assets);
-            inputStream = getContext().getAssets().open(ASSETS_PB_FILE);
-            outputStream.write(readInputStreamToByteArray(inputStream));
-        } catch (IOException ex) {
-            Log.e(TAG, "assets file not found: " + ex);
-            return;
-        } finally {
-            IoUtils.closeQuietly(outputStream);
-            IoUtils.closeQuietly(inputStream);
-        }
-        long checkSum = getChecksum(assets);
-        if (checkSum != getAssetsChecksum()) {
-            initDatabaseFromPb(assets, db);
-            setAssetsChecksum(checkSum);
-        }
-    }
-
-    /**
-     * parse and persist pb file as database default values.
-     */
-    private void initDatabaseFromPb(File pb, SQLiteDatabase db) {
+    private int initDatabaseFromPb(SQLiteDatabase db) {
         Log.d(TAG, "init database from pb file");
-        InputStream inputStream = null;
-        try {
-            inputStream = new FileInputStream(pb);
-            byte[] bytes = readInputStreamToByteArray(inputStream);
-            CarrierIdProto.CarrierList carrierList = CarrierIdProto.CarrierList.parseFrom(bytes);
-            List<ContentValues> cvs = new ArrayList<>();
-            for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
-                for (CarrierIdProto.CarrierAttribute attr: id.carrierAttribute) {
-                    ContentValues cv = new ContentValues();
-                    cv.put(CarrierIdentification.CID, id.canonicalId);
-                    cv.put(CarrierIdentification.NAME, id.carrierName);
-                    convertCarrierAttrToContentValues(cv, cvs, attr, 0);
-                }
+        int rows = 0;
+        CarrierIdProto.CarrierList carrierList = getUpdateCarrierList();
+        if (carrierList == null) return rows;
+        setAppliedVersion(carrierList.version);
+        List<ContentValues> cvs = new ArrayList<>();
+        for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
+            for (CarrierIdProto.CarrierAttribute attr : id.carrierAttribute) {
+                ContentValues cv = new ContentValues();
+                cv.put(CarrierIdentification.CID, id.canonicalId);
+                cv.put(CarrierIdentification.NAME, id.carrierName);
+                convertCarrierAttrToContentValues(cv, cvs, attr, 0);
             }
-            db.delete(CARRIER_ID_TABLE, null, null);
-            int rows = 0;
-            for (ContentValues cv : cvs) {
-                if (db.insertOrThrow(CARRIER_ID_TABLE, null, cv) > 0) rows++;
-            }
-            Log.d(TAG, "init database from pb. inserted rows = " + rows);
-            if (rows > 0) {
-                // Notify listener of DB change
-                getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
-                        null);
-            }
-        } catch (IOException ex) {
-            Log.e(TAG, "init database from pb failure: " + ex);
-        } finally {
-            IoUtils.closeQuietly(inputStream);
         }
+        db.delete(CARRIER_ID_TABLE, null, null);
+        for (ContentValues cv : cvs) {
+            if (db.insertOrThrow(CARRIER_ID_TABLE, null, cv) > 0) rows++;
+        }
+        Log.d(TAG, "init database from pb. inserted rows = " + rows);
+        if (rows > 0) {
+            // Notify listener of DB change
+            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
+                    null);
+        }
+        return rows;
     }
 
     /**
-     * recursively loop through carrier attribute list to get all combinations.
+     * Recursively loop through carrier attribute list to get all combinations.
      */
     private void convertCarrierAttrToContentValues(ContentValues cv, List<ContentValues> cvs,
             CarrierIdProto.CarrierAttribute attr, int index) {
@@ -358,7 +334,7 @@ public class CarrierIdProvider extends ContentProvider {
             return;
         }
         boolean found = false;
-        switch(index) {
+        switch (index) {
             case MCCMNC_INDEX:
                 for (String str : attr.mccmncTuple) {
                     cv.put(CarrierIdentification.MCCMNC, str);
@@ -417,10 +393,10 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case ICCID_PREFIX_INDEX:
                 for (String str : attr.iccidPrefix) {
-                     cv.put(CarrierIdentification.ICCID_PREFIX, str);
-                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                     cv.remove(CarrierIdentification.ICCID_PREFIX);
-                     found = true;
+                    cv.put(CarrierIdentification.ICCID_PREFIX, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierIdentification.ICCID_PREFIX);
+                    found = true;
                 }
                 break;
             default:
@@ -434,7 +410,62 @@ public class CarrierIdProvider extends ContentProvider {
     }
 
     /**
-     * util function to convert inputStream to byte array before parsing proto data.
+     * Return the update carrierList.
+     * Get the latest version from the last applied, assets and ota file. if the latest version
+     * is newer than the last applied, update is required. Otherwise no update is required and
+     * the returned carrierList will be null.
+     */
+    private CarrierIdProto.CarrierList getUpdateCarrierList() {
+        int version = getAppliedVersion();
+        CarrierIdProto.CarrierList carrierList = null;
+        CarrierIdProto.CarrierList assets = null;
+        CarrierIdProto.CarrierList ota = null;
+        InputStream is = null;
+
+        try {
+            is = getContext().getAssets().open(ASSETS_PB_FILE);
+            assets = CarrierIdProto.CarrierList.parseFrom(readInputStreamToByteArray(is));
+        } catch (IOException ex) {
+            Log.e(TAG, "read carrier list from assets pb failure: " + ex);
+        } finally {
+            IoUtils.closeQuietly(is);
+        }
+        try {
+            is = new FileInputStream(new File(Environment.getDataDirectory(), OTA_UPDATED_PB_PATH));
+            ota = CarrierIdProto.CarrierList.parseFrom(readInputStreamToByteArray(is));
+        } catch (IOException ex) {
+            Log.e(TAG, "read carrier list from ota pb failure: " + ex);
+        } finally {
+            IoUtils.closeQuietly(is);
+        }
+
+        // compare version
+        if (assets != null && assets.version > version) {
+            carrierList = assets;
+            version = assets.version;
+        }
+        if (ota != null && ota.version > version) {
+            carrierList = ota;
+            version = ota.version;
+        }
+        Log.d(TAG, "latest version: " + version + " need update: " + (carrierList != null));
+        return carrierList;
+    }
+
+    private int getAppliedVersion() {
+        final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        return sp.getInt(VERSION_PREF_KEY, -1);
+    }
+
+    private void setAppliedVersion(int version) {
+        final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        SharedPreferences.Editor editor = sp.edit();
+        editor.putInt(VERSION_PREF_KEY, version);
+        editor.apply();
+    }
+
+    /**
+     * Util function to convert inputStream to byte array before parsing proto data.
      */
     private static byte[] readInputStreamToByteArray(InputStream inputStream) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
@@ -446,33 +477,5 @@ public class CarrierIdProvider extends ContentProvider {
         }
         buffer.flush();
         return buffer.toByteArray();
-    }
-
-    /**
-     * util function to calculate checksum of a file
-     */
-    private long getChecksum(File file) {
-        long checksum = -1;
-        try {
-            checksum = FileUtils.checksumCrc32(file);
-            if (VDBG) Log.d(TAG, "Checksum for " + file.getAbsolutePath() + " is " + checksum);
-        } catch (FileNotFoundException e) {
-            Log.e(TAG, "FileNotFoundException for " + file.getAbsolutePath() + ":" + e);
-        } catch (IOException e) {
-            Log.e(TAG, "IOException for " + file.getAbsolutePath() + ":" + e);
-        }
-        return checksum;
-    }
-
-    private long getAssetsChecksum() {
-        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
-        return sp.getLong(ASSETS_FILE_CHECKSUM_PREF_KEY, -1);
-    }
-
-    private void setAssetsChecksum(long checksum) {
-        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
-        SharedPreferences.Editor editor = sp.edit();
-        editor.putLong(ASSETS_FILE_CHECKSUM_PREF_KEY, checksum);
-        editor.apply();
     }
 }
