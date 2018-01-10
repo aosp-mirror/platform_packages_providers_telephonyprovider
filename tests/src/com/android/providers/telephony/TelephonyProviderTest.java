@@ -815,4 +815,133 @@ public class TelephonyProviderTest extends TestCase {
             // Should catch SecurityException.
         }
     }
+
+    /**
+     * Verify that user/carrier edited/deleted APNs have priority in the EDITED field over
+     * insertions which set EDITED=UNEDITED. In these cases instead of merging the APNs using the
+     * new APN's value we keep the old value.
+     */
+    @Test
+    @SmallTest
+    public void testPreserveEdited() {
+        preserveEditedValueInMerge(Carriers.USER_EDITED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveUserDeleted() {
+        preserveDeletedValueInMerge(Carriers.USER_DELETED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveUserDeletedButPresentInXml() {
+        preserveDeletedValueInMerge(Carriers.USER_DELETED_BUT_PRESENT_IN_XML);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveCarrierEdited() {
+        preserveEditedValueInMerge(Carriers.CARRIER_EDITED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveCarrierDeleted() {
+        preserveDeletedValueInMerge(Carriers.CARRIER_DELETED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveCarrierDeletedButPresentInXml() {
+        preserveDeletedValueInMerge(Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML);
+    }
+
+    private void preserveEditedValueInMerge(int value) {
+        // insert user deleted APN
+        String carrierName1 = "carrier1";
+        String numeric1 = "123234";
+        String mcc1 = "123";
+        String mnc1 = "234";
+        ContentValues editedValue = new ContentValues();
+        editedValue.put(Carriers.NAME, carrierName1);
+        editedValue.put(Carriers.NUMERIC, numeric1);
+        editedValue.put(Carriers.MCC, mcc1);
+        editedValue.put(Carriers.MNC, mnc1);
+        editedValue.put(Carriers.EDITED, value);
+        assertNotNull(mContentResolver.insert(URI_TELEPHONY, editedValue));
+
+        Cursor cur = mContentResolver.query(URI_TELEPHONY, null, null, null, null);
+        assertEquals(1, cur.getCount());
+
+        // insert APN that conflicts with edited APN
+        String carrierName2 = "carrier2";
+        ContentValues values = new ContentValues();
+        values.put(Carriers.NAME, carrierName2);
+        values.put(Carriers.NUMERIC, numeric1);
+        values.put(Carriers.MCC, mcc1);
+        values.put(Carriers.MNC, mnc1);
+        values.put(Carriers.EDITED, Carriers.UNEDITED);
+        mContentResolver.insert(URI_TELEPHONY, values);
+
+        String[] testProjection = {
+            Carriers.NAME,
+            Carriers.APN,
+            Carriers.EDITED,
+            Carriers.TYPE,
+            Carriers.PROTOCOL,
+            Carriers.BEARER_BITMASK,
+        };
+        final int indexOfName = 0;
+        final int indexOfEdited = 2;
+
+        // Assert that the conflicting APN is merged into the existing user-edited APN, so only 1
+        // APN exists in the db
+        cur = mContentResolver.query(URI_TELEPHONY, testProjection, null, null, null);
+        assertEquals(1, cur.getCount());
+        cur.moveToFirst();
+        assertEquals(carrierName2, cur.getString(indexOfName));
+        assertEquals(value, cur.getInt(indexOfEdited));
+    }
+
+    private void preserveDeletedValueInMerge(int value) {
+        // insert user deleted APN
+        String carrierName1 = "carrier1";
+        String numeric1 = "123234";
+        String mcc1 = "123";
+        String mnc1 = "234";
+        ContentValues editedValue = new ContentValues();
+        editedValue.put(Carriers.NAME, carrierName1);
+        editedValue.put(Carriers.NUMERIC, numeric1);
+        editedValue.put(Carriers.MCC, mcc1);
+        editedValue.put(Carriers.MNC, mnc1);
+        editedValue.put(Carriers.EDITED, value);
+        assertNotNull(mContentResolver.insert(URI_TELEPHONY, editedValue));
+
+        // insert APN that conflicts with edited APN
+        String carrierName2 = "carrier2";
+        ContentValues values = new ContentValues();
+        values.put(Carriers.NAME, carrierName2);
+        values.put(Carriers.NUMERIC, numeric1);
+        values.put(Carriers.MCC, mcc1);
+        values.put(Carriers.MNC, mnc1);
+        values.put(Carriers.EDITED, Carriers.UNEDITED);
+        mContentResolver.insert(URI_TELEPHONY, values);
+
+        String[] testProjection = {
+            Carriers.NAME,
+            Carriers.APN,
+            Carriers.EDITED,
+            Carriers.TYPE,
+            Carriers.PROTOCOL,
+            Carriers.BEARER_BITMASK,
+        };
+        final int indexOfEdited = 2;
+
+        // Assert that the conflicting APN is merged into the existing user-deleted APN.
+        // Entries marked deleted will not show up in queries so we verify that no APNs can
+        // be seen
+        Cursor cur = mContentResolver.query(URI_TELEPHONY, testProjection, null, null, null);
+        assertEquals(0, cur.getCount());
+    }
 }
