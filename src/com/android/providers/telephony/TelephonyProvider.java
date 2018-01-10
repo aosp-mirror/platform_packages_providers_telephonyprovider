@@ -40,6 +40,7 @@ import static android.provider.Telephony.Carriers.MTU;
 import static android.provider.Telephony.Carriers.MVNO_MATCH_DATA;
 import static android.provider.Telephony.Carriers.MVNO_TYPE;
 import static android.provider.Telephony.Carriers.NAME;
+import static android.provider.Telephony.Carriers.NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.NUMERIC;
 import static android.provider.Telephony.Carriers.OWNED_BY;
 import static android.provider.Telephony.Carriers.OWNED_BY_OTHERS;
@@ -126,7 +127,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 23 << 16;
+    private static final int DATABASE_VERSION = 24 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -220,7 +221,7 @@ public class TelephonyProvider extends ContentProvider
     static {
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
-        // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible
+        // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible, network_type_bitmask
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
@@ -268,6 +269,7 @@ public class TelephonyProvider extends ContentProvider
                 CARRIER_ENABLED + " BOOLEAN DEFAULT 1," +
                 BEARER + " INTEGER DEFAULT 0," +
                 BEARER_BITMASK + " INTEGER DEFAULT 0," +
+                NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0," +
                 MVNO_TYPE + " TEXT DEFAULT ''," +
                 MVNO_MATCH_DATA + " TEXT DEFAULT ''," +
                 SUBSCRIPTION_ID + " INTEGER DEFAULT "
@@ -286,7 +288,8 @@ public class TelephonyProvider extends ContentProvider
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
                 // user, server, password, authtype, type, sub_id, modem_cognitive, max_conns,
-                // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible.
+                // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible,
+                // network_type_bitmask.
                 "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
     }
 
@@ -880,52 +883,9 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 18 << 16 | 6;
             }
             if (oldVersion < (19 << 16 | 6)) {
-                // Upgrade steps from version 18 are:
-                // 1. Create a temp table- done in createCarriersTable()
-                // 2. copy over APNs from old table to new table - done in copyDataToTmpTable()
-                // 3. Drop the existing table.
-                // 4. Copy over the tmp table.
-                Cursor c;
-                String[] proj = {"_id"};
-                if (VDBG) {
-                    c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
-                    log("dbh.onUpgrade:- before upgrading total number of rows: " + c.getCount());
-                    c.close();
-                }
-
-                c = db.query(CARRIERS_TABLE, null, null, null, null, null, null);
-
-                if (VDBG) {
-                    log("dbh.onUpgrade:- starting data copy of existing rows: " +
-                            + ((c == null) ? 0 : c.getCount()));
-                }
-
-                db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE_TMP);
-
-                createCarriersTable(db, CARRIERS_TABLE_TMP);
-
-                copyDataToTmpTable(db, c);
-                c.close();
-
-                db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
-
-                db.execSQL("ALTER TABLE " + CARRIERS_TABLE_TMP + " rename to " + CARRIERS_TABLE +
-                        ";");
-
-                if (VDBG) {
-                    c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
-                    log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
-                    c.close();
-                    c = db.query(CARRIERS_TABLE, proj, IS_UNEDITED, null, null, null, null);
-                    log("dbh.onUpgrade:- after upgrading total number of rows with " + IS_UNEDITED +
-                            ": " + c.getCount());
-                    c.close();
-                    c = db.query(CARRIERS_TABLE, proj, IS_EDITED, null, null, null, null);
-                    log("dbh.onUpgrade:- after upgrading total number of rows with " + IS_EDITED +
-                            ": " + c.getCount());
-                    c.close();
-                }
-                oldVersion = 19 << 16 | 6;
+                // Do nothing. This is to avoid recreating table twice. Table is anyway recreated
+                // for version 24 and that takes care of updates for this version as well.
+                // This version added more fields protocol and roaming protocol to the primary key.
             }
             if (oldVersion < (20 << 16 | 6)) {
                 try {
@@ -995,9 +955,55 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 23 << 16 | 6;
             }
+            if (oldVersion < (24 << 16 | 6)) {
+                Cursor c = null;
+                String[] proj = {"_id"};
+                recreateDB(c, db, proj, /* version */24);
+                if (VDBG) {
+                    c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
+                    c.close();
+                    c = db.query(CARRIERS_TABLE, proj, NETWORK_TYPE_BITMASK, null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows with "
+                            + NETWORK_TYPE_BITMASK + ": " + c.getCount());
+                    c.close();
+                }
+                oldVersion = 24 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
+        }
+
+        private void recreateDB(Cursor c, SQLiteDatabase db, String[] proj, int version) {
+            // Upgrade steps are:
+            // 1. Create a temp table- done in createCarriersTable()
+            // 2. copy over APNs from old table to new table - done in copyDataToTmpTable()
+            // 3. Drop the existing table.
+            // 4. Copy over the tmp table.
+            if (VDBG) {
+                c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
+                log("dbh.onUpgrade:- before upgrading total number of rows: " + c.getCount());
+                c.close();
+            }
+
+            c = db.query(CARRIERS_TABLE, null, null, null, null, null, null);
+
+            if (VDBG) {
+                log("dbh.onUpgrade:- starting data copy of existing rows: " +
+                        + ((c == null) ? 0 : c.getCount()));
+            }
+
+            db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE_TMP);
+
+            createCarriersTable(db, CARRIERS_TABLE_TMP);
+
+            copyDataToTmpTable(db, c);
+            c.close();
+
+            db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
+
+            db.execSQL("ALTER TABLE " + CARRIERS_TABLE_TMP + " rename to " + CARRIERS_TABLE + ";");
         }
 
         private void preserveUserAndCarrierApns(SQLiteDatabase db) {
@@ -1194,6 +1200,8 @@ public class TelephonyProvider extends ContentProvider
                 while (c.moveToNext()) {
                     ContentValues cv = new ContentValues();
                     copyApnValuesV17(cv, c);
+                    // Sync bearer bitmask and network type bitmask
+                    getNetworkTypeBitmaskFromCursor(cv, c);
                     try {
                         db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
                                 SQLiteDatabase.CONFLICT_ABORT);
@@ -1270,6 +1278,11 @@ public class TelephonyProvider extends ContentProvider
                         int bearer_bitmask = ServiceState.getBitmaskForTech(
                                 Integer.parseInt(bearerStr));
                         cv.put(BEARER_BITMASK, bearer_bitmask);
+
+                        int networkTypeBitmask = ServiceState.getBitmaskForTech(
+                                ServiceState.rilRadioTechnologyToNetworkType(
+                                        Integer.parseInt(bearerStr)));
+                        cv.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
                     }
 
                     int userEditedColumnIdx = c.getColumnIndex("user_edited");
@@ -1335,6 +1348,37 @@ public class TelephonyProvider extends ContentProvider
                 String fromCursor = c.getString(columnIndex);
                 if (!TextUtils.isEmpty(fromCursor)) {
                     cv.put(key, fromCursor);
+                }
+            }
+        }
+
+        /**
+         * If NETWORK_TYPE_BITMASK does not exist (upgrade from version 23 to version 24), generate
+         * NETWORK_TYPE_BITMASK with the use of BEARER_BITMASK. If NETWORK_TYPE_BITMASK existed
+         * (upgrade from version 24 to forward), always map NETWORK_TYPE_BITMASK to BEARER_BITMASK.
+         */
+        private void getNetworkTypeBitmaskFromCursor(ContentValues cv, Cursor c) {
+            int columnIndex = c.getColumnIndex(NETWORK_TYPE_BITMASK);
+            if (columnIndex != -1) {
+                getStringValueFromCursor(cv, c, NETWORK_TYPE_BITMASK);
+                // Map NETWORK_TYPE_BITMASK to BEARER_BITMASK if NETWORK_TYPE_BITMASK existed;
+                String fromCursor = c.getString(columnIndex);
+                if (!TextUtils.isEmpty(fromCursor) && fromCursor.matches("\\d+")) {
+                    int networkBitmask = Integer.valueOf(fromCursor);
+                    int bearerBitmask = ServiceState.convertNetworkTypeBitmaskToBearerBitmask(
+                            networkBitmask);
+                    cv.put(BEARER_BITMASK, String.valueOf(bearerBitmask));
+                }
+                return;
+            }
+            columnIndex = c.getColumnIndex(BEARER_BITMASK);
+            if (columnIndex != -1) {
+                String fromCursor = c.getString(columnIndex);
+                if (!TextUtils.isEmpty(fromCursor) && fromCursor.matches("\\d+")) {
+                    int bearerBitmask = Integer.valueOf(fromCursor);
+                    int networkBitmask = ServiceState.convertBearerBitmaskToNetworkTypeBitmask(
+                            bearerBitmask);
+                    cv.put(NETWORK_TYPE_BITMASK, String.valueOf(networkBitmask));
                 }
             }
         }
@@ -1410,10 +1454,26 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
 
+            int networkTypeBitmask = 0;
+            String networkTypeList = parser.getAttributeValue(null, "network_type_bitmask");
+            if (networkTypeList != null) {
+                networkTypeBitmask = ServiceState.getBitmaskFromString(networkTypeList);
+            }
+            map.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
+
             int bearerBitmask = 0;
-            String bearerList = parser.getAttributeValue(null, "bearer_bitmask");
-            if (bearerList != null) {
-                bearerBitmask = ServiceState.getBitmaskFromString(bearerList);
+            if (networkTypeList != null) {
+                bearerBitmask =
+                        ServiceState.convertNetworkTypeBitmaskToBearerBitmask(networkTypeBitmask);
+            } else {
+                String bearerList = parser.getAttributeValue(null, "bearer_bitmask");
+                if (bearerList != null) {
+                    bearerBitmask = ServiceState.getBitmaskFromString(bearerList);
+                }
+                // Update the network type bitmask to keep them sync.
+                networkTypeBitmask = ServiceState.convertBearerBitmaskToNetworkTypeBitmask(
+                        bearerBitmask);
+                map.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
             }
             map.put(BEARER_BITMASK, bearerBitmask);
 
@@ -1556,10 +1616,10 @@ public class TelephonyProvider extends ContentProvider
                         if (VDBG) {
                             log("mergeFieldsAndUpdateDb: Calling separateRowsNeeded() oldType=" +
                                     oldType + " old bearer=" + oldRow.getInt(oldRow.getColumnIndex(
-                                    BEARER_BITMASK)) +
+                                    BEARER_BITMASK)) +  " old networkType=" +
+                                    oldRow.getInt(oldRow.getColumnIndex(NETWORK_TYPE_BITMASK)) +
                                     " old profile_id=" + oldRow.getInt(oldRow.getColumnIndex(
-                                    PROFILE_ID)) +
-                                    " newRow " + newRow);
+                                    PROFILE_ID)) + " newRow " + newRow);
                         }
 
                         // If separate rows are needed, do not need to merge any further
@@ -1585,8 +1645,7 @@ public class TelephonyProvider extends ContentProvider
                         newRow.put(TYPE, mergedType.toString());
                     }
                 }
-                mergedValues.put(TYPE, newRow.getAsString(
-                        TYPE));
+                mergedValues.put(TYPE, newRow.getAsString(TYPE));
             }
 
             if (newRow.containsKey(BEARER_BITMASK)) {
@@ -1600,6 +1659,24 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 mergedValues.put(BEARER_BITMASK, newRow.getAsInteger(BEARER_BITMASK));
+            }
+
+            if (newRow.containsKey(NETWORK_TYPE_BITMASK)) {
+                int oldBitmask = oldRow.getInt(oldRow.getColumnIndex(NETWORK_TYPE_BITMASK));
+                int newBitmask = newRow.getAsInteger(NETWORK_TYPE_BITMASK);
+                if (oldBitmask != newBitmask) {
+                    if (oldBitmask == 0 || newBitmask == 0) {
+                        newRow.put(NETWORK_TYPE_BITMASK, 0);
+                    } else {
+                        newRow.put(NETWORK_TYPE_BITMASK, (oldBitmask | newBitmask));
+                    }
+                }
+                mergedValues.put(NETWORK_TYPE_BITMASK, newRow.getAsInteger(NETWORK_TYPE_BITMASK));
+            }
+
+            if (newRow.containsKey(BEARER_BITMASK)
+                    && newRow.containsKey(NETWORK_TYPE_BITMASK)) {
+                syncBearerBitmaskAndNetworkTypeBitmask(mergedValues);
             }
 
             if (!onUpgrade) {
@@ -1719,6 +1796,7 @@ public class TelephonyProvider extends ContentProvider
                     TYPE,
                     EDITED,
                     BEARER_BITMASK,
+                    NETWORK_TYPE_BITMASK,
                     PROFILE_ID };
             String selection = TextUtils.join("=? AND ", CARRIERS_UNIQUE_FIELDS) + "=?";
             int i = 0;
@@ -2352,6 +2430,7 @@ public class TelephonyProvider extends ContentProvider
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
         checkPermission();
+        syncBearerBitmaskAndNetworkTypeBitmask(initialValues);
 
         boolean notify = false;
         SQLiteDatabase db = getWritableDatabase();
@@ -2656,6 +2735,7 @@ public class TelephonyProvider extends ContentProvider
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
         checkPermission();
+        syncBearerBitmaskAndNetworkTypeBitmask(values);
 
         SQLiteDatabase db = getWritableDatabase();
         int match = s_urlMatcher.match(url);
@@ -2908,6 +2988,31 @@ public class TelephonyProvider extends ContentProvider
         getContext().getContentResolver().notifyChange(
                 CONTENT_URI, null, true, UserHandle.USER_ALL);
 
+    }
+
+    /**
+     * Sync the bearer bitmask and network type bitmask when inserting and updating.
+     * Since bearerBitmask is deprecating, map the networkTypeBitmask to bearerBitmask if
+     * networkTypeBitmask was provided. But if networkTypeBitmask was not provided, map the
+     * bearerBitmask to networkTypeBitmask.
+     */
+    private static void syncBearerBitmaskAndNetworkTypeBitmask(ContentValues values) {
+        if (values.containsKey(NETWORK_TYPE_BITMASK)) {
+            int convertedBitmask = ServiceState.convertNetworkTypeBitmaskToBearerBitmask(
+                    values.getAsInteger(NETWORK_TYPE_BITMASK));
+            if (values.containsKey(BEARER_BITMASK)
+                    && convertedBitmask != values.getAsInteger(BEARER_BITMASK)) {
+                loge("Network type bitmask and bearer bitmask are not compatible.");
+            }
+            values.put(BEARER_BITMASK, ServiceState.convertNetworkTypeBitmaskToBearerBitmask(
+                    values.getAsInteger(NETWORK_TYPE_BITMASK)));
+        } else {
+            if (values.containsKey(BEARER_BITMASK)) {
+                int convertedBitmask = ServiceState.convertBearerBitmaskToNetworkTypeBitmask(
+                        values.getAsInteger(BEARER_BITMASK));
+                values.put(NETWORK_TYPE_BITMASK, convertedBitmask);
+            }
+        }
     }
 
     /**
