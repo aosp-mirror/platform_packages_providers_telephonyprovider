@@ -311,15 +311,22 @@ public class CarrierIdProvider extends ContentProvider {
                 convertCarrierAttrToContentValues(cv, cvs, attr, 0);
             }
         }
-        db.delete(CARRIER_ID_TABLE, null, null);
-        for (ContentValues cv : cvs) {
-            if (db.insertOrThrow(CARRIER_ID_TABLE, null, cv) > 0) rows++;
-        }
-        Log.d(TAG, "init database from pb. inserted rows = " + rows);
-        if (rows > 0) {
-            // Notify listener of DB change
-            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
-                    null);
+        try {
+            // Batch all insertions in single transaction to improve efficiency
+            db.beginTransaction();
+            db.delete(CARRIER_ID_TABLE, null, null);
+            for (ContentValues cv : cvs) {
+                if (db.insertOrThrow(CARRIER_ID_TABLE, null, cv) > 0) rows++;
+            }
+            Log.d(TAG, "init database from pb. inserted rows = " + rows);
+            if (rows > 0) {
+                // Notify listener of DB change
+                getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
+                        null);
+            }
+            db.setTransactionSuccessful();
+        } finally {
+            db.endTransaction();
         }
         return rows;
     }
