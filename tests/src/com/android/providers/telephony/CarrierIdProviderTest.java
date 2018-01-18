@@ -17,6 +17,7 @@
 package com.android.providers.telephony;
 
 import android.content.ContentValues;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.database.ContentObserver;
@@ -24,6 +25,7 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.net.Uri;
 import android.os.Handler;
+import android.provider.Telephony;
 import android.provider.Telephony.CarrierIdentification;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
@@ -33,6 +35,11 @@ import junit.framework.TestCase;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
 
 /**
  * Tests for testing CRUD operations of CarrierIdProvider.
@@ -64,6 +71,7 @@ public class CarrierIdProviderTest extends TestCase {
     private MockContentResolver mContentResolver;
     private CarrierIdProviderTestable mCarrierIdProviderTestable;
     private FakeContentObserver mContentObserver;
+    private SharedPreferences mSharedPreferences = mock(SharedPreferences.class);
 
     private class FakeContentResolver extends MockContentResolver {
         @Override
@@ -123,6 +131,11 @@ public class CarrierIdProviderTest extends TestCase {
         @Override
         public int checkCallingOrSelfPermission(String permission) {
             return PackageManager.PERMISSION_GRANTED;
+        }
+
+        @Override
+        public SharedPreferences getSharedPreferences(String name, int mode) {
+            return mSharedPreferences;
         }
     }
 
@@ -295,6 +308,22 @@ public class CarrierIdProviderTest extends TestCase {
         findEntry.moveToFirst();
         assertEquals(dummy_cid, findEntry.getInt(0));
         assertEquals(dummy_iccid_prefix, findEntry.getString(1));
+    }
+
+    @Test
+    public void testGetVersion() {
+        doReturn(5).when(mSharedPreferences).getInt(eq("version"), anyInt());
+        int version = 0;
+        try {
+            Cursor cursor = mContext.getContentResolver().query(
+                    Uri.withAppendedPath(Telephony.CarrierIdentification.CONTENT_URI,
+                            "get_version"), null, null, null);
+            cursor.moveToFirst();
+            version = cursor.getInt(0);
+        } catch (Exception e) {
+            Log.d(TAG, "Error querying carrier list version:" + e);
+        }
+        assertEquals(5, version);
     }
 
     private static ContentValues createCarrierInfoInternal() {
