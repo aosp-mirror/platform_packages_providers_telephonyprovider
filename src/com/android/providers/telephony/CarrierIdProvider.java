@@ -23,6 +23,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -70,12 +71,13 @@ public class CarrierIdProvider extends ContentProvider {
     private static final int DATABASE_VERSION = 3;
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
-    private static final String VERSION_PREF_KEY = "version";
+    private static final String VERSION_KEY = "version";
     private static final String OTA_UPDATED_PB_PATH = "misc/carrierid/" + ASSETS_PB_FILE;
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
     private static final int URL_UPDATE_FROM_PB = 1;
+    private static final int URL_GET_VERSION    = 2;
 
     /**
      * index 0: {@link CarrierIdentification#MCCMNC}
@@ -162,6 +164,7 @@ public class CarrierIdProvider extends ContentProvider {
         mDbHelper = new CarrierIdDatabaseHelper(getContext());
         mDbHelper.getReadableDatabase();
         s_urlMatcher.addURI(AUTHORITY, "update_db", URL_UPDATE_FROM_PB);
+        s_urlMatcher.addURI(AUTHORITY, "get_version", URL_GET_VERSION);
         initDatabaseFromPb(mDbHelper.getWritableDatabase());
         return true;
     }
@@ -182,11 +185,20 @@ public class CarrierIdProvider extends ContentProvider {
                     + " selection=" + selection
                     + " selectionArgs=" + Arrays.toString(selectionArgs));
         }
-        SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
-        qb.setTables(CARRIER_ID_TABLE);
 
-        SQLiteDatabase db = getReadableDatabase();
-        return qb.query(db, projectionIn, selection, selectionArgs, null, null, sortOrder);
+        final int match = s_urlMatcher.match(uri);
+        switch (match) {
+            case URL_GET_VERSION:
+                final MatrixCursor cursor = new MatrixCursor(new String[] {VERSION_KEY});
+                cursor.addRow(new Object[] {getAppliedVersion()});
+                return cursor;
+            default:
+                SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+                qb.setTables(CARRIER_ID_TABLE);
+
+                SQLiteDatabase db = getReadableDatabase();
+                return qb.query(db, projectionIn, selection, selectionArgs, null, null, sortOrder);
+        }
     }
 
     @Override
@@ -461,13 +473,13 @@ public class CarrierIdProvider extends ContentProvider {
 
     private int getAppliedVersion() {
         final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
-        return sp.getInt(VERSION_PREF_KEY, -1);
+        return sp.getInt(VERSION_KEY, -1);
     }
 
     private void setAppliedVersion(int version) {
         final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
-        editor.putInt(VERSION_PREF_KEY, version);
+        editor.putInt(VERSION_KEY, version);
         editor.apply();
     }
 
