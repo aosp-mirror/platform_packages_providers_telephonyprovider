@@ -108,7 +108,7 @@ public class TelephonyProviderTestable extends TelephonyProvider {
 
             // set up the siminfo table
             Log.d(TAG, "InMemoryTelephonyProviderDbHelper onCreate creating the siminfo table");
-            db.execSQL(CREATE_SIMINFO_TABLE_STRING);
+            db.execSQL(getStringForSimInfoTableCreation("siminfo"));
         }
 
         @Override
