@@ -127,7 +127,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 24 << 16;
+    private static final int DATABASE_VERSION = 25 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -155,6 +155,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String CARRIERS_TABLE = "carriers";
     private static final String CARRIERS_TABLE_TMP = "carriers_tmp";
     private static final String SIMINFO_TABLE = "siminfo";
+    private static final String SIMINFO_TABLE_TMP = "siminfo_tmp";
 
     private static final String PREF_FILE_APN = "preferred-apn";
     private static final String COLUMN_APN_ID = "apn_id";
@@ -295,48 +296,52 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @VisibleForTesting
-    public static final String CREATE_SIMINFO_TABLE_STRING = "CREATE TABLE " + SIMINFO_TABLE + "("
-            + SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID
+    public static String getStringForSimInfoTableCreation(String tableName) {
+        return "CREATE TABLE " + tableName + "("
+                + SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID
                 + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-            + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
-            + SubscriptionManager.SIM_SLOT_INDEX
+                + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
+                + SubscriptionManager.SIM_SLOT_INDEX
                 + " INTEGER DEFAULT " + SubscriptionManager.SIM_NOT_INSERTED + ","
-            + SubscriptionManager.DISPLAY_NAME + " TEXT,"
-            + SubscriptionManager.CARRIER_NAME + " TEXT,"
-            + SubscriptionManager.NAME_SOURCE
+                + SubscriptionManager.DISPLAY_NAME + " TEXT,"
+                + SubscriptionManager.CARRIER_NAME + " TEXT,"
+                + SubscriptionManager.NAME_SOURCE
                 + " INTEGER DEFAULT " + SubscriptionManager.NAME_SOURCE_DEFAULT_SOURCE + ","
-            + SubscriptionManager.COLOR + " INTEGER DEFAULT " + SubscriptionManager.COLOR_DEFAULT + ","
-            + SubscriptionManager.NUMBER + " TEXT,"
-            + SubscriptionManager.DISPLAY_NUMBER_FORMAT
+                + SubscriptionManager.COLOR + " INTEGER DEFAULT "
+                + SubscriptionManager.COLOR_DEFAULT + ","
+                + SubscriptionManager.NUMBER + " TEXT,"
+                + SubscriptionManager.DISPLAY_NUMBER_FORMAT
                 + " INTEGER NOT NULL DEFAULT " + SubscriptionManager.DISPLAY_NUMBER_DEFAULT + ","
-            + SubscriptionManager.DATA_ROAMING
+                + SubscriptionManager.DATA_ROAMING
                 + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT + ","
-            + SubscriptionManager.MCC + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.SIM_PROVISIONING_STATUS
+                + SubscriptionManager.MCC + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.SIM_PROVISIONING_STATUS
                 + " INTEGER DEFAULT " + SubscriptionManager.SIM_PROVISIONED + ","
-            + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.ACCESS_RULES + " BLOB,"
-            + SubscriptionManager.IS_REMOVABLE + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
-            + SubscriptionManager.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
-            + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
-            + SubscriptionManager.ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
-            + SubscriptionManager.VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
-            + SubscriptionManager.WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
-            + SubscriptionManager.WFC_IMS_MODE + " INTEGER DEFAULT -1,"
-            + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
-            + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1"
-            + ");";
+                + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.CARD_ID + " TEXT NOT NULL,"
+                + SubscriptionManager.ACCESS_RULES + " BLOB,"
+                + SubscriptionManager.IS_REMOVABLE + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
+                + SubscriptionManager.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
+                + SubscriptionManager.ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
+                + SubscriptionManager.VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
+                + SubscriptionManager.WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
+                + SubscriptionManager.WFC_IMS_MODE + " INTEGER DEFAULT -1,"
+                + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
+                + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1"
+                + ");";
+    }
 
     static {
         s_urlMatcher.addURI("telephony", "carriers", URL_TELEPHONY);
@@ -436,7 +441,7 @@ public class TelephonyProvider extends ContentProvider
         @Override
         public void onCreate(SQLiteDatabase db) {
             if (DBG) log("dbh.onCreate:+ db=" + db);
-            createSimInfoTable(db);
+            createSimInfoTable(db, SIMINFO_TABLE);
             createCarriersTable(db, CARRIERS_TABLE);
             // if CarrierSettings app is installed, we expect it to do the initializiation instead
             if (apnSourceServiceExists(mContext)) {
@@ -458,7 +463,7 @@ public class TelephonyProvider extends ContentProvider
             } catch (SQLiteException e) {
                 loge("Exception " + SIMINFO_TABLE + "e=" + e);
                 if (e.getMessage().startsWith("no such table")) {
-                    createSimInfoTable(db);
+                    createSimInfoTable(db, SIMINFO_TABLE);
                 }
             }
             try {
@@ -473,9 +478,9 @@ public class TelephonyProvider extends ContentProvider
             if (VDBG) log("dbh.onOpen:- db=" + db);
         }
 
-        private void createSimInfoTable(SQLiteDatabase db) {
-            if (DBG) log("dbh.createSimInfoTable:+");
-            db.execSQL(CREATE_SIMINFO_TABLE_STRING);
+        private void createSimInfoTable(SQLiteDatabase db, String tableName) {
+            if (DBG) log("dbh.createSimInfoTable:+ " + tableName);
+            db.execSQL(getStringForSimInfoTableCreation(tableName));
             if (DBG) log("dbh.createSimInfoTable:-");
         }
 
@@ -967,15 +972,140 @@ public class TelephonyProvider extends ContentProvider
                     c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
                     c.close();
-                    c = db.query(CARRIERS_TABLE, proj, NETWORK_TYPE_BITMASK, null, null, null, null);
+                    c = db.query(
+                            CARRIERS_TABLE, proj, NETWORK_TYPE_BITMASK, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows with "
                             + NETWORK_TYPE_BITMASK + ": " + c.getCount());
                     c.close();
                 }
                 oldVersion = 24 << 16 | 6;
             }
+            if (oldVersion < (25 << 16 | 6)) {
+                // Add a new column SubscriptionManager.CARD_ID into the database and set the value
+                // to be the same as the existing column SubscriptionManager.ICC_ID. In order to do
+                // this, we need to first make a copy of the existing SIMINFO_TABLE, set the value
+                // of the new column SubscriptionManager.CARD_ID, and replace the SIMINFO_TABLE with
+                // the new table.
+                Cursor c = null;
+                String[] proj = {SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID};
+                recreateSimInfoDB(c, db, proj);
+                if (VDBG) {
+                    c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading " + SIMINFO_TABLE
+                            + " total number of rows: " + c.getCount());
+                    c.close();
+                    c = db.query(SIMINFO_TABLE, proj, SubscriptionManager.CARD_ID + " IS NOT NULL",
+                            null, null, null, null);
+                    log("dbh.onUpgrade:- after upgrading total number of rows with "
+                            + SubscriptionManager.CARD_ID + ": " + c.getCount());
+                    c.close();
+                }
+                oldVersion = 25 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
+            }
+        }
+
+        private void recreateSimInfoDB(Cursor c, SQLiteDatabase db, String[] proj) {
+            if (VDBG) {
+                c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null);
+                log("dbh.onUpgrade:+ before upgrading " + SIMINFO_TABLE +
+                        " total number of rows: " + c.getCount());
+                c.close();
+            }
+
+            c = db.query(SIMINFO_TABLE, null, null, null, null, null, null);
+
+            db.execSQL("DROP TABLE IF EXISTS " + SIMINFO_TABLE_TMP);
+
+            createSimInfoTable(db, SIMINFO_TABLE_TMP);
+
+            copySimInfoDataToTmpTable(db, c);
+            c.close();
+
+            db.execSQL("DROP TABLE IF EXISTS " + SIMINFO_TABLE);
+
+            db.execSQL("ALTER TABLE " + SIMINFO_TABLE_TMP + " rename to " + SIMINFO_TABLE + ";");
+
+        }
+
+        private void copySimInfoDataToTmpTable(SQLiteDatabase db, Cursor c) {
+            // Move entries from SIMINFO_TABLE to SIMINFO_TABLE_TMP
+            if (c != null) {
+                while (c.moveToNext()) {
+                    ContentValues cv = new ContentValues();
+                    copySimInfoValuesV24(cv, c);
+                    // The card ID is supposed to be the ICCID of the profile for UICC card, and
+                    // the EID of the card for eUICC card. Since EID is unknown for old entries in
+                    // SIMINFO_TABLE, we use ICCID as the card ID for all the old entries while
+                    // upgrading the SIMINFO_TABLE. In UiccController, both the card ID and ICCID
+                    // will be checked when user queries the slot information using the card ID
+                    // from the database.
+                    getCardIdfromIccid(cv, c);
+                    try {
+                        db.insert(SIMINFO_TABLE_TMP, null, cv);
+                        if (VDBG) {
+                            log("dbh.copySimInfoDataToTmpTable: db.insert returned >= 0; " +
+                                "insert successful for cv " + cv);
+                        }
+                    } catch (SQLException e) {
+                        if (VDBG)
+                            log("dbh.copySimInfoDataToTmpTable insertWithOnConflict exception " +
+                                e + " for cv " + cv);
+                    }
+                }
+            }
+        }
+
+        private void copySimInfoValuesV24(ContentValues cv, Cursor c) {
+            // String vals
+            getStringValueFromCursor(cv, c, SubscriptionManager.ICC_ID);
+            getStringValueFromCursor(cv, c, SubscriptionManager.DISPLAY_NAME);
+            getStringValueFromCursor(cv, c, SubscriptionManager.CARRIER_NAME);
+            getStringValueFromCursor(cv, c, SubscriptionManager.NUMBER);
+
+            // bool/int vals
+            getIntValueFromCursor(cv, c, SubscriptionManager.SIM_SLOT_INDEX);
+            getIntValueFromCursor(cv, c, SubscriptionManager.NAME_SOURCE);
+            getIntValueFromCursor(cv, c, SubscriptionManager.COLOR);
+            getIntValueFromCursor(cv, c, SubscriptionManager.DISPLAY_NUMBER_FORMAT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.DATA_ROAMING);
+            getIntValueFromCursor(cv, c, SubscriptionManager.MCC);
+            getIntValueFromCursor(cv, c, SubscriptionManager.MNC);
+            getIntValueFromCursor(cv, c, SubscriptionManager.SIM_PROVISIONING_STATUS);
+            getIntValueFromCursor(cv, c, SubscriptionManager.IS_EMBEDDED);
+            getIntValueFromCursor(cv, c, SubscriptionManager.IS_REMOVABLE);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_EXTREME_THREAT_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_SEVERE_THREAT_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_AMBER_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_EMERGENCY_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_SOUND_DURATION);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_REMINDER_INTERVAL);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_VIBRATE);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_SPEECH);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ETWS_TEST_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_CHANNEL_50_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_CMAS_TEST_ALERT);
+            getIntValueFromCursor(cv, c, SubscriptionManager.CB_OPT_OUT_DIALOG);
+            getIntValueFromCursor(cv, c, SubscriptionManager.ENHANCED_4G_MODE_ENABLED);
+            getIntValueFromCursor(cv, c, SubscriptionManager.VT_IMS_ENABLED);
+            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_ENABLED);
+            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_MODE);
+            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_ROAMING_MODE);
+            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_ROAMING_ENABLED);
+
+            // Blob vals
+            getBlobValueFromCursor(cv, c, SubscriptionManager.ACCESS_RULES);
+        }
+
+        private void getCardIdfromIccid(ContentValues cv, Cursor c) {
+            int columnIndex = c.getColumnIndex(SubscriptionManager.ICC_ID);
+            if (columnIndex != -1) {
+                String fromCursor = c.getString(columnIndex);
+                if (!TextUtils.isEmpty(fromCursor)) {
+                    cv.put(SubscriptionManager.CARD_ID, fromCursor);
+                }
             }
         }
 
@@ -1397,6 +1527,16 @@ public class TelephonyProvider extends ContentProvider
                     } catch (NumberFormatException nfe) {
                         // do nothing
                     }
+                }
+            }
+        }
+
+        private void getBlobValueFromCursor(ContentValues cv, Cursor c, String key) {
+            int columnIndex = c.getColumnIndex(key);
+            if (columnIndex != -1) {
+                byte[] fromCursor = c.getBlob(columnIndex);
+                if (fromCursor != null) {
+                    cv.put(key, fromCursor);
                 }
             }
         }
