@@ -110,6 +110,7 @@
                   android:exported="true"
                   android:singleUser="true"
                   android:multiprocess="false"
+                  android:readPermission="android.permission.READ_PRIVILEGED_PHONE_STATE"
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
 
         <service
