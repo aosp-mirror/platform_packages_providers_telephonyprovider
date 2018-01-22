@@ -165,7 +165,7 @@ public class CarrierIdProvider extends ContentProvider {
         mDbHelper.getReadableDatabase();
         s_urlMatcher.addURI(AUTHORITY, "update_db", URL_UPDATE_FROM_PB);
         s_urlMatcher.addURI(AUTHORITY, "get_version", URL_GET_VERSION);
-        initDatabaseFromPb(mDbHelper.getWritableDatabase());
+        updateDatabaseFromPb(mDbHelper.getWritableDatabase());
         return true;
     }
 
@@ -242,7 +242,7 @@ public class CarrierIdProvider extends ContentProvider {
         final int match = s_urlMatcher.match(uri);
         switch (match) {
             case URL_UPDATE_FROM_PB:
-                return initDatabaseFromPb(getWritableDatabase());
+                return updateDatabaseFromPb(getWritableDatabase());
             default:
                 final int count = getWritableDatabase().update(CARRIER_ID_TABLE, values, selection,
                         selectionArgs);
@@ -308,34 +308,47 @@ public class CarrierIdProvider extends ContentProvider {
      * Use version number to detect file update.
      * Update database with data from assets or ota only if version jumps.
      */
-    private int initDatabaseFromPb(SQLiteDatabase db) {
-        Log.d(TAG, "init database from pb file");
+    private int updateDatabaseFromPb(SQLiteDatabase db) {
+        Log.d(TAG, "update database from pb file");
         int rows = 0;
         CarrierIdProto.CarrierList carrierList = getUpdateCarrierList();
+        // No update is needed
         if (carrierList == null) return rows;
-        setAppliedVersion(carrierList.version);
-        List<ContentValues> cvs = new ArrayList<>();
-        for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
-            for (CarrierIdProto.CarrierAttribute attr : id.carrierAttribute) {
-                ContentValues cv = new ContentValues();
-                cv.put(CarrierIdentification.CID, id.canonicalId);
-                cv.put(CarrierIdentification.NAME, id.carrierName);
-                convertCarrierAttrToContentValues(cv, cvs, attr, 0);
-            }
-        }
+
+        ContentValues cv;
+        List<ContentValues> cvs;
         try {
-            // Batch all insertions in single transaction to improve efficiency
+            // Batch all insertions in a single transaction to improve efficiency.
             db.beginTransaction();
             db.delete(CARRIER_ID_TABLE, null, null);
-            for (ContentValues cv : cvs) {
-                if (db.insertOrThrow(CARRIER_ID_TABLE, null, cv) > 0) rows++;
+            for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
+                for (CarrierIdProto.CarrierAttribute attr : id.carrierAttribute) {
+                    cv = new ContentValues();
+                    cv.put(CarrierIdentification.CID, id.canonicalId);
+                    cv.put(CarrierIdentification.NAME, id.carrierName);
+                    cvs = new ArrayList<>();
+                    convertCarrierAttrToContentValues(cv, cvs, attr, 0);
+                    for (ContentValues contentVal : cvs) {
+                        // When a constraint violation occurs, the row that contains the violation
+                        // is not inserted. But the command continues executing normally.
+                        if (db.insertWithOnConflict(CARRIER_ID_TABLE, null, contentVal,
+                                SQLiteDatabase.CONFLICT_IGNORE) > 0) {
+                            rows++;
+                        } else {
+                            Log.e(TAG, "updateDatabaseFromPB insertion failure, row: "
+                                    + rows + "carrier id: " + id.canonicalId);
+                            // TODO metrics
+                        }
+                    }
+                }
             }
-            Log.d(TAG, "init database from pb. inserted rows = " + rows);
+            Log.d(TAG, "update database from pb. inserted rows = " + rows);
             if (rows > 0) {
                 // Notify listener of DB change
                 getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
                         null);
             }
+            setAppliedVersion(carrierList.version);
             db.setTransactionSuccessful();
         } finally {
             db.endTransaction();
