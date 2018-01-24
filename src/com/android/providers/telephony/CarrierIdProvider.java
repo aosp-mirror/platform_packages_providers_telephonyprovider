@@ -22,6 +22,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -178,6 +179,7 @@ public class CarrierIdProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projectionIn, String selection,
                         String[] selectionArgs, String sortOrder) {
+        checkReadPermission();
         if (VDBG) {
             Log.d(TAG, "query:"
                     + " uri=" + uri
@@ -203,6 +205,7 @@ public class CarrierIdProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
+        checkWritePermission();
         final long row = getWritableDatabase().insertOrThrow(CARRIER_ID_TABLE, null, values);
         if (row > 0) {
             final Uri newUri = ContentUris.withAppendedId(CarrierIdentification.CONTENT_URI, row);
@@ -214,6 +217,7 @@ public class CarrierIdProvider extends ContentProvider {
 
     @Override
     public int delete(Uri uri, String selection, String[] selectionArgs) {
+        checkWritePermission();
         if (VDBG) {
             Log.d(TAG, "delete:"
                     + " uri=" + uri
@@ -231,6 +235,7 @@ public class CarrierIdProvider extends ContentProvider {
 
     @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
+        checkWritePermission();
         if (VDBG) {
             Log.d(TAG, "update:"
                     + " uri=" + uri
@@ -509,5 +514,23 @@ public class CarrierIdProvider extends ContentProvider {
         }
         buffer.flush();
         return buffer.toByteArray();
+    }
+
+    private void checkReadPermission() {
+        int status = getContext().checkCallingOrSelfPermission(
+                "android.permission.READ_PRIVILEGED_PHONE_STATE");
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No permission to read Carrier Identification provider");
+    }
+
+    private void checkWritePermission() {
+        int status = getContext().checkCallingOrSelfPermission(
+                "android.permission.MODIFY_PHONE_STATE");
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No permission to write Carrier Identification provider");
     }
 }
