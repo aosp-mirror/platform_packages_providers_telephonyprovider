@@ -27,6 +27,7 @@ import static android.provider.Telephony.Carriers.CARRIER_EDITED;
 import static android.provider.Telephony.Carriers.CARRIER_ENABLED;
 import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
+import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED;
 import static android.provider.Telephony.Carriers.MAX_CONNS;
 import static android.provider.Telephony.Carriers.MAX_CONNS_TIME;
@@ -104,7 +105,11 @@ import android.util.Xml;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.IApnSourceService;
+import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.SubscriptionController;
+import com.android.internal.telephony.dataconnection.ApnSetting;
+import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -211,7 +216,8 @@ public class TelephonyProvider extends ContentProvider
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
     private static final Map<String, String> CARRIERS_UNIQUE_FIELDS_DEFAULTS = new HashMap();
 
-    private static Boolean s_apnSourceServiceExists;
+    @VisibleForTesting
+    static Boolean s_apnSourceServiceExists;
 
     protected final Object mLock = new Object();
     @GuardedBy("mLock")
@@ -3095,9 +3101,19 @@ public class TelephonyProvider extends ContentProvider
 
     private void restoreDefaultAPN(int subId) {
         SQLiteDatabase db = getWritableDatabase();
+        TelephonyManager telephonyManager =
+                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
+        String where = null;
+        if (telephonyManager.getPhoneCount() > 1) {
+            where = getWhereClauseForRestoreDefaultApn(db, subId);
+        }
+        if (TextUtils.isEmpty(where)) {
+            where = IS_NOT_OWNED_BY_DPC;
+        }
+        log("restoreDefaultAPN: where: " + where);
 
         try {
-            db.delete(CARRIERS_TABLE, IS_NOT_OWNED_BY_DPC, null);
+            db.delete(CARRIERS_TABLE, where, null);
         } catch (SQLException e) {
             loge("got exception when deleting to restore: " + e);
         }
@@ -3121,6 +3137,54 @@ public class TelephonyProvider extends ContentProvider
         } else {
             initDatabaseWithDatabaseHelper(db);
         }
+    }
+
+    private String getWhereClauseForRestoreDefaultApn(SQLiteDatabase db, int subId) {
+        IccRecords iccRecords = getIccRecords(subId);
+        if (iccRecords == null) {
+            return null;
+        }
+        TelephonyManager telephonyManager =
+                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
+        String simOperator = telephonyManager.getSimOperator(subId);
+        Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
+                NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
+        String where = null;
+
+        if (cursor != null) {
+            cursor.moveToFirst();
+            while (!cursor.isAfterLast()) {
+                String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
+                String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
+                if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
+                        && ApnSetting.mvnoMatches(iccRecords, mvnoType, mvnoMatchData)) {
+                    where = NUMERIC + "='" + simOperator + "'"
+                            + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
+                            + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
+                            + " AND " + IS_NOT_OWNED_BY_DPC;
+                    break;
+                }
+                cursor.moveToNext();
+            }
+            cursor.close();
+
+            if (TextUtils.isEmpty(where)) {
+                where = NUMERIC + "='" + simOperator + "'"
+                        + " AND (" + MVNO_TYPE + "='' OR " + MVNO_MATCH_DATA + "='')"
+                        + " AND " + IS_NOT_OWNED_BY_DPC;
+            }
+        }
+        return where;
+    }
+
+    @VisibleForTesting
+    IccRecords getIccRecords(int subId) {
+        TelephonyManager telephonyManager =
+                TelephonyManager.from(getContext()).createForSubscriptionId(subId);
+        int family = telephonyManager.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ?
+                UiccController.APP_FAM_3GPP : UiccController.APP_FAM_3GPP2;
+        return UiccController.getInstance().getIccRecords(
+                SubscriptionManager.getPhoneId(subId), family);
     }
 
     private synchronized void updateApnDb() {
