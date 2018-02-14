@@ -31,10 +31,13 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.Telephony.CarrierIdentification;
+import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.nano.CarrierIdProto;
 
 import java.io.ByteArrayOutputStream;
@@ -45,6 +48,8 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 import libcore.io.IoUtils;
 
@@ -77,39 +82,41 @@ public class CarrierIdProvider extends ContentProvider {
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
-    private static final int URL_UPDATE_FROM_PB = 1;
-    private static final int URL_GET_VERSION    = 2;
+
+    private static final int URL_ALL                = 1;
+    private static final int URL_ALL_UPDATE_FROM_PB = 2;
+    private static final int URL_ALL_GET_VERSION    = 3;
 
     /**
-     * index 0: {@link CarrierIdentification#MCCMNC}
+     * index 0: {@link CarrierIdentification.All#MCCMNC}
      */
     private static final int MCCMNC_INDEX                = 0;
     /**
-     * index 1: {@link CarrierIdentification#IMSI_PREFIX_XPATTERN}
+     * index 1: {@link CarrierIdentification.All#IMSI_PREFIX_XPATTERN}
      */
     private static final int IMSI_PREFIX_INDEX           = 1;
     /**
-     * index 2: {@link CarrierIdentification#GID1}
+     * index 2: {@link CarrierIdentification.All#GID1}
      */
     private static final int GID1_INDEX                  = 2;
     /**
-     * index 3: {@link CarrierIdentification#GID2}
+     * index 3: {@link CarrierIdentification.All#GID2}
      */
     private static final int GID2_INDEX                  = 3;
     /**
-     * index 4: {@link CarrierIdentification#PLMN}
+     * index 4: {@link CarrierIdentification.All#PLMN}
      */
     private static final int PLMN_INDEX                  = 4;
     /**
-     * index 5: {@link CarrierIdentification#SPN}
+     * index 5: {@link CarrierIdentification.All#SPN}
      */
     private static final int SPN_INDEX                   = 5;
     /**
-     * index 6: {@link CarrierIdentification#APN}
+     * index 6: {@link CarrierIdentification.All#APN}
      */
     private static final int APN_INDEX                   = 6;
     /**
-    * index 7: {@link CarrierIdentification#ICCID_PREFIX}
+    * index 7: {@link CarrierIdentification.All#ICCID_PREFIX}
     */
     private static final int ICCID_PREFIX_INDEX          = 7;
     /**
@@ -125,29 +132,36 @@ public class CarrierIdProvider extends ContentProvider {
     public static final String CARRIER_ID_TABLE = "carrier_id";
 
     private static final List<String> CARRIERS_ID_UNIQUE_FIELDS = new ArrayList<>(Arrays.asList(
-            CarrierIdentification.MCCMNC,
-            CarrierIdentification.GID1,
-            CarrierIdentification.GID2,
-            CarrierIdentification.PLMN,
-            CarrierIdentification.IMSI_PREFIX_XPATTERN,
-            CarrierIdentification.SPN,
-            CarrierIdentification.APN,
-            CarrierIdentification.ICCID_PREFIX));
+            CarrierIdentification.All.MCCMNC,
+            CarrierIdentification.All.GID1,
+            CarrierIdentification.All.GID2,
+            CarrierIdentification.All.PLMN,
+            CarrierIdentification.All.IMSI_PREFIX_XPATTERN,
+            CarrierIdentification.All.SPN,
+            CarrierIdentification.All.APN,
+            CarrierIdentification.All.ICCID_PREFIX));
 
     private CarrierIdDatabaseHelper mDbHelper;
+
+    /**
+     * Stores carrier id information for the current active subscriptions.
+     * Key is the active subId and entryValue is a pair of carrier id(int) and Carrier Name(String).
+     */
+    private final Map<Integer, Pair<Integer, String>> mCurrentSubscriptionMap =
+            new ConcurrentHashMap<>();
 
     @VisibleForTesting
     public static String getStringForCarrierIdTableCreation(String tableName) {
         return "CREATE TABLE " + tableName
                 + "(_id INTEGER PRIMARY KEY,"
-                + CarrierIdentification.MCCMNC + " TEXT NOT NULL,"
-                + CarrierIdentification.GID1 + " TEXT,"
-                + CarrierIdentification.GID2 + " TEXT,"
-                + CarrierIdentification.PLMN + " TEXT,"
-                + CarrierIdentification.IMSI_PREFIX_XPATTERN + " TEXT,"
-                + CarrierIdentification.SPN + " TEXT,"
-                + CarrierIdentification.APN + " TEXT,"
-                + CarrierIdentification.ICCID_PREFIX + " TEXT,"
+                + CarrierIdentification.All.MCCMNC + " TEXT NOT NULL,"
+                + CarrierIdentification.All.GID1 + " TEXT,"
+                + CarrierIdentification.All.GID2 + " TEXT,"
+                + CarrierIdentification.All.PLMN + " TEXT,"
+                + CarrierIdentification.All.IMSI_PREFIX_XPATTERN + " TEXT,"
+                + CarrierIdentification.All.SPN + " TEXT,"
+                + CarrierIdentification.All.APN + " TEXT,"
+                + CarrierIdentification.All.ICCID_PREFIX + " TEXT,"
                 + CarrierIdentification.NAME + " TEXT,"
                 + CarrierIdentification.CID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
@@ -156,7 +170,7 @@ public class CarrierIdProvider extends ContentProvider {
     @VisibleForTesting
     public static String getStringForIndexCreation(String tableName) {
         return "CREATE INDEX IF NOT EXISTS mccmncIndex ON " + tableName + " ("
-                + CarrierIdentification.MCCMNC + ");";
+                + CarrierIdentification.All.MCCMNC + ");";
     }
 
     @Override
@@ -164,8 +178,9 @@ public class CarrierIdProvider extends ContentProvider {
         Log.d(TAG, "onCreate");
         mDbHelper = new CarrierIdDatabaseHelper(getContext());
         mDbHelper.getReadableDatabase();
-        s_urlMatcher.addURI(AUTHORITY, "update_db", URL_UPDATE_FROM_PB);
-        s_urlMatcher.addURI(AUTHORITY, "get_version", URL_GET_VERSION);
+        s_urlMatcher.addURI(AUTHORITY, "all", URL_ALL);
+        s_urlMatcher.addURI(AUTHORITY, "all/update_db", URL_ALL_UPDATE_FROM_PB);
+        s_urlMatcher.addURI(AUTHORITY, "all/get_version", URL_ALL_GET_VERSION);
         updateDatabaseFromPb(mDbHelper.getWritableDatabase());
         return true;
     }
@@ -179,7 +194,6 @@ public class CarrierIdProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projectionIn, String selection,
                         String[] selectionArgs, String sortOrder) {
-        checkReadPermission();
         if (VDBG) {
             Log.d(TAG, "query:"
                     + " uri=" + uri
@@ -190,29 +204,42 @@ public class CarrierIdProvider extends ContentProvider {
 
         final int match = s_urlMatcher.match(uri);
         switch (match) {
-            case URL_GET_VERSION:
+            case URL_ALL_GET_VERSION:
+                checkReadPermission();
                 final MatrixCursor cursor = new MatrixCursor(new String[] {VERSION_KEY});
                 cursor.addRow(new Object[] {getAppliedVersion()});
                 return cursor;
-            default:
+            case URL_ALL:
+                checkReadPermission();
                 SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
                 qb.setTables(CARRIER_ID_TABLE);
 
                 SQLiteDatabase db = getReadableDatabase();
                 return qb.query(db, projectionIn, selection, selectionArgs, null, null, sortOrder);
+            default:
+                return queryCarrierIdForCurrentSubscription(uri, projectionIn);
         }
     }
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
         checkWritePermission();
-        final long row = getWritableDatabase().insertOrThrow(CARRIER_ID_TABLE, null, values);
-        if (row > 0) {
-            final Uri newUri = ContentUris.withAppendedId(CarrierIdentification.CONTENT_URI, row);
-            getContext().getContentResolver().notifyChange(newUri, null);
-            return newUri;
+        final int match = s_urlMatcher.match(uri);
+        switch (match) {
+            case URL_ALL:
+                final long row = getWritableDatabase().insertOrThrow(CARRIER_ID_TABLE, null,
+                        values);
+                if (row > 0) {
+                    final Uri newUri = ContentUris.withAppendedId(
+                            CarrierIdentification.All.CONTENT_URI, row);
+                    getContext().getContentResolver().notifyChange(
+                            CarrierIdentification.All.CONTENT_URI, null);
+                    return newUri;
+                }
+                return null;
+            default:
+                throw new IllegalArgumentException("Cannot insert that URL: " + uri);
         }
-        return null;
     }
 
     @Override
@@ -225,12 +252,20 @@ public class CarrierIdProvider extends ContentProvider {
                     + " selection=" + selection
                     + " selectionArgs=" + Arrays.toString(selectionArgs));
         }
-        final int count = getWritableDatabase().delete(CARRIER_ID_TABLE, selection, selectionArgs);
-        Log.d(TAG, "  delete.count=" + count);
-        if (count > 0) {
-            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI, null);
+        final int match = s_urlMatcher.match(uri);
+        switch (match) {
+            case URL_ALL:
+                final int count = getWritableDatabase().delete(CARRIER_ID_TABLE, selection,
+                        selectionArgs);
+                Log.d(TAG, "  delete.count=" + count);
+                if (count > 0) {
+                    getContext().getContentResolver().notifyChange(
+                            CarrierIdentification.All.CONTENT_URI, null);
+                }
+                return count;
+            default:
+                throw new IllegalArgumentException("Cannot delete that URL: " + uri);
         }
-        return count;
     }
 
     @Override
@@ -246,17 +281,20 @@ public class CarrierIdProvider extends ContentProvider {
 
         final int match = s_urlMatcher.match(uri);
         switch (match) {
-            case URL_UPDATE_FROM_PB:
+            case URL_ALL_UPDATE_FROM_PB:
                 return updateDatabaseFromPb(getWritableDatabase());
-            default:
+            case URL_ALL:
                 final int count = getWritableDatabase().update(CARRIER_ID_TABLE, values, selection,
                         selectionArgs);
                 Log.d(TAG, "  update.count=" + count);
                 if (count > 0) {
                     getContext().getContentResolver().notifyChange(
-                            CarrierIdentification.CONTENT_URI, null);
+                            CarrierIdentification.All.CONTENT_URI, null);
                 }
                 return count;
+            default:
+                return updateCarrierIdForCurrentSubscription(uri, values);
+
         }
     }
 
@@ -350,8 +388,8 @@ public class CarrierIdProvider extends ContentProvider {
             Log.d(TAG, "update database from pb. inserted rows = " + rows);
             if (rows > 0) {
                 // Notify listener of DB change
-                getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI,
-                        null);
+                getContext().getContentResolver().notifyChange(
+                        CarrierIdentification.All.CONTENT_URI, null);
             }
             setAppliedVersion(carrierList.version);
             db.setTransactionSuccessful();
@@ -374,65 +412,65 @@ public class CarrierIdProvider extends ContentProvider {
         switch (index) {
             case MCCMNC_INDEX:
                 for (String str : attr.mccmncTuple) {
-                    cv.put(CarrierIdentification.MCCMNC, str);
+                    cv.put(CarrierIdentification.All.MCCMNC, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.MCCMNC);
+                    cv.remove(CarrierIdentification.All.MCCMNC);
                     found = true;
                 }
                 break;
             case IMSI_PREFIX_INDEX:
                 for (String str : attr.imsiPrefixXpattern) {
-                    cv.put(CarrierIdentification.IMSI_PREFIX_XPATTERN, str);
+                    cv.put(CarrierIdentification.All.IMSI_PREFIX_XPATTERN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.IMSI_PREFIX_XPATTERN);
+                    cv.remove(CarrierIdentification.All.IMSI_PREFIX_XPATTERN);
                     found = true;
                 }
                 break;
             case GID1_INDEX:
                 for (String str : attr.gid1) {
-                    cv.put(CarrierIdentification.GID1, str);
+                    cv.put(CarrierIdentification.All.GID1, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.GID1);
+                    cv.remove(CarrierIdentification.All.GID1);
                     found = true;
                 }
                 break;
             case GID2_INDEX:
                 for (String str : attr.gid2) {
-                    cv.put(CarrierIdentification.GID2, str);
+                    cv.put(CarrierIdentification.All.GID2, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.GID2);
+                    cv.remove(CarrierIdentification.All.GID2);
                     found = true;
                 }
                 break;
             case PLMN_INDEX:
                 for (String str : attr.plmn) {
-                    cv.put(CarrierIdentification.PLMN, str);
+                    cv.put(CarrierIdentification.All.PLMN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.PLMN);
+                    cv.remove(CarrierIdentification.All.PLMN);
                     found = true;
                 }
                 break;
             case SPN_INDEX:
                 for (String str : attr.spn) {
-                    cv.put(CarrierIdentification.SPN, str);
+                    cv.put(CarrierIdentification.All.SPN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.SPN);
+                    cv.remove(CarrierIdentification.All.SPN);
                     found = true;
                 }
                 break;
             case APN_INDEX:
                 for (String str : attr.preferredApn) {
-                    cv.put(CarrierIdentification.APN, str);
+                    cv.put(CarrierIdentification.All.APN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.APN);
+                    cv.remove(CarrierIdentification.All.APN);
                     found = true;
                 }
                 break;
             case ICCID_PREFIX_INDEX:
                 for (String str : attr.iccidPrefix) {
-                    cv.put(CarrierIdentification.ICCID_PREFIX, str);
+                    cv.put(CarrierIdentification.All.ICCID_PREFIX, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.ICCID_PREFIX);
+                    cv.remove(CarrierIdentification.All.ICCID_PREFIX);
                     found = true;
                 }
                 break;
@@ -490,12 +528,14 @@ public class CarrierIdProvider extends ContentProvider {
     }
 
     private int getAppliedVersion() {
-        final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE,
+                Context.MODE_PRIVATE);
         return sp.getInt(VERSION_KEY, -1);
     }
 
     private void setAppliedVersion(int version) {
-        final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE, Context.MODE_PRIVATE);
+        final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE,
+                Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
         editor.putInt(VERSION_KEY, version);
         editor.apply();
@@ -514,6 +554,81 @@ public class CarrierIdProvider extends ContentProvider {
         }
         buffer.flush();
         return buffer.toByteArray();
+    }
+
+    private int updateCarrierIdForCurrentSubscription(Uri uri, ContentValues cv) {
+        // Parse the subId
+        int subId;
+        try {
+            subId = Integer.parseInt(uri.getLastPathSegment());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("invalid subid in provided uri " + uri);
+        }
+        Log.d(TAG, "updateCarrierIdForSubId: " + subId);
+
+        // Handle DEFAULT_SUBSCRIPTION_ID
+        if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
+            subId = SubscriptionController.getInstance().getDefaultSubId();
+        }
+
+        if (!SubscriptionController.getInstance().isActiveSubId(subId)) {
+            // Remove absent subId from the currentSubscriptionMap.
+            final List activeSubscriptions = Arrays.asList(SubscriptionController.getInstance()
+                    .getActiveSubIdList());
+            int count = 0;
+            for (int subscription : mCurrentSubscriptionMap.keySet()) {
+                if (!activeSubscriptions.contains(subscription)) {
+                    count++;
+                    Log.d(TAG, "updateCarrierIdForSubId: " + subscription);
+                    mCurrentSubscriptionMap.remove(subscription);
+                    getContext().getContentResolver().notifyChange(
+                            CarrierIdentification.CONTENT_URI, null);
+                }
+            }
+            return count;
+        } else {
+            mCurrentSubscriptionMap.put(subId,
+                    new Pair(cv.getAsInteger(CarrierIdentification.CID),
+                    cv.getAsString(CarrierIdentification.NAME)));
+            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI, null);
+            return 1;
+        }
+    }
+
+    private Cursor queryCarrierIdForCurrentSubscription(Uri uri, String[] projectionIn) {
+        // Parse the subId, using the default subId if subId is not provided
+        int subId = SubscriptionController.getInstance().getDefaultSubId();
+        if (!TextUtils.isEmpty(uri.getLastPathSegment())) {
+            try {
+                subId = Integer.parseInt(uri.getLastPathSegment());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("invalid subid in provided uri" + uri);
+            }
+        }
+        Log.d(TAG, "queryCarrierIdForSubId: " + subId);
+
+        // Handle DEFAULT_SUBSCRIPTION_ID
+        if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
+            subId = SubscriptionController.getInstance().getDefaultSubId();
+        }
+
+        if (!mCurrentSubscriptionMap.containsKey(subId)) {
+            // Return an empty cursor if subId is not belonging to current subscriptions.
+            return new MatrixCursor(projectionIn, 0);
+        }
+        final MatrixCursor c = new MatrixCursor(projectionIn, 1);
+        final MatrixCursor.RowBuilder row = c.newRow();
+        for (int i = 0; i < c.getColumnCount(); i++) {
+            final String columnName = c.getColumnName(i);
+            if (CarrierIdentification.CID.equals(columnName)) {
+                row.add(mCurrentSubscriptionMap.get(subId).first);
+            } else if (CarrierIdentification.NAME.equals(columnName)) {
+                row.add(mCurrentSubscriptionMap.get(subId).second);
+            } else {
+                throw new IllegalArgumentException("Invalid column " + projectionIn[i]);
+            }
+        }
+        return c;
     }
 
     private void checkReadPermission() {
