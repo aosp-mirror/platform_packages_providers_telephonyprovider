@@ -2569,9 +2569,7 @@ public class TelephonyProvider extends ContentProvider
         SQLiteDatabase db = getWritableDatabase();
 
         try {
-            // Replace on conflict so that if same APN is present in db with edited
-            // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
-            // edited USER/CARRIER_EDITED
+            // Abort on conflict of unique fields and attempt merge
             long rowID = db.insertWithOnConflict(CARRIERS_TABLE, null, values,
                     SQLiteDatabase.CONFLICT_ABORT);
             if (rowID >= 0) {
