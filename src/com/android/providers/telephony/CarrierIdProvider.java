@@ -122,7 +122,7 @@ public class CarrierIdProvider extends ContentProvider {
     /**
      * ending index of carrier attribute list.
      */
-    private static final int CARRIER_ATTR_END_IDX        = APN_INDEX;
+    private static final int CARRIER_ATTR_END_IDX        = ICCID_PREFIX_INDEX;
     /**
      * The authority string for the CarrierIdProvider
      */
