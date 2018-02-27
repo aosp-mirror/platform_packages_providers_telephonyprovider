@@ -2714,9 +2714,15 @@ public class TelephonyProvider extends ContentProvider
                 values.put(OWNED_BY, OWNED_BY_DPC);
                 // DPC records should not be user editable.
                 values.put(USER_EDITABLE, false);
-                Pair<Uri, Boolean> ret = insertRowWithValue(values);
-                result = ret.first;
-                notify = ret.second;
+
+                final long rowID = db.insertWithOnConflict(CARRIERS_TABLE, null, values,
+                        SQLiteDatabase.CONFLICT_IGNORE);
+                if (rowID >= 0) {
+                    result = ContentUris.withAppendedId(CONTENT_URI, rowID);
+                    notify = true;
+                }
+                if (VDBG) log("insert: inserted " + values.toString() + " rowID = " + rowID);
+
                 break;
             }
 
@@ -3032,7 +3038,7 @@ public class TelephonyProvider extends ContentProvider
                 }
                 count = db.updateWithOnConflict(CARRIERS_TABLE, values,
                         _ID + "=?" + " and " + IS_OWNED_BY_DPC,
-                        new String[] { url.getLastPathSegment() }, SQLiteDatabase.CONFLICT_REPLACE);
+                        new String[] { url.getLastPathSegment() }, SQLiteDatabase.CONFLICT_IGNORE);
                 break;
             }
 
