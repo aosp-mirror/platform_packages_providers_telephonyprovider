@@ -107,7 +107,7 @@
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
 
         <provider android:name="CarrierIdProvider"
-                  android:authorities="carrier_identification"
+                  android:authorities="carrier_id"
                   android:exported="true"
                   android:singleUser="true"
                   android:multiprocess="false" />
