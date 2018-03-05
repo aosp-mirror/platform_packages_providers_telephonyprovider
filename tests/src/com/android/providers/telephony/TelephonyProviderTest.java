@@ -84,10 +84,11 @@ public class TelephonyProviderTest extends TestCase {
     private TelephonyProviderTestable mTelephonyProviderTestable;
 
     private int notifyChangeCount;
+    private int notifyChangeRestoreCount;
 
     private static final String TEST_SUBID = "1";
     private static final String TEST_OPERATOR = "123456";
-    // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 0
+    // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 1
     private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
             "content://telephony/carriers/subId/" + TEST_SUBID);
 
@@ -119,6 +120,9 @@ public class TelephonyProviderTest extends TestCase {
                 public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork,
                         int userHandle) {
                     notifyChangeCount++;
+                    if (URL_RESTOREAPN_USING_SUBID.equals(uri)) {
+                        notifyChangeRestoreCount++;
+                    }
                 }
             };
 
@@ -191,6 +195,7 @@ public class TelephonyProviderTest extends TestCase {
         mContext = new MockContextWithProvider(mTelephonyProviderTestable);
         mContentResolver = (MockContentResolver) mContext.getContentResolver();
         notifyChangeCount = 0;
+        notifyChangeRestoreCount = 0;
     }
 
     @Override
@@ -1114,5 +1119,6 @@ public class TelephonyProviderTest extends TestCase {
         cursor = mContentResolver.query(
                 Carriers.CONTENT_URI, testProjection, null, null, null);
         assertEquals(0, cursor.getCount());
+        assertEquals(3, notifyChangeRestoreCount);
     }
 }
