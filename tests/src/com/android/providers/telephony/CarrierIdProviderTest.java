@@ -18,7 +18,6 @@ package com.android.providers.telephony;
 
 import android.content.ContentValues;
 import android.content.SharedPreferences;
-import android.content.UriMatcher;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.database.ContentObserver;
@@ -26,8 +25,7 @@ import android.database.Cursor;
 import android.database.SQLException;
 import android.net.Uri;
 import android.os.Handler;
-import android.provider.Telephony;
-import android.provider.Telephony.CarrierIdentification;
+import android.provider.Telephony.CarrierId;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.util.Log;
@@ -38,7 +36,6 @@ import junit.framework.TestCase;
 
 import org.junit.Assert;
 import org.junit.Test;
-import org.mockito.Mock;
 
 import java.lang.reflect.Field;
 
@@ -170,9 +167,8 @@ public class CarrierIdProviderTest extends TestCase {
     @Test
     public void testInsertCarrierInfo() {
         try {
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI,
-                    createCarrierInfoInternal());
-            Cursor countCursor = mContentResolver.query(CarrierIdentification.All.CONTENT_URI,
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, createCarrierInfoInternal());
+            Cursor countCursor = mContentResolver.query(CarrierId.All.CONTENT_URI,
                     new String[]{"count(*) AS count"},
                     null,
                     null,
@@ -193,8 +189,8 @@ public class CarrierIdProviderTest extends TestCase {
         try {
             //insert same row twice to break uniqueness constraint
             ContentValues contentValues = createCarrierInfoInternal();
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI, contentValues);
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI, contentValues);
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, contentValues);
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, contentValues);
             Assert.fail("should throw an exception for duplicate carrier info");
         } catch (Exception e) {
             Log.d(TAG, "Error inserting carrier info:" + e);
@@ -209,8 +205,8 @@ public class CarrierIdProviderTest extends TestCase {
         try {
             //insert a row with null mnccmnc to break not null constraint
             ContentValues contentValues = new ContentValues();
-            contentValues.put(CarrierIdentification.All.GID1, dummy_gid1);
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI, contentValues);
+            contentValues.put(CarrierId.All.GID1, dummy_gid1);
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, contentValues);
             Assert.fail("should throw an exception for null mccmnc");
         } catch (SQLException e) {
             Log.d(TAG, "Error inserting carrier info:" + e);
@@ -224,16 +220,16 @@ public class CarrierIdProviderTest extends TestCase {
     @Test
     public void testDeleteCarrierInfo() {
         try {
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI,
+            mContentResolver.insert(CarrierId.All.CONTENT_URI,
                     createCarrierInfoInternal());
         } catch (Exception e) {
             Log.d(TAG, "Error inserting carrier info:" + e);
         }
         int numRowsDeleted = -1;
         try {
-            String whereClause = CarrierIdentification.All.MCCMNC + "=?";
+            String whereClause = CarrierId.All.MCCMNC + "=?";
             String[] whereArgs = new String[] { dummy_mccmnc };
-            numRowsDeleted = mContentResolver.delete(CarrierIdentification.All.CONTENT_URI,
+            numRowsDeleted = mContentResolver.delete(CarrierId.All.CONTENT_URI,
                     whereClause, whereArgs);
         } catch (Exception e) {
             Log.d(TAG, "Error deleting values:" + e);
@@ -251,23 +247,23 @@ public class CarrierIdProviderTest extends TestCase {
         ContentValues contentValues = createCarrierInfoInternal();
 
         try {
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI, contentValues);
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, contentValues);
         } catch (Exception e) {
             Log.d(TAG, "Error inserting carrierInfo:" + e);
         }
 
         try {
-            contentValues.put(CarrierIdentification.CID, 1);
-            mContentResolver.update(CarrierIdentification.All.CONTENT_URI, contentValues,
-                    CarrierIdentification.All.MCCMNC + "=?", new String[] { dummy_mccmnc });
+            contentValues.put(CarrierId.CARRIER_ID, 1);
+            mContentResolver.update(CarrierId.All.CONTENT_URI, contentValues,
+                    CarrierId.All.MCCMNC + "=?", new String[] { dummy_mccmnc });
         } catch (Exception e) {
             Log.d(TAG, "Error updating values:" + e);
         }
 
         try {
-            Cursor findEntry = mContentResolver.query(CarrierIdentification.All.CONTENT_URI,
-                    new String[] { CarrierIdentification.CID },
-                    CarrierIdentification.All.MCCMNC + "=?", new String[] { dummy_mccmnc },
+            Cursor findEntry = mContentResolver.query(CarrierId.All.CONTENT_URI,
+                    new String[] { CarrierId.CARRIER_ID},
+                    CarrierId.All.MCCMNC + "=?", new String[] { dummy_mccmnc },
                     null);
             findEntry.moveToFirst();
             cid = findEntry.getInt(0);
@@ -284,21 +280,21 @@ public class CarrierIdProviderTest extends TestCase {
 
         try {
             // insert a MVNO
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI, contentValues);
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, contentValues);
             // insert its MNO
             contentValues = new ContentValues();
-            contentValues.put(CarrierIdentification.All.MCCMNC, dummy_mccmnc);
-            contentValues.put(CarrierIdentification.CID, 1);
-            mContentResolver.insert(CarrierIdentification.All.CONTENT_URI, contentValues);
+            contentValues.put(CarrierId.All.MCCMNC, dummy_mccmnc);
+            contentValues.put(CarrierId.CARRIER_ID, 1);
+            mContentResolver.insert(CarrierId.All.CONTENT_URI, contentValues);
         } catch (Exception e) {
             Log.d(TAG, "Error inserting carrierInfo:" + e);
         }
 
         Cursor findEntry = null;
-        String[] columns = {CarrierIdentification.CID, CarrierIdentification.All.ICCID_PREFIX};
+        String[] columns = {CarrierId.CARRIER_ID, CarrierId.All.ICCID_PREFIX};
         try {
-            findEntry = mContentResolver.query(CarrierIdentification.All.CONTENT_URI, columns,
-                    CarrierIdentification.All.MCCMNC + "=?", new String[] { dummy_mccmnc },
+            findEntry = mContentResolver.query(CarrierId.All.CONTENT_URI, columns,
+                    CarrierId.All.MCCMNC + "=?", new String[] { dummy_mccmnc },
                     null);
         } catch (Exception e) {
             Log.d(TAG, "Query failed:" + e);
@@ -307,10 +303,10 @@ public class CarrierIdProviderTest extends TestCase {
 
         try {
             // query based on mccmnc & gid1 & iccid_prefix
-            findEntry = mContentResolver.query(CarrierIdentification.All.CONTENT_URI, columns,
-                    CarrierIdentification.All.MCCMNC + "=? and "
-                    + CarrierIdentification.All.GID1 + "=? and "
-                    + CarrierIdentification.All.ICCID_PREFIX + "=?",
+            findEntry = mContentResolver.query(CarrierId.All.CONTENT_URI, columns,
+                    CarrierId.All.MCCMNC + "=? and "
+                    + CarrierId.All.GID1 + "=? and "
+                    + CarrierId.All.ICCID_PREFIX + "=?",
                     new String[] { dummy_mccmnc, dummy_gid1, dummy_iccid_prefix }, null);
         } catch (Exception e) {
             Log.d(TAG, "Query failed:" + e);
@@ -327,7 +323,7 @@ public class CarrierIdProviderTest extends TestCase {
         int version = 0;
         try {
             Cursor cursor = mContext.getContentResolver().query(
-                    Uri.withAppendedPath(Telephony.CarrierIdentification.All.CONTENT_URI,
+                    Uri.withAppendedPath(CarrierId.All.CONTENT_URI,
                             "get_version"), null, null, null);
             cursor.moveToFirst();
             version = cursor.getInt(0);
@@ -342,12 +338,12 @@ public class CarrierIdProviderTest extends TestCase {
         // update carrier id for subId 1
         try {
             ContentValues cv = new ContentValues();
-            cv.put(CarrierIdentification.CID, dummy_cid);
-            cv.put(CarrierIdentification.NAME, dummy_name);
+            cv.put(CarrierId.CARRIER_ID, dummy_cid);
+            cv.put(CarrierId.CARRIER_NAME, dummy_name);
             doReturn(1).when(mSubController).getDefaultSubId();
             doReturn(true).when(mSubController).isActiveSubId(eq(1));
-            mContext.getContentResolver().update(Uri.withAppendedPath(
-                    CarrierIdentification.CONTENT_URI, "1"), cv, null, null);
+            mContext.getContentResolver().update(Uri.withAppendedPath(CarrierId.CONTENT_URI,
+                    "1"), cv, null, null);
         } catch (Exception e) {
             Log.d(TAG, "Error updating current subscription: " + e);
             e.printStackTrace();
@@ -358,9 +354,8 @@ public class CarrierIdProviderTest extends TestCase {
         // query carrier id for subId 1
         try {
             final Cursor c = mContext.getContentResolver().query(
-                    Uri.withAppendedPath(CarrierIdentification.CONTENT_URI, "1"),
-                    new String[] {CarrierIdentification.CID,
-                    CarrierIdentification.NAME}, null, null);
+                    Uri.withAppendedPath(CarrierId.CONTENT_URI, "1"),
+                    new String[] {CarrierId.CARRIER_ID, CarrierId.CARRIER_NAME}, null, null);
             c.moveToFirst();
             carrierId = c.getInt(0);
             carrierName = c.getString(1);
@@ -374,9 +369,8 @@ public class CarrierIdProviderTest extends TestCase {
         int count  = -1;
         try {
             final Cursor c = mContext.getContentResolver().query(
-                    Uri.withAppendedPath(CarrierIdentification.CONTENT_URI, "2"),
-                    new String[]{CarrierIdentification.CID,
-                            CarrierIdentification.NAME}, null, null);
+                    Uri.withAppendedPath(CarrierId.CONTENT_URI, "2"),
+                    new String[]{CarrierId.CARRIER_ID, CarrierId.CARRIER_NAME}, null, null);
             count = c.getCount();
         } catch (Exception e) {
             Log.d(TAG, "Error query current subscription: " + e);
@@ -385,9 +379,8 @@ public class CarrierIdProviderTest extends TestCase {
 
         // query without subId, expect return carrier id of the default subId
         try {
-            final Cursor c = mContext.getContentResolver().query(CarrierIdentification.CONTENT_URI,
-                    new String[]{CarrierIdentification.CID,
-                            CarrierIdentification.NAME}, null, null);
+            final Cursor c = mContext.getContentResolver().query(CarrierId.CONTENT_URI,
+                    new String[]{CarrierId.CARRIER_ID, CarrierId.CARRIER_NAME}, null, null);
             c.moveToFirst();
             carrierId = c.getInt(0);
             carrierName = c.getString(1);
@@ -400,9 +393,8 @@ public class CarrierIdProviderTest extends TestCase {
 
     @Test(expected = IllegalArgumentException.class)
     public void testQueryCurrrentSubscription_wrongProjection() {
-        mContext.getContentResolver().query(CarrierIdentification.CONTENT_URI,
-                new String[]{CarrierIdentification.CID,
-                        CarrierIdentification.NAME, CarrierIdentification.All.MCCMNC},
+        mContext.getContentResolver().query(CarrierId.CONTENT_URI,
+                new String[]{CarrierId.CARRIER_ID, CarrierId.CARRIER_NAME, CarrierId.All.MCCMNC},
                 null, null);
     }
 
@@ -410,8 +402,8 @@ public class CarrierIdProviderTest extends TestCase {
     public void testQueryWithWrongURI() {
         try {
             mContext.getContentResolver().query(Uri.withAppendedPath(
-                    CarrierIdentification.CONTENT_URI, "invalid"),
-                    new String[]{CarrierIdentification.CID, CarrierIdentification.NAME}, null, null);
+                    CarrierId.CONTENT_URI, "invalid"),
+                    new String[]{CarrierId.CARRIER_ID, CarrierId.CARRIER_NAME}, null, null);
             Assert.fail("should throw an exception for wrong uri");
         } catch (IllegalArgumentException ex) {
         }
@@ -421,12 +413,12 @@ public class CarrierIdProviderTest extends TestCase {
     public void testUpdateCurrentSubscription_WrongURI() {
         try {
             ContentValues cv = new ContentValues();
-            cv.put(CarrierIdentification.CID, dummy_cid);
-            cv.put(CarrierIdentification.NAME, dummy_name);
+            cv.put(CarrierId.CARRIER_ID, dummy_cid);
+            cv.put(CarrierId.CARRIER_NAME, dummy_name);
             doReturn(1).when(mSubController).getDefaultSubId();
             doReturn(true).when(mSubController).isActiveSubId(eq(1));
 
-            mContext.getContentResolver().update(CarrierIdentification.CONTENT_URI, cv, null, null);
+            mContext.getContentResolver().update(CarrierId.CONTENT_URI, cv, null, null);
             Assert.fail("should throw an exception for wrong uri");
         } catch (IllegalArgumentException ex) {
             assertFalse(mContentObserver.changed);
@@ -435,16 +427,16 @@ public class CarrierIdProviderTest extends TestCase {
 
     private static ContentValues createCarrierInfoInternal() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CarrierIdentification.All.MCCMNC, dummy_mccmnc);
-        contentValues.put(CarrierIdentification.All.GID1, dummy_gid1);
-        contentValues.put(CarrierIdentification.All.GID2, dummy_gid2);
-        contentValues.put(CarrierIdentification.All.PLMN, dummy_plmn);
-        contentValues.put(CarrierIdentification.All.IMSI_PREFIX_XPATTERN, dummy_imsi_prefix);
-        contentValues.put(CarrierIdentification.All.SPN, dummy_spn);
-        contentValues.put(CarrierIdentification.All.APN, dummy_apn);
-        contentValues.put(CarrierIdentification.All.ICCID_PREFIX, dummy_iccid_prefix);
-        contentValues.put(CarrierIdentification.NAME, dummy_name);
-        contentValues.put(CarrierIdentification.CID, dummy_cid);
+        contentValues.put(CarrierId.All.MCCMNC, dummy_mccmnc);
+        contentValues.put(CarrierId.All.GID1, dummy_gid1);
+        contentValues.put(CarrierId.All.GID2, dummy_gid2);
+        contentValues.put(CarrierId.All.PLMN, dummy_plmn);
+        contentValues.put(CarrierId.All.IMSI_PREFIX_XPATTERN, dummy_imsi_prefix);
+        contentValues.put(CarrierId.All.SPN, dummy_spn);
+        contentValues.put(CarrierId.All.APN, dummy_apn);
+        contentValues.put(CarrierId.All.ICCID_PREFIX, dummy_iccid_prefix);
+        contentValues.put(CarrierId.CARRIER_NAME, dummy_name);
+        contentValues.put(CarrierId.CARRIER_ID, dummy_cid);
         return contentValues;
     }
 }
