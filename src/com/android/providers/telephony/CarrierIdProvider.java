@@ -30,7 +30,7 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Environment;
-import android.provider.Telephony.CarrierIdentification;
+import android.provider.Telephony.CarrierId;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -88,35 +88,35 @@ public class CarrierIdProvider extends ContentProvider {
     private static final int URL_ALL_GET_VERSION    = 3;
 
     /**
-     * index 0: {@link CarrierIdentification.All#MCCMNC}
+     * index 0: {@link CarrierId.All#MCCMNC}
      */
     private static final int MCCMNC_INDEX                = 0;
     /**
-     * index 1: {@link CarrierIdentification.All#IMSI_PREFIX_XPATTERN}
+     * index 1: {@link CarrierId.All#IMSI_PREFIX_XPATTERN}
      */
     private static final int IMSI_PREFIX_INDEX           = 1;
     /**
-     * index 2: {@link CarrierIdentification.All#GID1}
+     * index 2: {@link CarrierId.All#GID1}
      */
     private static final int GID1_INDEX                  = 2;
     /**
-     * index 3: {@link CarrierIdentification.All#GID2}
+     * index 3: {@link CarrierId.All#GID2}
      */
     private static final int GID2_INDEX                  = 3;
     /**
-     * index 4: {@link CarrierIdentification.All#PLMN}
+     * index 4: {@link CarrierId.All#PLMN}
      */
     private static final int PLMN_INDEX                  = 4;
     /**
-     * index 5: {@link CarrierIdentification.All#SPN}
+     * index 5: {@link CarrierId.All#SPN}
      */
     private static final int SPN_INDEX                   = 5;
     /**
-     * index 6: {@link CarrierIdentification.All#APN}
+     * index 6: {@link CarrierId.All#APN}
      */
     private static final int APN_INDEX                   = 6;
     /**
-    * index 7: {@link CarrierIdentification.All#ICCID_PREFIX}
+    * index 7: {@link CarrierId.All#ICCID_PREFIX}
     */
     private static final int ICCID_PREFIX_INDEX          = 7;
     /**
@@ -127,19 +127,19 @@ public class CarrierIdProvider extends ContentProvider {
      * The authority string for the CarrierIdProvider
      */
     @VisibleForTesting
-    public static final String AUTHORITY = "carrier_identification";
+    public static final String AUTHORITY = "carrier_id";
 
     public static final String CARRIER_ID_TABLE = "carrier_id";
 
     private static final List<String> CARRIERS_ID_UNIQUE_FIELDS = new ArrayList<>(Arrays.asList(
-            CarrierIdentification.All.MCCMNC,
-            CarrierIdentification.All.GID1,
-            CarrierIdentification.All.GID2,
-            CarrierIdentification.All.PLMN,
-            CarrierIdentification.All.IMSI_PREFIX_XPATTERN,
-            CarrierIdentification.All.SPN,
-            CarrierIdentification.All.APN,
-            CarrierIdentification.All.ICCID_PREFIX));
+            CarrierId.All.MCCMNC,
+            CarrierId.All.GID1,
+            CarrierId.All.GID2,
+            CarrierId.All.PLMN,
+            CarrierId.All.IMSI_PREFIX_XPATTERN,
+            CarrierId.All.SPN,
+            CarrierId.All.APN,
+            CarrierId.All.ICCID_PREFIX));
 
     private CarrierIdDatabaseHelper mDbHelper;
 
@@ -154,23 +154,23 @@ public class CarrierIdProvider extends ContentProvider {
     public static String getStringForCarrierIdTableCreation(String tableName) {
         return "CREATE TABLE " + tableName
                 + "(_id INTEGER PRIMARY KEY,"
-                + CarrierIdentification.All.MCCMNC + " TEXT NOT NULL,"
-                + CarrierIdentification.All.GID1 + " TEXT,"
-                + CarrierIdentification.All.GID2 + " TEXT,"
-                + CarrierIdentification.All.PLMN + " TEXT,"
-                + CarrierIdentification.All.IMSI_PREFIX_XPATTERN + " TEXT,"
-                + CarrierIdentification.All.SPN + " TEXT,"
-                + CarrierIdentification.All.APN + " TEXT,"
-                + CarrierIdentification.All.ICCID_PREFIX + " TEXT,"
-                + CarrierIdentification.NAME + " TEXT,"
-                + CarrierIdentification.CID + " INTEGER DEFAULT -1,"
+                + CarrierId.All.MCCMNC + " TEXT NOT NULL,"
+                + CarrierId.All.GID1 + " TEXT,"
+                + CarrierId.All.GID2 + " TEXT,"
+                + CarrierId.All.PLMN + " TEXT,"
+                + CarrierId.All.IMSI_PREFIX_XPATTERN + " TEXT,"
+                + CarrierId.All.SPN + " TEXT,"
+                + CarrierId.All.APN + " TEXT,"
+                + CarrierId.All.ICCID_PREFIX + " TEXT,"
+                + CarrierId.CARRIER_NAME + " TEXT,"
+                + CarrierId.CARRIER_ID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
     }
 
     @VisibleForTesting
     public static String getStringForIndexCreation(String tableName) {
         return "CREATE INDEX IF NOT EXISTS mccmncIndex ON " + tableName + " ("
-                + CarrierIdentification.All.MCCMNC + ");";
+                + CarrierId.All.MCCMNC + ");";
     }
 
     @Override
@@ -231,9 +231,9 @@ public class CarrierIdProvider extends ContentProvider {
                         values);
                 if (row > 0) {
                     final Uri newUri = ContentUris.withAppendedId(
-                            CarrierIdentification.All.CONTENT_URI, row);
+                            CarrierId.All.CONTENT_URI, row);
                     getContext().getContentResolver().notifyChange(
-                            CarrierIdentification.All.CONTENT_URI, null);
+                            CarrierId.All.CONTENT_URI, null);
                     return newUri;
                 }
                 return null;
@@ -260,7 +260,7 @@ public class CarrierIdProvider extends ContentProvider {
                 Log.d(TAG, "  delete.count=" + count);
                 if (count > 0) {
                     getContext().getContentResolver().notifyChange(
-                            CarrierIdentification.All.CONTENT_URI, null);
+                            CarrierId.All.CONTENT_URI, null);
                 }
                 return count;
             default:
@@ -288,8 +288,7 @@ public class CarrierIdProvider extends ContentProvider {
                         selectionArgs);
                 Log.d(TAG, "  update.count=" + count);
                 if (count > 0) {
-                    getContext().getContentResolver().notifyChange(
-                            CarrierIdentification.All.CONTENT_URI, null);
+                    getContext().getContentResolver().notifyChange(CarrierId.All.CONTENT_URI, null);
                 }
                 return count;
             default:
@@ -367,8 +366,8 @@ public class CarrierIdProvider extends ContentProvider {
             for (CarrierIdProto.CarrierId id : carrierList.carrierId) {
                 for (CarrierIdProto.CarrierAttribute attr : id.carrierAttribute) {
                     cv = new ContentValues();
-                    cv.put(CarrierIdentification.CID, id.canonicalId);
-                    cv.put(CarrierIdentification.NAME, id.carrierName);
+                    cv.put(CarrierId.CARRIER_ID, id.canonicalId);
+                    cv.put(CarrierId.CARRIER_NAME, id.carrierName);
                     cvs = new ArrayList<>();
                     convertCarrierAttrToContentValues(cv, cvs, attr, 0);
                     for (ContentValues contentVal : cvs) {
@@ -388,8 +387,7 @@ public class CarrierIdProvider extends ContentProvider {
             Log.d(TAG, "update database from pb. inserted rows = " + rows);
             if (rows > 0) {
                 // Notify listener of DB change
-                getContext().getContentResolver().notifyChange(
-                        CarrierIdentification.All.CONTENT_URI, null);
+                getContext().getContentResolver().notifyChange(CarrierId.All.CONTENT_URI, null);
             }
             setAppliedVersion(carrierList.version);
             db.setTransactionSuccessful();
@@ -412,65 +410,65 @@ public class CarrierIdProvider extends ContentProvider {
         switch (index) {
             case MCCMNC_INDEX:
                 for (String str : attr.mccmncTuple) {
-                    cv.put(CarrierIdentification.All.MCCMNC, str);
+                    cv.put(CarrierId.All.MCCMNC, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.MCCMNC);
+                    cv.remove(CarrierId.All.MCCMNC);
                     found = true;
                 }
                 break;
             case IMSI_PREFIX_INDEX:
                 for (String str : attr.imsiPrefixXpattern) {
-                    cv.put(CarrierIdentification.All.IMSI_PREFIX_XPATTERN, str);
+                    cv.put(CarrierId.All.IMSI_PREFIX_XPATTERN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.IMSI_PREFIX_XPATTERN);
+                    cv.remove(CarrierId.All.IMSI_PREFIX_XPATTERN);
                     found = true;
                 }
                 break;
             case GID1_INDEX:
                 for (String str : attr.gid1) {
-                    cv.put(CarrierIdentification.All.GID1, str);
+                    cv.put(CarrierId.All.GID1, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.GID1);
+                    cv.remove(CarrierId.All.GID1);
                     found = true;
                 }
                 break;
             case GID2_INDEX:
                 for (String str : attr.gid2) {
-                    cv.put(CarrierIdentification.All.GID2, str);
+                    cv.put(CarrierId.All.GID2, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.GID2);
+                    cv.remove(CarrierId.All.GID2);
                     found = true;
                 }
                 break;
             case PLMN_INDEX:
                 for (String str : attr.plmn) {
-                    cv.put(CarrierIdentification.All.PLMN, str);
+                    cv.put(CarrierId.All.PLMN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.PLMN);
+                    cv.remove(CarrierId.All.PLMN);
                     found = true;
                 }
                 break;
             case SPN_INDEX:
                 for (String str : attr.spn) {
-                    cv.put(CarrierIdentification.All.SPN, str);
+                    cv.put(CarrierId.All.SPN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.SPN);
+                    cv.remove(CarrierId.All.SPN);
                     found = true;
                 }
                 break;
             case APN_INDEX:
                 for (String str : attr.preferredApn) {
-                    cv.put(CarrierIdentification.All.APN, str);
+                    cv.put(CarrierId.All.APN, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.APN);
+                    cv.remove(CarrierId.All.APN);
                     found = true;
                 }
                 break;
             case ICCID_PREFIX_INDEX:
                 for (String str : attr.iccidPrefix) {
-                    cv.put(CarrierIdentification.All.ICCID_PREFIX, str);
+                    cv.put(CarrierId.All.ICCID_PREFIX, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
-                    cv.remove(CarrierIdentification.All.ICCID_PREFIX);
+                    cv.remove(CarrierId.All.ICCID_PREFIX);
                     found = true;
                 }
                 break;
@@ -581,16 +579,15 @@ public class CarrierIdProvider extends ContentProvider {
                     count++;
                     Log.d(TAG, "updateCarrierIdForSubId: " + subscription);
                     mCurrentSubscriptionMap.remove(subscription);
-                    getContext().getContentResolver().notifyChange(
-                            CarrierIdentification.CONTENT_URI, null);
+                    getContext().getContentResolver().notifyChange(CarrierId.CONTENT_URI, null);
                 }
             }
             return count;
         } else {
             mCurrentSubscriptionMap.put(subId,
-                    new Pair(cv.getAsInteger(CarrierIdentification.CID),
-                    cv.getAsString(CarrierIdentification.NAME)));
-            getContext().getContentResolver().notifyChange(CarrierIdentification.CONTENT_URI, null);
+                    new Pair(cv.getAsInteger(CarrierId.CARRIER_ID),
+                    cv.getAsString(CarrierId.CARRIER_NAME)));
+            getContext().getContentResolver().notifyChange(CarrierId.CONTENT_URI, null);
             return 1;
         }
     }
@@ -620,9 +617,9 @@ public class CarrierIdProvider extends ContentProvider {
         final MatrixCursor.RowBuilder row = c.newRow();
         for (int i = 0; i < c.getColumnCount(); i++) {
             final String columnName = c.getColumnName(i);
-            if (CarrierIdentification.CID.equals(columnName)) {
+            if (CarrierId.CARRIER_ID.equals(columnName)) {
                 row.add(mCurrentSubscriptionMap.get(subId).first);
-            } else if (CarrierIdentification.NAME.equals(columnName)) {
+            } else if (CarrierId.CARRIER_NAME.equals(columnName)) {
                 row.add(mCurrentSubscriptionMap.get(subId).second);
             } else {
                 throw new IllegalArgumentException("Invalid column " + projectionIn[i]);
@@ -637,7 +634,7 @@ public class CarrierIdProvider extends ContentProvider {
         if (status == PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        throw new SecurityException("No permission to read Carrier Identification provider");
+        throw new SecurityException("No permission to read CarrierId provider");
     }
 
     private void checkWritePermission() {
@@ -646,6 +643,6 @@ public class CarrierIdProvider extends ContentProvider {
         if (status == PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        throw new SecurityException("No permission to write Carrier Identification provider");
+        throw new SecurityException("No permission to write CarrierId provider");
     }
 }
