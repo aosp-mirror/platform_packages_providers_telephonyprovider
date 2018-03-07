@@ -77,6 +77,12 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20416"
     mccmnc_tuple: "20420"
+    gid1: "FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20416"
+    mccmnc_tuple: "20420"
+    spn: "T-Mobile  NL"
   }
 }
 carrier_id {
@@ -85,6 +91,11 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "23001"
     spn: "T-Mobile CZ"
+    spn: "KAKTUS"
+    spn: "Mobil CZ"
+    spn: "RWE Mobil"
+    spn: "innogy"
+    spn: "PREmobil"
   }
 }
 carrier_id {
@@ -118,7 +129,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 9
-  carrier_name: "Hrvasky Telekom"
+  carrier_name: "Hrvaski Telekom"
   carrier_attribute {
     mccmnc_tuple: "21901"
     spn: "T-Mobile HR"
@@ -728,7 +739,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 624
-  carrier_name: "Colombia M\303\263vil S.A."
+  carrier_name: "Colombia Móvil S.A."
   carrier_attribute {
     mccmnc_tuple: "732103"
     mccmnc_tuple: "732111"
@@ -736,7 +747,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 625
-  carrier_name: "Telef\303\263nica M\303\263viles Colombia S.A."
+  carrier_name: "Telefónica Móviles Colombia S.A."
   carrier_attribute {
     mccmnc_tuple: "732123"
   }
@@ -828,7 +839,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 673
-  carrier_name: "Telev\303\265rgu AS"
+  carrier_name: "Televõrgu AS"
   carrier_attribute {
     mccmnc_tuple: "24807"
   }
@@ -989,14 +1000,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 741
-  carrier_name: "Cellcom Guin\303\251e SA"
+  carrier_name: "Cellcom Guinée SA"
   carrier_attribute {
     mccmnc_tuple: "61105"
   }
 }
 carrier_id {
   canonical_id: 742
-  carrier_name: "Orange Cara\303\257be Mobiles"
+  carrier_name: "Orange Caraïbe Mobiles"
   carrier_attribute {
     mccmnc_tuple: "34001"
   }
@@ -1017,7 +1028,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 745
-  carrier_name: "Bouygues Telecom Cara\303\257be"
+  carrier_name: "Bouygues Telecom Caraïbe"
   carrier_attribute {
     mccmnc_tuple: "34020"
   }
@@ -1101,9 +1112,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 767
-  carrier_name: "GSM1800/Peoples Telephone Company Ltd."
+  carrier_name: "中國移動香港 China Mobile HK"
   carrier_attribute {
     mccmnc_tuple: "45412"
+    mccmnc_tuple: "45413"
   }
 }
 carrier_id {
@@ -1342,7 +1354,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 893
-  carrier_name: "BIT\304\226"
+  carrier_name: "BITĖ"
   carrier_attribute {
     mccmnc_tuple: "24602"
   }
@@ -1405,7 +1417,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 902
-  carrier_name: "M\303\251dit\303\251l\303\251com"
+  carrier_name: "Méditélécom"
   carrier_attribute {
     mccmnc_tuple: "60400"
   }
@@ -1504,7 +1516,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 963
-  carrier_name: "Reserved for AMPS MIN based IMSI\'s"
+  carrier_name: "Reserved for AMPS MIN based IMSI's"
   carrier_attribute {
     mccmnc_tuple: "53000"
   }
@@ -1568,7 +1580,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 974
-  carrier_name: "movistar (Telef\303\263nica Moviles Panama S.A.)"
+  carrier_name: "movistar (Telefónica Moviles Panama S.A.)"
   carrier_attribute {
     mccmnc_tuple: "71402"
     mccmnc_tuple: "714020"
@@ -1576,7 +1588,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1008
-  carrier_name: "Soci\303\251t\303\251 R\303\251unionnaise du Radiot\303\251l\303\251phone"
+  carrier_name: "Société Réunionnaise du Radiotéléphone"
   carrier_attribute {
     mccmnc_tuple: "64710"
   }
@@ -1762,7 +1774,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1086
-  carrier_name: "Companhia Santomese de Telecomunica\303\247\303\264es"
+  carrier_name: "Companhia Santomese de Telecomunicaçôes"
   carrier_attribute {
     mccmnc_tuple: "62601"
   }
@@ -2398,7 +2410,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1335
-  carrier_name: "Compa\303\261\303\255a de Radiocomunicaciones Moviles S.A."
+  carrier_name: "Compañía de Radiocomunicaciones Moviles S.A."
   carrier_attribute {
     mccmnc_tuple: "722010"
   }
@@ -2427,14 +2439,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1339
-  carrier_name: "Compa\303\261\303\255a de Telefonos del Interior Norte S.A."
+  carrier_name: "Compañía de Telefonos del Interior Norte S.A."
   carrier_attribute {
     mccmnc_tuple: "722320"
   }
 }
 carrier_id {
   canonical_id: 1340
-  carrier_name: "Compa\303\261\303\255a de Telefonos del Interior S.A."
+  carrier_name: "Compañía de Telefonos del Interior S.A."
   carrier_attribute {
     mccmnc_tuple: "722330"
   }
@@ -2560,7 +2572,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1358
-  carrier_name: "MOBI\'S (Mobilina Srpske)"
+  carrier_name: "MOBI'S (Mobilina Srpske)"
   carrier_attribute {
     mccmnc_tuple: "21805"
   }
@@ -2612,59 +2624,6 @@ carrier_id {
   carrier_name: "Proximus"
   carrier_attribute {
     mccmnc_tuple: "20601"
-    imsi_prefix_xpattern: "2060100"
-    imsi_prefix_xpattern: "2060101"
-    imsi_prefix_xpattern: "2060102"
-    imsi_prefix_xpattern: "2060103"
-    imsi_prefix_xpattern: "20601041"
-    imsi_prefix_xpattern: "20601042"
-    imsi_prefix_xpattern: "20601043"
-    imsi_prefix_xpattern: "20601044"
-    imsi_prefix_xpattern: "20601045"
-    imsi_prefix_xpattern: "20601046"
-    imsi_prefix_xpattern: "20601047"
-    imsi_prefix_xpattern: "20601048"
-    imsi_prefix_xpattern: "20601049"
-    imsi_prefix_xpattern: "20601053"
-    imsi_prefix_xpattern: "20601054"
-    imsi_prefix_xpattern: "20601055"
-    imsi_prefix_xpattern: "20601056"
-    imsi_prefix_xpattern: "20601057"
-    imsi_prefix_xpattern: "20601058"
-    imsi_prefix_xpattern: "20601059"
-    imsi_prefix_xpattern: "2060106"
-    imsi_prefix_xpattern: "2060107"
-    imsi_prefix_xpattern: "2060108"
-    imsi_prefix_xpattern: "2060109"
-    imsi_prefix_xpattern: "206011"
-    imsi_prefix_xpattern: "206012"
-    imsi_prefix_xpattern: "206013"
-    imsi_prefix_xpattern: "206014"
-    imsi_prefix_xpattern: "206015"
-    imsi_prefix_xpattern: "206016"
-    imsi_prefix_xpattern: "206017"
-    imsi_prefix_xpattern: "2060181"
-    imsi_prefix_xpattern: "2060182"
-    imsi_prefix_xpattern: "2060183"
-    imsi_prefix_xpattern: "2060184"
-    imsi_prefix_xpattern: "2060185"
-    imsi_prefix_xpattern: "2060186"
-    imsi_prefix_xpattern: "2060187"
-    imsi_prefix_xpattern: "20601881"
-    imsi_prefix_xpattern: "20601882"
-    imsi_prefix_xpattern: "20601883"
-    imsi_prefix_xpattern: "20601884"
-    imsi_prefix_xpattern: "20601885"
-    imsi_prefix_xpattern: "20601886"
-    imsi_prefix_xpattern: "20601887"
-    imsi_prefix_xpattern: "20601888"
-    imsi_prefix_xpattern: "20601889"
-    imsi_prefix_xpattern: "2060189"
-    imsi_prefix_xpattern: "206019"
-    spn: ""
-    spn: "Pay&Go"
-    spn: "Proximus"
-    spn: "BEL PROXIMUS"
   }
 }
 carrier_id {
@@ -3045,14 +3004,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1421
-  carrier_name: "Orange C\303\264te d\'Ivoire"
+  carrier_name: "Orange Côte d'Ivoire"
   carrier_attribute {
     mccmnc_tuple: "61203"
   }
 }
 carrier_id {
   canonical_id: 1422
-  carrier_name: "Comium C\303\264te d\'Ivoire"
+  carrier_name: "Comium Côte d'Ivoire"
   carrier_attribute {
     mccmnc_tuple: "61204"
   }
@@ -3066,14 +3025,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1424
-  carrier_name: "Oricel C\303\264te d\'Ivoire"
+  carrier_name: "Oricel Côte d'Ivoire"
   carrier_attribute {
     mccmnc_tuple: "61206"
   }
 }
 carrier_id {
   canonical_id: 1425
-  carrier_name: "Aircomm C\303\264te d\'Ivoire"
+  carrier_name: "Aircomm Côte d'Ivoire"
   carrier_attribute {
     mccmnc_tuple: "61207"
   }
@@ -3095,7 +3054,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1428
-  carrier_name: "Telef\303\263nica M\303\263vil"
+  carrier_name: "Telefónica Móvil"
   carrier_attribute {
     mccmnc_tuple: "73002"
     mccmnc_tuple: "73007"
@@ -3218,7 +3177,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1446
-  carrier_name: "T+Telecomunica\303\247\303\264es"
+  carrier_name: "T+Telecomunicaçôes"
   carrier_attribute {
     mccmnc_tuple: "62502"
   }
@@ -3396,14 +3355,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1470
-  carrier_name: "Alg\303\251rie Telecom"
+  carrier_name: "Algérie Telecom"
   carrier_attribute {
     mccmnc_tuple: "60301"
   }
 }
 carrier_id {
   canonical_id: 1471
-  carrier_name: "Orascom Telecom Alg\303\251rie"
+  carrier_name: "Orascom Telecom Algérie"
   carrier_attribute {
     mccmnc_tuple: "60302"
   }
@@ -3466,7 +3425,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1480
-  carrier_name: "Sonera Carrier Networks Oy"
+  carrier_name: "Telia"
   carrier_attribute {
     mccmnc_tuple: "24491"
   }
@@ -3653,6 +3612,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "23458"
   }
+  carrier_attribute {
+    mccmnc_tuple: "23410"
+    gid1: "519"
+  }
 }
 carrier_id {
   canonical_id: 1508
@@ -3755,21 +3718,22 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1522
-  carrier_name: "Telef\303\263nica Centroam\303\251rica Guatemala S.A."
+  carrier_name: "Telefónica Centroamérica Guatemala S.A."
   carrier_attribute {
     mccmnc_tuple: "70403"
+    mccmnc_tuple: "704030"
   }
 }
 carrier_id {
   canonical_id: 1523
-  carrier_name: "Guin\303\251tel S.A."
+  carrier_name: "Guinétel S.A."
   carrier_attribute {
     mccmnc_tuple: "63201"
   }
 }
 carrier_id {
   canonical_id: 1524
-  carrier_name: "Spacetel Guin\303\251-Bissau S.A."
+  carrier_name: "Spacetel Guiné-Bissau S.A."
   carrier_attribute {
     mccmnc_tuple: "63202"
   }
@@ -4652,28 +4616,28 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1667
-  carrier_name: "St. Pierre-et-Miquelon T\303\251l\303\251com"
+  carrier_name: "St. Pierre-et-Miquelon Télécom"
   carrier_attribute {
     mccmnc_tuple: "30801"
   }
 }
 carrier_id {
   canonical_id: 1668
-  carrier_name: "Optimus - Telecomunica\303\247\303\265es, S.A."
+  carrier_name: "Optimus - Telecomunicações, S.A."
   carrier_attribute {
     mccmnc_tuple: "26803"
   }
 }
 carrier_id {
   canonical_id: 1669
-  carrier_name: "Oniway - Inforcomunica\303\247\303\264es, S.A."
+  carrier_name: "Oniway - Inforcomunicaçôes, S.A."
   carrier_attribute {
     mccmnc_tuple: "26805"
   }
 }
 carrier_id {
   canonical_id: 1670
-  carrier_name: "TMN - Telecomunica\303\247\303\265es M\303\263veis Nacionais, S.A."
+  carrier_name: "TMN - Telecomunicações Móveis Nacionais, S.A."
   carrier_attribute {
     mccmnc_tuple: "26806"
   }
@@ -4702,7 +4666,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1674
-  carrier_name: "Compa\303\261ia Privada de Comunicaciones S.A."
+  carrier_name: "Compañia Privada de Comunicaciones S.A."
   carrier_attribute {
     mccmnc_tuple: "74403"
   }
@@ -4716,7 +4680,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1676
-  carrier_name: "Orange La R\303\251union"
+  carrier_name: "Orange La Réunion"
   carrier_attribute {
     mccmnc_tuple: "64700"
   }
@@ -4730,7 +4694,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1678
-  carrier_name: "\320\234\320\242\320\241"
+  carrier_name: "МТС"
   carrier_attribute {
     mccmnc_tuple: "25001"
   }
@@ -4751,7 +4715,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1681
-  carrier_name: "\320\221\320\270\320\273\320\260\320\271\320\275"
+  carrier_name: "Билайн"
   carrier_attribute {
     mccmnc_tuple: "25099"
   }
@@ -4842,7 +4806,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1694
-  carrier_name: "Svenska UMTS-N\303\244t AB"
+  carrier_name: "Svenska UMTS-Nät AB"
   carrier_attribute {
     mccmnc_tuple: "24005"
   }
@@ -5144,7 +5108,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1737
-  carrier_name: "T\303\274rk Telekom"
+  carrier_name: "Türk Telekom"
   carrier_attribute {
     mccmnc_tuple: "28603"
     mccmnc_tuple: "28604"
@@ -6058,7 +6022,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1871
-  carrier_name: "Corporaci\303\263n Digitel"
+  carrier_name: "Corporación Digitel"
   carrier_attribute {
     mccmnc_tuple: "73402"
   }
@@ -6128,7 +6092,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1881
-  carrier_name: "\351\201\240\345\202\263\351\233\273\344\277\241 Far EasTone Telecom"
+  carrier_name: "遠傳電信 Far EasTone Telecom"
   carrier_attribute {
     mccmnc_tuple: "46601"
     mccmnc_tuple: "46688"
@@ -6136,7 +6100,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1882
-  carrier_name: "\344\272\236\345\244\252\351\233\273\344\277\241 Asia Pacific Telecom"
+  carrier_name: "亞太電信 Asia Pacific Telecom"
   carrier_attribute {
     mccmnc_tuple: "46602"
     mccmnc_tuple: "46605"
@@ -6151,7 +6115,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1884
-  carrier_name: "\344\270\255\350\217\257\351\233\273\344\277\241_Chunghwa Telecom"
+  carrier_name: "中華電信_Chunghwa Telecom"
   carrier_attribute {
     mccmnc_tuple: "46611"
     mccmnc_tuple: "46692"
@@ -6159,7 +6123,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1886
-  carrier_name: "\345\217\260\347\201\243\344\271\213\346\230\237 T Star"
+  carrier_name: "台灣之星 T Star"
   carrier_attribute {
     mccmnc_tuple: "46689"
   }
@@ -6173,7 +6137,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1888
-  carrier_name: "\345\217\260\347\201\243\345\244\247\345\223\245\345\244\247 Taiwan Mobile Telecom"
+  carrier_name: "台灣大哥大 Taiwan Mobile Telecom"
   carrier_attribute {
     mccmnc_tuple: "46697"
   }
@@ -6218,7 +6182,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1894
-  carrier_name: "SoftBank\343\203\273Y!mobile"
+  carrier_name: "SoftBank・Y!mobile"
   carrier_attribute {
     mccmnc_tuple: "44020"
   }
@@ -6260,7 +6224,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1900
-  carrier_name: "Network Norway"
+  carrier_name: "OneCall"
   carrier_attribute {
     mccmnc_tuple: "24205"
   }
@@ -6965,6 +6929,31 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 1989
+  carrier_name: "Project Fi"
+  carrier_attribute {
+    mccmnc_tuple: "23420"
+    gid1: "0306"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "45403"
+    gid1: "0206"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310120"
+    spn: "Fi Network"
+    spn: "nova"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    imsi_prefix_xpattern: "31026097"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311580"
+    imsi_prefix_xpattern: "3115801"
+  }
+}
+carrier_id {
   canonical_id: 1990
   carrier_name: "Golan Telecom"
   carrier_attribute {
@@ -7105,13 +7094,15 @@ carrier_id {
   carrier_name: "Movistar (Telefonica Moviles El Salvador)"
   carrier_attribute {
     mccmnc_tuple: "70604"
+    mccmnc_tuple: "706040"
   }
 }
 carrier_id {
   canonical_id: 2010
-  carrier_name: "Movistar (Telefon\303\255a Celular de Nicaragua)"
+  carrier_name: "Movistar (Telefonía Celular de Nicaragua)"
   carrier_attribute {
     mccmnc_tuple: "71030"
+    mccmnc_tuple: "710300"
   }
 }
 carrier_id {
@@ -7325,7 +7316,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2038
-  carrier_name: "webe"
+  carrier_name: "unifi mobile"
   carrier_attribute {
     mccmnc_tuple: "50211"
     mccmnc_tuple: "502153"
@@ -7795,8 +7786,39 @@ carrier_id {
   canonical_id: 2114
   carrier_name: "EWE"
   carrier_attribute {
-    mccmnc_tuple: "26002"
+    mccmnc_tuple: "26202"
     spn: "ewe.de"
   }
 }
-version: 1
+carrier_id {
+  canonical_id: 2115
+  carrier_name: "Glo"
+  carrier_attribute {
+    mccmnc_tuple: "62150"
+  }
+}
+carrier_id {
+  canonical_id: 2116
+  carrier_name: "Ratel"
+  carrier_attribute {
+    mccmnc_tuple: "44010"
+    preferred_apn: "ratel.com"
+  }
+}
+carrier_id {
+  canonical_id: 2117
+  carrier_name: "TalkTalk"
+  carrier_attribute {
+    mccmnc_tuple: "23410"
+    gid1: "537"
+  }
+}
+carrier_id {
+  canonical_id: 2118
+  carrier_name: "giffgaff"
+  carrier_attribute {
+    mccmnc_tuple: "23410"
+    gid1: "508"
+  }
+}
+version: 2
