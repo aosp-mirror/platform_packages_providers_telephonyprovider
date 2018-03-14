@@ -21,6 +21,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
@@ -949,6 +950,29 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Sms.TYPE + "=" + Sms.MESSAGE_TYPE_INBOX +
                    " OR " +
                    Sms.TYPE + "=" + Sms.MESSAGE_TYPE_SENT + ";");
+
+        if (mContext.getPackageManager().hasSystemFeature(PackageManager.FEATURE_AUTOMOTIVE)) {
+            // Create a table to keep track of changes to SMS table - specifically on update to read
+            // and deletion of msgs
+            db.execSQL("CREATE TABLE sms_changes (" +
+                       "_id INTEGER PRIMARY KEY," +
+                       "orig_rowid INTEGER," +
+                       "sub_id INTEGER," +
+                       "type INTEGER," +
+                       "new_read_status INTEGER" +
+                       ");");
+            db.execSQL("CREATE TRIGGER sms_update_on_read_change_row " +
+                        "AFTER UPDATE OF read ON sms WHEN NEW.read != OLD.read " +
+                        "BEGIN " +
+                        "  INSERT INTO sms_changes VALUES(null, NEW._id, NEW.sub_id, " +
+                        "0, NEW.read); " +
+                        "END;");
+            db.execSQL("CREATE TRIGGER sms_delete_change_row " +
+                       "AFTER DELETE ON sms " +
+                       "BEGIN " +
+                       "  INSERT INTO sms_changes values(null, OLD._id, OLD.sub_id, 1, null); " +
+                       "END;");
+        }
     }
 
     private void createCommonTables(SQLiteDatabase db) {
