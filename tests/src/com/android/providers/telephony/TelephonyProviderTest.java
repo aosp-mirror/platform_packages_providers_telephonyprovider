@@ -54,10 +54,16 @@ import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Map;
@@ -95,6 +101,11 @@ public class TelephonyProviderTest extends TestCase {
     // Used to test the "restore to default"
     private static final Uri URL_RESTOREAPN_USING_SUBID = Uri.parse(
             "content://telephony/carriers/restore/subId/" + TEST_SUBID);
+    // Used to test the preferred apn
+    private static final Uri URL_PREFERAPN_USING_SUBID = Uri.parse(
+            "content://telephony/carriers/preferapn/subId/" + TEST_SUBID);
+
+    private static final String COLUMN_APN_ID = "apn_id";
 
     // Constants for DPC related tests.
     private static final Uri URI_DPC = Uri.parse("content://telephony/carriers/dpc");
@@ -169,7 +180,7 @@ public class TelephonyProviderTest extends TestCase {
         }
 
         @Override
-       public SharedPreferences getSharedPreferences(String name, int mode) {
+        public SharedPreferences getSharedPreferences(String name, int mode) {
           return mSharedPreferences;
         }
 
@@ -1029,6 +1040,53 @@ public class TelephonyProviderTest extends TestCase {
         // be seen
         Cursor cur = mContentResolver.query(URI_TELEPHONY, testProjection, null, null, null);
         assertEquals(0, cur.getCount());
+    }
+
+    /**
+     * Test URL_PREFERAPN_USING_SUBID works correctly.
+     */
+    @Test
+    @SmallTest
+    public void testQueryPreferredApn() {
+        // create APNs
+        ContentValues preferredValues = new ContentValues();
+        preferredValues.put(Carriers.APN, "apnName");
+        preferredValues.put(Carriers.NAME, "name");
+        preferredValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        ContentValues otherValues = new ContentValues();
+        final String otherApn = "otherApnName";
+        final String otherName = "otherName";
+        otherValues.put(Carriers.APN, otherApn);
+        otherValues.put(Carriers.NAME, otherName);
+        otherValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        // insert APNs
+        // TODO if using URL_TELEPHONY, SubscriptionManager.getDefaultSubscriptionId() returns -1
+        Log.d(TAG, "testQueryPreferredApn: Bulk inserting contentValues=" + preferredValues + ", "
+                + otherValues);
+        Uri uri = mContentResolver.insert(CONTENT_URI_WITH_SUBID, preferredValues);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, otherValues);
+        final String preferredApnIdString = uri.getLastPathSegment();
+        final long preferredApnId = Long.parseLong(preferredApnIdString);
+        Log.d(TAG, "testQueryPreferredApn: preferredApnString=" + preferredApnIdString);
+
+        // set preferred apn
+        preferredValues.put(COLUMN_APN_ID, preferredApnIdString);
+        mContentResolver.insert(URL_PREFERAPN_USING_SUBID, preferredValues);
+
+        // query preferred APN
+        SharedPreferences sp = mContext.getSharedPreferences("", 0);
+        when(sp.getLong(anyString(), anyLong())).thenReturn(preferredApnId);
+        final String[] testProjection = { Carriers.APN, Carriers.NAME };
+        Cursor cursor = mContentResolver.query(
+                URL_PREFERAPN_USING_SUBID, testProjection, null, null, null);
+
+        // verify that preferred apn was set and retreived
+        ArgumentCaptor<Long> argumentCaptor = ArgumentCaptor.forClass(Long.class);
+        SharedPreferences.Editor e = sp.edit();
+        verify(e, times(1)).putLong(eq(COLUMN_APN_ID + TEST_SUBID), argumentCaptor.capture());
+        assertEquals(preferredApnId, (long) argumentCaptor.getValue());
+        assertEquals(1, cursor.getCount());
     }
 
     /**
