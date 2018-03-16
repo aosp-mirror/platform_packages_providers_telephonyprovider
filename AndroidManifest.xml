@@ -66,6 +66,13 @@
                   android:singleUser="true"
                   android:readPermission="android.permission.READ_SMS" />
 
+        <provider android:name="SmsChangesProvider"
+                  android:authorities="sms-changes"
+                  android:multiprocess="false"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:readPermission="android.permission.READ_SMS" />
+
         <!-- This is a singleton provider that is used by all users.
              A new instance is not created for each user. And the db is shared
              as well.
