@@ -1504,6 +1504,19 @@ public class TelephonyProvider extends ContentProvider
             }
 
             if (!onUpgrade) {
+                // Do not overwrite a carrier or user edit with EDITED=UNEDITED
+                if (newRow.containsKey(EDITED)) {
+                    int oldEdited = oldRow.getInt(oldRow.getColumnIndex(EDITED));
+                    int newEdited = newRow.getAsInteger(EDITED);
+                    if (newEdited == UNEDITED && (oldEdited == CARRIER_EDITED
+                                || oldEdited == CARRIER_DELETED
+                                || oldEdited == CARRIER_DELETED_BUT_PRESENT_IN_XML
+                                || oldEdited == USER_EDITED
+                                || oldEdited == USER_DELETED
+                                || oldEdited == USER_DELETED_BUT_PRESENT_IN_XML)) {
+                        newRow.remove(EDITED);
+                    }
+                }
                 mergedValues.putAll(newRow);
             }
 
