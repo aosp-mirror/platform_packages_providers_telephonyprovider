@@ -2265,7 +2265,7 @@ public class TelephonyProvider extends ContentProvider
 
     private long getPreferredApnIdFromApn(int subId) {
         log("getPreferredApnIdFromApn: for subId " + subId);
-        SQLiteDatabase db = getWritableDatabase();
+        SQLiteDatabase db = getReadableDatabase();
         String where = TextUtils.join("=? and ", CARRIERS_UNIQUE_FIELDS) + "=?";
         String[] whereArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
