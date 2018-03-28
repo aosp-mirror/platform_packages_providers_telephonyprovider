@@ -82,7 +82,7 @@ public class CarrierProvider extends ContentProvider {
                 null, values);
         if (row > 0) {
             Uri newUri = ContentUris.withAppendedId(CONTENT_URI, row);
-            getContext().getContentResolver().notifyChange(newUri, null);
+            getContext().getContentResolver().notifyChange(CONTENT_URI, null);
             return newUri;
         }
         return null;
@@ -115,6 +115,9 @@ public class CarrierProvider extends ContentProvider {
         }
         final int count = getWritableDatabase().update(CarrierDatabaseHelper.CARRIER_KEY_TABLE,
                 values, selection, selectionArgs);
+        if (count > 0) {
+            getContext().getContentResolver().notifyChange(CONTENT_URI, null);
+        }
         Log.d(TAG, "  update.count=" + count);
         return count;
     }
