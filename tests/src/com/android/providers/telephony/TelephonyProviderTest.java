@@ -94,6 +94,8 @@ public class TelephonyProviderTest extends TestCase {
 
     private static final String TEST_SUBID = "1";
     private static final String TEST_OPERATOR = "123456";
+    private static final String TEST_MCC = "123";
+    private static final String TEST_MNC = "456";
     // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 1
     private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
             "content://telephony/carriers/subId/" + TEST_SUBID);
@@ -285,6 +287,59 @@ public class TelephonyProviderTest extends TestCase {
     @SmallTest
     public void testInsertCarriers() {
         doSimpleTestForUri(Carriers.CONTENT_URI);
+    }
+
+    /**
+     * Test updating values in carriers table. Verify that when update hits a conflict using URL_ID
+     * we merge the rows.
+     */
+    @Test
+    @SmallTest
+    public void testUpdateConflictingCarriers() {
+        // insert 2 test contentValues
+        ContentValues contentValues = new ContentValues();
+        final String insertApn = "exampleApnName";
+        final String insertName = "exampleName";
+        final String insertNumeric = TEST_OPERATOR;
+        final String insertMcc = TEST_MCC;
+        final String insertMnc = TEST_MNC;
+        contentValues.put(Carriers.APN, insertApn);
+        contentValues.put(Carriers.NAME, insertName);
+        contentValues.put(Carriers.NUMERIC, insertNumeric);
+        contentValues.put(Carriers.MCC, insertMcc);
+        contentValues.put(Carriers.MNC, insertMnc);
+
+        ContentValues contentValues2 = new ContentValues();
+        final String insertName2 = "exampleName2";
+        contentValues2.put(Carriers.NAME, insertName2);
+
+        Uri row1 = mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+        Uri row2 = mContentResolver.insert(Carriers.CONTENT_URI, contentValues2);
+
+        // use URL_ID to update row2 apn so it conflicts with row1
+        Log.d(TAG, "testUpdateConflictingCarriers: update row2=" + row2);
+        contentValues.put(Carriers.NAME, insertName2);
+        mContentResolver.update(row2, contentValues, null, null);
+
+        // verify that only 1 APN now exists and it has the fields from row1 and row2
+        final String[] testProjection =
+        {
+            Carriers.APN,
+            Carriers.NAME,
+            Carriers.NUMERIC,
+            Carriers.MCC,
+            Carriers.MNC
+        };
+        Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection, null, null,
+                null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(insertApn, cursor.getString(0 /* APN */));
+        assertEquals(insertName2, cursor.getString(1 /* NAME */));
+        assertEquals(insertNumeric, cursor.getString(2 /* NUMERIC */));
+        assertEquals(insertMcc, cursor.getString(3 /* MCC */));
+        assertEquals(insertMnc, cursor.getString(4 /* MNC */));
     }
 
     /**
