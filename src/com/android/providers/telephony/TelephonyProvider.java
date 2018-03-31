@@ -2985,6 +2985,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_ID:
             {
+                String rowID = url.getLastPathSegment();
                 if (where != null || whereArgs != null) {
                     throw new UnsupportedOperationException(
                             "Cannot update URL " + url + " with a where clause");
@@ -2994,18 +2995,21 @@ public class TelephonyProvider extends ContentProvider
                 }
 
                 try {
-                    count = db.updateWithOnConflict(CARRIERS_TABLE, values,
-                        _ID + "=?" + " and " + IS_NOT_OWNED_BY_DPC,
-                        new String[] { url.getLastPathSegment() }, SQLiteDatabase.CONFLICT_ABORT);
+                    count = db.updateWithOnConflict(CARRIERS_TABLE, values, _ID + "=?" + " and " +
+                            IS_NOT_OWNED_BY_DPC, new String[] { rowID },
+                            SQLiteDatabase.CONFLICT_ABORT);
                 } catch (SQLException e) {
                     // Update failed which could be due to a conflict. Check if that is
                     // the case and merge the entries
+                    log("update: exception " + e);
                     Cursor oldRow = DatabaseHelper.selectConflictingRow(db, CARRIERS_TABLE, values);
                     if (oldRow != null) {
                         ContentValues mergedValues = new ContentValues();
                         DatabaseHelper.mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
                                 mergedValues, false, getContext());
                         oldRow.close();
+                        db.delete(CARRIERS_TABLE, _ID + "=?" + " and " + IS_NOT_OWNED_BY_DPC,
+                                new String[] { rowID });
                     }
                 }
                 break;
