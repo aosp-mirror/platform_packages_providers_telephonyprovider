@@ -1145,6 +1145,50 @@ public class TelephonyProviderTest extends TestCase {
     }
 
     /**
+     *  Test that APN_SET_ID works correctly.
+     */
+    @Test
+    @SmallTest
+    public void testApnSetId() {
+        // create APNs
+        ContentValues values1 = new ContentValues();
+        final String apn = "apnName";
+        final String apnName = "name";
+        values1.put(Carriers.APN, apn);
+        values1.put(Carriers.NAME, apnName);
+        values1.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        ContentValues values2 = new ContentValues();
+        final String otherApn = "otherApnName";
+        final String otherName = "otherName";
+        values2.put(Carriers.APN, otherApn);
+        values2.put(Carriers.NAME, otherName);
+        values2.put(Carriers.NUMERIC, TEST_OPERATOR);
+        values2.put(Carriers.APN_SET_ID, 1);
+
+        // insert APNs
+        // TODO if using URL_TELEPHONY, SubscriptionManager.getDefaultSubscriptionId() returns -1
+        Log.d(TAG, "testApnSetId: inserting contentValues=" + values1 + ", " + values2);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values1);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values2);
+
+        // query APN with default APN_SET_ID
+        final String[] testProjection = { Carriers.NAME };
+        Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection,
+                Carriers.APN_SET_ID + "=?", new String[] { "0" }, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(apnName, cursor.getString(0));
+
+        // query APN with APN_SET_ID=1
+        cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection,
+                Carriers.APN_SET_ID + "=?", new String[] { "1" }, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(otherName, cursor.getString(0));
+    }
+
+    /**
      * Test URL_RESTOREAPN_USING_SUBID works correctly.
      */
     @Test
