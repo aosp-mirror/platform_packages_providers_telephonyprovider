@@ -37,6 +37,7 @@ import android.os.Build;
 import android.os.FileUtils;
 import android.os.Process;
 import android.provider.Telephony.Carriers;
+import android.support.test.InstrumentationRegistry;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
@@ -123,8 +124,6 @@ public class TelephonyProviderTest extends TestCase {
      */
     private class MockContextWithProvider extends MockContext {
         private final MockContentResolver mResolver;
-        private final SharedPreferences mSharedPreferences = mock(SharedPreferences.class);
-        private final SharedPreferences.Editor mEditor = mock(SharedPreferences.Editor.class);
         private TelephonyManager mTelephonyManager = mock(TelephonyManager.class);
 
         public MockContextWithProvider(TelephonyProvider telephonyProvider) {
@@ -155,8 +154,6 @@ public class TelephonyProviderTest extends TestCase {
             // mResolver can send queries to mTelephonyProvider
             mResolver.addProvider("telephony", telephonyProvider);
             Log.d(TAG, "MockContextWithProvider: Add telephonyProvider to mResolver");
-
-            when(mSharedPreferences.edit()).thenReturn(mEditor);
         }
 
         @Override
@@ -183,7 +180,7 @@ public class TelephonyProviderTest extends TestCase {
 
         @Override
         public SharedPreferences getSharedPreferences(String name, int mode) {
-          return mSharedPreferences;
+            return InstrumentationRegistry.getContext().getSharedPreferences(name, mode);
         }
 
         // Gives permission to write to the APN table within the MockContext
@@ -1105,8 +1102,10 @@ public class TelephonyProviderTest extends TestCase {
     public void testQueryPreferredApn() {
         // create APNs
         ContentValues preferredValues = new ContentValues();
-        preferredValues.put(Carriers.APN, "apnName");
-        preferredValues.put(Carriers.NAME, "name");
+        final String preferredApn = "preferredApn";
+        final String preferredName = "preferredName";
+        preferredValues.put(Carriers.APN, preferredApn);
+        preferredValues.put(Carriers.NAME, preferredName);
         preferredValues.put(Carriers.NUMERIC, TEST_OPERATOR);
         ContentValues otherValues = new ContentValues();
         final String otherApn = "otherApnName";
@@ -1130,18 +1129,15 @@ public class TelephonyProviderTest extends TestCase {
         mContentResolver.insert(URL_PREFERAPN_USING_SUBID, preferredValues);
 
         // query preferred APN
-        SharedPreferences sp = mContext.getSharedPreferences("", 0);
-        when(sp.getLong(anyString(), anyLong())).thenReturn(preferredApnId);
         final String[] testProjection = { Carriers.APN, Carriers.NAME };
         Cursor cursor = mContentResolver.query(
                 URL_PREFERAPN_USING_SUBID, testProjection, null, null, null);
 
         // verify that preferred apn was set and retreived
-        ArgumentCaptor<Long> argumentCaptor = ArgumentCaptor.forClass(Long.class);
-        SharedPreferences.Editor e = sp.edit();
-        verify(e, times(1)).putLong(eq(COLUMN_APN_ID + TEST_SUBID), argumentCaptor.capture());
-        assertEquals(preferredApnId, (long) argumentCaptor.getValue());
         assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(preferredApn, cursor.getString(0));
+        assertEquals(preferredName, cursor.getString(1));
     }
 
     /**
@@ -1186,6 +1182,71 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(1, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(otherName, cursor.getString(0));
+    }
+
+    /**
+     *  Test that querying with the PREFERAPNSET url yields all APNs in the preferred set.
+     */
+    @Test
+    @SmallTest
+    public void testPreferApnSetUrl() {
+        // create APNs
+        ContentValues values1 = new ContentValues();
+        final String apn = "apnName";
+        final String apnName = "name";
+        values1.put(Carriers.APN, apn);
+        values1.put(Carriers.NAME, apnName);
+        values1.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        ContentValues values2 = new ContentValues();
+        final String apn2 = "otherApnName";
+        final String name2 = "name2";
+        values2.put(Carriers.APN, apn2);
+        values2.put(Carriers.NAME, name2);
+        values2.put(Carriers.NUMERIC, TEST_OPERATOR);
+        values2.put(Carriers.APN_SET_ID, 1);
+
+        ContentValues values3 = new ContentValues();
+        final String apn3 = "thirdApnName";
+        final String name3 = "name3";
+        values3.put(Carriers.APN, apn3);
+        values3.put(Carriers.NAME, name3);
+        values3.put(Carriers.NUMERIC, TEST_OPERATOR);
+        values3.put(Carriers.APN_SET_ID, 1);
+
+        // insert APNs
+        // we explicitly include subid, as SubscriptionManager.getDefaultSubscriptionId() returns -1
+        Log.d(TAG, "testPreferApnSetUrl: inserting contentValues=" + values1 + ", " + values2
+                + ", " + values3);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values1);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values2);
+        Uri uri = mContentResolver.insert(CONTENT_URI_WITH_SUBID, values3);
+
+        // before there's a preferred APN set, assert that all APNs are returned
+        final String[] testProjection = { Carriers.NAME };
+        Cursor cursor = mContentResolver.query(
+                Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
+                testProjection, null, null, null);
+        assertEquals(3, cursor.getCount());
+
+        // set the APN from values3 (apn_set_id = 1) to the preferred APN
+        final String preferredApnIdString = uri.getLastPathSegment();
+        final long preferredApnId = Long.parseLong(preferredApnIdString);
+        ContentValues prefer = new ContentValues();
+        prefer.put("apn_id", preferredApnId);
+        int count = mContentResolver.update(URL_PREFERAPN_USING_SUBID, prefer, null, null);
+        assertEquals(1, count);
+
+        // query APN with PREFERAPNSET url
+        // explicitly include SUB_ID, as SubscriptionManager.getDefaultSubscriptionId() returns -1
+        cursor = mContentResolver.query(
+                Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
+                testProjection, null, null, null);
+        assertEquals(2, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(name2, cursor.getString(0));
+        cursor.moveToNext();
+        assertEquals(name3, cursor.getString(0));
     }
 
     /**
