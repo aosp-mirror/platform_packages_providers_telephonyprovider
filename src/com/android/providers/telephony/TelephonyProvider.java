@@ -133,7 +133,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 25 << 16;
+    private static final int DATABASE_VERSION = 26 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
