@@ -17,12 +17,14 @@
 package com.android.providers.telephony;
 
 import android.app.AppOpsManager;
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.content.res.Resources;
 import android.database.ContentObserver;
+import android.database.Cursor;
 import android.net.Uri;
 import android.provider.Telephony;
 import android.telephony.TelephonyManager;
@@ -58,6 +60,20 @@ public class SmsProviderTest extends TestCase {
 
     private int notifyChangeCount;
 
+    private final String mFakePdu = "123abc";
+    private final String mFakeAddress = "FakeAddress";
+    private final String mFakeOriginatingAddr = "FakeDisplayAddress";
+    private final String mFakeMessageBody = "FakeMessageBody";
+    private final int mFakeRefNumber = 123;
+    private final int mFakeSequence = 1;
+    private final int mFakeCount = 1;
+    private final int mFakePort = 1 << 19;
+    private final long mDate = 0;
+
+    private final Uri mRawUri =
+            Uri.withAppendedPath(Telephony.Sms.CONTENT_URI, "raw");
+    private final Uri mRawUriPermanentDelete =
+            Uri.withAppendedPath(Telephony.Sms.CONTENT_URI, "raw/permanentDelete");
 
     /**
      * This is used to give the SmsProviderTest a mocked context which takes a
@@ -169,5 +185,87 @@ public class SmsProviderTest extends TestCase {
         Log.d(TAG, "testInsertAttachmentTable Inserting contentValues: " + values);
         assertEquals(Uri.parse("content://sms/attachments/1"),
                 mContentResolver.insert(Uri.parse("content://sms/attachments"), values));
+    }
+
+    @Test
+    @SmallTest
+    public void testRawTableInsert() {
+        // insert test contentValues
+        assertEquals(Uri.parse("content://sms/raw/1"),
+                mContentResolver.insert(mRawUri, getFakeRawValue()));
+
+        // Query and confirm contents.
+        Cursor cursor = mContentResolver.query(mRawUri, null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToNext();
+        assertEquals(mFakePdu, cursor.getString(cursor.getColumnIndex("pdu")));
+        assertEquals(mFakeAddress, cursor.getString(cursor.getColumnIndex("address")));
+        assertEquals(mFakeOriginatingAddr,
+                cursor.getString(cursor.getColumnIndex("display_originating_addr")));
+        assertEquals(mFakeMessageBody, cursor.getString(cursor.getColumnIndex("message_body")));
+        assertEquals(mDate, cursor.getInt(cursor.getColumnIndex("date")));
+        assertEquals(mFakePort, cursor.getInt(cursor.getColumnIndex("destination_port")));
+        assertEquals(mFakeRefNumber, cursor.getInt(cursor.getColumnIndex("reference_number")));
+        assertEquals(mFakeSequence, cursor.getInt(cursor.getColumnIndex("sequence")));
+        assertEquals(mFakeCount, cursor.getInt(cursor.getColumnIndex("count")));
+        assertEquals(0, cursor.getInt(cursor.getColumnIndex("deleted")));
+
+        // Insert another two.
+        assertEquals(Uri.parse("content://sms/raw/2"),
+                mContentResolver.insert(mRawUri, getFakeRawValue()));
+        assertEquals(Uri.parse("content://sms/raw/3"),
+                mContentResolver.insert(mRawUri, getFakeRawValue()));
+
+        cursor.close();
+    }
+
+    @Test
+    @SmallTest
+    public void testRawTableDelete() throws Exception {
+        assertEquals(Uri.parse("content://sms/raw/1"),
+                mContentResolver.insert(mRawUri, getFakeRawValue()));
+
+        // Mark as deleted.
+        String where = "reference_number=?";
+        String[] whereArgs = {Integer.toString(mFakeRefNumber)};
+        assertEquals(1, mContentResolver.delete(mRawUri, where, whereArgs));
+
+        // The row should still be in table, with column "deleted" to be 1.
+        Cursor cursor = mSmsProviderTestable.mDeOpenHelper.getReadableDatabase().query(
+                "raw", null, null, null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToNext();
+        assertEquals(1, cursor.getInt(cursor.getColumnIndex("deleted")));
+        cursor.close();
+
+        // The deleted row should be purged.
+        cursor = mContentResolver.query(mRawUri, null, null, null, null);
+        assertEquals(0, cursor.getCount());
+
+        // Permanent delete all rows.
+        assertEquals(Uri.parse("content://sms/raw/1"),
+                mContentResolver.insert(mRawUri, getFakeRawValue()));
+        assertEquals(Uri.parse("content://sms/raw/2"),
+                mContentResolver.insert(mRawUri, getFakeRawValue()));
+        assertEquals(2, mContentResolver.delete(mRawUriPermanentDelete, null, null));
+        cursor = mSmsProviderTestable.mDeOpenHelper.getReadableDatabase().query(
+                "raw", null, null, null, null, null, null);
+        assertEquals(0, cursor.getCount());
+        cursor.close();
+    }
+
+    private ContentValues getFakeRawValue() {
+        ContentValues values = new ContentValues();
+        values.put("pdu", mFakePdu);
+        values.put("date", mDate);
+        values.put("destination_port", mFakePort);
+        values.put("address", mFakeAddress);
+        values.put("display_originating_addr", mFakeOriginatingAddr);
+        values.put("reference_number", mFakeRefNumber);
+        values.put("sequence", mFakeSequence);
+        values.put("count", mFakeCount);
+        values.put("message_body", mFakeMessageBody);
+
+        return values;
     }
 }

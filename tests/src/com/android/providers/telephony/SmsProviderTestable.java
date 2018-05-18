@@ -25,30 +25,18 @@ import android.util.Log;
 public class SmsProviderTestable extends SmsProvider {
     private static final String TAG = "SmsProviderTestable";
 
-    private InMemorySmsProviderDbHelper mDbHelper;
-
     @Override
     public boolean onCreate() {
         Log.d(TAG, "onCreate called: mDbHelper = new InMemorySmsProviderDbHelper()");
-        mDbHelper = new InMemorySmsProviderDbHelper();
+        mCeOpenHelper = new InMemorySmsProviderDbHelper();
+        mDeOpenHelper = new InMemorySmsProviderDbHelper();
         return true;
-    }
-
-    @Override
-    SQLiteDatabase getReadableDatabase(int match) {
-        Log.d(TAG, "getReadableDatabase called");
-        return mDbHelper.getReadableDatabase();
-    }
-
-    @Override
-    SQLiteDatabase getWritableDatabase(int match) {
-        Log.d(TAG, "getWritableDatabase called");
-        return mDbHelper.getWritableDatabase();
     }
 
     // close mDbHelper database object
     protected void closeDatabase() {
-        mDbHelper.close();
+        mCeOpenHelper.close();
+        mDeOpenHelper.close();
     }
 
     /**
@@ -70,6 +58,7 @@ public class SmsProviderTestable extends SmsProvider {
             // Set up the sms tables
             Log.d(TAG, "InMemorySmsProviderDbHelper onCreate creating the sms tables");
             db.execSQL(MmsSmsDatabaseHelper.CREATE_SMS_TABLE_STRING);
+            db.execSQL(MmsSmsDatabaseHelper.CREATE_RAW_TABLE_STRING);
             db.execSQL(MmsSmsDatabaseHelper.CREATE_ATTACHMENTS_TABLE_STRING);
         }
 
