@@ -26,17 +26,13 @@ import android.database.MatrixCursor.RowBuilder;
 import android.net.Uri;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionManager;
-import android.telephony.TelephonyManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.Phone;
-import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.SubscriptionController;
 
 import java.lang.NumberFormatException;
 import java.util.HashMap;
-import java.util.Objects;
 
 import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionId;
 import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionIdAndField;
@@ -149,7 +145,7 @@ public class ServiceStateProvider extends ContentProvider {
             newSS.setRilVoiceRadioTechnology(values.getAsInteger(RIL_VOICE_RADIO_TECHNOLOGY));
             newSS.setRilDataRadioTechnology(values.getAsInteger(RIL_DATA_RADIO_TECHNOLOGY));
             newSS.setCssIndicator(values.getAsInteger(CSS_INDICATOR));
-            newSS.setSystemAndNetworkId(values.getAsInteger(SYSTEM_ID),
+            newSS.setCdmaSystemAndNetworkId(values.getAsInteger(SYSTEM_ID),
                     values.getAsInteger(NETWORK_ID));
             newSS.setCdmaRoamingIndicator(values.getAsInteger(CDMA_ROAMING_INDICATOR));
             newSS.setCdmaDefaultRoamingIndicator(
@@ -232,8 +228,8 @@ public class ServiceStateProvider extends ContentProvider {
             final int ril_voice_radio_technology = ss.getRilVoiceRadioTechnology();
             final int ril_data_radio_technology = ss.getRilDataRadioTechnology();
             final int css_indicator = ss.getCssIndicator();
-            final int network_id = ss.getNetworkId();
-            final int system_id = ss.getSystemId();
+            final int network_id = ss.getCdmaNetworkId();
+            final int system_id = ss.getCdmaSystemId();
             final int cdma_roaming_indicator = ss.getCdmaRoamingIndicator();
             final int cdma_default_roaming_indicator = ss.getCdmaDefaultRoamingIndicator();
             final int cdma_eri_icon_index = ss.getCdmaEriIconIndex();

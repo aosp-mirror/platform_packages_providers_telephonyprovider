@@ -19,11 +19,13 @@ package com.android.providers.telephony;
 import android.annotation.TargetApi;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.content.res.Resources;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.database.ContentObserver;
 import android.database.DatabaseErrorHandler;
@@ -33,7 +35,9 @@ import android.database.sqlite.SQLiteDatabase.CursorFactory;
 import android.net.Uri;
 import android.os.Build;
 import android.os.FileUtils;
+import android.os.Process;
 import android.provider.Telephony.Carriers;
+import android.support.test.InstrumentationRegistry;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.AndroidTestCase;
@@ -51,10 +55,20 @@ import junit.framework.TestCase;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import org.mockito.ArgumentCaptor;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.util.Map;
+import java.util.Set;
 
 
 /**
@@ -77,13 +91,31 @@ public class TelephonyProviderTest extends TestCase {
     private TelephonyProviderTestable mTelephonyProviderTestable;
 
     private int notifyChangeCount;
+    private int notifyChangeRestoreCount;
 
     private static final String TEST_SUBID = "1";
     private static final String TEST_OPERATOR = "123456";
-    // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 0
+    private static final String TEST_MCC = "123";
+    private static final String TEST_MNC = "456";
+    // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 1
     private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
             "content://telephony/carriers/subId/" + TEST_SUBID);
 
+    // Used to test the "restore to default"
+    private static final Uri URL_RESTOREAPN_USING_SUBID = Uri.parse(
+            "content://telephony/carriers/restore/subId/" + TEST_SUBID);
+    // Used to test the preferred apn
+    private static final Uri URL_PREFERAPN_USING_SUBID = Uri.parse(
+            "content://telephony/carriers/preferapn/subId/" + TEST_SUBID);
+
+    private static final String COLUMN_APN_ID = "apn_id";
+
+    // Constants for DPC related tests.
+    private static final Uri URI_DPC = Uri.parse("content://telephony/carriers/dpc");
+    private static final Uri URI_TELEPHONY = Carriers.CONTENT_URI;
+    private static final Uri URI_FILTERED = Uri.parse("content://telephony/carriers/filtered");
+    private static final Uri URI_ENFORCE_MANAGED= Uri.parse("content://telephony/carriers/enforce_managed");
+    private static final String ENFORCED_KEY = "enforced";
 
     /**
      * This is used to give the TelephonyProviderTest a mocked context which takes a
@@ -100,6 +132,9 @@ public class TelephonyProviderTest extends TestCase {
                 public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork,
                         int userHandle) {
                     notifyChangeCount++;
+                    if (URL_RESTOREAPN_USING_SUBID.equals(uri)) {
+                        notifyChangeRestoreCount++;
+                    }
                 }
             };
 
@@ -143,6 +178,11 @@ public class TelephonyProviderTest extends TestCase {
             return mResolver;
         }
 
+        @Override
+        public SharedPreferences getSharedPreferences(String name, int mode) {
+            return InstrumentationRegistry.getContext().getSharedPreferences(name, mode);
+        }
+
         // Gives permission to write to the APN table within the MockContext
         @Override
         public int checkCallingOrSelfPermission(String permission) {
@@ -165,6 +205,7 @@ public class TelephonyProviderTest extends TestCase {
         mContext = new MockContextWithProvider(mTelephonyProviderTestable);
         mContentResolver = (MockContentResolver) mContext.getContentResolver();
         notifyChangeCount = 0;
+        notifyChangeRestoreCount = 0;
     }
 
     @Override
@@ -243,6 +284,59 @@ public class TelephonyProviderTest extends TestCase {
     @SmallTest
     public void testInsertCarriers() {
         doSimpleTestForUri(Carriers.CONTENT_URI);
+    }
+
+    /**
+     * Test updating values in carriers table. Verify that when update hits a conflict using URL_ID
+     * we merge the rows.
+     */
+    @Test
+    @SmallTest
+    public void testUpdateConflictingCarriers() {
+        // insert 2 test contentValues
+        ContentValues contentValues = new ContentValues();
+        final String insertApn = "exampleApnName";
+        final String insertName = "exampleName";
+        final String insertNumeric = TEST_OPERATOR;
+        final String insertMcc = TEST_MCC;
+        final String insertMnc = TEST_MNC;
+        contentValues.put(Carriers.APN, insertApn);
+        contentValues.put(Carriers.NAME, insertName);
+        contentValues.put(Carriers.NUMERIC, insertNumeric);
+        contentValues.put(Carriers.MCC, insertMcc);
+        contentValues.put(Carriers.MNC, insertMnc);
+
+        ContentValues contentValues2 = new ContentValues();
+        final String insertName2 = "exampleName2";
+        contentValues2.put(Carriers.NAME, insertName2);
+
+        Uri row1 = mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+        Uri row2 = mContentResolver.insert(Carriers.CONTENT_URI, contentValues2);
+
+        // use URL_ID to update row2 apn so it conflicts with row1
+        Log.d(TAG, "testUpdateConflictingCarriers: update row2=" + row2);
+        contentValues.put(Carriers.NAME, insertName2);
+        mContentResolver.update(row2, contentValues, null, null);
+
+        // verify that only 1 APN now exists and it has the fields from row1 and row2
+        final String[] testProjection =
+        {
+            Carriers.APN,
+            Carriers.NAME,
+            Carriers.NUMERIC,
+            Carriers.MCC,
+            Carriers.MNC
+        };
+        Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection, null, null,
+                null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(insertApn, cursor.getString(0 /* APN */));
+        assertEquals(insertName2, cursor.getString(1 /* NAME */));
+        assertEquals(insertNumeric, cursor.getString(2 /* NUMERIC */));
+        assertEquals(insertMcc, cursor.getString(3 /* MCC */));
+        assertEquals(insertMnc, cursor.getString(4 /* MNC */));
     }
 
     /**
@@ -375,10 +469,12 @@ public class TelephonyProviderTest extends TestCase {
         final String insertDisplayName = "exampleDisplayName";
         final String insertCarrierName = "exampleCarrierName";
         final String insertIccId = "exampleIccId";
+        final String insertCardId = "exampleCardId";
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
         contentValues.put(SubscriptionManager.ICC_ID, insertIccId);
+        contentValues.put(SubscriptionManager.CARD_ID, insertCardId);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SubscriptionManager.CONTENT_URI, contentValues);
@@ -388,6 +484,7 @@ public class TelephonyProviderTest extends TestCase {
         {
             SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID,
             SubscriptionManager.CARRIER_NAME,
+            SubscriptionManager.CARD_ID,
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -402,8 +499,10 @@ public class TelephonyProviderTest extends TestCase {
         cursor.moveToFirst();
         final int resultSubId = cursor.getInt(0);
         final String resultCarrierName = cursor.getString(1);
+        final String resultCardId = cursor.getString(2);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
+        assertEquals(insertCardId, resultCardId);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
@@ -418,5 +517,826 @@ public class TelephonyProviderTest extends TestCase {
         cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
         assertEquals(0, cursor.getCount());
+    }
+
+    private int parseIdFromInsertedUri(Uri uri) throws NumberFormatException {
+        return (uri != null) ? Integer.parseInt(uri.getLastPathSegment()) : -1;
+    }
+
+    private int insertApnRecord(Uri uri, String apn, String name, int current, String numeric) {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apn);
+        contentValues.put(Carriers.NAME, name);
+        contentValues.put(Carriers.CURRENT, current);
+        contentValues.put(Carriers.NUMERIC, numeric);
+        Uri resultUri = mContentResolver.insert(uri, contentValues);
+        return parseIdFromInsertedUri(resultUri);
+    }
+
+    /**
+     * Test URL_ENFORCE_MANAGED and URL_FILTERED works correctly.
+     * Verify that when enforce is set true via URL_ENFORCE_MANAGED, only DPC records are returned
+     * for URL_FILTERED and URL_FILTERED_ID.
+     * Verify that when enforce is set false via URL_ENFORCE_MANAGED, only non-DPC records
+     * are returned for URL_FILTERED and URL_FILTERED_ID.
+     */
+    @Test
+    @SmallTest
+    public void testEnforceManagedUri() {
+        mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
+
+        final int current = 1;
+        final String numeric = "123456789";
+
+        // Insert DPC record.
+        final String dpcRecordApn = "exampleApnNameDPC";
+        final String dpcRecordName = "exampleNameDPC";
+        final int dpcRecordId = insertApnRecord(URI_DPC, dpcRecordApn, dpcRecordName,
+                current, numeric);
+
+        // Insert non-DPC record.
+        final String othersRecordApn = "exampleApnNameOTHERS";
+        final String othersRecordName = "exampleNameDPOTHERS";
+        final int othersRecordId = insertApnRecord(URI_TELEPHONY, othersRecordApn, othersRecordName,
+                current, numeric);
+
+        // Set enforced = false.
+        ContentValues enforceManagedValue = new ContentValues();
+        enforceManagedValue.put(ENFORCED_KEY, false);
+        Log.d(TAG, "testEnforceManagedUri Updating enforced = false: "
+                + enforceManagedValue);
+        mContentResolver.update(URI_ENFORCE_MANAGED, enforceManagedValue, "", new String[]{});
+
+        // Verify that enforced is set to false in TelephonyProvider.
+        Cursor enforceCursor = mContentResolver.query(URI_ENFORCE_MANAGED,
+            null, null, null, null);
+        assertNotNull(enforceCursor);
+        assertEquals(1, enforceCursor.getCount());
+        enforceCursor.moveToFirst();
+        assertEquals(0, enforceCursor.getInt(0));
+
+        // Verify URL_FILTERED query only returns non-DPC record.
+        final String[] testProjection =
+        {
+            Carriers._ID,
+            Carriers.OWNED_BY
+        };
+        final String selection = Carriers.NUMERIC + "=?";
+        final String[] selectionArgs = { numeric };
+        final Cursor cursorNotEnforced = mContentResolver.query(URI_FILTERED,
+            testProjection, selection, selectionArgs, null);
+        assertNotNull(cursorNotEnforced);
+        assertEquals(1, cursorNotEnforced.getCount());
+        cursorNotEnforced.moveToFirst();
+        assertEquals(othersRecordId, cursorNotEnforced.getInt(0));
+        assertEquals(Carriers.OWNED_BY_OTHERS, cursorNotEnforced.getInt(1));
+
+        // Verify that URL_FILTERED_ID cannot get DPC record.
+        Cursor cursorNotEnforcedDpc = mContentResolver.query(Uri.withAppendedPath(URI_FILTERED,
+                Integer.toString(dpcRecordId)), null, null, null, null);
+        assertNotNull(cursorNotEnforcedDpc);
+        assertTrue(cursorNotEnforcedDpc.getCount() == 0);
+        // Verify that URL_FILTERED_ID can get non-DPC record.
+        Cursor cursorNotEnforcedOthers = mContentResolver.query(Uri.withAppendedPath(URI_FILTERED,
+                Integer.toString(othersRecordId)), null, null, null, null);
+        assertNotNull(cursorNotEnforcedOthers);
+        assertTrue(cursorNotEnforcedOthers.getCount() == 1);
+
+        // Set enforced = true.
+        enforceManagedValue.put(ENFORCED_KEY, true);
+        Log.d(TAG, "testEnforceManagedUri Updating enforced = true: "
+                + enforceManagedValue);
+        mContentResolver.update(URI_ENFORCE_MANAGED, enforceManagedValue, "", new String[]{});
+
+        // Verify that enforced is set to true in TelephonyProvider.
+        enforceCursor = mContentResolver.query(URI_ENFORCE_MANAGED,
+            null, null, null, null);
+        assertNotNull(enforceCursor);
+        assertEquals(1, enforceCursor.getCount());
+        enforceCursor.moveToFirst();
+        assertEquals(1, enforceCursor.getInt(0));
+
+        // Verify URL_FILTERED query only returns DPC record.
+        final Cursor cursorEnforced = mContentResolver.query(URI_FILTERED,
+                testProjection, selection, selectionArgs, null);
+        assertNotNull(cursorEnforced);
+        assertEquals(1, cursorEnforced.getCount());
+        cursorEnforced.moveToFirst();
+        assertEquals(dpcRecordId, cursorEnforced.getInt(0));
+        assertEquals(Carriers.OWNED_BY_DPC, cursorEnforced.getInt(1));
+
+        // Verify that URL_FILTERED_ID can get DPC record.
+        cursorNotEnforcedDpc = mContentResolver.query(Uri.withAppendedPath(URI_FILTERED,
+                Integer.toString(dpcRecordId)), null, null, null, null);
+        assertNotNull(cursorNotEnforcedDpc);
+        assertTrue(cursorNotEnforcedDpc.getCount() == 1);
+        // Verify that URL_FILTERED_ID cannot get non-DPC record.
+        cursorNotEnforcedOthers = mContentResolver.query(Uri.withAppendedPath(URI_FILTERED,
+                Integer.toString(othersRecordId)), null, null, null, null);
+        assertNotNull(cursorNotEnforcedOthers);
+        assertTrue(cursorNotEnforcedOthers.getCount() == 0);
+
+        // Delete testing records.
+        int numRowsDeleted = mContentResolver.delete(URI_TELEPHONY, selection, selectionArgs);
+        assertEquals(1, numRowsDeleted);
+
+        numRowsDeleted = mContentResolver.delete(
+                ContentUris.withAppendedId(URI_DPC, dpcRecordId), "", null);
+        assertEquals(1, numRowsDeleted);
+    }
+
+    private Cursor queryFullTestApnRecord(Uri uri, String numeric) {
+        final String selection = Carriers.NUMERIC + "=?";
+        String[] selectionArgs = { numeric };
+        final String[] testProjection =
+                {
+                        Carriers._ID,
+                        Carriers.APN,
+                        Carriers.NAME,
+                        Carriers.CURRENT,
+                        Carriers.OWNED_BY,
+                };
+        return mContentResolver.query(uri, testProjection, selection, selectionArgs, null);
+    }
+
+    @Test
+    @SmallTest
+    /**
+     * Test URL_TELEPHONY cannot insert, query, update or delete DPC records.
+     */
+    public void testTelephonyUriDpcRecordAccessControl() {
+        mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
+
+        final int current = 1;
+        final String numeric = "123456789";
+        final String selection = Carriers.NUMERIC + "=?";
+        final String[] selectionArgs = { numeric };
+
+        // Insert DPC record.
+        final String dpcRecordApn = "exampleApnNameDPC";
+        final String dpcRecordName = "exampleNameDPC";
+        final int dpcRecordId = insertApnRecord(URI_DPC, dpcRecordApn, dpcRecordName,
+                current, numeric);
+
+        // Insert non-DPC record.
+        final String othersRecordApn = "exampleApnNameOTHERS";
+        final String othersRecordName = "exampleNameDPOTHERS";
+        final int othersRecordId = insertApnRecord(URI_TELEPHONY, othersRecordApn, othersRecordName,
+                current, numeric);
+
+        // Verify URL_TELEPHONY query only returns non-DPC record.
+        final Cursor cursorTelephony = queryFullTestApnRecord(URI_TELEPHONY, numeric);
+        assertNotNull(cursorTelephony);
+        assertEquals(1, cursorTelephony.getCount());
+        cursorTelephony.moveToFirst();
+        assertApnEquals(cursorTelephony, othersRecordId, othersRecordApn, othersRecordName,
+                current, Carriers.OWNED_BY_OTHERS);
+
+        // Verify URI_TELEPHONY updates only non-DPC records.
+        ContentValues contentValuesOthersUpdate = new ContentValues();
+        final String othersRecordUpdatedApn = "exampleApnNameOTHERSUpdated";
+        final String othersRecordUpdatedName = "exampleNameOTHERSpdated";
+        contentValuesOthersUpdate.put(Carriers.APN, othersRecordUpdatedApn);
+        contentValuesOthersUpdate.put(Carriers.NAME, othersRecordUpdatedName);
+
+        final int updateCount = mContentResolver.update(URI_TELEPHONY, contentValuesOthersUpdate,
+                selection, selectionArgs);
+        assertEquals(1, updateCount);
+        final Cursor cursorNonDPCUpdate = queryFullTestApnRecord(URI_TELEPHONY, numeric);
+        final Cursor cursorDPCUpdate = queryFullTestApnRecord(URI_DPC, numeric);
+
+        // Verify that non-DPC records are updated.
+        assertNotNull(cursorNonDPCUpdate);
+        assertEquals(1, cursorNonDPCUpdate.getCount());
+        cursorNonDPCUpdate.moveToFirst();
+        assertApnEquals(cursorNonDPCUpdate, othersRecordId, othersRecordUpdatedApn,
+                othersRecordUpdatedName);
+
+        // Verify that DPC records are not updated.
+        assertNotNull(cursorDPCUpdate);
+        assertEquals(1, cursorDPCUpdate.getCount());
+        cursorDPCUpdate.moveToFirst();
+        assertApnEquals(cursorDPCUpdate, dpcRecordId, dpcRecordApn, dpcRecordName);
+
+        // Verify URI_TELEPHONY deletes only non-DPC records.
+        int numRowsDeleted = mContentResolver.delete(URI_TELEPHONY, selection, selectionArgs);
+        assertEquals(1, numRowsDeleted);
+        final Cursor cursorTelephonyRemaining = queryFullTestApnRecord(URI_TELEPHONY, numeric);
+        assertNotNull(cursorTelephonyRemaining);
+        assertEquals(0, cursorTelephonyRemaining.getCount());
+        final Cursor cursorDPCDeleted = queryFullTestApnRecord(URI_DPC, numeric);
+        assertNotNull(cursorDPCDeleted);
+        assertEquals(1, cursorDPCDeleted.getCount());
+
+        // Delete remaining test records.
+        numRowsDeleted = mContentResolver.delete(
+                ContentUris.withAppendedId(URI_DPC, dpcRecordId), "", null);
+        assertEquals(1, numRowsDeleted);
+    }
+
+    /**
+     * Test URL_DPC cannot insert or query non-DPC records.
+     * Test URL_DPC_ID cannot update or delete non-DPC records.
+     */
+    @Test
+    @SmallTest
+    public void testDpcUri() {
+        int dpcRecordId = 0, othersRecordId = 0;
+        try {
+            mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
+
+            final int current = 1;
+            final String numeric = "123456789";
+
+            // Insert DPC record.
+            final String dpcRecordApn = "exampleApnNameDPC";
+            final String dpcRecordName = "exampleNameDPC";
+            dpcRecordId = insertApnRecord(URI_DPC, dpcRecordApn, dpcRecordName,
+                    current, numeric);
+
+            // Insert non-DPC record.
+            final String othersRecordApn = "exampleApnNameOTHERS";
+            final String othersRecordName = "exampleNameDPOTHERS";
+            othersRecordId = insertApnRecord(URI_TELEPHONY, othersRecordApn, othersRecordName,
+                    current, numeric);
+
+            Log.d(TAG, "testDPCIdUri Id for inserted DPC record: " + dpcRecordId);
+            Log.d(TAG, "testDPCIdUri Id for inserted non-DPC record: " + othersRecordId);
+
+            // Verify that URI_DPC query only returns DPC records.
+            final Cursor cursorDPC = queryFullTestApnRecord(URI_DPC, numeric);
+            assertNotNull(cursorDPC);
+            assertEquals(1, cursorDPC.getCount());
+            cursorDPC.moveToFirst();
+            assertApnEquals(cursorDPC, dpcRecordId, dpcRecordApn, dpcRecordName, current,
+                    Carriers.OWNED_BY_DPC);
+
+            // Verify that URI_DPC_ID updates only DPC records.
+            ContentValues contentValuesDpcUpdate = new ContentValues();
+            final String dpcRecordUpdatedApn = "exampleApnNameDPCUpdated";
+            final String dpcRecordUpdatedName = "exampleNameDPCUpdated";
+            contentValuesDpcUpdate.put(Carriers.APN, dpcRecordUpdatedApn);
+            contentValuesDpcUpdate.put(Carriers.NAME, dpcRecordUpdatedName);
+            final int updateCount = mContentResolver.update(
+                    ContentUris.withAppendedId(URI_DPC, dpcRecordId),
+                    contentValuesDpcUpdate, null, null);
+            assertEquals(1, updateCount);
+            final Cursor cursorNonDPCUpdate = queryFullTestApnRecord(URI_TELEPHONY, numeric);
+            final Cursor cursorDPCUpdate = queryFullTestApnRecord(URI_DPC, numeric);
+
+            // Verify that non-DPC records are not updated.
+            assertNotNull(cursorNonDPCUpdate);
+            assertEquals(1, cursorNonDPCUpdate.getCount());
+            cursorNonDPCUpdate.moveToFirst();
+            assertApnEquals(cursorNonDPCUpdate, othersRecordId, othersRecordApn, othersRecordName);
+
+            // Verify that DPC records are updated.
+            assertNotNull(cursorDPCUpdate);
+            assertEquals(1, cursorDPCUpdate.getCount());
+            cursorDPCUpdate.moveToFirst();
+            assertApnEquals(cursorDPCUpdate, dpcRecordId, dpcRecordUpdatedApn,
+                    dpcRecordUpdatedName);
+
+            // Test URI_DPC_ID deletes only DPC records.
+            int numRowsDeleted = mContentResolver.delete(
+                    ContentUris.withAppendedId(URI_DPC, dpcRecordId), null, null);
+            assertEquals(1, numRowsDeleted);
+            numRowsDeleted = mContentResolver.delete(
+                    ContentUris.withAppendedId(URI_DPC, dpcRecordId), null, null);
+            assertEquals(0, numRowsDeleted);
+
+        } finally {
+            // Delete remaining test records.
+            int numRowsDeleted = mContentResolver.delete(
+                    ContentUris.withAppendedId(URI_TELEPHONY, othersRecordId), null, null);
+            assertEquals(1, numRowsDeleted);
+        }
+    }
+
+    private void assertApnEquals(Cursor cursor, Object... values) {
+        assertTrue(values.length <= cursor.getColumnCount());
+        for (int i = 0; i < values.length; i ++) {
+            if (values[i] instanceof Integer) {
+                assertEquals(values[i], cursor.getInt(i));
+            } else if (values[i] instanceof String) {
+                assertEquals(values[i], cursor.getString(i));
+            } else {
+                fail("values input type not correct");
+            }
+        }
+    }
+
+    /**
+     * Test URL_DPC does not change database on conflict for insert and update.
+     */
+    @Test
+    @SmallTest
+    public void testDpcUriOnConflict() {
+        int dpcRecordId1 = 0, dpcRecordId2 = 0;
+        try {
+            mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
+
+            final int current = 1;
+            final String numeric = "123456789";
+
+            // Insert DPC record 1.
+            final String dpcRecordApn1 = "exampleApnNameDPC";
+            final String dpcRecordName = "exampleNameDPC";
+            dpcRecordId1 = insertApnRecord(URI_DPC, dpcRecordApn1, dpcRecordName,
+                    current, numeric);
+            Log.d(TAG, "testDpcUriOnConflict Id for DPC record 1: " + dpcRecordId1);
+
+            // Insert conflicting DPC record.
+            final String dpcRecordNameConflict = "exampleNameDPCConflict";
+            final int dpcRecordIdConflict = insertApnRecord(URI_DPC, dpcRecordApn1,
+                    dpcRecordNameConflict, current, numeric);
+
+            // Verity that conflicting DPC record is not inserted.
+            assertEquals(-1, dpcRecordIdConflict);
+            // Verify that APN 1 is not replaced or updated.
+            Cursor cursorDPC1 = queryFullTestApnRecord(URI_DPC, numeric);
+            assertNotNull(cursorDPC1);
+            assertEquals(1, cursorDPC1.getCount());
+            cursorDPC1.moveToFirst();
+            assertApnEquals(cursorDPC1, dpcRecordId1, dpcRecordApn1, dpcRecordName, current,
+                    Carriers.OWNED_BY_DPC);
+
+            // Insert DPC record 2.
+            final String dpcRecordApn2 = "exampleApnNameDPC2";
+            dpcRecordId2 = insertApnRecord(URI_DPC, dpcRecordApn2, dpcRecordName,
+                    current, numeric);
+            Log.d(TAG, "testDpcUriOnConflict Id for DPC record 2: " + dpcRecordId2);
+
+            // Update DPC record 2 to the values of DPC record 1.
+            ContentValues contentValuesDpcUpdate = new ContentValues();
+            contentValuesDpcUpdate.put(Carriers.APN, dpcRecordApn1);
+            contentValuesDpcUpdate.put(Carriers.NAME, dpcRecordNameConflict);
+            final int updateCount = mContentResolver.update(
+                    ContentUris.withAppendedId(URI_DPC, dpcRecordId2),
+                    contentValuesDpcUpdate, null, null);
+
+            // Verify that database is not updated.
+            assertEquals(0, updateCount);
+            Cursor cursorDPC2 = queryFullTestApnRecord(URI_DPC, numeric);
+            assertNotNull(cursorDPC2);
+            assertEquals(2, cursorDPC2.getCount());
+            cursorDPC2.moveToFirst();
+            assertApnEquals(cursorDPC2, dpcRecordId1, dpcRecordApn1, dpcRecordName, current,
+                    Carriers.OWNED_BY_DPC);
+            cursorDPC2.moveToNext();
+            assertApnEquals(cursorDPC2, dpcRecordId2, dpcRecordApn2, dpcRecordName, current,
+                    Carriers.OWNED_BY_DPC);
+        } finally {
+            // Delete test records.
+            int numRowsDeleted = mContentResolver.delete(
+                    ContentUris.withAppendedId(URI_DPC, dpcRecordId1), null, null);
+            assertEquals(1, numRowsDeleted);
+            numRowsDeleted = mContentResolver.delete(
+                    ContentUris.withAppendedId(URI_DPC, dpcRecordId2), null, null);
+            assertEquals(1, numRowsDeleted);
+        }
+    }
+
+    /**
+     * Verify that SecurityException is thrown if URL_DPC, URL_FILTERED and
+     * URL_ENFORCE_MANAGED is accessed from neither SYSTEM_UID nor PHONE_UID.
+     */
+    @Test
+    @SmallTest
+    public void testAccessUrlDpcThrowSecurityExceptionFromOtherUid() {
+        mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID + 123456);
+
+        // Test insert().
+        ContentValues contentValuesDPC = new ContentValues();
+        try {
+            mContentResolver.insert(URI_DPC, contentValuesDPC);
+            assertFalse("SecurityException should be thrown when URI_DPC is called from"
+                    + " neither SYSTEM_UID nor PHONE_UID", true);
+        } catch (SecurityException e) {
+            // Should catch SecurityException.
+        }
+
+        // Test query().
+        try {
+            mContentResolver.query(URI_DPC,
+                    new String[]{}, "", new String[]{}, null);
+            assertFalse("SecurityException should be thrown when URI_DPC is called from"
+                    + " neither SYSTEM_UID nor PHONE_UID", true);
+        } catch (SecurityException e) {
+            // Should catch SecurityException.
+        }
+        try {
+            mContentResolver.query(URI_ENFORCE_MANAGED,
+            new String[]{}, "", new String[]{}, null);
+            assertFalse("SecurityException should be thrown when URI_ENFORCE_MANAGED is "
+                    + "called from neither SYSTEM_UID nor PHONE_UID", true);
+        } catch (SecurityException e) {
+            // Should catch SecurityException.
+        }
+
+        // Test update().
+        ContentValues contentValuesDPCUpdate = new ContentValues();
+        try {
+            mContentResolver.update(
+                    Uri.parse(URI_DPC + "/1"),
+                    contentValuesDPCUpdate, "", new String[]{});
+            assertFalse("SecurityException should be thrown when URI_DPC is called"
+                    + " from neither SYSTEM_UID nor PHONE_UID", true);
+        } catch (SecurityException e) {
+            // Should catch SecurityException.
+        }
+        try {
+            mContentResolver.update(URI_ENFORCE_MANAGED, contentValuesDPCUpdate,
+                    "", new String[]{});
+            assertFalse("SecurityException should be thrown when URI_DPC is called"
+                    + " from neither SYSTEM_UID nor PHONE_UID", true);
+        } catch (SecurityException e) {
+            // Should catch SecurityException.
+        }
+
+        // Test delete().
+        try {
+            mContentResolver.delete(
+                    Uri.parse(URI_DPC + "/0"), "", new String[]{});
+            assertFalse("SecurityException should be thrown when URI_DPC is called"
+                    + " from neither SYSTEM_UID nor PHONE_UID", true);
+        } catch (SecurityException e) {
+            // Should catch SecurityException.
+        }
+    }
+
+    /**
+     * Verify that user/carrier edited/deleted APNs have priority in the EDITED field over
+     * insertions which set EDITED=UNEDITED. In these cases instead of merging the APNs using the
+     * new APN's value we keep the old value.
+     */
+    @Test
+    @SmallTest
+    public void testPreserveEdited() {
+        preserveEditedValueInMerge(Carriers.USER_EDITED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveUserDeleted() {
+        preserveDeletedValueInMerge(Carriers.USER_DELETED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveUserDeletedButPresentInXml() {
+        preserveDeletedValueInMerge(Carriers.USER_DELETED_BUT_PRESENT_IN_XML);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveCarrierEdited() {
+        preserveEditedValueInMerge(Carriers.CARRIER_EDITED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveCarrierDeleted() {
+        preserveDeletedValueInMerge(Carriers.CARRIER_DELETED);
+    }
+
+    @Test
+    @SmallTest
+    public void testPreserveCarrierDeletedButPresentInXml() {
+        preserveDeletedValueInMerge(Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML);
+    }
+
+    private void preserveEditedValueInMerge(int value) {
+        // insert user deleted APN
+        String carrierName1 = "carrier1";
+        String numeric1 = "123234";
+        String mcc1 = "123";
+        String mnc1 = "234";
+        ContentValues editedValue = new ContentValues();
+        editedValue.put(Carriers.NAME, carrierName1);
+        editedValue.put(Carriers.NUMERIC, numeric1);
+        editedValue.put(Carriers.MCC, mcc1);
+        editedValue.put(Carriers.MNC, mnc1);
+        editedValue.put(Carriers.EDITED, value);
+        assertNotNull(mContentResolver.insert(URI_TELEPHONY, editedValue));
+
+        Cursor cur = mContentResolver.query(URI_TELEPHONY, null, null, null, null);
+        assertEquals(1, cur.getCount());
+
+        // insert APN that conflicts with edited APN
+        String carrierName2 = "carrier2";
+        ContentValues values = new ContentValues();
+        values.put(Carriers.NAME, carrierName2);
+        values.put(Carriers.NUMERIC, numeric1);
+        values.put(Carriers.MCC, mcc1);
+        values.put(Carriers.MNC, mnc1);
+        values.put(Carriers.EDITED, Carriers.UNEDITED);
+        mContentResolver.insert(URI_TELEPHONY, values);
+
+        String[] testProjection = {
+            Carriers.NAME,
+            Carriers.APN,
+            Carriers.EDITED,
+            Carriers.TYPE,
+            Carriers.PROTOCOL,
+            Carriers.BEARER_BITMASK,
+        };
+        final int indexOfName = 0;
+        final int indexOfEdited = 2;
+
+        // Assert that the conflicting APN is merged into the existing user-edited APN, so only 1
+        // APN exists in the db
+        cur = mContentResolver.query(URI_TELEPHONY, testProjection, null, null, null);
+        assertEquals(1, cur.getCount());
+        cur.moveToFirst();
+        assertEquals(carrierName2, cur.getString(indexOfName));
+        assertEquals(value, cur.getInt(indexOfEdited));
+    }
+
+    private void preserveDeletedValueInMerge(int value) {
+        // insert user deleted APN
+        String carrierName1 = "carrier1";
+        String numeric1 = "123234";
+        String mcc1 = "123";
+        String mnc1 = "234";
+        ContentValues editedValue = new ContentValues();
+        editedValue.put(Carriers.NAME, carrierName1);
+        editedValue.put(Carriers.NUMERIC, numeric1);
+        editedValue.put(Carriers.MCC, mcc1);
+        editedValue.put(Carriers.MNC, mnc1);
+        editedValue.put(Carriers.EDITED, value);
+        assertNotNull(mContentResolver.insert(URI_TELEPHONY, editedValue));
+
+        // insert APN that conflicts with edited APN
+        String carrierName2 = "carrier2";
+        ContentValues values = new ContentValues();
+        values.put(Carriers.NAME, carrierName2);
+        values.put(Carriers.NUMERIC, numeric1);
+        values.put(Carriers.MCC, mcc1);
+        values.put(Carriers.MNC, mnc1);
+        values.put(Carriers.EDITED, Carriers.UNEDITED);
+        mContentResolver.insert(URI_TELEPHONY, values);
+
+        String[] testProjection = {
+            Carriers.NAME,
+            Carriers.APN,
+            Carriers.EDITED,
+            Carriers.TYPE,
+            Carriers.PROTOCOL,
+            Carriers.BEARER_BITMASK,
+        };
+        final int indexOfEdited = 2;
+
+        // Assert that the conflicting APN is merged into the existing user-deleted APN.
+        // Entries marked deleted will not show up in queries so we verify that no APNs can
+        // be seen
+        Cursor cur = mContentResolver.query(URI_TELEPHONY, testProjection, null, null, null);
+        assertEquals(0, cur.getCount());
+    }
+
+    /**
+     * Test URL_PREFERAPN_USING_SUBID works correctly.
+     */
+    @Test
+    @SmallTest
+    public void testQueryPreferredApn() {
+        // create APNs
+        ContentValues preferredValues = new ContentValues();
+        final String preferredApn = "preferredApn";
+        final String preferredName = "preferredName";
+        preferredValues.put(Carriers.APN, preferredApn);
+        preferredValues.put(Carriers.NAME, preferredName);
+        preferredValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        ContentValues otherValues = new ContentValues();
+        final String otherApn = "otherApnName";
+        final String otherName = "otherName";
+        otherValues.put(Carriers.APN, otherApn);
+        otherValues.put(Carriers.NAME, otherName);
+        otherValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        // insert APNs
+        // TODO if using URL_TELEPHONY, SubscriptionManager.getDefaultSubscriptionId() returns -1
+        Log.d(TAG, "testQueryPreferredApn: Bulk inserting contentValues=" + preferredValues + ", "
+                + otherValues);
+        Uri uri = mContentResolver.insert(CONTENT_URI_WITH_SUBID, preferredValues);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, otherValues);
+        final String preferredApnIdString = uri.getLastPathSegment();
+        final long preferredApnId = Long.parseLong(preferredApnIdString);
+        Log.d(TAG, "testQueryPreferredApn: preferredApnString=" + preferredApnIdString);
+
+        // set preferred apn
+        preferredValues.put(COLUMN_APN_ID, preferredApnIdString);
+        mContentResolver.insert(URL_PREFERAPN_USING_SUBID, preferredValues);
+
+        // query preferred APN
+        final String[] testProjection = { Carriers.APN, Carriers.NAME };
+        Cursor cursor = mContentResolver.query(
+                URL_PREFERAPN_USING_SUBID, testProjection, null, null, null);
+
+        // verify that preferred apn was set and retreived
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(preferredApn, cursor.getString(0));
+        assertEquals(preferredName, cursor.getString(1));
+    }
+
+    /**
+     *  Test that APN_SET_ID works correctly.
+     */
+    @Test
+    @SmallTest
+    public void testApnSetId() {
+        // create APNs
+        ContentValues values1 = new ContentValues();
+        final String apn = "apnName";
+        final String apnName = "name";
+        values1.put(Carriers.APN, apn);
+        values1.put(Carriers.NAME, apnName);
+        values1.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        ContentValues values2 = new ContentValues();
+        final String otherApn = "otherApnName";
+        final String otherName = "otherName";
+        values2.put(Carriers.APN, otherApn);
+        values2.put(Carriers.NAME, otherName);
+        values2.put(Carriers.NUMERIC, TEST_OPERATOR);
+        values2.put(Carriers.APN_SET_ID, 1);
+
+        // insert APNs
+        // TODO if using URL_TELEPHONY, SubscriptionManager.getDefaultSubscriptionId() returns -1
+        Log.d(TAG, "testApnSetId: inserting contentValues=" + values1 + ", " + values2);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values1);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values2);
+
+        // query APN with default APN_SET_ID
+        final String[] testProjection = { Carriers.NAME };
+        Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection,
+                Carriers.APN_SET_ID + "=?", new String[] { "0" }, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(apnName, cursor.getString(0));
+
+        // query APN with APN_SET_ID=1
+        cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection,
+                Carriers.APN_SET_ID + "=?", new String[] { "1" }, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(otherName, cursor.getString(0));
+    }
+
+    /**
+     *  Test that querying with the PREFERAPNSET url yields all APNs in the preferred set.
+     */
+    @Test
+    @SmallTest
+    public void testPreferApnSetUrl() {
+        // create APNs
+        ContentValues values1 = new ContentValues();
+        final String apn = "apnName";
+        final String apnName = "name";
+        values1.put(Carriers.APN, apn);
+        values1.put(Carriers.NAME, apnName);
+        values1.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        ContentValues values2 = new ContentValues();
+        final String apn2 = "otherApnName";
+        final String name2 = "name2";
+        values2.put(Carriers.APN, apn2);
+        values2.put(Carriers.NAME, name2);
+        values2.put(Carriers.NUMERIC, TEST_OPERATOR);
+        values2.put(Carriers.APN_SET_ID, 1);
+
+        ContentValues values3 = new ContentValues();
+        final String apn3 = "thirdApnName";
+        final String name3 = "name3";
+        values3.put(Carriers.APN, apn3);
+        values3.put(Carriers.NAME, name3);
+        values3.put(Carriers.NUMERIC, TEST_OPERATOR);
+        values3.put(Carriers.APN_SET_ID, 1);
+
+        // insert APNs
+        // we explicitly include subid, as SubscriptionManager.getDefaultSubscriptionId() returns -1
+        Log.d(TAG, "testPreferApnSetUrl: inserting contentValues=" + values1 + ", " + values2
+                + ", " + values3);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values1);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values2);
+        Uri uri = mContentResolver.insert(CONTENT_URI_WITH_SUBID, values3);
+
+        // before there's a preferred APN set, assert that all APNs are returned
+        final String[] testProjection = { Carriers.NAME };
+        Cursor cursor = mContentResolver.query(
+                Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
+                testProjection, null, null, null);
+        assertEquals(3, cursor.getCount());
+
+        // set the APN from values3 (apn_set_id = 1) to the preferred APN
+        final String preferredApnIdString = uri.getLastPathSegment();
+        final long preferredApnId = Long.parseLong(preferredApnIdString);
+        ContentValues prefer = new ContentValues();
+        prefer.put("apn_id", preferredApnId);
+        int count = mContentResolver.update(URL_PREFERAPN_USING_SUBID, prefer, null, null);
+        assertEquals(1, count);
+
+        // query APN with PREFERAPNSET url
+        // explicitly include SUB_ID, as SubscriptionManager.getDefaultSubscriptionId() returns -1
+        cursor = mContentResolver.query(
+                Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
+                testProjection, null, null, null);
+        assertEquals(2, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(name2, cursor.getString(0));
+        cursor.moveToNext();
+        assertEquals(name3, cursor.getString(0));
+    }
+
+    /**
+     * Test URL_RESTOREAPN_USING_SUBID works correctly.
+     */
+    @Test
+    @SmallTest
+    public void testRestoreDefaultApn() {
+        // setup for multi-SIM
+        TelephonyManager telephonyManager =
+                (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
+        doReturn(2).when(telephonyManager).getPhoneCount();
+
+        // create APN to be deleted (including MVNO values)
+        ContentValues targetValues = new ContentValues();
+        targetValues.put(Carriers.APN, "apnName");
+        targetValues.put(Carriers.NAME, "name");
+        targetValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        targetValues.put(Carriers.MVNO_TYPE, "spn");
+        targetValues.put(Carriers.MVNO_MATCH_DATA, TelephonyProviderTestable.TEST_SPN);
+        // create other operator APN (sama MCCMNC)
+        ContentValues otherValues = new ContentValues();
+        final String otherApn = "otherApnName";
+        final String otherName = "otherName";
+        final String otherMvnoTyp = "spn";
+        final String otherMvnoMatchData = "testOtherOperator";
+        otherValues.put(Carriers.APN, otherApn);
+        otherValues.put(Carriers.NAME, otherName);
+        otherValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        otherValues.put(Carriers.MVNO_TYPE, otherMvnoTyp);
+        otherValues.put(Carriers.MVNO_MATCH_DATA, otherMvnoMatchData);
+
+        // insert APNs
+        Log.d(TAG, "testRestoreDefaultApn: Bulk inserting contentValues=" + targetValues + ", "
+                + otherValues);
+        ContentValues[] values = new ContentValues[]{ targetValues, otherValues };
+        mContentResolver.bulkInsert(Carriers.CONTENT_URI, values);
+
+        // restore to default
+        mContentResolver.delete(URL_RESTOREAPN_USING_SUBID, null, null);
+
+        // get values in table
+        final String[] testProjection =
+        {
+            Carriers.APN,
+            Carriers.NAME,
+            Carriers.MVNO_TYPE,
+            Carriers.MVNO_MATCH_DATA,
+        };
+        // verify that deleted result match results of query
+        Cursor cursor = mContentResolver.query(
+                Carriers.CONTENT_URI, testProjection, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(otherApn, cursor.getString(0));
+        assertEquals(otherName, cursor.getString(1));
+        assertEquals(otherMvnoTyp, cursor.getString(2));
+        assertEquals(otherMvnoMatchData, cursor.getString(3));
+
+        // create APN to be deleted (not include MVNO values)
+        ContentValues targetValues2 = new ContentValues();
+        targetValues2.put(Carriers.APN, "apnName");
+        targetValues2.put(Carriers.NAME, "name");
+        targetValues2.put(Carriers.NUMERIC, TEST_OPERATOR);
+
+        // insert APN
+        mContentResolver.insert(Carriers.CONTENT_URI, targetValues2);
+
+        // restore to default
+        mContentResolver.delete(URL_RESTOREAPN_USING_SUBID, null, null);
+
+        // verify that deleted result match results of query
+        cursor = mContentResolver.query(Carriers.CONTENT_URI, testProjection, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(otherApn, cursor.getString(0));
+        assertEquals(otherName, cursor.getString(1));
+        assertEquals(otherMvnoTyp, cursor.getString(2));
+        assertEquals(otherMvnoMatchData, cursor.getString(3));
+
+        // setup for single-SIM
+        doReturn(1).when(telephonyManager).getPhoneCount();
+
+        // restore to default
+        mContentResolver.delete(URL_RESTOREAPN_USING_SUBID, null, null);
+
+        // verify that deleted values are gone
+        cursor = mContentResolver.query(
+                Carriers.CONTENT_URI, testProjection, null, null, null);
+        assertEquals(0, cursor.getCount());
+        assertEquals(3, notifyChangeRestoreCount);
     }
 }

@@ -16,31 +16,16 @@
 
 package com.android.providers.telephony;
 
-import android.content.ContentResolver;
 import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ProviderInfo;
-import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Binder;
-import android.os.IBinder;
-import android.os.Looper;
 import android.support.test.InstrumentationRegistry;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionManager;
-import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
-import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
-import android.util.Log;
-
-import com.android.internal.telephony.CarrierActionAgent;
-import com.android.internal.telephony.CommandsInterface;
-import com.android.internal.telephony.GsmCdmaPhone;
-import com.android.internal.telephony.PhoneFactory;
-import com.android.internal.telephony.ServiceStateTracker;
 
 import org.junit.After;
 import org.junit.Before;
@@ -49,11 +34,8 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Spy;
 
-import static android.app.job.JobInfo.TriggerContentUri.FLAG_NOTIFY_FOR_DESCENDANTS;
-import static android.Manifest.permission.MODIFY_PHONE_STATE;
 import static android.provider.Telephony.ServiceStateTable;
 import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionId;
-import static android.provider.Telephony.ServiceStateTable.getContentValuesForServiceState;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -199,8 +181,8 @@ public class ServiceStateProviderTest {
         final int rilVoiceRadioTechnology = ss.getRilVoiceRadioTechnology();
         final int rilDataRadioTechnology = ss.getRilDataRadioTechnology();
         final int cssIndicator = ss.getCssIndicator();
-        final int networkId = ss.getNetworkId();
-        final int systemId = ss.getSystemId();
+        final int networkId = ss.getCdmaNetworkId();
+        final int systemId = ss.getCdmaSystemId();
         final int cdmaRoamingIndicator = ss.getCdmaRoamingIndicator();
         final int cdmaDefaultRoamingIndicator = ss.getCdmaDefaultRoamingIndicator();
         final int cdmaEriIconIndex = ss.getCdmaEriIconIndex();
@@ -243,11 +225,11 @@ public class ServiceStateProviderTest {
 
         ServiceState oldSS = new ServiceState();
         oldSS.setStateOutOfService();
-        oldSS.setSystemAndNetworkId(1, 1);
+        oldSS.setCdmaSystemAndNetworkId(1, 1);
 
         ServiceState newSS = new ServiceState();
         newSS.setStateOutOfService();
-        newSS.setSystemAndNetworkId(0, 0);
+        newSS.setCdmaSystemAndNetworkId(0, 0);
 
         // Test that notifyChange is not called for these fields
         boolean notifyChangeWasCalled = false;
