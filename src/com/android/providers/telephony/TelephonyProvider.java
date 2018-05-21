@@ -125,9 +125,11 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.zip.CRC32;
+import java.util.Set;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -223,6 +225,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
+    private static final Set<String> CARRIERS_BOOLEAN_FIELDS = new HashSet<String>();
     private static final Map<String, String> CARRIERS_UNIQUE_FIELDS_DEFAULTS = new HashMap();
 
     @VisibleForTesting
@@ -260,6 +263,14 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_SET_SET));
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
+
+        // SQLite databases store bools as ints but the ContentValues objects passed in through
+        // queries use bools. As a result there is some special handling of boolean fields within
+        // the TelephonyProvider.
+        CARRIERS_BOOLEAN_FIELDS.add(CARRIER_ENABLED);
+        CARRIERS_BOOLEAN_FIELDS.add(MODEM_COGNITIVE);
+        CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
+        CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
     }
 
     @VisibleForTesting
@@ -284,7 +295,7 @@ public class TelephonyProvider extends ContentProvider
                 CURRENT + " INTEGER," +
                 PROTOCOL + " TEXT DEFAULT " + DEFAULT_PROTOCOL + "," +
                 ROAMING_PROTOCOL + " TEXT DEFAULT " + DEFAULT_ROAMING_PROTOCOL + "," +
-                CARRIER_ENABLED + " BOOLEAN DEFAULT 1," +
+                CARRIER_ENABLED + " BOOLEAN DEFAULT 1," + // SQLite databases store bools as ints
                 BEARER + " INTEGER DEFAULT 0," +
                 BEARER_BITMASK + " INTEGER DEFAULT 0," +
                 NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0," +
@@ -1335,15 +1346,13 @@ public class TelephonyProvider extends ContentProvider
             whereArgs[i++] = values.containsKey(ROAMING_PROTOCOL) ?
                     values.getAsString(ROAMING_PROTOCOL) : DEFAULT_ROAMING_PROTOCOL;
 
-            if (values.containsKey(CARRIER_ENABLED) &&
-                    (values.getAsString(CARRIER_ENABLED).
-                            equalsIgnoreCase("false") ||
-                            values.getAsString(CARRIER_ENABLED).equals("0"))) {
-                whereArgs[i++] = "false";
-                whereArgs[i++] = "0";
+            if (values.containsKey(CARRIER_ENABLED)) {
+                whereArgs[i++] = convertStringToBoolString(values.getAsString(CARRIER_ENABLED));
+                whereArgs[i++] = convertStringToIntString(values.getAsString(CARRIER_ENABLED));
             } else {
-                whereArgs[i++] = "true";
-                whereArgs[i++] = "1";
+                String defaultIntString = CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(CARRIER_ENABLED);
+                whereArgs[i++] = convertStringToBoolString(defaultIntString);
+                whereArgs[i++] = defaultIntString;
             }
 
             whereArgs[i++] = values.containsKey(BEARER) ?
@@ -2020,15 +2029,16 @@ public class TelephonyProvider extends ContentProvider
             int i = 0;
             String[] selectionArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
             for (String field : CARRIERS_UNIQUE_FIELDS) {
-                if (CARRIER_ENABLED.equals(field)) {
-                    // for CARRIER_ENABLED we overwrite the value "false" with "0"
-                    selectionArgs[i++] = row.containsKey(CARRIER_ENABLED) &&
-                            (row.getAsString(CARRIER_ENABLED).equals("0") ||
-                                    row.getAsString(CARRIER_ENABLED).equals("false")) ?
-                            "0" : CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(CARRIER_ENABLED);
+                if (!row.containsKey(field)) {
+                    selectionArgs[i++] = CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
                 } else {
-                    selectionArgs[i++] = row.containsKey(field) ?
-                            row.getAsString(field) : CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
+                    if (CARRIERS_BOOLEAN_FIELDS.contains(field)) {
+                        // for boolean fields we overwrite the strings "true" and "false" with "1"
+                        // and "0"
+                        selectionArgs[i++] = convertStringToIntString(row.getAsString(field));
+                    } else {
+                        selectionArgs[i++] = row.getAsString(field);
+                    }
                 }
             }
 
@@ -2055,6 +2065,24 @@ public class TelephonyProvider extends ContentProvider
 
             return null;
         }
+    }
+
+    /**
+     * Convert "true" and "false" to "1" and "0".
+     * If the passed in string is already "1" or "0" returns the passed in string.
+     */
+    private static String convertStringToIntString(String boolString) {
+        if ("0".equals(boolString) || "false".equalsIgnoreCase(boolString)) return "0";
+        return "1";
+    }
+
+    /**
+     * Convert "1" and "0" to "true" and "false".
+     * If the passed in string is already "true" or "false" returns the passed in string.
+     */
+    private static String convertStringToBoolString(String intString) {
+        if ("0".equals(intString) || "false".equalsIgnoreCase(intString)) return "false";
+        return "true";
     }
 
     /**
