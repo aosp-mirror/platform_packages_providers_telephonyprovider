@@ -183,7 +183,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static final String PARTNER_APNS_PATH = "etc/apns-conf.xml";
     private static final String OEM_APNS_PATH = "telephony/apns-conf.xml";
-    private static final String OTA_UPDATED_APNS_PATH = "misc/apns-conf.xml";
+    private static final String OTA_UPDATED_APNS_PATH = "misc/apns/apns-conf.xml";
     private static final String OLD_APNS_PATH = "etc/old-apns-conf.xml";
 
     private static final String DEFAULT_PROTOCOL = "IP";
