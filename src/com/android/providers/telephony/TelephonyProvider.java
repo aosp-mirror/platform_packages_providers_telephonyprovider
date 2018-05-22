@@ -116,15 +116,18 @@ import com.android.internal.util.XmlUtils;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -518,7 +521,30 @@ public class TelephonyProvider extends ContentProvider
             } catch (IOException e) {
                 loge("IOException for " + file.getAbsolutePath() + ":" + e);
             }
+
+            // The RRO may have been updated in a firmware upgrade. Add checksum for the
+            // resources to the total checksum so that apns in an RRO update is not missed.
+            try (InputStream inputStream = mContext.getResources().
+                        openRawResource(com.android.internal.R.xml.apns)) {
+                byte[] array = toByteArray(inputStream);
+                CRC32 c = new CRC32();
+                c.update(array);
+                checksum += c.getValue();
+                if (DBG) log("Checksum after adding resource is " + checksum);
+            } catch (IOException | Resources.NotFoundException e) {
+                loge("Exception when calculating checksum for internal apn resources: " + e);
+            }
             return checksum;
+        }
+
+        private static byte[] toByteArray(InputStream input) throws IOException {
+            byte[] buffer = new byte[128];
+            int bytesRead;
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            while ((bytesRead = input.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+            return output.toByteArray();
         }
 
         private long getApnConfChecksum() {
