@@ -68,6 +68,8 @@ public class CarrierIdProviderTest extends TestCase {
     private static final String dummy_apn = "APN_DUMMY";
     private static final String dummy_iccid_prefix = "ICCID_PREFIX_DUMMY";
     private static final String dummy_name = "NAME_DUMMY";
+    private static final String dummy_access_rule =
+            "B9CFCE1C47A6AC713442718F15EF55B00B3A6D1A6D48CB46249FA8EB51465350";
     private static final int dummy_cid = 0;
 
     private MockContextWithProvider mContext;
@@ -433,6 +435,7 @@ public class CarrierIdProviderTest extends TestCase {
         contentValues.put(CarrierId.All.ICCID_PREFIX, dummy_iccid_prefix);
         contentValues.put(CarrierId.CARRIER_NAME, dummy_name);
         contentValues.put(CarrierId.CARRIER_ID, dummy_cid);
+        contentValues.put(CarrierId.All.PRIVILEGE_ACCESS_RULE, dummy_access_rule);
         return contentValues;
     }
 }
