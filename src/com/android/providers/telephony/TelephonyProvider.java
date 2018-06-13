@@ -99,6 +99,7 @@ import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
@@ -108,7 +109,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.IApnSourceService;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.dataconnection.ApnSetting;
+import com.android.internal.telephony.dataconnection.ApnSettingUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
@@ -3259,7 +3260,8 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
-                        && ApnSetting.mvnoMatches(iccRecords, mvnoType, mvnoMatchData)) {
+                        && ApnSettingUtils.mvnoMatches(iccRecords,
+                        ApnSetting.getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
                             + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
