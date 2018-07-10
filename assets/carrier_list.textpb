@@ -1944,12 +1944,15 @@ carrier_id {
   canonical_id: 1187
   carrier_name: "AT&T"
   carrier_attribute {
+    mccmnc_tuple: "310030"
     mccmnc_tuple: "310070"
     mccmnc_tuple: "310170"
+    mccmnc_tuple: "310280"
     mccmnc_tuple: "310380"
     mccmnc_tuple: "310410"
     mccmnc_tuple: "310560"
     mccmnc_tuple: "310680"
+    mccmnc_tuple: "310950"
     mccmnc_tuple: "311180"
   }
 }
@@ -2037,13 +2040,6 @@ carrier_id {
   carrier_name: "Oklahoma Western Telephone Company"
   carrier_attribute {
     mccmnc_tuple: "310540"
-  }
-}
-carrier_id {
-  canonical_id: 1233
-  carrier_name: "Texas RSA 1 dba XIT Cellular"
-  carrier_attribute {
-    mccmnc_tuple: "310950"
   }
 }
 carrier_id {
@@ -5410,13 +5406,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 1782
-  carrier_name: "Centennial Communications"
-  carrier_attribute {
-    mccmnc_tuple: "310030"
-  }
-}
-carrier_id {
   canonical_id: 1783
   carrier_name: "Nevada Wireless LLC"
   carrier_attribute {
@@ -5478,13 +5467,6 @@ carrier_id {
   carrier_name: "Alaska Wireless Communications LLC"
   carrier_attribute {
     mccmnc_tuple: "310190"
-  }
-}
-carrier_id {
-  canonical_id: 1794
-  carrier_name: "Contennial Puerto Rio License Corp."
-  carrier_attribute {
-    mccmnc_tuple: "310280"
   }
 }
 carrier_id {
@@ -7821,4 +7803,4 @@ carrier_id {
     gid1: "508"
   }
 }
-version: 2
+version: 4
