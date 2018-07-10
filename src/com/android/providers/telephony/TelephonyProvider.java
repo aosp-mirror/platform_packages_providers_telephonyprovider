@@ -586,8 +586,8 @@ public class TelephonyProvider extends ContentProvider
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
             File oemConfFile =  new File(Environment.getOemDirectory(), OEM_APNS_PATH);
             File updatedConfFile = new File(Environment.getDataDirectory(), OTA_UPDATED_APNS_PATH);
-            confFile = getNewerFile(confFile, oemConfFile);
-            confFile = getNewerFile(confFile, updatedConfFile);
+            confFile = pickSecondIfExists(confFile, oemConfFile);
+            confFile = pickSecondIfExists(confFile, updatedConfFile);
             return confFile;
         }
 
@@ -697,26 +697,16 @@ public class TelephonyProvider extends ContentProvider
 
         }
 
-        private File getNewerFile(File sysApnFile, File altApnFile) {
+        private File pickSecondIfExists(File sysApnFile, File altApnFile) {
             if (altApnFile.exists()) {
-                // Alternate file exists. Use the newer one.
-                long altFileTime = altApnFile.lastModified();
-                long currFileTime = sysApnFile.lastModified();
-                if (DBG) log("APNs Timestamp: altFileTime = " + altFileTime + " currFileTime = "
-                        + currFileTime);
-
-                // To get the latest version from OEM or System image
-                if (altFileTime > currFileTime) {
-                    if (DBG) log("APNs Timestamp: Alternate image " + altApnFile.getPath() +
-                            " is greater than System image");
-                    return altApnFile;
-                }
+                if (DBG) log("Load APNs from " + altApnFile.getPath() +
+                        " instead of " + sysApnFile.getPath());
+                return altApnFile;
             } else {
-                // No Apn in alternate image, so load it from system image.
-                if (DBG) log("No APNs in OEM image = " + altApnFile.getPath() +
-                        " Load APNs from system image");
+                if (DBG) log("Load APNs from " + sysApnFile.getPath() +
+                        " instead of " + altApnFile.getPath());
+                return sysApnFile;
             }
-            return sysApnFile;
         }
 
         @Override
