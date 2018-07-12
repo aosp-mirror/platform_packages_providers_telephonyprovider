@@ -2583,6 +2583,8 @@ public class TelephonyProvider extends ContentProvider
                             MMSC.equals(column) ||
                             MMSPROXY.equals(column) ||
                             MMSPORT.equals(column) ||
+                            MVNO_TYPE.equals(column) ||
+                            MVNO_MATCH_DATA.equals(column) ||
                             APN.equals(column)) {
                         // noop
                     } else {
