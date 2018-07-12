@@ -15,6 +15,8 @@
  */
 package com.android.providers.telephony;
 
+import android.content.Context;
+import android.content.pm.ProviderInfo;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.util.Log;
@@ -49,6 +51,14 @@ public class CarrierIdProviderTestable extends CarrierIdProvider {
     SQLiteDatabase getWritableDatabase() {
         Log.d(TAG, "getWritableDatabase called" + mDbHelper.getWritableDatabase());
         return mDbHelper.getWritableDatabase();
+    }
+
+    void initializeForTesting(Context context) {
+        ProviderInfo providerInfo = new ProviderInfo();
+        providerInfo.authority = CarrierIdProvider.AUTHORITY;
+
+        // Add context to given carrierIdProvider
+        attachInfoForTesting(context, providerInfo);
     }
 
     /**
