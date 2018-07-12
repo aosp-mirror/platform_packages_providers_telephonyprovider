@@ -104,14 +104,10 @@ public class CarrierIdProviderTest extends TestCase {
     private class MockContextWithProvider extends MockContext {
         private final MockContentResolver mResolver;
 
-        public MockContextWithProvider(CarrierIdProvider carrierIdProvider) {
+        public MockContextWithProvider(CarrierIdProviderTestable carrierIdProvider) {
             mResolver = new FakeContentResolver();
 
-            ProviderInfo providerInfo = new ProviderInfo();
-            providerInfo.authority = CarrierIdProvider.AUTHORITY;
-
-            // Add context to given carrierIdProvider
-            carrierIdProvider.attachInfoForTesting(this, providerInfo);
+            carrierIdProvider.initializeForTesting(this);
             Log.d(TAG, "MockContextWithProvider: carrierIdProvider.getContext(): "
                     + carrierIdProvider.getContext());
 
