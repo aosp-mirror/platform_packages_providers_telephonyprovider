@@ -16,59 +16,40 @@
 
 package com.android.providers.telephony;
 
-import android.annotation.TargetApi;
-import android.content.ContentProvider;
-import android.content.ContentResolver;
+import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
+import android.Manifest;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
 import android.content.res.Resources;
-import android.content.SharedPreferences;
-import android.database.Cursor;
 import android.database.ContentObserver;
-import android.database.DatabaseErrorHandler;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteOpenHelper;
-import android.database.sqlite.SQLiteDatabase.CursorFactory;
+import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
-import android.os.FileUtils;
 import android.os.Process;
+import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
 import android.support.test.InstrumentationRegistry;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
-import android.test.AndroidTestCase;
-import android.test.mock.MockContentProvider;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.providers.telephony.TelephonyProvider;
-
 import junit.framework.TestCase;
 
-import org.junit.After;
-import org.junit.Before;
 import org.junit.Test;
-import org.mockito.ArgumentCaptor;
 
-import static org.mockito.ArgumentMatchers.anyInt;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.times;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-
-import java.util.Map;
-import java.util.Set;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.IntStream;
 
 
 /**
@@ -125,6 +106,10 @@ public class TelephonyProviderTest extends TestCase {
     private class MockContextWithProvider extends MockContext {
         private final MockContentResolver mResolver;
         private TelephonyManager mTelephonyManager = mock(TelephonyManager.class);
+
+        private final List<String> GRANTED_PERMISSIONS = Arrays.asList(
+                Manifest.permission.MODIFY_PHONE_STATE, Manifest.permission.WRITE_APN_SETTINGS,
+                Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
 
         public MockContextWithProvider(TelephonyProvider telephonyProvider) {
             mResolver = new MockContentResolver() {
@@ -186,7 +171,7 @@ public class TelephonyProviderTest extends TestCase {
         // Gives permission to write to the APN table within the MockContext
         @Override
         public int checkCallingOrSelfPermission(String permission) {
-            if (TextUtils.equals(permission, "android.permission.WRITE_APN_SETTINGS")) {
+            if (GRANTED_PERMISSIONS.contains(permission)) {
                 Log.d(TAG, "checkCallingOrSelfPermission: permission=" + permission
                         + ", returning PackageManager.PERMISSION_GRANTED");
                 return PackageManager.PERMISSION_GRANTED;
@@ -284,6 +269,64 @@ public class TelephonyProviderTest extends TestCase {
     @SmallTest
     public void testInsertCarriers() {
         doSimpleTestForUri(Carriers.CONTENT_URI);
+    }
+
+    /**
+     * Test migrating int-based MCC/MNCs over to Strings in the sim info table
+     */
+    @Test
+    @SmallTest
+    public void testMccMncMigration() {
+        CarrierIdProviderTestable carrierIdProvider = new CarrierIdProviderTestable();
+        carrierIdProvider.initializeForTesting(mContext);
+        mContentResolver.addProvider(Telephony.CarrierId.All.CONTENT_URI.getAuthority(),
+                carrierIdProvider);
+        // Insert a few values into the carrier ID db
+        List<String> mccMncs = Arrays.asList("99910", "999110", "999060", "99905");
+        ContentValues[] carrierIdMccMncs = mccMncs.stream()
+                .map((mccMnc) -> {
+                    ContentValues cv = new ContentValues(1);
+                    cv.put(Telephony.CarrierId.All.MCCMNC, mccMnc);
+                    return cv;
+                }).toArray(ContentValues[]::new);
+        mContentResolver.bulkInsert(Telephony.CarrierId.All.CONTENT_URI, carrierIdMccMncs);
+
+        // Populate the sim info db with int-format entries
+        ContentValues[] existingSimInfoEntries = IntStream.range(0, mccMncs.size())
+                .mapToObj((idx) -> {
+                    int mcc = Integer.valueOf(mccMncs.get(idx).substring(0, 3));
+                    int mnc = Integer.valueOf(mccMncs.get(idx).substring(3));
+                    ContentValues cv = new ContentValues(4);
+                    cv.put(SubscriptionManager.MCC, mcc);
+                    cv.put(SubscriptionManager.MNC, mnc);
+                    cv.put(SubscriptionManager.ICC_ID, String.valueOf(idx));
+                    cv.put(SubscriptionManager.CARD_ID, String.valueOf(idx));
+                    return cv;
+        }).toArray(ContentValues[]::new);
+
+        mContentResolver.bulkInsert(SubscriptionManager.CONTENT_URI, existingSimInfoEntries);
+
+        // Run the upgrade helper on all the sim info entries.
+        String[] proj = {SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID,
+                SubscriptionManager.MCC, SubscriptionManager.MNC,
+                SubscriptionManager.MCC_STRING, SubscriptionManager.MNC_STRING};
+        try (Cursor c = mContentResolver.query(SubscriptionManager.CONTENT_URI, proj,
+                null, null, null)) {
+            while (c.moveToNext()) {
+                TelephonyProvider.fillInMccMncStringAtCursor(mContext,
+                        mTelephonyProviderTestable.getWritableDatabase(), c);
+            }
+        }
+
+        // Loop through and make sure that everything got filled in correctly.
+        try (Cursor c = mContentResolver.query(SubscriptionManager.CONTENT_URI, proj,
+                null, null, null)) {
+            while (c.moveToNext()) {
+                String mcc = c.getString(c.getColumnIndexOrThrow(SubscriptionManager.MCC_STRING));
+                String mnc = c.getString(c.getColumnIndexOrThrow(SubscriptionManager.MNC_STRING));
+                assertTrue(mccMncs.contains(mcc + mnc));
+            }
+        }
     }
 
     /**
