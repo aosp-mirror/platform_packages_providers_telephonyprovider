@@ -95,10 +95,12 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.os.UserHandle;
+import android.provider.Telephony;
 import android.telephony.ServiceState;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.Pair;
@@ -108,7 +110,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.IApnSourceService;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.dataconnection.ApnSetting;
+import com.android.internal.telephony.dataconnection.ApnSettingUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
@@ -116,15 +118,21 @@ import com.android.internal.util.XmlUtils;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.zip.CRC32;
+import java.util.Set;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -133,7 +141,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 26 << 16;
+    private static final int DATABASE_VERSION = 27 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -220,6 +228,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
+    private static final Set<String> CARRIERS_BOOLEAN_FIELDS = new HashSet<String>();
     private static final Map<String, String> CARRIERS_UNIQUE_FIELDS_DEFAULTS = new HashMap();
 
     @VisibleForTesting
@@ -257,6 +266,14 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_SET_SET));
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
+
+        // SQLite databases store bools as ints but the ContentValues objects passed in through
+        // queries use bools. As a result there is some special handling of boolean fields within
+        // the TelephonyProvider.
+        CARRIERS_BOOLEAN_FIELDS.add(CARRIER_ENABLED);
+        CARRIERS_BOOLEAN_FIELDS.add(MODEM_COGNITIVE);
+        CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
+        CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
     }
 
     @VisibleForTesting
@@ -281,7 +298,7 @@ public class TelephonyProvider extends ContentProvider
                 CURRENT + " INTEGER," +
                 PROTOCOL + " TEXT DEFAULT " + DEFAULT_PROTOCOL + "," +
                 ROAMING_PROTOCOL + " TEXT DEFAULT " + DEFAULT_ROAMING_PROTOCOL + "," +
-                CARRIER_ENABLED + " BOOLEAN DEFAULT 1," +
+                CARRIER_ENABLED + " BOOLEAN DEFAULT 1," + // SQLite databases store bools as ints
                 BEARER + " INTEGER DEFAULT 0," +
                 BEARER_BITMASK + " INTEGER DEFAULT 0," +
                 NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0," +
@@ -330,6 +347,8 @@ public class TelephonyProvider extends ContentProvider
                 + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT + ","
                 + SubscriptionManager.MCC + " INTEGER DEFAULT 0,"
                 + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.MCC_STRING + " TEXT,"
+                + SubscriptionManager.MNC_STRING + " TEXT,"
                 + SubscriptionManager.SIM_PROVISIONING_STATUS
                 + " INTEGER DEFAULT " + SubscriptionManager.SIM_PROVISIONED + ","
                 + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
@@ -419,7 +438,8 @@ public class TelephonyProvider extends ContentProvider
         mInjector = injector;
     }
 
-    private static class DatabaseHelper extends SQLiteOpenHelper {
+    @VisibleForTesting
+    public static class DatabaseHelper extends SQLiteOpenHelper {
         // Context to access resources with
         private Context mContext;
 
@@ -435,10 +455,15 @@ public class TelephonyProvider extends ContentProvider
             setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         }
 
-        private static int getVersion(Context context) {
+        @VisibleForTesting
+        public static int getVersion(Context context) {
             if (VDBG) log("getVersion:+");
             // Get the database version, combining a static schema version and the XML version
             Resources r = context.getResources();
+            if (r == null) {
+                loge("resources=null, return version=" + Integer.toHexString(DATABASE_VERSION));
+                return DATABASE_VERSION;
+            }
             XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
             try {
                 XmlUtils.beginDocument(parser, "apns");
@@ -518,7 +543,30 @@ public class TelephonyProvider extends ContentProvider
             } catch (IOException e) {
                 loge("IOException for " + file.getAbsolutePath() + ":" + e);
             }
+
+            // The RRO may have been updated in a firmware upgrade. Add checksum for the
+            // resources to the total checksum so that apns in an RRO update is not missed.
+            try (InputStream inputStream = mContext.getResources().
+                        openRawResource(com.android.internal.R.xml.apns)) {
+                byte[] array = toByteArray(inputStream);
+                CRC32 c = new CRC32();
+                c.update(array);
+                checksum += c.getValue();
+                if (DBG) log("Checksum after adding resource is " + checksum);
+            } catch (IOException | Resources.NotFoundException e) {
+                loge("Exception when calculating checksum for internal apn resources: " + e);
+            }
             return checksum;
+        }
+
+        private static byte[] toByteArray(InputStream input) throws IOException {
+            byte[] buffer = new byte[128];
+            int bytesRead;
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            while ((bytesRead = input.read(buffer)) != -1) {
+                output.write(buffer, 0, bytesRead);
+            }
+            return output.toByteArray();
         }
 
         private long getApnConfChecksum() {
@@ -538,8 +586,8 @@ public class TelephonyProvider extends ContentProvider
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
             File oemConfFile =  new File(Environment.getOemDirectory(), OEM_APNS_PATH);
             File updatedConfFile = new File(Environment.getDataDirectory(), OTA_UPDATED_APNS_PATH);
-            confFile = getNewerFile(confFile, oemConfFile);
-            confFile = getNewerFile(confFile, updatedConfFile);
+            confFile = pickSecondIfExists(confFile, oemConfFile);
+            confFile = pickSecondIfExists(confFile, updatedConfFile);
             return confFile;
         }
 
@@ -570,16 +618,20 @@ public class TelephonyProvider extends ContentProvider
             if (VDBG) log("dbh.initDatabase:+ db=" + db);
             // Read internal APNS data
             Resources r = mContext.getResources();
-            XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
             int publicversion = -1;
-            try {
-                XmlUtils.beginDocument(parser, "apns");
-                publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
-                loadApns(db, parser);
-            } catch (Exception e) {
-                loge("Got exception while loading APN database." + e);
-            } finally {
-                parser.close();
+            if (r != null) {
+                XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
+                try {
+                    XmlUtils.beginDocument(parser, "apns");
+                    publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
+                    loadApns(db, parser);
+                } catch (Exception e) {
+                    loge("Got exception while loading APN database." + e);
+                } finally {
+                    parser.close();
+                }
+            } else {
+                loge("initDatabase: resources=null");
             }
 
             // Read external APNS data (partner-provided)
@@ -645,26 +697,16 @@ public class TelephonyProvider extends ContentProvider
 
         }
 
-        private File getNewerFile(File sysApnFile, File altApnFile) {
+        private File pickSecondIfExists(File sysApnFile, File altApnFile) {
             if (altApnFile.exists()) {
-                // Alternate file exists. Use the newer one.
-                long altFileTime = altApnFile.lastModified();
-                long currFileTime = sysApnFile.lastModified();
-                if (DBG) log("APNs Timestamp: altFileTime = " + altFileTime + " currFileTime = "
-                        + currFileTime);
-
-                // To get the latest version from OEM or System image
-                if (altFileTime > currFileTime) {
-                    if (DBG) log("APNs Timestamp: Alternate image " + altApnFile.getPath() +
-                            " is greater than System image");
-                    return altApnFile;
-                }
+                if (DBG) log("Load APNs from " + altApnFile.getPath() +
+                        " instead of " + sysApnFile.getPath());
+                return altApnFile;
             } else {
-                // No Apn in alternate image, so load it from system image.
-                if (DBG) log("No APNs in OEM image = " + altApnFile.getPath() +
-                        " Load APNs from system image");
+                if (DBG) log("Load APNs from " + sysApnFile.getPath() +
+                        " instead of " + altApnFile.getPath());
+                return sysApnFile;
             }
-            return sysApnFile;
         }
 
         @Override
@@ -1033,9 +1075,37 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 26 << 16 | 6;
             }
+
+            if (oldVersion < (27 << 16 | 6)) {
+                // Add the new MCC_STRING and MNC_STRING columns into the subscription table,
+                // and attempt to populate them.
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.MCC_STRING + " TEXT;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.MNC_STRING + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                " The table will get created in onOpen.");
+                    }
+                }
+                // Migrate the old integer values over to strings
+                String[] proj = {SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID,
+                        SubscriptionManager.MCC, SubscriptionManager.MNC};
+                try (Cursor c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null)) {
+                    while (c.moveToNext()) {
+                        fillInMccMncStringAtCursor(mContext, db, c);
+                    }
+                }
+                oldVersion = 27 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
+            // when adding fields to onUpgrade, also add a unit test to TelephonyDatabaseHelperTest
+            // and update the DATABASE_VERSION field
         }
 
         private void recreateSimInfoDB(Cursor c, SQLiteDatabase db, String[] proj) {
@@ -1309,15 +1379,13 @@ public class TelephonyProvider extends ContentProvider
             whereArgs[i++] = values.containsKey(ROAMING_PROTOCOL) ?
                     values.getAsString(ROAMING_PROTOCOL) : DEFAULT_ROAMING_PROTOCOL;
 
-            if (values.containsKey(CARRIER_ENABLED) &&
-                    (values.getAsString(CARRIER_ENABLED).
-                            equalsIgnoreCase("false") ||
-                            values.getAsString(CARRIER_ENABLED).equals("0"))) {
-                whereArgs[i++] = "false";
-                whereArgs[i++] = "0";
+            if (values.containsKey(CARRIER_ENABLED)) {
+                whereArgs[i++] = convertStringToBoolString(values.getAsString(CARRIER_ENABLED));
+                whereArgs[i++] = convertStringToIntString(values.getAsString(CARRIER_ENABLED));
             } else {
-                whereArgs[i++] = "true";
-                whereArgs[i++] = "1";
+                String defaultIntString = CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(CARRIER_ENABLED);
+                whereArgs[i++] = convertStringToBoolString(defaultIntString);
+                whereArgs[i++] = defaultIntString;
             }
 
             whereArgs[i++] = values.containsKey(BEARER) ?
@@ -1430,82 +1498,87 @@ public class TelephonyProvider extends ContentProvider
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
             // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
-            if (c != null) {
-                String[] persistApnsForPlmns = mContext.getResources().getStringArray(
-                        R.array.persist_apns_for_plmn);
-                while (c.moveToNext()) {
-                    ContentValues cv = new ContentValues();
-                    String val;
-                    // Using V17 copy function for V15 upgrade. This should be fine since it handles
-                    // columns that may not exist properly (getStringValueFromCursor() and
-                    // getIntValueFromCursor() handle column index -1)
-                    copyApnValuesV17(cv, c);
-                    // Change bearer to a bitmask
-                    String bearerStr = c.getString(c.getColumnIndex(BEARER));
-                    if (!TextUtils.isEmpty(bearerStr)) {
-                        int bearer_bitmask = ServiceState.getBitmaskForTech(
-                                Integer.parseInt(bearerStr));
-                        cv.put(BEARER_BITMASK, bearer_bitmask);
+            if (c != null && mContext.getResources() != null) {
+                try {
+                    String[] persistApnsForPlmns = mContext.getResources().getStringArray(
+                            R.array.persist_apns_for_plmn);
+                    while (c.moveToNext()) {
+                        ContentValues cv = new ContentValues();
+                        String val;
+                        // Using V17 copy function for V15 upgrade. This should be fine since it handles
+                        // columns that may not exist properly (getStringValueFromCursor() and
+                        // getIntValueFromCursor() handle column index -1)
+                        copyApnValuesV17(cv, c);
+                        // Change bearer to a bitmask
+                        String bearerStr = c.getString(c.getColumnIndex(BEARER));
+                        if (!TextUtils.isEmpty(bearerStr)) {
+                            int bearer_bitmask = ServiceState.getBitmaskForTech(
+                                    Integer.parseInt(bearerStr));
+                            cv.put(BEARER_BITMASK, bearer_bitmask);
 
-                        int networkTypeBitmask = ServiceState.getBitmaskForTech(
-                                ServiceState.rilRadioTechnologyToNetworkType(
-                                        Integer.parseInt(bearerStr)));
-                        cv.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
-                    }
-
-                    int userEditedColumnIdx = c.getColumnIndex("user_edited");
-                    if (userEditedColumnIdx != -1) {
-                        String user_edited = c.getString(userEditedColumnIdx);
-                        if (!TextUtils.isEmpty(user_edited)) {
-                            cv.put(EDITED, new Integer(user_edited));
+                            int networkTypeBitmask = ServiceState.getBitmaskForTech(
+                                    ServiceState.rilRadioTechnologyToNetworkType(
+                                            Integer.parseInt(bearerStr)));
+                            cv.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
                         }
-                    } else {
-                        cv.put(EDITED, CARRIER_EDITED);
-                    }
 
-                    // New EDITED column. Default value (UNEDITED) will
-                    // be used for all rows except for non-mvno entries for plmns indicated
-                    // by resource: those will be set to CARRIER_EDITED to preserve
-                    // their current values
-                    val = c.getString(c.getColumnIndex(NUMERIC));
-                    for (String s : persistApnsForPlmns) {
-                        if (!TextUtils.isEmpty(val) && val.equals(s) &&
-                                (!cv.containsKey(MVNO_TYPE) ||
-                                        TextUtils.isEmpty(cv.getAsString(MVNO_TYPE)))) {
-                            if (userEditedColumnIdx == -1) {
-                                cv.put(EDITED, CARRIER_EDITED);
-                            } else { // if (oldVersion == 14) -- if db had user_edited column
-                                if (cv.getAsInteger(EDITED) == USER_EDITED) {
-                                    cv.put(EDITED, CARRIER_EDITED);
-                                }
+                        int userEditedColumnIdx = c.getColumnIndex("user_edited");
+                        if (userEditedColumnIdx != -1) {
+                            String user_edited = c.getString(userEditedColumnIdx);
+                            if (!TextUtils.isEmpty(user_edited)) {
+                                cv.put(EDITED, new Integer(user_edited));
                             }
+                        } else {
+                            cv.put(EDITED, CARRIER_EDITED);
+                        }
 
-                            break;
+                        // New EDITED column. Default value (UNEDITED) will
+                        // be used for all rows except for non-mvno entries for plmns indicated
+                        // by resource: those will be set to CARRIER_EDITED to preserve
+                        // their current values
+                        val = c.getString(c.getColumnIndex(NUMERIC));
+                        for (String s : persistApnsForPlmns) {
+                            if (!TextUtils.isEmpty(val) && val.equals(s) &&
+                                    (!cv.containsKey(MVNO_TYPE) ||
+                                            TextUtils.isEmpty(cv.getAsString(MVNO_TYPE)))) {
+                                if (userEditedColumnIdx == -1) {
+                                    cv.put(EDITED, CARRIER_EDITED);
+                                } else { // if (oldVersion == 14) -- if db had user_edited column
+                                    if (cv.getAsInteger(EDITED) == USER_EDITED) {
+                                        cv.put(EDITED, CARRIER_EDITED);
+                                    }
+                                }
+
+                                break;
+                            }
+                        }
+
+                        try {
+                            db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
+                                    SQLiteDatabase.CONFLICT_ABORT);
+                            if (VDBG) {
+                                log("dbh.copyPreservedApnsToNewTable: db.insert returned >= 0; " +
+                                        "insert successful for cv " + cv);
+                            }
+                        } catch (SQLException e) {
+                            if (VDBG)
+                                log("dbh.copyPreservedApnsToNewTable insertWithOnConflict exception " +
+                                        e + " for cv " + cv);
+                            // Insertion failed which could be due to a conflict. Check if that is
+                            // the case and merge the entries
+                            Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
+                                    CARRIERS_TABLE_TMP, cv);
+                            if (oldRow != null) {
+                                ContentValues mergedValues = new ContentValues();
+                                mergeFieldsAndUpdateDb(db, CARRIERS_TABLE_TMP, oldRow, cv,
+                                        mergedValues, true, mContext);
+                                oldRow.close();
+                            }
                         }
                     }
-
-                    try {
-                        db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
-                                SQLiteDatabase.CONFLICT_ABORT);
-                        if (VDBG) {
-                            log("dbh.copyPreservedApnsToNewTable: db.insert returned >= 0; " +
-                                    "insert successful for cv " + cv);
-                        }
-                    } catch (SQLException e) {
-                        if (VDBG)
-                            log("dbh.copyPreservedApnsToNewTable insertWithOnConflict exception " +
-                                    e + " for cv " + cv);
-                        // Insertion failed which could be due to a conflict. Check if that is
-                        // the case and merge the entries
-                        Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
-                                CARRIERS_TABLE_TMP, cv);
-                        if (oldRow != null) {
-                            ContentValues mergedValues = new ContentValues();
-                            mergeFieldsAndUpdateDb(db, CARRIERS_TABLE_TMP, oldRow, cv,
-                                    mergedValues, true, mContext);
-                            oldRow.close();
-                        }
-                    }
+                } catch (Resources.NotFoundException e) {
+                    loge("array.persist_apns_for_plmn is not found");
+                    return;
                 }
             }
         }
@@ -1893,13 +1966,17 @@ public class TelephonyProvider extends ContentProvider
             boolean match = false;
 
             // Check if APN falls under persist_apns_for_plmn
-            String[] persistApnsForPlmns = context.getResources().getStringArray(
-                    R.array.persist_apns_for_plmn);
-            for (String s : persistApnsForPlmns) {
-                if (s.equalsIgnoreCase(newRow.getAsString(NUMERIC))) {
-                    match = true;
-                    break;
+            if (context.getResources() != null) {
+                String[] persistApnsForPlmns = context.getResources().getStringArray(
+                        R.array.persist_apns_for_plmn);
+                for (String s : persistApnsForPlmns) {
+                    if (s.equalsIgnoreCase(newRow.getAsString(NUMERIC))) {
+                        match = true;
+                        break;
+                    }
                 }
+            } else {
+                loge("separateRowsNeeded: resources=null");
             }
 
             if (!match) return false;
@@ -1994,15 +2071,16 @@ public class TelephonyProvider extends ContentProvider
             int i = 0;
             String[] selectionArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
             for (String field : CARRIERS_UNIQUE_FIELDS) {
-                if (CARRIER_ENABLED.equals(field)) {
-                    // for CARRIER_ENABLED we overwrite the value "false" with "0"
-                    selectionArgs[i++] = row.containsKey(CARRIER_ENABLED) &&
-                            (row.getAsString(CARRIER_ENABLED).equals("0") ||
-                                    row.getAsString(CARRIER_ENABLED).equals("false")) ?
-                            "0" : CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(CARRIER_ENABLED);
+                if (!row.containsKey(field)) {
+                    selectionArgs[i++] = CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
                 } else {
-                    selectionArgs[i++] = row.containsKey(field) ?
-                            row.getAsString(field) : CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
+                    if (CARRIERS_BOOLEAN_FIELDS.contains(field)) {
+                        // for boolean fields we overwrite the strings "true" and "false" with "1"
+                        // and "0"
+                        selectionArgs[i++] = convertStringToIntString(row.getAsString(field));
+                    } else {
+                        selectionArgs[i++] = row.getAsString(field);
+                    }
                 }
             }
 
@@ -2029,6 +2107,24 @@ public class TelephonyProvider extends ContentProvider
 
             return null;
         }
+    }
+
+    /**
+     * Convert "true" and "false" to "1" and "0".
+     * If the passed in string is already "1" or "0" returns the passed in string.
+     */
+    private static String convertStringToIntString(String boolString) {
+        if ("0".equals(boolString) || "false".equalsIgnoreCase(boolString)) return "0";
+        return "1";
+    }
+
+    /**
+     * Convert "1" and "0" to "true" and "false".
+     * If the passed in string is already "true" or "false" returns the passed in string.
+     */
+    private static String convertStringToBoolString(String intString) {
+        if ("0".equals(intString) || "false".equalsIgnoreCase(intString)) return "false";
+        return "true";
     }
 
     /**
@@ -2517,6 +2613,8 @@ public class TelephonyProvider extends ContentProvider
                             MMSC.equals(column) ||
                             MMSPROXY.equals(column) ||
                             MMSPORT.equals(column) ||
+                            MVNO_TYPE.equals(column) ||
+                            MVNO_MATCH_DATA.equals(column) ||
                             APN.equals(column)) {
                         // noop
                     } else {
@@ -3233,7 +3331,8 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
-                        && ApnSetting.mvnoMatches(iccRecords, mvnoType, mvnoMatchData)) {
+                        && ApnSettingUtils.mvnoMatches(iccRecords,
+                        ApnSetting.getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
                             + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
@@ -3289,10 +3388,58 @@ public class TelephonyProvider extends ContentProvider
 
         initDatabaseWithDatabaseHelper(db);
 
-        // Notify listereners of DB change since DB has been updated
+        // Notify listeners of DB change since DB has been updated
         getContext().getContentResolver().notifyChange(
                 CONTENT_URI, null, true, UserHandle.USER_ALL);
 
+    }
+
+    public static void fillInMccMncStringAtCursor(Context context, SQLiteDatabase db, Cursor c) {
+        int mcc, mnc;
+        String subId;
+        try {
+            mcc = c.getInt(c.getColumnIndexOrThrow(SubscriptionManager.MCC));
+            mnc = c.getInt(c.getColumnIndexOrThrow(SubscriptionManager.MNC));
+            subId = c.getString(c.getColumnIndexOrThrow(
+                    SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID));
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Possible database corruption -- some columns not found.");
+            return;
+        }
+
+        String mccString = String.format(Locale.getDefault(), "%03d", mcc);
+        String mncString = getBestStringMnc(context, mccString, mnc);
+        ContentValues cv = new ContentValues(2);
+        cv.put(SubscriptionManager.MCC_STRING, mccString);
+        cv.put(SubscriptionManager.MNC_STRING, mncString);
+        db.update(SIMINFO_TABLE, cv,
+                SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                new String[]{subId});
+    }
+
+    /*
+     * Find the best string-form mnc by looking up possibilities in the carrier id db.
+     * Default to the three-digit version if neither/both are valid.
+     */
+    private static String getBestStringMnc(Context context, String mcc, int mnc) {
+        if (mnc >= 100 && mnc <= 999) {
+            return String.valueOf(mnc);
+        }
+        String twoDigitMnc = String.format(Locale.getDefault(), "%02d", mnc);
+        String threeDigitMnc = "0" + twoDigitMnc;
+
+        try (
+                Cursor twoDigitMncCursor = context.getContentResolver().query(
+                        Telephony.CarrierId.All.CONTENT_URI,
+                        /* projection */ null,
+                        /* selection */ Telephony.CarrierId.All.MCCMNC + "=?",
+                        /* selectionArgs */ new String[]{mcc + twoDigitMnc}, null)
+        ) {
+            if (twoDigitMncCursor.getCount() > 0) {
+                return twoDigitMnc;
+            }
+            return threeDigitMnc;
+        }
     }
 
     /**
