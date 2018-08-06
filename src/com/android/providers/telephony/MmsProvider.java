@@ -19,6 +19,7 @@ package com.android.providers.telephony;
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
+import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
@@ -38,6 +39,7 @@ import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.Mms.Addr;
+import android.provider.Telephony.Mms.Inbox;
 import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms;
@@ -360,6 +362,7 @@ public class MmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         ContentValues finalValues;
         Uri res = Mms.CONTENT_URI;
+        Uri caseSpecificUri = null;
         long rowId;
 
         if (table.equals(TABLE_PDU)) {
@@ -407,6 +410,11 @@ public class MmsProvider extends ContentProvider {
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
                 Log.e(TAG, "MmsProvider.insert: failed!");
                 return null;
+            }
+
+            // Notify change when an MMS is received.
+            if (msgBox == Mms.MESSAGE_BOX_INBOX) {
+                caseSpecificUri = ContentUris.withAppendedId(Mms.Inbox.CONTENT_URI, rowId);
             }
 
             res = Uri.parse(res + "/" + rowId);
@@ -584,7 +592,7 @@ public class MmsProvider extends ContentProvider {
         }
 
         if (notify) {
-            notifyChange(res);
+            notifyChange(res, caseSpecificUri);
         }
         return res;
     }
@@ -680,7 +688,7 @@ public class MmsProvider extends ContentProvider {
         }
 
         if ((deletedRows > 0) && notify) {
-            notifyChange(uri);
+            notifyChange(uri, null);
         }
         return deletedRows;
     }
@@ -856,7 +864,7 @@ public class MmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int count = db.update(table, finalValues, finalSelection, selectionArgs);
         if (notify && (count > 0)) {
-            notifyChange(uri);
+            notifyChange(uri, null);
         }
         return count;
     }
@@ -973,11 +981,16 @@ public class MmsProvider extends ContentProvider {
         values.remove(Mms._ID);
     }
 
-    private void notifyChange(final Uri uri) {
+    private void notifyChange(final Uri uri, final Uri caseSpecificUri) {
         final Context context = getContext();
+        if (caseSpecificUri != null) {
+            context.getContentResolver().notifyChange(
+                caseSpecificUri, null, true, UserHandle.USER_ALL);
+        }
         context.getContentResolver().notifyChange(
                 MmsSms.CONTENT_URI, null, true, UserHandle.USER_ALL);
-        ProviderUtil.notifyIfNotDefaultSmsApp(uri, getCallingPackage(), context);
+        ProviderUtil.notifyIfNotDefaultSmsApp(caseSpecificUri == null ? uri : caseSpecificUri,
+                getCallingPackage(), context);
     }
 
     private final static String TAG = "MmsProvider";
