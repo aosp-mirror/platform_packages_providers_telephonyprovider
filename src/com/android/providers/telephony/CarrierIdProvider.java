@@ -324,6 +324,7 @@ public class CarrierIdProvider extends ContentProvider {
          */
         public CarrierIdDatabaseHelper(Context context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
+            setWriteAheadLoggingEnabled(false);
         }
 
         @Override
