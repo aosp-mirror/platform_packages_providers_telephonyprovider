@@ -455,6 +455,7 @@ public class TelephonyProvider extends ContentProvider
             mContext = context;
             // Memory optimization - close idle connections after 30s of inactivity
             setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
+            setWriteAheadLoggingEnabled(false);
         }
 
         @VisibleForTesting
