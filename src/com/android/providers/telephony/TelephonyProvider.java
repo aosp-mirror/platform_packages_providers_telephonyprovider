@@ -2209,7 +2209,8 @@ public class TelephonyProvider extends ContentProvider
                 r.getString(R.string.apn_source_service)));
         log("binding to service to restore apns, intent=" + intent);
         try {
-            if (context.bindService(intent, connection, Context.BIND_IMPORTANT)) {
+            if (context.bindService(intent, connection, Context.BIND_IMPORTANT |
+                        Context.BIND_AUTO_CREATE)) {
                 synchronized (mLock) {
                     while (mIApnSourceService == null) {
                         try {
