@@ -3281,7 +3281,7 @@ public class TelephonyProvider extends ContentProvider
         TelephonyManager telephonyManager =
                 (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
         for (String pkg : packages) {
-            if (telephonyManager.checkCarrierPrivilegesForPackage(pkg) ==
+            if (telephonyManager.checkCarrierPrivilegesForPackageAnyPhone(pkg) ==
                     TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS) {
                 return;
             }
