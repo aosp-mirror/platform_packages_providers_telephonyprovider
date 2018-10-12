@@ -61,7 +61,6 @@ import static android.provider.Telephony.ServiceStateTable.CDMA_DEFAULT_ROAMING_
 import static android.provider.Telephony.ServiceStateTable.CDMA_ERI_ICON_INDEX;
 import static android.provider.Telephony.ServiceStateTable.CDMA_ERI_ICON_MODE;
 import static android.provider.Telephony.ServiceStateTable.IS_EMERGENCY_ONLY;
-import static android.provider.Telephony.ServiceStateTable.IS_DATA_ROAMING_FROM_REGISTRATION;
 import static android.provider.Telephony.ServiceStateTable.IS_USING_CARRIER_AGGREGATION;
 
 
@@ -94,7 +93,6 @@ public class ServiceStateProvider extends ContentProvider {
         CDMA_ERI_ICON_INDEX,
         CDMA_ERI_ICON_MODE,
         IS_EMERGENCY_ONLY,
-        IS_DATA_ROAMING_FROM_REGISTRATION,
         IS_USING_CARRIER_AGGREGATION,
     };
 
@@ -153,8 +151,6 @@ public class ServiceStateProvider extends ContentProvider {
             newSS.setCdmaEriIconIndex(values.getAsInteger(CDMA_ERI_ICON_INDEX));
             newSS.setCdmaEriIconMode(values.getAsInteger(CDMA_ERI_ICON_MODE));
             newSS.setEmergencyOnly(values.getAsBoolean(IS_EMERGENCY_ONLY));
-            newSS.setDataRoamingFromRegistration(
-                    values.getAsBoolean(IS_DATA_ROAMING_FROM_REGISTRATION));
             newSS.setIsUsingCarrierAggregation(values.getAsBoolean(IS_USING_CARRIER_AGGREGATION));
 
             // notify listeners
@@ -235,8 +231,6 @@ public class ServiceStateProvider extends ContentProvider {
             final int cdma_eri_icon_index = ss.getCdmaEriIconIndex();
             final int cdma_eri_icon_mode = ss.getCdmaEriIconMode();
             final int is_emergency_only = (ss.isEmergencyOnly()) ? 1 : 0;
-            final int is_data_roaming_from_registration =
-                    (ss.getDataRoamingFromRegistration()) ? 1 : 0;
             final int is_using_carrier_aggregation = (ss.isUsingCarrierAggregation()) ? 1 : 0;
 
             return buildSingleRowResult(projection, sColumns, new Object[] {
@@ -261,7 +255,6 @@ public class ServiceStateProvider extends ContentProvider {
                         cdma_eri_icon_index,
                         cdma_eri_icon_mode,
                         is_emergency_only,
-                        is_data_roaming_from_registration,
                         is_using_carrier_aggregation,
             });
         }
