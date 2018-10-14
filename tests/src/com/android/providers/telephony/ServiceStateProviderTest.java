@@ -87,7 +87,6 @@ public class ServiceStateProviderTest {
         ServiceStateTable.CDMA_ERI_ICON_INDEX,
         ServiceStateTable.CDMA_ERI_ICON_MODE,
         ServiceStateTable.IS_EMERGENCY_ONLY,
-        ServiceStateTable.IS_DATA_ROAMING_FROM_REGISTRATION,
         ServiceStateTable.IS_USING_CARRIER_AGGREGATION,
     };
 
@@ -188,7 +187,6 @@ public class ServiceStateProviderTest {
         final int cdmaEriIconIndex = ss.getCdmaEriIconIndex();
         final int cdmaEriIconMode = ss.getCdmaEriIconMode();
         final int isEmergencyOnly = (ss.isEmergencyOnly()) ? 1 : 0;
-        final int isDataRoamingFromRegistration = (ss.getDataRoamingFromRegistration()) ? 1 : 0;
         final int isUsingCarrierAggregation = (ss.isUsingCarrierAggregation()) ? 1 : 0;
 
         assertEquals(voiceRegState, cursor.getInt(0));
@@ -210,8 +208,7 @@ public class ServiceStateProviderTest {
         assertEquals(cdmaEriIconIndex, cursor.getInt(16));
         assertEquals(cdmaEriIconMode, cursor.getInt(17));
         assertEquals(isEmergencyOnly, cursor.getInt(18));
-        assertEquals(isDataRoamingFromRegistration, cursor.getInt(19));
-        assertEquals(isUsingCarrierAggregation, cursor.getInt(20));
+        assertEquals(isUsingCarrierAggregation, cursor.getInt(19));
     }
 
     /**

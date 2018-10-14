@@ -388,6 +388,7 @@ public class TelephonyProvider extends ContentProvider
         s_urlMatcher.addURI("telephony", "carriers/preferapnset", URL_PREFERAPNSET);
 
         s_urlMatcher.addURI("telephony", "siminfo", URL_SIMINFO);
+        s_urlMatcher.addURI("telephony", "siminfo/#", URL_SIMINFO_USING_SUBID);
 
         s_urlMatcher.addURI("telephony", "carriers/subId/*", URL_TELEPHONY_USING_SUBID);
         s_urlMatcher.addURI("telephony", "carriers/current/subId/*", URL_CURRENT_USING_SUBID);
@@ -3244,6 +3245,24 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
+            case URL_SIMINFO_USING_SUBID:
+                String subIdString = url.getLastPathSegment();
+                try {
+                    subId = Integer.parseInt(subIdString);
+                } catch (NumberFormatException e) {
+                    loge("NumberFormatException" + e);
+                    throw new IllegalArgumentException("Invalid subId " + url);
+                }
+                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
+                if (where != null || whereArgs != null) {
+                    throw new UnsupportedOperationException(
+                            "Cannot update URL " + url + " with a where clause");
+                }
+                count = db.update(SIMINFO_TABLE, values, _ID + "=?",
+                        new String[] { subIdString});
+                uriType = URL_SIMINFO_USING_SUBID;
+                break;
+
             case URL_SIMINFO: {
                 count = db.update(SIMINFO_TABLE, values, where, whereArgs);
                 uriType = URL_SIMINFO;
@@ -3256,10 +3275,27 @@ public class TelephonyProvider extends ContentProvider
         }
 
         if (count > 0) {
+            Uri wfcNotifyUri = SubscriptionManager.WFC_ENABLED_CONTENT_URI;
+            Uri enhanced4GNotifyUri = SubscriptionManager.ENHANCED_4G_ENABLED_CONTENT_URI;
             switch (uriType) {
+                case URL_SIMINFO_USING_SUBID:
+                    wfcNotifyUri = Uri.withAppendedPath(
+                            SubscriptionManager.WFC_ENABLED_CONTENT_URI, "" + subId);
+                    enhanced4GNotifyUri = Uri.withAppendedPath(
+                            SubscriptionManager.ENHANCED_4G_ENABLED_CONTENT_URI, "" + subId);
+                    // intentional fall through from above case
                 case URL_SIMINFO:
                     getContext().getContentResolver().notifyChange(
                             SubscriptionManager.CONTENT_URI, null, true, UserHandle.USER_ALL);
+                    // notify observers on specific user settings changes.
+                    if (values.containsKey(SubscriptionManager.WFC_IMS_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(
+                                wfcNotifyUri, null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(SubscriptionManager.ENHANCED_4G_MODE_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(
+                                enhanced4GNotifyUri, null, true, UserHandle.USER_ALL);
+                    }
                     break;
                 default:
                     getContext().getContentResolver().notifyChange(
