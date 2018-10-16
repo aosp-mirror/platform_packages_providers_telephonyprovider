@@ -151,9 +151,10 @@ public class CarrierIdProvider extends ContentProvider {
 
     /**
      * Stores carrier id information for the current active subscriptions.
-     * Key is the active subId and entryValue is a pair of carrier id(int) and Carrier Name(String).
+     * Key is the active subId and entryValue is carrier id(int), mno carrier id (int) and
+     * carrier name(String).
      */
-    private final Map<Integer, Pair<Integer, String>> mCurrentSubscriptionMap =
+    private final Map<Integer, ContentValues> mCurrentSubscriptionMap =
             new ConcurrentHashMap<>();
 
     @VisibleForTesting
@@ -600,9 +601,7 @@ public class CarrierIdProvider extends ContentProvider {
             }
             return count;
         } else {
-            mCurrentSubscriptionMap.put(subId,
-                    new Pair(cv.getAsInteger(CarrierId.CARRIER_ID),
-                    cv.getAsString(CarrierId.CARRIER_NAME)));
+            mCurrentSubscriptionMap.put(subId, new ContentValues(cv));
             getContext().getContentResolver().notifyChange(CarrierId.CONTENT_URI, null);
             return 1;
         }
@@ -634,9 +633,11 @@ public class CarrierIdProvider extends ContentProvider {
         for (int i = 0; i < c.getColumnCount(); i++) {
             final String columnName = c.getColumnName(i);
             if (CarrierId.CARRIER_ID.equals(columnName)) {
-                row.add(mCurrentSubscriptionMap.get(subId).first);
+                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.CARRIER_ID));
             } else if (CarrierId.CARRIER_NAME.equals(columnName)) {
-                row.add(mCurrentSubscriptionMap.get(subId).second);
+                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.CARRIER_NAME));
+            } else if (CarrierId.MNO_CARRIER_ID.equals(columnName)) {
+                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.MNO_CARRIER_ID));
             } else {
                 throw new IllegalArgumentException("Invalid column " + projectionIn[i]);
             }
