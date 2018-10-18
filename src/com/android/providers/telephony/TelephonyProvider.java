@@ -69,6 +69,7 @@ import static android.provider.Telephony.Carriers._ID;
 
 import android.content.ComponentName;
 import android.content.ContentProvider;
+import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
@@ -3284,8 +3285,14 @@ public class TelephonyProvider extends ContentProvider
                             SubscriptionManager.ENHANCED_4G_ENABLED_CONTENT_URI, "" + subId);
                     // intentional fall through from above case
                 case URL_SIMINFO:
+                    // skip notifying descendant URLs to avoid unneccessary wake up.
+                    // If not set, any change to SIMINFO will notify observers which listens to
+                    // specific field of SIMINFO.
                     getContext().getContentResolver().notifyChange(
-                            SubscriptionManager.CONTENT_URI, null, true, UserHandle.USER_ALL);
+                            SubscriptionManager.CONTENT_URI, null,
+                            ContentResolver.NOTIFY_SYNC_TO_NETWORK
+                                    | ContentResolver.NOTIFY_SKIP_NOTIFY_FOR_DESCENDANTS,
+                            UserHandle.USER_ALL);
                     // notify observers on specific user settings changes.
                     if (values.containsKey(SubscriptionManager.WFC_IMS_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
