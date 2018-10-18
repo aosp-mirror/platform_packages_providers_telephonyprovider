@@ -47,6 +47,7 @@ import android.util.Log;
 import android.util.Slog;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.PhoneFactory;
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
 
@@ -79,7 +80,6 @@ import java.util.Iterator;
  */
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";
-    private static LocalLog sLocalLog = new LocalLog(100);
 
     private static final String SMS_UPDATE_THREAD_READ_BODY =
                         "  UPDATE threads SET read = " +
@@ -272,7 +272,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         public void onCorruption(SQLiteDatabase dbObj) {
             String logMsg = "Corruption reported by sqlite on database: " + dbObj.getPath();
             Slog.wtf(TAG, logMsg);
-            sLocalLog.log(logMsg);
+            PhoneFactory.localLog(TAG, logMsg);
             sendDbErrorIntents();
             mDefaultDatabaseErrorHandler.onCorruption(dbObj);
         }
@@ -287,6 +287,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         setWriteAheadLoggingEnabled(false);
+        try {
+            PhoneFactory.addLocalLog(TAG, 100);
+        } catch (IllegalArgumentException e) {
+            // ignore
+        }
     }
 
     private static void sendDbErrorIntents() {
@@ -503,13 +508,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        sLocalLog.log("onCreate: Creating all SMS-MMS tables.");
+        PhoneFactory.localLog(TAG, "onCreate: Creating all SMS-MMS tables.");
         if (isInitialCreateDone()) {
             // this onCreate is called after onCreate was called once initially. The db file
             // disappeared mysteriously?
             String logMsg = "onCreate: was already called once earlier";
             Slog.wtf(TAG, logMsg);
-            sLocalLog.log(logMsg);
+            PhoneFactory.localLog(TAG, logMsg);
             sendDbErrorIntents();
         } else {
             setInitialCreateDone();
@@ -1612,7 +1617,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
 
         Log.e(TAG, "Destroying all old data.");
-        sLocalLog.log("onUpgrade: Calling dropAll() and onCreate(). Upgrading database from version "
+        PhoneFactory.localLog(TAG, "onUpgrade: Calling dropAll() and onCreate(). Upgrading database from version "
                         + oldVersion + " to " + currentVersion + "failed.");
         dropAll(db);
         onCreate(db);
@@ -1622,7 +1627,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Clean the database out in order to start over from scratch.
         // We don't need to drop our triggers here because SQLite automatically
         // drops a trigger when its attached database is dropped.
-        sLocalLog.log("****DROPPING ALL SMS-MMS TABLES****");
+        PhoneFactory.localLog(TAG, "****DROPPING ALL SMS-MMS TABLES****");
         db.execSQL("DROP TABLE IF EXISTS canonical_addresses");
         db.execSQL("DROP TABLE IF EXISTS threads");
         db.execSQL("DROP TABLE IF EXISTS " + MmsSmsProvider.TABLE_PENDING_MSG);
@@ -1929,7 +1934,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                     " hasAutoIncrementPart: " + hasAutoIncrementPart +
                     " hasAutoIncrementPdu: " + hasAutoIncrementPdu;
             Log.d(TAG, logMsg);
-            sLocalLog.log(logMsg);
+            PhoneFactory.localLog(TAG, logMsg);
             boolean autoIncrementThreadsSuccess = true;
             boolean autoIncrementAddressesSuccess = true;
             boolean autoIncrementPartSuccess = true;
@@ -2234,6 +2239,5 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     public void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
         writer.println("MmsSmsDatabaseHelper:");
-        sLocalLog.dump(fd, writer, args);
     }
 }
