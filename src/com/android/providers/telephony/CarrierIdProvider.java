@@ -74,7 +74,7 @@ public class CarrierIdProvider extends ContentProvider {
     private static final String TAG = CarrierIdProvider.class.getSimpleName();
 
     private static final String DATABASE_NAME = "carrierIdentification.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
     private static final String VERSION_KEY = "version";
@@ -119,10 +119,15 @@ public class CarrierIdProvider extends ContentProvider {
     * index 7: {@link CarrierId.All#ICCID_PREFIX}
     */
     private static final int ICCID_PREFIX_INDEX          = 7;
+
+    /**
+     * index 8: {@link CarrierId.All#PRIVILEGE_ACCESS_RULE}
+     */
+    private static final int PRIVILEGE_ACCESS_RULE       = 8;
     /**
      * ending index of carrier attribute list.
      */
-    private static final int CARRIER_ATTR_END_IDX        = ICCID_PREFIX_INDEX;
+    private static final int CARRIER_ATTR_END_IDX        = PRIVILEGE_ACCESS_RULE;
     /**
      * The authority string for the CarrierIdProvider
      */
@@ -139,15 +144,17 @@ public class CarrierIdProvider extends ContentProvider {
             CarrierId.All.IMSI_PREFIX_XPATTERN,
             CarrierId.All.SPN,
             CarrierId.All.APN,
-            CarrierId.All.ICCID_PREFIX));
+            CarrierId.All.ICCID_PREFIX,
+            CarrierId.All.PRIVILEGE_ACCESS_RULE));
 
     private CarrierIdDatabaseHelper mDbHelper;
 
     /**
      * Stores carrier id information for the current active subscriptions.
-     * Key is the active subId and entryValue is a pair of carrier id(int) and Carrier Name(String).
+     * Key is the active subId and entryValue is carrier id(int), mno carrier id (int) and
+     * carrier name(String).
      */
-    private final Map<Integer, Pair<Integer, String>> mCurrentSubscriptionMap =
+    private final Map<Integer, ContentValues> mCurrentSubscriptionMap =
             new ConcurrentHashMap<>();
 
     @VisibleForTesting
@@ -162,6 +169,7 @@ public class CarrierIdProvider extends ContentProvider {
                 + CarrierId.All.SPN + " TEXT,"
                 + CarrierId.All.APN + " TEXT,"
                 + CarrierId.All.ICCID_PREFIX + " TEXT,"
+                + CarrierId.All.PRIVILEGE_ACCESS_RULE + " TEXT,"
                 + CarrierId.CARRIER_NAME + " TEXT,"
                 + CarrierId.CARRIER_ID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
@@ -472,6 +480,14 @@ public class CarrierIdProvider extends ContentProvider {
                     found = true;
                 }
                 break;
+            case PRIVILEGE_ACCESS_RULE:
+                for (String str : attr.privilegeAccessRule) {
+                    cv.put(CarrierId.All.PRIVILEGE_ACCESS_RULE, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierId.All.PRIVILEGE_ACCESS_RULE);
+                    found = true;
+                }
+                break;
             default:
                 Log.e(TAG, "unsupported index: " + index);
                 break;
@@ -584,9 +600,7 @@ public class CarrierIdProvider extends ContentProvider {
             }
             return count;
         } else {
-            mCurrentSubscriptionMap.put(subId,
-                    new Pair(cv.getAsInteger(CarrierId.CARRIER_ID),
-                    cv.getAsString(CarrierId.CARRIER_NAME)));
+            mCurrentSubscriptionMap.put(subId, new ContentValues(cv));
             getContext().getContentResolver().notifyChange(CarrierId.CONTENT_URI, null);
             return 1;
         }
@@ -618,9 +632,11 @@ public class CarrierIdProvider extends ContentProvider {
         for (int i = 0; i < c.getColumnCount(); i++) {
             final String columnName = c.getColumnName(i);
             if (CarrierId.CARRIER_ID.equals(columnName)) {
-                row.add(mCurrentSubscriptionMap.get(subId).first);
+                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.CARRIER_ID));
             } else if (CarrierId.CARRIER_NAME.equals(columnName)) {
-                row.add(mCurrentSubscriptionMap.get(subId).second);
+                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.CARRIER_NAME));
+            } else if (CarrierId.MNO_CARRIER_ID.equals(columnName)) {
+                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.MNO_CARRIER_ID));
             } else {
                 throw new IllegalArgumentException("Invalid column " + projectionIn[i]);
             }
