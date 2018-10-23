@@ -18,30 +18,26 @@ package com.android.providers.telephony;
 
 import static android.provider.Telephony.Carriers;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.not;
-import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertTrue;
-import static org.mockito.ArgumentMatchers.anyInt;
 
 import android.content.Context;
 import android.database.Cursor;
-import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteDatabase;
+import android.database.sqlite.SQLiteOpenHelper;
 import android.support.test.InstrumentationRegistry;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
 
-import java.util.List;
-import java.util.ArrayList;
-import java.util.Arrays;
-
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @RunWith(JUnit4.class)
 public final class TelephonyDatabaseHelperTest {
@@ -74,6 +70,20 @@ public final class TelephonyDatabaseHelperTest {
         Log.d(TAG, "carriers columns: " + Arrays.toString(upgradedColumns));
 
         assertTrue(Arrays.asList(upgradedColumns).contains(Carriers.APN_SET_ID));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasCarrierIdField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSubscriptionTypeField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.DatabaseHelper.getVersion(mContext));
+
+        // the upgraded db must have the Telephony.Carriers.CARRIER_ID field
+        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "carriers columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(Carriers.CARRIER_ID));
     }
 
     @Test

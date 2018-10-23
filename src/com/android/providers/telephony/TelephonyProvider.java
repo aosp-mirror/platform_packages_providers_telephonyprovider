@@ -26,6 +26,7 @@ import static android.provider.Telephony.Carriers.CARRIER_DELETED;
 import static android.provider.Telephony.Carriers.CARRIER_DELETED_BUT_PRESENT_IN_XML;
 import static android.provider.Telephony.Carriers.CARRIER_EDITED;
 import static android.provider.Telephony.Carriers.CARRIER_ENABLED;
+import static android.provider.Telephony.Carriers.CARRIER_ID;
 import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
@@ -142,7 +143,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 28 << 16;
+    private static final int DATABASE_VERSION = 29 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -265,6 +266,8 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(USER_EDITABLE, "1");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(OWNED_BY, String.valueOf(OWNED_BY_OTHERS));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_SET_SET));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ID,
+                String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
 
@@ -285,6 +288,7 @@ public class TelephonyProvider extends ContentProvider
                 NUMERIC + " TEXT DEFAULT ''," +
                 MCC + " TEXT DEFAULT ''," +
                 MNC + " TEXT DEFAULT ''," +
+                CARRIER_ID + " INTEGER DEFAULT " + TelephonyManager.UNKNOWN_CARRIER_ID  + "," +
                 APN + " TEXT DEFAULT ''," +
                 USER + " TEXT DEFAULT ''," +
                 SERVER + " TEXT DEFAULT ''," +
@@ -305,8 +309,8 @@ public class TelephonyProvider extends ContentProvider
                 NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0," +
                 MVNO_TYPE + " TEXT DEFAULT ''," +
                 MVNO_MATCH_DATA + " TEXT DEFAULT ''," +
-                SUBSCRIPTION_ID + " INTEGER DEFAULT "
-                + SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
+                SUBSCRIPTION_ID + " INTEGER DEFAULT " +
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
                 PROFILE_ID + " INTEGER DEFAULT 0," +
                 MODEM_COGNITIVE + " BOOLEAN DEFAULT 0," +
                 MAX_CONNS + " INTEGER DEFAULT 0," +
@@ -1030,7 +1034,7 @@ public class TelephonyProvider extends ContentProvider
             if (oldVersion < (24 << 16 | 6)) {
                 Cursor c = null;
                 String[] proj = {"_id"};
-                recreateDB(c, db, proj, /* version */24);
+                recreateDB(db, proj, /* version */24);
                 if (VDBG) {
                     c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows: " + c.getCount());
@@ -1121,11 +1125,27 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 28 << 16 | 6;
             }
+
+            if (oldVersion < (29 << 16 | 6)) {
+                try {
+                    // Add a new column Telephony.CARRIER_ID into the database and add UNIQUE
+                    // constraint into table. However, sqlite cannot add constraints to an existing
+                    // table, so recreate the table.
+                    String[] proj = {"_id"};
+                    recreateDB(db, proj,  /* version */29);
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 29 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
             // when adding fields to onUpgrade, also add a unit test to TelephonyDatabaseHelperTest
-            // and update the DATABASE_VERSION field
+            // and update the DATABASE_VERSION field and add a column in copyAllApnValues
         }
 
         private void recreateSimInfoDB(Cursor c, SQLiteDatabase db, String[] proj) {
@@ -1233,12 +1253,13 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        private void recreateDB(Cursor c, SQLiteDatabase db, String[] proj, int version) {
+        private void recreateDB(SQLiteDatabase db, String[] proj, int version) {
             // Upgrade steps are:
             // 1. Create a temp table- done in createCarriersTable()
             // 2. copy over APNs from old table to new table - done in copyDataToTmpTable()
             // 3. Drop the existing table.
             // 4. Copy over the tmp table.
+            Cursor c;
             if (VDBG) {
                 c = db.query(CARRIERS_TABLE, proj, null, null, null, null, null);
                 log("dbh.onUpgrade:- before upgrading total number of rows: " + c.getCount());
@@ -1256,7 +1277,7 @@ public class TelephonyProvider extends ContentProvider
 
             createCarriersTable(db, CARRIERS_TABLE_TMP);
 
-            copyDataToTmpTable(db, c);
+            copyDataToTmpTable(db, c, version);
             c.close();
 
             db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
@@ -1450,14 +1471,16 @@ public class TelephonyProvider extends ContentProvider
             db.delete(CARRIERS_TABLE, where, whereArgs);
         }
 
-        private void copyDataToTmpTable(SQLiteDatabase db, Cursor c) {
+        private void copyDataToTmpTable(SQLiteDatabase db, Cursor c, int version) {
             // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
             if (c != null) {
                 while (c.moveToNext()) {
                     ContentValues cv = new ContentValues();
-                    copyApnValuesV17(cv, c);
-                    // Sync bearer bitmask and network type bitmask
-                    getNetworkTypeBitmaskFromCursor(cv, c);
+                    copyAllApnValues(cv, c);
+                    if (version == 24) {
+                        // Sync bearer bitmask and network type bitmask
+                        getNetworkTypeBitmaskFromCursor(cv, c);
+                    }
                     try {
                         db.insertWithOnConflict(CARRIERS_TABLE_TMP, null, cv,
                                 SQLiteDatabase.CONFLICT_ABORT);
@@ -1515,6 +1538,47 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, USER_VISIBLE);
         }
 
+        private void copyAllApnValues(ContentValues cv, Cursor c) {
+            // String vals
+            getStringValueFromCursor(cv, c, NAME);
+            getStringValueFromCursor(cv, c, NUMERIC);
+            getStringValueFromCursor(cv, c, MCC);
+            getStringValueFromCursor(cv, c, MNC);
+            getStringValueFromCursor(cv, c, APN);
+            getStringValueFromCursor(cv, c, USER);
+            getStringValueFromCursor(cv, c, SERVER);
+            getStringValueFromCursor(cv, c, PASSWORD);
+            getStringValueFromCursor(cv, c, PROXY);
+            getStringValueFromCursor(cv, c, PORT);
+            getStringValueFromCursor(cv, c, MMSPROXY);
+            getStringValueFromCursor(cv, c, MMSPORT);
+            getStringValueFromCursor(cv, c, MMSC);
+            getStringValueFromCursor(cv, c, TYPE);
+            getStringValueFromCursor(cv, c, PROTOCOL);
+            getStringValueFromCursor(cv, c, ROAMING_PROTOCOL);
+            getStringValueFromCursor(cv, c, MVNO_TYPE);
+            getStringValueFromCursor(cv, c, MVNO_MATCH_DATA);
+
+            // bool/int vals
+            getIntValueFromCursor(cv, c, AUTH_TYPE);
+            getIntValueFromCursor(cv, c, CURRENT);
+            getIntValueFromCursor(cv, c, CARRIER_ENABLED);
+            getIntValueFromCursor(cv, c, BEARER);
+            getIntValueFromCursor(cv, c, SUBSCRIPTION_ID);
+            getIntValueFromCursor(cv, c, PROFILE_ID);
+            getIntValueFromCursor(cv, c, MODEM_COGNITIVE);
+            getIntValueFromCursor(cv, c, MAX_CONNS);
+            getIntValueFromCursor(cv, c, WAIT_TIME);
+            getIntValueFromCursor(cv, c, MAX_CONNS_TIME);
+            getIntValueFromCursor(cv, c, MTU);
+            getIntValueFromCursor(cv, c, NETWORK_TYPE_BITMASK);
+            getIntValueFromCursor(cv, c, BEARER_BITMASK);
+            getIntValueFromCursor(cv, c, EDITED);
+            getIntValueFromCursor(cv, c, USER_VISIBLE);
+            getIntValueFromCursor(cv, c, USER_EDITABLE);
+            getIntValueFromCursor(cv, c, OWNED_BY);
+            getIntValueFromCursor(cv, c, APN_SET_ID);
+        }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
             // Move entries from CARRIERS_TABLE to CARRIERS_TABLE_TMP
@@ -2482,7 +2546,7 @@ public class TelephonyProvider extends ContentProvider
     public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
-            + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
+                + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
         TelephonyManager mTelephonyManager =
                 (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
         int subId = SubscriptionManager.getDefaultSubscriptionId();
@@ -2594,7 +2658,7 @@ public class TelephonyProvider extends ContentProvider
             }
             //intentional fall through from above case
             case URL_FILTERED: {
-                if(isManagedApnEnforced()) {
+                if (isManagedApnEnforced()) {
                     // If enforced, return DPC records only.
                     constraints.add(IS_OWNED_BY_DPC);
                 } else {
