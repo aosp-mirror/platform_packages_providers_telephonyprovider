@@ -74,7 +74,7 @@ public class CarrierIdProvider extends ContentProvider {
     private static final String TAG = CarrierIdProvider.class.getSimpleName();
 
     private static final String DATABASE_NAME = "carrierIdentification.db";
-    private static final int DATABASE_VERSION = 3;
+    private static final int DATABASE_VERSION = 4;
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
     private static final String VERSION_KEY = "version";
@@ -119,10 +119,15 @@ public class CarrierIdProvider extends ContentProvider {
     * index 7: {@link CarrierId.All#ICCID_PREFIX}
     */
     private static final int ICCID_PREFIX_INDEX          = 7;
+
+    /**
+     * index 8: {@link CarrierId.All#PRIVILEGE_ACCESS_RULE}
+     */
+    private static final int PRIVILEGE_ACCESS_RULE       = 8;
     /**
      * ending index of carrier attribute list.
      */
-    private static final int CARRIER_ATTR_END_IDX        = ICCID_PREFIX_INDEX;
+    private static final int CARRIER_ATTR_END_IDX        = PRIVILEGE_ACCESS_RULE;
     /**
      * The authority string for the CarrierIdProvider
      */
@@ -139,7 +144,8 @@ public class CarrierIdProvider extends ContentProvider {
             CarrierId.All.IMSI_PREFIX_XPATTERN,
             CarrierId.All.SPN,
             CarrierId.All.APN,
-            CarrierId.All.ICCID_PREFIX));
+            CarrierId.All.ICCID_PREFIX,
+            CarrierId.All.PRIVILEGE_ACCESS_RULE));
 
     private CarrierIdDatabaseHelper mDbHelper;
 
@@ -162,6 +168,7 @@ public class CarrierIdProvider extends ContentProvider {
                 + CarrierId.All.SPN + " TEXT,"
                 + CarrierId.All.APN + " TEXT,"
                 + CarrierId.All.ICCID_PREFIX + " TEXT,"
+                + CarrierId.All.PRIVILEGE_ACCESS_RULE + " TEXT,"
                 + CarrierId.CARRIER_NAME + " TEXT,"
                 + CarrierId.CARRIER_ID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
@@ -469,6 +476,14 @@ public class CarrierIdProvider extends ContentProvider {
                     cv.put(CarrierId.All.ICCID_PREFIX, str);
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.ICCID_PREFIX);
+                    found = true;
+                }
+                break;
+            case PRIVILEGE_ACCESS_RULE:
+                for (String str : attr.privilegeAccessRule) {
+                    cv.put(CarrierId.All.PRIVILEGE_ACCESS_RULE, str);
+                    convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
+                    cv.remove(CarrierId.All.PRIVILEGE_ACCESS_RULE);
                     found = true;
                 }
                 break;
