@@ -42,6 +42,7 @@ import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.MmsSms.PendingMessages;
 import android.provider.Telephony.Sms;
+import android.provider.Telephony.Sms.Intents;
 import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -63,6 +64,7 @@ import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A {@link SQLiteOpenHelper} that handles DB management of SMS and MMS tables.
@@ -263,6 +265,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // SharedPref key used to check if initial create has been done (if onCreate has already been
     // called once)
     private static final String INITIAL_CREATE_DONE = "initial_create_done";
+    // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
+    private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
 
     /**
      * The primary purpose of this DatabaseErrorHandler is to print a Slog.wtf so database
@@ -526,16 +530,27 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        PhoneFactory.localLog(TAG, "onCreate: Creating all SMS-MMS tables.");
-        if (isInitialCreateDone()) {
-            // this onCreate is called after onCreate was called once initially. The db file
-            // disappeared mysteriously?
-            String logMsg = "onCreate: was already called once earlier";
-            Slog.wtf(TAG, logMsg);
-            PhoneFactory.localLog(TAG, logMsg);
-            sendDbErrorIntents(mContext, false);
-        } else {
-            setInitialCreateDone();
+        localLog("onCreate: Creating all SMS-MMS tables.");
+        // if FBE is not supported, or if this onCreate is for CE partition database
+        if (!StorageManager.isFileEncryptedNativeOrEmulated()
+                || mContext.isCredentialProtectedStorage()) {
+            localLog("onCreate: broadcasting ACTION_SMS_MMS_DB_CREATED");
+            // Broadcast ACTION_SMS_MMS_DB_CREATED
+            Intent intent = new Intent(Sms.Intents.ACTION_SMS_MMS_DB_CREATED);
+            intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
+
+            if (isInitialCreateDone()) {
+                // this onCreate is called after onCreate was called once initially. The db file
+                // disappeared mysteriously?
+                localLogWtf("onCreate: was already called once earlier");
+                sendDbErrorIntents(mContext, false);
+                intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, false);
+            } else {
+                setInitialCreateDone();
+                intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
+            }
+
+            mContext.sendBroadcast(intent, android.Manifest.permission.READ_SMS);
         }
         createMmsTables(db);
         createSmsTables(db);
@@ -546,16 +561,28 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createIndices(db);
     }
 
+    private void localLog(String logMsg) {
+        Log.d(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
+    }
+
+    private void localLogWtf(String logMsg) {
+        Slog.wtf(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
+    }
+
     private boolean isInitialCreateDone() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
         return sp.getBoolean(INITIAL_CREATE_DONE, false);
     }
 
     private void setInitialCreateDone() {
-        SharedPreferences.Editor editor
-                = PreferenceManager.getDefaultSharedPreferences(mContext).edit();
-        editor.putBoolean(INITIAL_CREATE_DONE, true);
-        editor.commit();
+        if (!sInitialCreateDone.getAndSet(true)) {
+            SharedPreferences.Editor editor
+                    = PreferenceManager.getDefaultSharedPreferences(mContext).edit();
+            editor.putBoolean(INITIAL_CREATE_DONE, true);
+            editor.commit();
+        }
     }
 
     // When upgrading the database we need to populate the words
@@ -1937,8 +1964,27 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     @Override
+    public synchronized  SQLiteDatabase getReadableDatabase() {
+        SQLiteDatabase db = super.getWritableDatabase();
+
+        // getReadableDatabase gets or creates a database. So we know for sure that a database has
+        // already been created at this point.
+        if (mContext.isCredentialProtectedStorage()) {
+            setInitialCreateDone();
+        }
+
+        return db;
+    }
+
+    @Override
     public synchronized SQLiteDatabase getWritableDatabase() {
         SQLiteDatabase db = super.getWritableDatabase();
+
+        // getWritableDatabase gets or creates a database. So we know for sure that a database has
+        // already been created at this point.
+        if (mContext.isCredentialProtectedStorage()) {
+            setInitialCreateDone();
+        }
 
         if (!sTriedAutoIncrement) {
             sTriedAutoIncrement = true;
