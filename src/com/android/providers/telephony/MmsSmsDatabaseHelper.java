@@ -16,8 +16,6 @@
 
 package com.android.providers.telephony;
 
-import static android.Manifest.permission.MODIFY_PHONE_STATE;
-
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -43,7 +41,6 @@ import android.provider.Telephony.MmsSms.PendingMessages;
 import android.provider.Telephony.Sms;
 import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
-import android.telephony.TelephonyManager;
 import android.util.LocalLog;
 import android.util.Log;
 import android.util.Slog;
@@ -245,7 +242,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private static MmsSmsDatabaseHelper sDeInstance = null;
     private static MmsSmsDatabaseHelper sCeInstance = null;
-    private static MmsSmsDatabaseErrorHandler sDbErrorHandler = null;
 
     private static final String[] BIND_ARGS_NONE = new String[0];
 
@@ -270,24 +266,22 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static class MmsSmsDatabaseErrorHandler implements DatabaseErrorHandler {
         private DefaultDatabaseErrorHandler mDefaultDatabaseErrorHandler
                 = new DefaultDatabaseErrorHandler();
-        private Context mContext;
-
-        MmsSmsDatabaseErrorHandler(Context context) {
-            mContext = context;
-        }
 
         @Override
         public void onCorruption(SQLiteDatabase dbObj) {
             String logMsg = "Corruption reported by sqlite on database: " + dbObj.getPath();
             Slog.wtf(TAG, logMsg);
             PhoneFactory.localLog(TAG, logMsg);
-            sendDbErrorIntents(mContext, true);
+            sendDbErrorIntents();
             mDefaultDatabaseErrorHandler.onCorruption(dbObj);
         }
     }
 
-    private MmsSmsDatabaseHelper(Context context, MmsSmsDatabaseErrorHandler dbErrHandler) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION, dbErrHandler);
+    private static MmsSmsDatabaseErrorHandler sMmsSmsDatabaseErrorHandler
+            = new MmsSmsDatabaseErrorHandler();
+
+    private MmsSmsDatabaseHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION, sMmsSmsDatabaseErrorHandler);
         mContext = context;
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
@@ -299,18 +293,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    private static void sendDbErrorIntents(Context context, boolean isCorrupted) {
-        Intent intent = new Intent(TelephonyManager.ACTION_MMSSMS_DATABASE_LOST);
-        intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
-        intent.putExtra(TelephonyManager.EXTRA_IS_CORRUPTED, isCorrupted);
-        context.sendBroadcast(intent, MODIFY_PHONE_STATE);
-    }
-
-    private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {
-        if (sDbErrorHandler == null) {
-            sDbErrorHandler = new MmsSmsDatabaseErrorHandler(context);
-        }
-        return sDbErrorHandler;
+    private static void sendDbErrorIntents() {
+        // TODO: send intent to ConnectivityMonitor and also a public intent that tells apps
+        // that messaging db is gone
     }
 
     /**
@@ -318,9 +303,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForDe(Context context) {
         if (sDeInstance == null) {
-            sDeInstance = new MmsSmsDatabaseHelper(
-                ProviderUtil.getDeviceEncryptedContext(context),
-                getDbErrorHandler(context));
+            sDeInstance = new MmsSmsDatabaseHelper(ProviderUtil.getDeviceEncryptedContext(context));
         }
         return sDeInstance;
     }
@@ -333,8 +316,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         if (sCeInstance == null) {
             if (StorageManager.isFileEncryptedNativeOrEmulated()) {
                 sCeInstance = new MmsSmsDatabaseHelper(
-                    ProviderUtil.getCredentialEncryptedContext(context),
-                    getDbErrorHandler(context));
+                    ProviderUtil.getCredentialEncryptedContext(context));
             } else {
                 sCeInstance = getInstanceForDe(context);
             }
@@ -532,7 +514,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             String logMsg = "onCreate: was already called once earlier";
             Slog.wtf(TAG, logMsg);
             PhoneFactory.localLog(TAG, logMsg);
-            sendDbErrorIntents(mContext, false);
+            sendDbErrorIntents();
         } else {
             setInitialCreateDone();
         }
