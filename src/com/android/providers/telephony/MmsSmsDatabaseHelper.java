@@ -16,8 +16,6 @@
 
 package com.android.providers.telephony;
 
-import static android.Manifest.permission.MODIFY_PHONE_STATE;
-
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -25,8 +23,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.database.DatabaseErrorHandler;
-import android.database.DefaultDatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -41,10 +37,9 @@ import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.MmsSms.PendingMessages;
 import android.provider.Telephony.Sms;
+import android.provider.Telephony.Sms.Intents;
 import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
-import android.telephony.TelephonyManager;
-import android.util.LocalLog;
 import android.util.Log;
 import android.util.Slog;
 
@@ -54,14 +49,13 @@ import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
 
 import java.io.File;
-import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * A {@link SQLiteOpenHelper} that handles DB management of SMS and MMS tables.
@@ -245,7 +239,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private static MmsSmsDatabaseHelper sDeInstance = null;
     private static MmsSmsDatabaseHelper sCeInstance = null;
-    private static MmsSmsDatabaseErrorHandler sDbErrorHandler = null;
 
     private static final String[] BIND_ARGS_NONE = new String[0];
 
@@ -262,35 +255,15 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // SharedPref key used to check if initial create has been done (if onCreate has already been
     // called once)
     private static final String INITIAL_CREATE_DONE = "initial_create_done";
+    // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
+    private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
 
-    /**
-     * The primary purpose of this DatabaseErrorHandler is to print a Slog.wtf so database
-     * corruption can be caught earlier.
-     */
-    private static class MmsSmsDatabaseErrorHandler implements DatabaseErrorHandler {
-        private DefaultDatabaseErrorHandler mDefaultDatabaseErrorHandler
-                = new DefaultDatabaseErrorHandler();
-        private Context mContext;
-
-        MmsSmsDatabaseErrorHandler(Context context) {
-            mContext = context;
-        }
-
-        @Override
-        public void onCorruption(SQLiteDatabase dbObj) {
-            String logMsg = "Corruption reported by sqlite on database: " + dbObj.getPath();
-            Slog.wtf(TAG, logMsg);
-            PhoneFactory.localLog(TAG, logMsg);
-            sendDbErrorIntents(mContext, true);
-            mDefaultDatabaseErrorHandler.onCorruption(dbObj);
-        }
-    }
-
-    private MmsSmsDatabaseHelper(Context context, MmsSmsDatabaseErrorHandler dbErrHandler) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION, dbErrHandler);
+    private MmsSmsDatabaseHelper(Context context) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION);
         mContext = context;
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
+        setWriteAheadLoggingEnabled(false);
         try {
             PhoneFactory.addLocalLog(TAG, 100);
         } catch (IllegalArgumentException e) {
@@ -298,28 +271,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
-    private static void sendDbErrorIntents(Context context, boolean isCorrupted) {
-        Intent intent = new Intent(TelephonyManager.ACTION_MMSSMS_DATABASE_LOST);
-        intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
-        intent.putExtra(TelephonyManager.EXTRA_IS_CORRUPTED, isCorrupted);
-        context.sendBroadcast(intent, MODIFY_PHONE_STATE);
-    }
-
-    private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {
-        if (sDbErrorHandler == null) {
-            sDbErrorHandler = new MmsSmsDatabaseErrorHandler(context);
-        }
-        return sDbErrorHandler;
-    }
-
     /**
      * Returns a singleton helper for the combined MMS and SMS database in device encrypted storage.
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForDe(Context context) {
         if (sDeInstance == null) {
-            sDeInstance = new MmsSmsDatabaseHelper(
-                ProviderUtil.getDeviceEncryptedContext(context),
-                getDbErrorHandler(context));
+            sDeInstance = new MmsSmsDatabaseHelper(ProviderUtil.getDeviceEncryptedContext(context));
         }
         return sDeInstance;
     }
@@ -332,8 +289,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         if (sCeInstance == null) {
             if (StorageManager.isFileEncryptedNativeOrEmulated()) {
                 sCeInstance = new MmsSmsDatabaseHelper(
-                    ProviderUtil.getCredentialEncryptedContext(context),
-                    getDbErrorHandler(context));
+                    ProviderUtil.getCredentialEncryptedContext(context));
             } else {
                 sCeInstance = getInstanceForDe(context);
             }
@@ -524,16 +480,26 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        PhoneFactory.localLog(TAG, "onCreate: Creating all SMS-MMS tables.");
-        if (isInitialCreateDone()) {
-            // this onCreate is called after onCreate was called once initially. The db file
-            // disappeared mysteriously?
-            String logMsg = "onCreate: was already called once earlier";
-            Slog.wtf(TAG, logMsg);
-            PhoneFactory.localLog(TAG, logMsg);
-            sendDbErrorIntents(mContext, false);
-        } else {
-            setInitialCreateDone();
+        localLog("onCreate: Creating all SMS-MMS tables.");
+        // if FBE is not supported, or if this onCreate is for CE partition database
+        if (!StorageManager.isFileEncryptedNativeOrEmulated()
+                || mContext.isCredentialProtectedStorage()) {
+            localLog("onCreate: broadcasting ACTION_SMS_MMS_DB_CREATED");
+            // Broadcast ACTION_SMS_MMS_DB_CREATED
+            Intent intent = new Intent(Sms.Intents.ACTION_SMS_MMS_DB_CREATED);
+            intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
+
+            if (isInitialCreateDone()) {
+                // this onCreate is called after onCreate was called once initially. The db file
+                // disappeared mysteriously?
+                localLogWtf("onCreate: was already called once earlier");
+                intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, false);
+            } else {
+                setInitialCreateDone();
+                intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
+            }
+
+            mContext.sendBroadcast(intent, android.Manifest.permission.READ_SMS);
         }
         createMmsTables(db);
         createSmsTables(db);
@@ -544,16 +510,28 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createIndices(db);
     }
 
+    private void localLog(String logMsg) {
+        Log.d(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
+    }
+
+    private void localLogWtf(String logMsg) {
+        Slog.wtf(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
+    }
+
     private boolean isInitialCreateDone() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(mContext);
         return sp.getBoolean(INITIAL_CREATE_DONE, false);
     }
 
     private void setInitialCreateDone() {
-        SharedPreferences.Editor editor
-                = PreferenceManager.getDefaultSharedPreferences(mContext).edit();
-        editor.putBoolean(INITIAL_CREATE_DONE, true);
-        editor.commit();
+        if (!sInitialCreateDone.getAndSet(true)) {
+            SharedPreferences.Editor editor
+                    = PreferenceManager.getDefaultSharedPreferences(mContext).edit();
+            editor.putBoolean(INITIAL_CREATE_DONE, true);
+            editor.commit();
+        }
     }
 
     // When upgrading the database we need to populate the words
@@ -1610,8 +1588,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
 
         Log.e(TAG, "Destroying all old data.");
-        PhoneFactory.localLog(TAG, "onUpgrade: Calling dropAll() and onCreate(). Upgrading database from version "
-                        + oldVersion + " to " + currentVersion + "failed.");
+        localLog("onUpgrade: Calling dropAll() and onCreate(). Upgrading database"
+                + " from version " + oldVersion + " to " + currentVersion + "failed.");
         dropAll(db);
         onCreate(db);
     }
@@ -1620,7 +1598,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Clean the database out in order to start over from scratch.
         // We don't need to drop our triggers here because SQLite automatically
         // drops a trigger when its attached database is dropped.
-        PhoneFactory.localLog(TAG, "****DROPPING ALL SMS-MMS TABLES****");
+        localLog("****DROPPING ALL SMS-MMS TABLES****");
         db.execSQL("DROP TABLE IF EXISTS canonical_addresses");
         db.execSQL("DROP TABLE IF EXISTS threads");
         db.execSQL("DROP TABLE IF EXISTS " + MmsSmsProvider.TABLE_PENDING_MSG);
@@ -1912,8 +1890,27 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     @Override
+    public synchronized  SQLiteDatabase getReadableDatabase() {
+        SQLiteDatabase db = super.getWritableDatabase();
+
+        // getReadableDatabase gets or creates a database. So we know for sure that a database has
+        // already been created at this point.
+        if (mContext.isCredentialProtectedStorage()) {
+            setInitialCreateDone();
+        }
+
+        return db;
+    }
+
+    @Override
     public synchronized SQLiteDatabase getWritableDatabase() {
         SQLiteDatabase db = super.getWritableDatabase();
+
+        // getWritableDatabase gets or creates a database. So we know for sure that a database has
+        // already been created at this point.
+        if (mContext.isCredentialProtectedStorage()) {
+            setInitialCreateDone();
+        }
 
         if (!sTriedAutoIncrement) {
             sTriedAutoIncrement = true;
@@ -1927,7 +1924,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                     " hasAutoIncrementPart: " + hasAutoIncrementPart +
                     " hasAutoIncrementPdu: " + hasAutoIncrementPdu;
             Log.d(TAG, logMsg);
-            PhoneFactory.localLog(TAG, logMsg);
+            localLog(logMsg);
             boolean autoIncrementThreadsSuccess = true;
             boolean autoIncrementAddressesSuccess = true;
             boolean autoIncrementPartSuccess = true;
@@ -2228,9 +2225,5 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    "  (SELECT DISTINCT pdu.thread_id FROM part " +
                    "   JOIN pdu ON pdu._id=part.mid " +
                    "   WHERE part.ct != 'text/plain' AND part.ct != 'application/smil')");
-    }
-
-    public void dump(FileDescriptor fd, PrintWriter writer, String[] args) {
-        writer.println("MmsSmsDatabaseHelper:");
     }
 }
