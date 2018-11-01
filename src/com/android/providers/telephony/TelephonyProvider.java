@@ -3275,14 +3275,10 @@ public class TelephonyProvider extends ContentProvider
         }
 
         if (count > 0) {
-            Uri wfcNotifyUri = SubscriptionManager.WFC_ENABLED_CONTENT_URI;
-            Uri enhanced4GNotifyUri = SubscriptionManager.ENHANCED_4G_ENABLED_CONTENT_URI;
+            boolean usingSubId = false;
             switch (uriType) {
                 case URL_SIMINFO_USING_SUBID:
-                    wfcNotifyUri = Uri.withAppendedPath(
-                            SubscriptionManager.WFC_ENABLED_CONTENT_URI, "" + subId);
-                    enhanced4GNotifyUri = Uri.withAppendedPath(
-                            SubscriptionManager.ENHANCED_4G_ENABLED_CONTENT_URI, "" + subId);
+                    usingSubId = true;
                     // intentional fall through from above case
                 case URL_SIMINFO:
                     // skip notifying descendant URLs to avoid unneccessary wake up.
@@ -3296,11 +3292,34 @@ public class TelephonyProvider extends ContentProvider
                     // notify observers on specific user settings changes.
                     if (values.containsKey(SubscriptionManager.WFC_IMS_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
-                                wfcNotifyUri, null, true, UserHandle.USER_ALL);
+                                getNotifyContentUri(SubscriptionManager.WFC_ENABLED_CONTENT_URI,
+                                        usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
                     if (values.containsKey(SubscriptionManager.ENHANCED_4G_MODE_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
-                                enhanced4GNotifyUri, null, true, UserHandle.USER_ALL);
+                                getNotifyContentUri(SubscriptionManager
+                                                .ADVANCED_CALLING_ENABLED_CONTENT_URI,
+                                        usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(SubscriptionManager.VT_IMS_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(
+                                getNotifyContentUri(SubscriptionManager.VT_ENABLED_CONTENT_URI,
+                                        usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(SubscriptionManager.WFC_IMS_MODE)) {
+                        getContext().getContentResolver().notifyChange(
+                                getNotifyContentUri(SubscriptionManager.WFC_MODE_CONTENT_URI,
+                                        usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(SubscriptionManager.WFC_IMS_ROAMING_MODE)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                SubscriptionManager.WFC_ROAMING_MODE_CONTENT_URI,
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(SubscriptionManager.WFC_IMS_ROAMING_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                SubscriptionManager.WFC_ROAMING_ENABLED_CONTENT_URI,
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
                     break;
                 default:
@@ -3310,6 +3329,10 @@ public class TelephonyProvider extends ContentProvider
         }
 
         return count;
+    }
+
+    private static Uri getNotifyContentUri(Uri uri, boolean usingSubId, int subId) {
+        return (usingSubId) ? Uri.withAppendedPath(uri, "" + subId) : uri;
     }
 
     private void checkPermission() {
