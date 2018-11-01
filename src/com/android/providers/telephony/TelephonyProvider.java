@@ -46,8 +46,8 @@ import static android.provider.Telephony.Carriers.NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.NO_SET_SET;
 import static android.provider.Telephony.Carriers.NUMERIC;
 import static android.provider.Telephony.Carriers.OWNED_BY;
-import static android.provider.Telephony.Carriers.OWNED_BY_OTHERS;
 import static android.provider.Telephony.Carriers.OWNED_BY_DPC;
+import static android.provider.Telephony.Carriers.OWNED_BY_OTHERS;
 import static android.provider.Telephony.Carriers.PASSWORD;
 import static android.provider.Telephony.Carriers.PORT;
 import static android.provider.Telephony.Carriers.PROFILE_ID;
@@ -132,8 +132,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.zip.CRC32;
 import java.util.Set;
+import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -166,7 +166,8 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_ENFORCE_MANAGED = 20;
     private static final int URL_PREFERAPNSET = 21;
     private static final int URL_PREFERAPNSET_USING_SUBID = 22;
-
+    private static final int URL_SIM_APN_LIST = 23;
+    private static final int URL_SIM_APN_LIST_ID = 24;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -415,6 +416,8 @@ public class TelephonyProvider extends ContentProvider
         s_urlMatcher.addURI("telephony", "carriers/filtered/#", URL_FILTERED_ID);
         // Only Called by DevicePolicyManager to enforce DPC records.
         s_urlMatcher.addURI("telephony", "carriers/enforce_managed", URL_ENFORCE_MANAGED);
+        s_urlMatcher.addURI("telephony", "carriers/sim_apn_list", URL_SIM_APN_LIST);
+        s_urlMatcher.addURI("telephony", "carriers/sim_apn_list/#", URL_SIM_APN_LIST_ID);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put(CURRENT, "0");
@@ -2616,6 +2619,19 @@ public class TelephonyProvider extends ContentProvider
                 qb.setTables(SIMINFO_TABLE);
                 break;
             }
+            case URL_SIM_APN_LIST_ID: {
+                subIdString = url.getLastPathSegment();
+                try {
+                    subId = Integer.parseInt(subIdString);
+                } catch (NumberFormatException e) {
+                    loge("NumberFormatException" + e);
+                    return null;
+                }
+            }
+            //intentional fall through from above case
+            case URL_SIM_APN_LIST: {
+                return getSubscriptionMatchingAPNList(qb, projectionIn, sort, subId);
+            }
 
             default: {
                 return null;
@@ -2672,6 +2688,92 @@ public class TelephonyProvider extends ContentProvider
         if (ret != null)
             ret.setNotificationUri(getContext().getContentResolver(), url);
         return ret;
+    }
+
+    /**
+     * To find the current sim APN.
+     *
+     * There has three steps:
+     * 1. Query the APN based on carrier ID and fall back to query { MCC, MNC, MVNO }.
+     * 2. If can't find the current APN, then query the parent APN. Query based on
+     *    MNO carrier id and { MCC, MNC }.
+     * 3. else return empty cursor
+     *
+     */
+    private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
+            String sort, int subId) {
+
+        Cursor ret;
+        final TelephonyManager tm = ((TelephonyManager)
+                getContext().getSystemService(Context.TELEPHONY_SERVICE))
+                .createForSubscriptionId(subId);
+        SQLiteDatabase db = getReadableDatabase();
+
+        // For query db one time, append step 1 and step 2 condition in one selection and
+        // separate results after the query is completed. Because IMSI has special match rule,
+        // so just query the MCC / MNC and filter the MVNO by ourselves
+        String carrierIDSelection = CARRIER_ID + " =? OR " + NUMERIC + " =? OR "
+                + CARRIER_ID + " =? ";
+
+
+        String mccmnc = tm.getSimOperator();
+        String carrierId = String.valueOf(tm.getSimCarrierId());
+        String mnoCarrierId = String.valueOf(tm.getSimMNOCarrierId());
+
+        ret = qb.query(db, null, carrierIDSelection,
+                new String[]{carrierId, mccmnc, mnoCarrierId}, null, null, sort);
+
+        if (DBG) log("match current APN size:  " + ret.getCount());
+
+        MatrixCursor currentCursor = new MatrixCursor(projectionIn);
+        MatrixCursor parentCursor = new MatrixCursor(projectionIn);
+
+        int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
+        int numericIndex = ret.getColumnIndex(NUMERIC);
+        int mvnoIndex = ret.getColumnIndex(MVNO_TYPE);
+        int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
+
+        IccRecords iccRecords = getIccRecords(subId);
+
+        //Separate the result into MatrixCursor
+        while (ret.moveToNext()) {
+            List<String> data = new ArrayList<>();
+            for (String column : projectionIn) {
+                data.add(ret.getString(ret.getColumnIndex(column)));
+            }
+
+            if (ret.getString(carrierIdIndex).equals(carrierId)) {
+                // 1. APN query result based on SIM carrier id
+                currentCursor.addRow(data);
+            } else if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
+                    ApnSettingUtils.mvnoMatches(iccRecords,
+                            ApnSetting.getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                            ret.getString(mvnoDataIndex))) {
+                // 1. APN query result based on legacy SIM MCC/MCC and MVNO in case APN carrier id
+                // migration is not 100%. some APNSettings can not find match id.
+                // TODO: remove legacy {mcc,mnc, mvno} support in the future.
+                currentCursor.addRow(data);
+            } else if (ret.getString(carrierIdIndex).equals(mnoCarrierId)) {
+                // 2. APN query result based on SIM MNO carrier id in case no APN found from
+                // exact carrier id fallback to query the MNO carrier id
+                parentCursor.addRow(data);
+            } else if (!TextUtils.isEmpty(ret.getString(numericIndex))) {
+                // 2. APN query result based on SIM MCC/MNC
+                // TODO: remove legacy {mcc, mnc} support in the future.
+                parentCursor.addRow(data);
+            }
+        }
+
+        if (currentCursor.getCount() > 0) {
+            if (DBG) log("match Carrier Id APN: " + currentCursor.getCount());
+            return currentCursor;
+        } else if (parentCursor.getCount() > 0) {
+            if (DBG) log("match MNO Carrier ID APN: " + parentCursor.getCount());
+            return parentCursor;
+        } else {
+            if (DBG) log("APN no match");
+            return new MatrixCursor(projectionIn);
+        }
     }
 
     @Override
