@@ -24,6 +24,8 @@ import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
+import android.database.DatabaseErrorHandler;
+import android.database.DefaultDatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
@@ -240,6 +242,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private static MmsSmsDatabaseHelper sDeInstance = null;
     private static MmsSmsDatabaseHelper sCeInstance = null;
+    private static MmsSmsDatabaseErrorHandler sDbErrorHandler = null;
 
     private static final String[] BIND_ARGS_NONE = new String[0];
 
@@ -259,8 +262,31 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
     private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
 
-    private MmsSmsDatabaseHelper(Context context) {
-        super(context, DATABASE_NAME, null, DATABASE_VERSION);
+    /**
+     * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
+     * print a Slog.wtf so database corruption can be caught earlier.
+     */
+    private static class MmsSmsDatabaseErrorHandler implements DatabaseErrorHandler {
+        private DefaultDatabaseErrorHandler mDefaultDatabaseErrorHandler
+                = new DefaultDatabaseErrorHandler();
+        private Context mContext;
+
+        MmsSmsDatabaseErrorHandler(Context context) {
+            mContext = context;
+        }
+
+        @Override
+        public void onCorruption(SQLiteDatabase dbObj) {
+            String logMsg = "Corruption reported by sqlite on database: " + dbObj.getPath();
+            localLogWtf(logMsg);
+            sendDbLostIntent(mContext, true);
+            // Let the default error handler take other actions
+            mDefaultDatabaseErrorHandler.onCorruption(dbObj);
+        }
+    }
+
+    private MmsSmsDatabaseHelper(Context context, MmsSmsDatabaseErrorHandler dbErrorHandler) {
+        super(context, DATABASE_NAME, null, DATABASE_VERSION, dbErrorHandler);
         mContext = context;
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
@@ -272,12 +298,27 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {
+        if (sDbErrorHandler == null) {
+            sDbErrorHandler = new MmsSmsDatabaseErrorHandler(context);
+        }
+        return sDbErrorHandler;
+    }
+
+    private static void sendDbLostIntent(Context context, boolean isCorrupted) {
+        // Broadcast ACTION_SMS_MMS_DB_LOST
+        Intent intent = new Intent(Sms.Intents.ACTION_SMS_MMS_DB_LOST);
+        intent.putExtra(Sms.Intents.EXTRA_IS_CORRUPTED, isCorrupted);
+        intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
+        context.sendBroadcast(intent, android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
+    }
     /**
      * Returns a singleton helper for the combined MMS and SMS database in device encrypted storage.
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForDe(Context context) {
         if (sDeInstance == null) {
-            sDeInstance = new MmsSmsDatabaseHelper(ProviderUtil.getDeviceEncryptedContext(context));
+            Context deContext = ProviderUtil.getDeviceEncryptedContext(context);
+            sDeInstance = new MmsSmsDatabaseHelper(deContext, getDbErrorHandler(deContext));
         }
         return sDeInstance;
     }
@@ -289,8 +330,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForCe(Context context) {
         if (sCeInstance == null) {
             if (StorageManager.isFileEncryptedNativeOrEmulated()) {
-                sCeInstance = new MmsSmsDatabaseHelper(
-                    ProviderUtil.getCredentialEncryptedContext(context));
+                Context ceContext = ProviderUtil.getCredentialEncryptedContext(context);
+                sCeInstance = new MmsSmsDatabaseHelper(ceContext, getDbErrorHandler(ceContext));
             } else {
                 sCeInstance = getInstanceForDe(context);
             }
@@ -495,6 +536,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 // disappeared mysteriously?
                 localLogWtf("onCreate: was already called once earlier");
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, false);
+                sendDbLostIntent(mContext, false);
             } else {
                 setInitialCreateDone();
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
@@ -511,12 +553,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createIndices(db);
     }
 
-    private void localLog(String logMsg) {
+    private static void localLog(String logMsg) {
         Log.d(TAG, logMsg);
         PhoneFactory.localLog(TAG, logMsg);
     }
 
-    private void localLogWtf(String logMsg) {
+    private static void localLogWtf(String logMsg) {
         Slog.wtf(TAG, logMsg);
         PhoneFactory.localLog(TAG, logMsg);
     }
