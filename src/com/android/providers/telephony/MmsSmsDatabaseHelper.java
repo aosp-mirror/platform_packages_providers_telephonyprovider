@@ -290,7 +290,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         mContext = context;
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
-        setWriteAheadLoggingEnabled(false);
         try {
             PhoneFactory.addLocalLog(TAG, 100);
         } catch (IllegalArgumentException e) {
