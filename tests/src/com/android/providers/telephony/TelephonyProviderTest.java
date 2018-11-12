@@ -40,7 +40,6 @@ import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
-import android.text.TextUtils;
 import android.util.Log;
 
 import junit.framework.TestCase;
@@ -80,6 +79,7 @@ public class TelephonyProviderTest extends TestCase {
     private static final String TEST_OPERATOR = "123456";
     private static final String TEST_MCC = "123";
     private static final String TEST_MNC = "456";
+
     // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 1
     private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
             "content://telephony/carriers/subId/" + TEST_SUBID);
@@ -92,6 +92,8 @@ public class TelephonyProviderTest extends TestCase {
             "content://telephony/carriers/preferapn/subId/" + TEST_SUBID);
     private static final Uri URL_WFC_ENABLED_USING_SUBID = Uri.parse(
             "content://telephony/siminfo/" + TEST_SUBID);
+    private static final Uri URL_SIM_APN_LIST = Uri.parse(
+        "content://telephony/carriers/sim_apn_list");
 
     private static final String COLUMN_APN_ID = "apn_id";
 
@@ -1438,5 +1440,168 @@ public class TelephonyProviderTest extends TestCase {
                 values, null, null);
         assertEquals(1, notifyWfcCount);
         assertEquals(0, notifyWfcCountWithTestSubId);
+    }
+
+    @Test
+    @SmallTest
+    public void testGetCurrentAPNList_APNMatchTheCarrierID() {
+        // Test on getCurrentAPNList() step 1
+        TelephonyManager telephonyManager =
+                ((TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE));
+        doReturn(telephonyManager).when(telephonyManager).createForSubscriptionId(anyInt());
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final int carrierID = 100;
+        final String numeric = TEST_OPERATOR;
+        doReturn(carrierID).when(telephonyManager).getSimCarrierId();
+        doReturn(numeric).when(telephonyManager).getSimOperator();
+
+        // Insert the APN
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierID);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+            };
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
+            testProjection, null, null, null);
+
+        cursor.moveToFirst();
+        assertEquals(apnName, cursor.getString(0));
+        assertEquals(carrierName, cursor.getString(1));
+        assertEquals(String.valueOf(carrierID), cursor.getString(2));
+    }
+
+    @Test
+    @SmallTest
+    public void testGetCurrentAPNList_APNMatchTheMCCMNCAndMVNO() {
+        // Test on getCurrentAPNList() step 2
+        TelephonyManager telephonyManager =
+                ((TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE));
+        doReturn(telephonyManager).when(telephonyManager).createForSubscriptionId(anyInt());
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final String numeric = TEST_OPERATOR;
+        final String mvnoType = "spn";
+        final String mvnoData = TelephonyProviderTestable.TEST_SPN;
+        final int carrierId = 100;
+        doReturn(carrierId).when(telephonyManager).getSimCarrierId();
+        doReturn(numeric).when(telephonyManager).getSimOperator();
+        //TelephonyProviderTestable had mock iccreord
+
+        // The DB only have the MCC/MNC and MVNO APN
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.NUMERIC, numeric);
+        contentValues.put(Carriers.MVNO_TYPE, mvnoType);
+        contentValues.put(Carriers.MVNO_MATCH_DATA, mvnoData);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.NUMERIC,
+                Carriers.MVNO_MATCH_DATA
+            };
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
+            testProjection, null, null, null);
+
+
+        cursor.moveToFirst();
+        assertEquals(apnName, cursor.getString(0));
+        assertEquals(carrierName, cursor.getString(1));
+        assertEquals(numeric, cursor.getString(2));
+        assertEquals(mvnoData, cursor.getString(3));
+    }
+
+    @Test
+    @SmallTest
+    public void testGetCurrentAPNList_APNMatchTheMNOCarrierID() {
+        // Test on getCurrentAPNList() step 3
+        TelephonyManager telephonyManager =
+                ((TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE));
+        doReturn(telephonyManager).when(telephonyManager).createForSubscriptionId(anyInt());
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final int carrierId = 100;
+        final int mnoCarrierId = 101;
+        final String numeric = TEST_OPERATOR;
+        doReturn(carrierId).when(telephonyManager).getSimCarrierId();
+        doReturn(mnoCarrierId).when(telephonyManager).getSimMNOCarrierId();
+        doReturn(numeric).when(telephonyManager).getSimOperator();
+
+        // The DB only have the MNO carrier id APN
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, mnoCarrierId);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+            };
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
+            testProjection, null, null, null);
+
+        cursor.moveToFirst();
+        assertEquals(apnName, cursor.getString(0));
+        assertEquals(carrierName, cursor.getString(1));
+        assertEquals(String.valueOf(mnoCarrierId), cursor.getString(2));
+    }
+
+    @Test
+    @SmallTest
+    public void testGetCurrentAPNList_APNMatchTheParentMCCMNC() {
+        // Test on getCurrentAPNList() step 4
+        TelephonyManager telephonyManager =
+                ((TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE));
+        doReturn(telephonyManager).when(telephonyManager).createForSubscriptionId(anyInt());
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final String numeric = TEST_OPERATOR;
+        final String mvnoData = TelephonyProviderTestable.TEST_SPN;
+        final int carrierId = 100;
+        final int mnoCarrierId = 101;
+
+        doReturn(carrierId).when(telephonyManager).getSimCarrierId();
+        doReturn(numeric).when(telephonyManager).getSimOperator();
+        doReturn(mvnoData).when(telephonyManager).getSimOperatorName();
+        doReturn(mnoCarrierId).when(telephonyManager).getSimMNOCarrierId();
+
+        // The DB only have the MNO APN
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.NUMERIC, numeric);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.NUMERIC,
+            };
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
+            testProjection, null, null, null);
+
+        cursor.moveToFirst();
+        assertEquals(apnName, cursor.getString(0));
+        assertEquals(carrierName, cursor.getString(1));
+        assertEquals(numeric, cursor.getString(2));
     }
 }
