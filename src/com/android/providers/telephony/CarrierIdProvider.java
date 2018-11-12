@@ -25,6 +25,7 @@ import android.content.UriMatcher;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.MatrixCursor;
+import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -74,7 +75,7 @@ public class CarrierIdProvider extends ContentProvider {
     private static final String TAG = CarrierIdProvider.class.getSimpleName();
 
     private static final String DATABASE_NAME = "carrierIdentification.db";
-    private static final int DATABASE_VERSION = 4;
+    private static final int DATABASE_VERSION = 5;
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
     private static final String VERSION_KEY = "version";
@@ -145,7 +146,8 @@ public class CarrierIdProvider extends ContentProvider {
             CarrierId.All.SPN,
             CarrierId.All.APN,
             CarrierId.All.ICCID_PREFIX,
-            CarrierId.All.PRIVILEGE_ACCESS_RULE));
+            CarrierId.All.PRIVILEGE_ACCESS_RULE,
+            CarrierId.PARENT_CARRIER_ID));
 
     private CarrierIdDatabaseHelper mDbHelper;
 
@@ -172,6 +174,7 @@ public class CarrierIdProvider extends ContentProvider {
                 + CarrierId.All.PRIVILEGE_ACCESS_RULE + " TEXT,"
                 + CarrierId.CARRIER_NAME + " TEXT,"
                 + CarrierId.CARRIER_ID + " INTEGER DEFAULT -1,"
+                + CarrierId.PARENT_CARRIER_ID + " INTEGER DEFAULT -1,"
                 + "UNIQUE (" + TextUtils.join(", ", CARRIERS_ID_UNIQUE_FIELDS) + "));";
     }
 
@@ -325,6 +328,7 @@ public class CarrierIdProvider extends ContentProvider {
          */
         public CarrierIdDatabaseHelper(Context context) {
             super(context, DATABASE_NAME, null, DATABASE_VERSION);
+            Log.d(TAG, "CarrierIdDatabaseHelper: " + DATABASE_VERSION);
             setWriteAheadLoggingEnabled(false);
         }
 
@@ -350,6 +354,9 @@ public class CarrierIdProvider extends ContentProvider {
             if (oldVersion < DATABASE_VERSION) {
                 dropCarrierTable(db);
                 createCarrierTable(db);
+                // force rewrite carrier id db
+                setAppliedVersion(0);
+                updateDatabaseFromPb(db);
             }
         }
     }
@@ -412,7 +419,9 @@ public class CarrierIdProvider extends ContentProvider {
     private void convertCarrierAttrToContentValues(ContentValues cv, List<ContentValues> cvs,
             CarrierIdProto.CarrierAttribute attr, int index) {
         if (index > CARRIER_ATTR_END_IDX) {
-            cvs.add(new ContentValues(cv));
+            ContentValues carrier = new ContentValues(cv);
+            if (!cvs.contains(carrier))
+            cvs.add(carrier);
             return;
         }
         boolean found = false;
@@ -435,7 +444,7 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case GID1_INDEX:
                 for (String str : attr.gid1) {
-                    cv.put(CarrierId.All.GID1, str);
+                    cv.put(CarrierId.All.GID1, str.toLowerCase());
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.GID1);
                     found = true;
@@ -443,7 +452,7 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case GID2_INDEX:
                 for (String str : attr.gid2) {
-                    cv.put(CarrierId.All.GID2, str);
+                    cv.put(CarrierId.All.GID2, str.toLowerCase());
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.GID2);
                     found = true;
@@ -459,7 +468,7 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case SPN_INDEX:
                 for (String str : attr.spn) {
-                    cv.put(CarrierId.All.SPN, str);
+                    cv.put(CarrierId.All.SPN, str.toLowerCase());
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.SPN);
                     found = true;
