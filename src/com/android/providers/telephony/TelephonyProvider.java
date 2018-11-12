@@ -2562,6 +2562,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
+        checkQueryPermission(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -2658,18 +2659,19 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_FILTERED_ID: {
-                constraints.add("_id = " + url.getLastPathSegment());
+                qb.appendWhere("_id = " + url.getLastPathSegment());
             }
             //intentional fall through from above case
             case URL_FILTERED: {
                 if (isManagedApnEnforced()) {
                     // If enforced, return DPC records only.
-                    constraints.add(IS_OWNED_BY_DPC);
+                    qb.appendWhereStandalone(IS_OWNED_BY_DPC);
                 } else {
                     // Otherwise return non-DPC records only.
-                    constraints.add(IS_NOT_OWNED_BY_DPC);
+                    qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
                 }
-                break;
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             case URL_ENFORCE_MANAGED: {
@@ -2695,7 +2697,9 @@ public class TelephonyProvider extends ContentProvider
             }
             //intentional fall through from above case
             case URL_SIM_APN_LIST: {
-                return getSubscriptionMatchingAPNList(qb, projectionIn, sort, subId);
+                qb.appendWhere(IS_NOT_OWNED_BY_DPC);
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             default: {
@@ -2706,28 +2710,6 @@ public class TelephonyProvider extends ContentProvider
         // appendWhere doesn't add ANDs so we do it ourselves
         if (constraints.size() > 0) {
             qb.appendWhere(TextUtils.join(" AND ", constraints));
-        }
-
-        if (match != URL_SIMINFO) {
-            if (projectionIn != null) {
-                for (String column : projectionIn) {
-                    if (TYPE.equals(column) ||
-                            MMSC.equals(column) ||
-                            MMSPROXY.equals(column) ||
-                            MMSPORT.equals(column) ||
-                            MVNO_TYPE.equals(column) ||
-                            MVNO_MATCH_DATA.equals(column) ||
-                            APN.equals(column)) {
-                        // noop
-                    } else {
-                        checkPermission();
-                        break;
-                    }
-                }
-            } else {
-                // null returns all columns, so need permission check
-                checkPermission();
-            }
         }
 
         SQLiteDatabase db = getReadableDatabase();
@@ -2755,6 +2737,30 @@ public class TelephonyProvider extends ContentProvider
         return ret;
     }
 
+    private void checkQueryPermission(int match, String[] projectionIn) {
+        if (match != URL_SIMINFO) {
+            if (projectionIn != null) {
+                for (String column : projectionIn) {
+                    if (TYPE.equals(column) ||
+                            MMSC.equals(column) ||
+                            MMSPROXY.equals(column) ||
+                            MMSPORT.equals(column) ||
+                            MVNO_TYPE.equals(column) ||
+                            MVNO_MATCH_DATA.equals(column) ||
+                            APN.equals(column)) {
+                        // noop
+                    } else {
+                        checkPermission();
+                        break;
+                    }
+                }
+            } else {
+                // null returns all columns, so need permission check
+                checkPermission();
+            }
+        }
+    }
+
     /**
      * To find the current sim APN.
      *
@@ -2766,7 +2772,7 @@ public class TelephonyProvider extends ContentProvider
      *
      */
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
-            String sort, int subId) {
+            String selection, String[] selectionArgs, String sort, int subId) {
 
         Cursor ret;
         final TelephonyManager tm = ((TelephonyManager)
@@ -2774,24 +2780,25 @@ public class TelephonyProvider extends ContentProvider
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
 
-        // For query db one time, append step 1 and step 2 condition in one selection and
-        // separate results after the query is completed. Because IMSI has special match rule,
-        // so just query the MCC / MNC and filter the MVNO by ourselves
-        String carrierIDSelection = CARRIER_ID + " =? OR " + NUMERIC + " =? OR "
-                + CARRIER_ID + " =? ";
-
-
         String mccmnc = tm.getSimOperator();
         String carrierId = String.valueOf(tm.getSimCarrierId());
         String mnoCarrierId = String.valueOf(tm.getSimMNOCarrierId());
 
-        ret = qb.query(db, null, carrierIDSelection,
-                new String[]{carrierId, mccmnc, mnoCarrierId}, null, null, sort);
+        // For query db one time, append step 1 and step 2 condition in one selection and
+        // separate results after the query is completed. Because IMSI has special match rule,
+        // so just query the MCC / MNC and filter the MVNO by ourselves
+        String carrierIDSelection = CARRIER_ID + " = '" + carrierId + "' OR " +
+                NUMERIC + " = '" + mccmnc + "' OR " +
+                CARRIER_ID + " = '" + mnoCarrierId + "' ";
+        qb.appendWhereStandalone(carrierIDSelection);
+
+        ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
 
         if (DBG) log("match current APN size:  " + ret.getCount());
 
-        MatrixCursor currentCursor = new MatrixCursor(projectionIn);
-        MatrixCursor parentCursor = new MatrixCursor(projectionIn);
+        String[] coulmnNames = projectionIn != null ? projectionIn : ret.getColumnNames();
+        MatrixCursor currentCursor = new MatrixCursor(coulmnNames);
+        MatrixCursor parentCursor = new MatrixCursor(coulmnNames);
 
         int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
         int numericIndex = ret.getColumnIndex(NUMERIC);
@@ -2803,7 +2810,7 @@ public class TelephonyProvider extends ContentProvider
         //Separate the result into MatrixCursor
         while (ret.moveToNext()) {
             List<String> data = new ArrayList<>();
-            for (String column : projectionIn) {
+            for (String column : coulmnNames) {
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
@@ -2837,7 +2844,7 @@ public class TelephonyProvider extends ContentProvider
             return parentCursor;
         } else {
             if (DBG) log("APN no match");
-            return new MatrixCursor(projectionIn);
+            return new MatrixCursor(coulmnNames);
         }
     }
 
