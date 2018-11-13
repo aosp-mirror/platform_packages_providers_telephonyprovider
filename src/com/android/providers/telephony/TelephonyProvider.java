@@ -2251,7 +2251,7 @@ public class TelephonyProvider extends ContentProvider
         return s_apnSourceServiceExists;
     }
 
-    private void restoreApnsWithService() {
+    private void restoreApnsWithService(int subId) {
         Context context = getContext();
         Resources r = context.getResources();
         ServiceConnection connection = new ServiceConnection() {
@@ -2290,7 +2290,7 @@ public class TelephonyProvider extends ContentProvider
                         }
                     }
                     try {
-                        ContentValues[] values = mIApnSourceService.getApns();
+                        ContentValues[] values = mIApnSourceService.getApns(subId);
                         if (values != null) {
                             // we use the unsynchronized insert because this function is called
                             // within the syncrhonized function delete()
@@ -3559,7 +3559,7 @@ public class TelephonyProvider extends ContentProvider
         editorApn.apply();
 
         if (apnSourceServiceExists(getContext())) {
-            restoreApnsWithService();
+            restoreApnsWithService(subId);
         } else {
             initDatabaseWithDatabaseHelper(db);
         }
