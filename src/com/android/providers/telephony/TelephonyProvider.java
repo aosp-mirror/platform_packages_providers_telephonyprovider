@@ -379,6 +379,7 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.PARENT_SUB_ID + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.GROUP_UUID + " TEXT"
                 + ");";
     }
@@ -1145,8 +1146,6 @@ public class TelephonyProvider extends ContentProvider
 
             if (oldVersion < (30 << 16 | 6)) {
                 try {
-                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " DROP COLUMN "
-                            + SubscriptionManager.PARENT_SUB_ID);
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + SubscriptionManager.GROUP_UUID + " TEXT;");
