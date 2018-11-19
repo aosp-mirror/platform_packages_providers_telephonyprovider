@@ -119,6 +119,13 @@
                   android:singleUser="true"
                   android:multiprocess="false" />
 
+        <provider android:name="RcsProvider"
+                  android:authorities="rcs"
+                  android:multiprocess="false"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:readPermission="android.permission.READ_SMS" />
+
         <service
             android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
             android:exported="false" />
