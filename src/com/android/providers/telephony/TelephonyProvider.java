@@ -2777,12 +2777,12 @@ public class TelephonyProvider extends ContentProvider
     }
 
     /**
-     * To find the current sim APN.
+     * To find the current sim APN. Query APN based on {MCC, MNC, MVNO} to support backward
+     * compatibility but will move to carrier id in the future.
      *
      * There has three steps:
-     * 1. Query the APN based on carrier ID and fall back to query { MCC, MNC, MVNO }.
-     * 2. If can't find the current APN, then query the parent APN. Query based on
-     *    MNO carrier id and { MCC, MNC }.
+     * 1. Query the APN based on { MCC, MNC, MVNO }.
+     * 2. If can't find the current APN, then query the parent APN. Query based on { MCC, MNC }.
      * 3. else return empty cursor
      *
      */
@@ -2794,18 +2794,12 @@ public class TelephonyProvider extends ContentProvider
                 getContext().getSystemService(Context.TELEPHONY_SERVICE))
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
-
         String mccmnc = tm.getSimOperator();
-        String carrierId = String.valueOf(tm.getSimCarrierId());
-        String mnoCarrierId = String.valueOf(tm.getSimMNOCarrierId());
 
         // For query db one time, append step 1 and step 2 condition in one selection and
         // separate results after the query is completed. Because IMSI has special match rule,
         // so just query the MCC / MNC and filter the MVNO by ourselves
-        String carrierIDSelection = CARRIER_ID + " = '" + carrierId + "' OR " +
-                NUMERIC + " = '" + mccmnc + "' OR " +
-                CARRIER_ID + " = '" + mnoCarrierId + "' ";
-        qb.appendWhereStandalone(carrierIDSelection);
+        qb.appendWhereStandalone(NUMERIC + " = '" + mccmnc + "' ");
 
         ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
 
@@ -2815,7 +2809,6 @@ public class TelephonyProvider extends ContentProvider
         MatrixCursor currentCursor = new MatrixCursor(coulmnNames);
         MatrixCursor parentCursor = new MatrixCursor(coulmnNames);
 
-        int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
         int numericIndex = ret.getColumnIndex(NUMERIC);
         int mvnoIndex = ret.getColumnIndex(MVNO_TYPE);
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
@@ -2829,24 +2822,15 @@ public class TelephonyProvider extends ContentProvider
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
-            if (ret.getString(carrierIdIndex).equals(carrierId)) {
-                // 1. APN query result based on SIM carrier id
-                currentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
+            if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
                     ApnSettingUtils.mvnoMatches(iccRecords,
                             ApnSetting.getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
                             ret.getString(mvnoDataIndex))) {
-                // 1. APN query result based on legacy SIM MCC/MCC and MVNO in case APN carrier id
-                // migration is not 100%. some APNSettings can not find match id.
-                // TODO: remove legacy {mcc,mnc, mvno} support in the future.
+                // 1. APN query result based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
-            } else if (ret.getString(carrierIdIndex).equals(mnoCarrierId)) {
-                // 2. APN query result based on SIM MNO carrier id in case no APN found from
-                // exact carrier id fallback to query the MNO carrier id
-                parentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex))) {
+            } else if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
+                    TextUtils.isEmpty(ret.getString(mvnoIndex))) {
                 // 2. APN query result based on SIM MCC/MNC
-                // TODO: remove legacy {mcc, mnc} support in the future.
                 parentCursor.addRow(data);
             }
         }
