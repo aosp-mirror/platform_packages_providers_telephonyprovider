@@ -380,7 +380,6 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.PARENT_SUB_ID + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.GROUP_UUID + " TEXT"
                 + ");";
     }
@@ -1120,8 +1119,6 @@ public class TelephonyProvider extends ContentProvider
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + SubscriptionManager.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0;");
-                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.PARENT_SUB_ID + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
