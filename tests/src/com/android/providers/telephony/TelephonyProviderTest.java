@@ -1070,7 +1070,7 @@ public class TelephonyProviderTest extends TestCase {
         editedValue.put(Carriers.NUMERIC, numeric1);
         editedValue.put(Carriers.MCC, mcc1);
         editedValue.put(Carriers.MNC, mnc1);
-        editedValue.put(Carriers.EDITED, value);
+        editedValue.put(Carriers.EDITED_STATUS, value);
         assertNotNull(mContentResolver.insert(URI_TELEPHONY, editedValue));
 
         Cursor cur = mContentResolver.query(URI_TELEPHONY, null, null, null, null);
@@ -1083,13 +1083,13 @@ public class TelephonyProviderTest extends TestCase {
         values.put(Carriers.NUMERIC, numeric1);
         values.put(Carriers.MCC, mcc1);
         values.put(Carriers.MNC, mnc1);
-        values.put(Carriers.EDITED, Carriers.UNEDITED);
+        values.put(Carriers.EDITED_STATUS, Carriers.UNEDITED);
         mContentResolver.insert(URI_TELEPHONY, values);
 
         String[] testProjection = {
             Carriers.NAME,
             Carriers.APN,
-            Carriers.EDITED,
+            Carriers.EDITED_STATUS,
             Carriers.TYPE,
             Carriers.PROTOCOL,
             Carriers.BEARER_BITMASK,
@@ -1117,7 +1117,7 @@ public class TelephonyProviderTest extends TestCase {
         editedValue.put(Carriers.NUMERIC, numeric1);
         editedValue.put(Carriers.MCC, mcc1);
         editedValue.put(Carriers.MNC, mnc1);
-        editedValue.put(Carriers.EDITED, value);
+        editedValue.put(Carriers.EDITED_STATUS, value);
         assertNotNull(mContentResolver.insert(URI_TELEPHONY, editedValue));
 
         // insert APN that conflicts with edited APN
@@ -1127,13 +1127,13 @@ public class TelephonyProviderTest extends TestCase {
         values.put(Carriers.NUMERIC, numeric1);
         values.put(Carriers.MCC, mcc1);
         values.put(Carriers.MNC, mnc1);
-        values.put(Carriers.EDITED, Carriers.UNEDITED);
+        values.put(Carriers.EDITED_STATUS, Carriers.UNEDITED);
         mContentResolver.insert(URI_TELEPHONY, values);
 
         String[] testProjection = {
             Carriers.NAME,
             Carriers.APN,
-            Carriers.EDITED,
+            Carriers.EDITED_STATUS,
             Carriers.TYPE,
             Carriers.PROTOCOL,
             Carriers.BEARER_BITMASK,
