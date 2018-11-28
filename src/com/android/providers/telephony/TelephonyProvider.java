@@ -30,21 +30,21 @@ import static android.provider.Telephony.Carriers.CARRIER_ID;
 import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
-import static android.provider.Telephony.Carriers.EDITED;
-import static android.provider.Telephony.Carriers.MAX_CONNS;
-import static android.provider.Telephony.Carriers.MAX_CONNS_TIME;
+import static android.provider.Telephony.Carriers.EDITED_STATUS;
+import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
+import static android.provider.Telephony.Carriers.TIME_LIMIT_FOR_MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
 import static android.provider.Telephony.Carriers.MMSC;
 import static android.provider.Telephony.Carriers.MMSPORT;
 import static android.provider.Telephony.Carriers.MMSPROXY;
 import static android.provider.Telephony.Carriers.MNC;
-import static android.provider.Telephony.Carriers.MODEM_COGNITIVE;
+import static android.provider.Telephony.Carriers.MODEM_PERSIST;
 import static android.provider.Telephony.Carriers.MTU;
 import static android.provider.Telephony.Carriers.MVNO_MATCH_DATA;
 import static android.provider.Telephony.Carriers.MVNO_TYPE;
 import static android.provider.Telephony.Carriers.NAME;
 import static android.provider.Telephony.Carriers.NETWORK_TYPE_BITMASK;
-import static android.provider.Telephony.Carriers.NO_SET_SET;
+import static android.provider.Telephony.Carriers.NO_APN_SET_ID;
 import static android.provider.Telephony.Carriers.NUMERIC;
 import static android.provider.Telephony.Carriers.OWNED_BY;
 import static android.provider.Telephony.Carriers.OWNED_BY_DPC;
@@ -65,7 +65,7 @@ import static android.provider.Telephony.Carriers.USER_DELETED_BUT_PRESENT_IN_XM
 import static android.provider.Telephony.Carriers.USER_EDITABLE;
 import static android.provider.Telephony.Carriers.USER_EDITED;
 import static android.provider.Telephony.Carriers.USER_VISIBLE;
-import static android.provider.Telephony.Carriers.WAIT_TIME;
+import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
 
 import android.content.ComponentName;
@@ -205,24 +205,24 @@ public class TelephonyProvider extends ContentProvider
     private static final ContentValues s_currentNullMap;
     private static final ContentValues s_currentSetMap;
 
-    private static final String IS_UNEDITED = EDITED + "=" + UNEDITED;
-    private static final String IS_EDITED = EDITED + "!=" + UNEDITED;
-    private static final String IS_USER_EDITED = EDITED + "=" + USER_EDITED;
-    private static final String IS_NOT_USER_EDITED = EDITED + "!=" + USER_EDITED;
-    private static final String IS_USER_DELETED = EDITED + "=" + USER_DELETED;
-    private static final String IS_NOT_USER_DELETED = EDITED + "!=" + USER_DELETED;
+    private static final String IS_UNEDITED = EDITED_STATUS + "=" + UNEDITED;
+    private static final String IS_EDITED = EDITED_STATUS + "!=" + UNEDITED;
+    private static final String IS_USER_EDITED = EDITED_STATUS + "=" + USER_EDITED;
+    private static final String IS_NOT_USER_EDITED = EDITED_STATUS + "!=" + USER_EDITED;
+    private static final String IS_USER_DELETED = EDITED_STATUS + "=" + USER_DELETED;
+    private static final String IS_NOT_USER_DELETED = EDITED_STATUS + "!=" + USER_DELETED;
     private static final String IS_USER_DELETED_BUT_PRESENT_IN_XML =
-            EDITED + "=" + USER_DELETED_BUT_PRESENT_IN_XML;
+            EDITED_STATUS + "=" + USER_DELETED_BUT_PRESENT_IN_XML;
     private static final String IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML =
-            EDITED + "!=" + USER_DELETED_BUT_PRESENT_IN_XML;
-    private static final String IS_CARRIER_EDITED = EDITED + "=" + CARRIER_EDITED;
-    private static final String IS_NOT_CARRIER_EDITED = EDITED + "!=" + CARRIER_EDITED;
-    private static final String IS_CARRIER_DELETED = EDITED + "=" + CARRIER_DELETED;
-    private static final String IS_NOT_CARRIER_DELETED = EDITED + "!=" + CARRIER_DELETED;
+            EDITED_STATUS + "!=" + USER_DELETED_BUT_PRESENT_IN_XML;
+    private static final String IS_CARRIER_EDITED = EDITED_STATUS + "=" + CARRIER_EDITED;
+    private static final String IS_NOT_CARRIER_EDITED = EDITED_STATUS + "!=" + CARRIER_EDITED;
+    private static final String IS_CARRIER_DELETED = EDITED_STATUS + "=" + CARRIER_DELETED;
+    private static final String IS_NOT_CARRIER_DELETED = EDITED_STATUS + "!=" + CARRIER_DELETED;
     private static final String IS_CARRIER_DELETED_BUT_PRESENT_IN_XML =
-            EDITED + "=" + CARRIER_DELETED_BUT_PRESENT_IN_XML;
+            EDITED_STATUS + "=" + CARRIER_DELETED_BUT_PRESENT_IN_XML;
     private static final String IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML =
-            EDITED + "!=" + CARRIER_DELETED_BUT_PRESENT_IN_XML;
+            EDITED_STATUS + "!=" + CARRIER_DELETED_BUT_PRESENT_IN_XML;
     private static final String IS_OWNED_BY_DPC = OWNED_BY + "=" + OWNED_BY_DPC;
     private static final String IS_NOT_OWNED_BY_DPC = OWNED_BY + "!=" + OWNED_BY_DPC;
 
@@ -266,7 +266,7 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(ROAMING_PROTOCOL, "IP");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(USER_EDITABLE, "1");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(OWNED_BY, String.valueOf(OWNED_BY_OTHERS));
-        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_SET_SET));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_APN_SET_ID));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ID,
                 String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
 
@@ -276,7 +276,7 @@ public class TelephonyProvider extends ContentProvider
         // queries use bools. As a result there is some special handling of boolean fields within
         // the TelephonyProvider.
         CARRIERS_BOOLEAN_FIELDS.add(CARRIER_ENABLED);
-        CARRIERS_BOOLEAN_FIELDS.add(MODEM_COGNITIVE);
+        CARRIERS_BOOLEAN_FIELDS.add(MODEM_PERSIST);
         CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
         CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
     }
@@ -313,16 +313,16 @@ public class TelephonyProvider extends ContentProvider
                 SUBSCRIPTION_ID + " INTEGER DEFAULT " +
                 SubscriptionManager.INVALID_SUBSCRIPTION_ID + "," +
                 PROFILE_ID + " INTEGER DEFAULT 0," +
-                MODEM_COGNITIVE + " BOOLEAN DEFAULT 0," +
-                MAX_CONNS + " INTEGER DEFAULT 0," +
-                WAIT_TIME + " INTEGER DEFAULT 0," +
-                MAX_CONNS_TIME + " INTEGER DEFAULT 0," +
+                MODEM_PERSIST + " BOOLEAN DEFAULT 0," +
+                MAX_CONNECTIONS + " INTEGER DEFAULT 0," +
+                WAIT_TIME_RETRY + " INTEGER DEFAULT 0," +
+                TIME_LIMIT_FOR_MAX_CONNECTIONS + " INTEGER DEFAULT 0," +
                 MTU + " INTEGER DEFAULT 0," +
-                EDITED + " INTEGER DEFAULT " + UNEDITED + "," +
+                EDITED_STATUS + " INTEGER DEFAULT " + UNEDITED + "," +
                 USER_VISIBLE + " BOOLEAN DEFAULT 1," +
                 USER_EDITABLE + " BOOLEAN DEFAULT 1," +
                 OWNED_BY + " INTEGER DEFAULT " + OWNED_BY_OTHERS + "," +
-                APN_SET_ID + " INTEGER DEFAULT " + NO_SET_SET + "," +
+                APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
@@ -687,12 +687,12 @@ public class TelephonyProvider extends ContentProvider
 
                 // Change USER_DELETED_BUT_PRESENT_IN_XML to USER_DELETED
                 ContentValues cv = new ContentValues();
-                cv.put(EDITED, USER_DELETED);
+                cv.put(EDITED_STATUS, USER_DELETED);
                 db.update(CARRIERS_TABLE, cv, IS_USER_DELETED_BUT_PRESENT_IN_XML, null);
 
                 // Change CARRIER_DELETED_BUT_PRESENT_IN_XML to CARRIER_DELETED
                 cv = new ContentValues();
-                cv.put(EDITED, CARRIER_DELETED);
+                cv.put(EDITED_STATUS, CARRIER_DELETED);
                 db.update(CARRIERS_TABLE, cv, IS_CARRIER_DELETED_BUT_PRESENT_IN_XML, null);
 
                 if (confreader != null) {
@@ -1079,7 +1079,7 @@ public class TelephonyProvider extends ContentProvider
                 // Carriers.NO_SET_SET by default.
                 try {
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
-                            APN_SET_ID + " INTEGER DEFAULT " + NO_SET_SET + ";");
+                            APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
@@ -1401,10 +1401,10 @@ public class TelephonyProvider extends ContentProvider
                     queryValOrNull(MVNO_TYPE) +
                     queryValOrNull(MVNO_MATCH_DATA) +
                     queryValOrNull(PROFILE_ID) +
-                    queryVal2OrNull(MODEM_COGNITIVE) +
-                    queryValOrNull(MAX_CONNS) +
-                    queryValOrNull(WAIT_TIME) +
-                    queryValOrNull(MAX_CONNS_TIME) +
+                    queryVal2OrNull(MODEM_PERSIST) +
+                    queryValOrNull(MAX_CONNECTIONS) +
+                    queryValOrNull(WAIT_TIME_RETRY) +
+                    queryValOrNull(TIME_LIMIT_FOR_MAX_CONNECTIONS) +
                     queryValOrNull(MTU);
             String[] whereArgs = new String[29];
             int i = 0;
@@ -1457,10 +1457,10 @@ public class TelephonyProvider extends ContentProvider
             whereArgs[i++] = values.containsKey(PROFILE_ID) ?
                     values.getAsString(PROFILE_ID) : "0";
 
-            if (values.containsKey(MODEM_COGNITIVE) &&
-                    (values.getAsString(MODEM_COGNITIVE).
+            if (values.containsKey(MODEM_PERSIST) &&
+                    (values.getAsString(MODEM_PERSIST).
                             equalsIgnoreCase("true") ||
-                            values.getAsString(MODEM_COGNITIVE).equals("1"))) {
+                            values.getAsString(MODEM_PERSIST).equals("1"))) {
                 whereArgs[i++] = "true";
                 whereArgs[i++] = "1";
             } else {
@@ -1468,12 +1468,12 @@ public class TelephonyProvider extends ContentProvider
                 whereArgs[i++] = "0";
             }
 
-            whereArgs[i++] = values.containsKey(MAX_CONNS) ?
-                    values.getAsString(MAX_CONNS) : "0";
-            whereArgs[i++] = values.containsKey(WAIT_TIME) ?
-                    values.getAsString(WAIT_TIME) : "0";
-            whereArgs[i++] = values.containsKey(MAX_CONNS_TIME) ?
-                    values.getAsString(MAX_CONNS_TIME) : "0";
+            whereArgs[i++] = values.containsKey(MAX_CONNECTIONS) ?
+                    values.getAsString(MAX_CONNECTIONS) : "0";
+            whereArgs[i++] = values.containsKey(WAIT_TIME_RETRY) ?
+                    values.getAsString(WAIT_TIME_RETRY) : "0";
+            whereArgs[i++] = values.containsKey(TIME_LIMIT_FOR_MAX_CONNECTIONS) ?
+                    values.getAsString(TIME_LIMIT_FOR_MAX_CONNECTIONS) : "0";
             whereArgs[i++] = values.containsKey(MTU) ?
                     values.getAsString(MTU) : "0";
 
@@ -1547,13 +1547,13 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, BEARER);
             getIntValueFromCursor(cv, c, SUBSCRIPTION_ID);
             getIntValueFromCursor(cv, c, PROFILE_ID);
-            getIntValueFromCursor(cv, c, MODEM_COGNITIVE);
-            getIntValueFromCursor(cv, c, MAX_CONNS);
-            getIntValueFromCursor(cv, c, WAIT_TIME);
-            getIntValueFromCursor(cv, c, MAX_CONNS_TIME);
+            getIntValueFromCursor(cv, c, MODEM_PERSIST);
+            getIntValueFromCursor(cv, c, MAX_CONNECTIONS);
+            getIntValueFromCursor(cv, c, WAIT_TIME_RETRY);
+            getIntValueFromCursor(cv, c, TIME_LIMIT_FOR_MAX_CONNECTIONS);
             getIntValueFromCursor(cv, c, MTU);
             getIntValueFromCursor(cv, c, BEARER_BITMASK);
-            getIntValueFromCursor(cv, c, EDITED);
+            getIntValueFromCursor(cv, c, EDITED_STATUS);
             getIntValueFromCursor(cv, c, USER_VISIBLE);
         }
 
@@ -1585,14 +1585,14 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, BEARER);
             getIntValueFromCursor(cv, c, SUBSCRIPTION_ID);
             getIntValueFromCursor(cv, c, PROFILE_ID);
-            getIntValueFromCursor(cv, c, MODEM_COGNITIVE);
-            getIntValueFromCursor(cv, c, MAX_CONNS);
-            getIntValueFromCursor(cv, c, WAIT_TIME);
-            getIntValueFromCursor(cv, c, MAX_CONNS_TIME);
+            getIntValueFromCursor(cv, c, MODEM_PERSIST);
+            getIntValueFromCursor(cv, c, MAX_CONNECTIONS);
+            getIntValueFromCursor(cv, c, WAIT_TIME_RETRY);
+            getIntValueFromCursor(cv, c, TIME_LIMIT_FOR_MAX_CONNECTIONS);
             getIntValueFromCursor(cv, c, MTU);
             getIntValueFromCursor(cv, c, NETWORK_TYPE_BITMASK);
             getIntValueFromCursor(cv, c, BEARER_BITMASK);
-            getIntValueFromCursor(cv, c, EDITED);
+            getIntValueFromCursor(cv, c, EDITED_STATUS);
             getIntValueFromCursor(cv, c, USER_VISIBLE);
             getIntValueFromCursor(cv, c, USER_EDITABLE);
             getIntValueFromCursor(cv, c, OWNED_BY);
@@ -1629,10 +1629,10 @@ public class TelephonyProvider extends ContentProvider
                         if (userEditedColumnIdx != -1) {
                             String user_edited = c.getString(userEditedColumnIdx);
                             if (!TextUtils.isEmpty(user_edited)) {
-                                cv.put(EDITED, new Integer(user_edited));
+                                cv.put(EDITED_STATUS, new Integer(user_edited));
                             }
                         } else {
-                            cv.put(EDITED, CARRIER_EDITED);
+                            cv.put(EDITED_STATUS, CARRIER_EDITED);
                         }
 
                         // New EDITED column. Default value (UNEDITED) will
@@ -1645,10 +1645,10 @@ public class TelephonyProvider extends ContentProvider
                                     (!cv.containsKey(MVNO_TYPE) ||
                                             TextUtils.isEmpty(cv.getAsString(MVNO_TYPE)))) {
                                 if (userEditedColumnIdx == -1) {
-                                    cv.put(EDITED, CARRIER_EDITED);
+                                    cv.put(EDITED_STATUS, CARRIER_EDITED);
                                 } else { // if (oldVersion == 14) -- if db had user_edited column
-                                    if (cv.getAsInteger(EDITED) == USER_EDITED) {
-                                        cv.put(EDITED, CARRIER_EDITED);
+                                    if (cv.getAsInteger(EDITED_STATUS) == USER_EDITED) {
+                                        cv.put(EDITED_STATUS, CARRIER_EDITED);
                                     }
                                 }
 
@@ -1797,15 +1797,15 @@ public class TelephonyProvider extends ContentProvider
             addIntAttribute(parser, "authtype", map, AUTH_TYPE);
             addIntAttribute(parser, "bearer", map, BEARER);
             addIntAttribute(parser, "profile_id", map, PROFILE_ID);
-            addIntAttribute(parser, "max_conns", map, MAX_CONNS);
-            addIntAttribute(parser, "wait_time", map, WAIT_TIME);
-            addIntAttribute(parser, "max_conns_time", map, MAX_CONNS_TIME);
+            addIntAttribute(parser, "max_conns", map, MAX_CONNECTIONS);
+            addIntAttribute(parser, "wait_time", map, WAIT_TIME_RETRY);
+            addIntAttribute(parser, "max_conns_time", map, TIME_LIMIT_FOR_MAX_CONNECTIONS);
             addIntAttribute(parser, "mtu", map, MTU);
             addIntAttribute(parser, "apn_set_id", map, APN_SET_ID);
 
 
             addBoolAttribute(parser, "carrier_enabled", map, CARRIER_ENABLED);
-            addBoolAttribute(parser, "modem_cognitive", map, MODEM_COGNITIVE);
+            addBoolAttribute(parser, "modem_cognitive", map, MODEM_PERSIST);
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
 
@@ -1927,7 +1927,7 @@ public class TelephonyProvider extends ContentProvider
                 if (oldRow != null) {
                     // Update the row
                     ContentValues mergedValues = new ContentValues();
-                    int edited = oldRow.getInt(oldRow.getColumnIndex(EDITED));
+                    int edited = oldRow.getInt(oldRow.getColumnIndex(EDITED_STATUS));
                     int old_edited = edited;
                     if (edited != UNEDITED) {
                         if (edited == USER_DELETED) {
@@ -1939,7 +1939,7 @@ public class TelephonyProvider extends ContentProvider
                             // by user but present in apn xml file.
                             edited = CARRIER_DELETED_BUT_PRESENT_IN_XML;
                         }
-                        mergedValues.put(EDITED, edited);
+                        mergedValues.put(EDITED_STATUS, edited);
                     }
 
                     mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, row, mergedValues, false,
@@ -2036,16 +2036,16 @@ public class TelephonyProvider extends ContentProvider
 
             if (!onUpgrade) {
                 // Do not overwrite a carrier or user edit with EDITED=UNEDITED
-                if (newRow.containsKey(EDITED)) {
-                    int oldEdited = oldRow.getInt(oldRow.getColumnIndex(EDITED));
-                    int newEdited = newRow.getAsInteger(EDITED);
+                if (newRow.containsKey(EDITED_STATUS)) {
+                    int oldEdited = oldRow.getInt(oldRow.getColumnIndex(EDITED_STATUS));
+                    int newEdited = newRow.getAsInteger(EDITED_STATUS);
                     if (newEdited == UNEDITED && (oldEdited == CARRIER_EDITED
                                 || oldEdited == CARRIER_DELETED
                                 || oldEdited == CARRIER_DELETED_BUT_PRESENT_IN_XML
                                 || oldEdited == USER_EDITED
                                 || oldEdited == USER_DELETED
                                 || oldEdited == USER_DELETED_BUT_PRESENT_IN_XML)) {
-                        newRow.remove(EDITED);
+                        newRow.remove(EDITED_STATUS);
                     }
                 }
                 mergedValues.putAll(newRow);
@@ -2166,7 +2166,7 @@ public class TelephonyProvider extends ContentProvider
 
             String[] columns = { "_id",
                     TYPE,
-                    EDITED,
+                    EDITED_STATUS,
                     BEARER_BITMASK,
                     NETWORK_TYPE_BITMASK,
                     PROFILE_ID };
@@ -2441,7 +2441,7 @@ public class TelephonyProvider extends ContentProvider
         try {
             return Integer.parseInt(sp.getString(APN_SET_ID + subId, null));
         } catch (NumberFormatException e) {
-            return NO_SET_SET;
+            return NO_APN_SET_ID;
         }
     }
 
@@ -2660,7 +2660,7 @@ public class TelephonyProvider extends ContentProvider
             // intentional fall through from above case
             case URL_PREFERAPNSET: {
                 final int set = getPreferredApnSetId(subId);
-                if (set != NO_SET_SET) {
+                if (set != NO_APN_SET_ID) {
                     constraints.add(APN_SET_ID + "=" + set);
                 }
                 break;
@@ -2985,8 +2985,8 @@ public class TelephonyProvider extends ContentProvider
                 }
 
                 values = DatabaseHelper.setDefaultValue(values);
-                if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, CARRIER_EDITED);
+                if (!values.containsKey(EDITED_STATUS)) {
+                    values.put(EDITED_STATUS, CARRIER_EDITED);
                 }
                 // Owned_by should be others if inserted via general uri.
                 values.put(OWNED_BY, OWNED_BY_OTHERS);
@@ -3104,7 +3104,7 @@ public class TelephonyProvider extends ContentProvider
                 IS_NOT_CARRIER_EDITED + ")";
         String unedited = ") and " + IS_UNEDITED;
         ContentValues cv = new ContentValues();
-        cv.put(EDITED, USER_DELETED);
+        cv.put(EDITED_STATUS, USER_DELETED);
 
         checkPermission();
 
@@ -3291,8 +3291,8 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_TELEPHONY:
             {
-                if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, CARRIER_EDITED);
+                if (!values.containsKey(EDITED_STATUS)) {
+                    values.put(EDITED_STATUS, CARRIER_EDITED);
                 }
 
                 // Replace on conflict so that if same APN is present in db with edited
@@ -3320,8 +3320,8 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT:
             {
-                if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, CARRIER_EDITED);
+                if (!values.containsKey(EDITED_STATUS)) {
+                    values.put(EDITED_STATUS, CARRIER_EDITED);
                 }
                 // Replace on conflict so that if same APN is present in db with edited
                 // as UNEDITED or USER/CARRIER_DELETED, it is replaced with
@@ -3339,8 +3339,8 @@ public class TelephonyProvider extends ContentProvider
                     throw new UnsupportedOperationException(
                             "Cannot update URL " + url + " with a where clause");
                 }
-                if (!values.containsKey(EDITED)) {
-                    values.put(EDITED, CARRIER_EDITED);
+                if (!values.containsKey(EDITED_STATUS)) {
+                    values.put(EDITED_STATUS, CARRIER_EDITED);
                 }
 
                 try {
