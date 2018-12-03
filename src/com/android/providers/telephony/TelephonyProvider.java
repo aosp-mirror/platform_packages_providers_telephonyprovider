@@ -2589,6 +2589,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
+        checkQueryPermission(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -2685,18 +2686,19 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_FILTERED_ID: {
-                constraints.add("_id = " + url.getLastPathSegment());
+                qb.appendWhere("_id = " + url.getLastPathSegment());
             }
             //intentional fall through from above case
             case URL_FILTERED: {
                 if (isManagedApnEnforced()) {
                     // If enforced, return DPC records only.
-                    constraints.add(IS_OWNED_BY_DPC);
+                    qb.appendWhereStandalone(IS_OWNED_BY_DPC);
                 } else {
                     // Otherwise return non-DPC records only.
-                    constraints.add(IS_NOT_OWNED_BY_DPC);
+                    qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
                 }
-                break;
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             case URL_ENFORCE_MANAGED: {
@@ -2722,7 +2724,9 @@ public class TelephonyProvider extends ContentProvider
             }
             //intentional fall through from above case
             case URL_SIM_APN_LIST: {
-                return getSubscriptionMatchingAPNList(qb, projectionIn, sort, subId);
+                qb.appendWhere(IS_NOT_OWNED_BY_DPC);
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             default: {
@@ -2733,28 +2737,6 @@ public class TelephonyProvider extends ContentProvider
         // appendWhere doesn't add ANDs so we do it ourselves
         if (constraints.size() > 0) {
             qb.appendWhere(TextUtils.join(" AND ", constraints));
-        }
-
-        if (match != URL_SIMINFO) {
-            if (projectionIn != null) {
-                for (String column : projectionIn) {
-                    if (TYPE.equals(column) ||
-                            MMSC.equals(column) ||
-                            MMSPROXY.equals(column) ||
-                            MMSPORT.equals(column) ||
-                            MVNO_TYPE.equals(column) ||
-                            MVNO_MATCH_DATA.equals(column) ||
-                            APN.equals(column)) {
-                        // noop
-                    } else {
-                        checkPermission();
-                        break;
-                    }
-                }
-            } else {
-                // null returns all columns, so need permission check
-                checkPermission();
-            }
         }
 
         SQLiteDatabase db = getReadableDatabase();
@@ -2782,45 +2764,63 @@ public class TelephonyProvider extends ContentProvider
         return ret;
     }
 
+    private void checkQueryPermission(int match, String[] projectionIn) {
+        if (match != URL_SIMINFO) {
+            if (projectionIn != null) {
+                for (String column : projectionIn) {
+                    if (TYPE.equals(column) ||
+                            MMSC.equals(column) ||
+                            MMSPROXY.equals(column) ||
+                            MMSPORT.equals(column) ||
+                            MVNO_TYPE.equals(column) ||
+                            MVNO_MATCH_DATA.equals(column) ||
+                            APN.equals(column)) {
+                        // noop
+                    } else {
+                        checkPermission();
+                        break;
+                    }
+                }
+            } else {
+                // null returns all columns, so need permission check
+                checkPermission();
+            }
+        }
+    }
+
     /**
-     * To find the current sim APN.
+     * To find the current sim APN. Query APN based on {MCC, MNC, MVNO} to support backward
+     * compatibility but will move to carrier id in the future.
      *
      * There has three steps:
-     * 1. Query the APN based on carrier ID and fall back to query { MCC, MNC, MVNO }.
-     * 2. If can't find the current APN, then query the parent APN. Query based on
-     *    MNO carrier id and { MCC, MNC }.
+     * 1. Query the APN based on { MCC, MNC, MVNO }.
+     * 2. If can't find the current APN, then query the parent APN. Query based on { MCC, MNC }.
      * 3. else return empty cursor
      *
      */
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
-            String sort, int subId) {
+            String selection, String[] selectionArgs, String sort, int subId) {
 
         Cursor ret;
         final TelephonyManager tm = ((TelephonyManager)
                 getContext().getSystemService(Context.TELEPHONY_SERVICE))
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
+        String mccmnc = tm.getSimOperator();
 
         // For query db one time, append step 1 and step 2 condition in one selection and
         // separate results after the query is completed. Because IMSI has special match rule,
         // so just query the MCC / MNC and filter the MVNO by ourselves
-        String carrierIDSelection = CARRIER_ID + " =? OR " + NUMERIC + " =? OR "
-                + CARRIER_ID + " =? ";
+        qb.appendWhereStandalone(NUMERIC + " = '" + mccmnc + "' ");
 
-
-        String mccmnc = tm.getSimOperator();
-        String carrierId = String.valueOf(tm.getSimCarrierId());
-        String mnoCarrierId = String.valueOf(tm.getSimMNOCarrierId());
-
-        ret = qb.query(db, null, carrierIDSelection,
-                new String[]{carrierId, mccmnc, mnoCarrierId}, null, null, sort);
+        ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
 
         if (DBG) log("match current APN size:  " + ret.getCount());
 
-        MatrixCursor currentCursor = new MatrixCursor(projectionIn);
-        MatrixCursor parentCursor = new MatrixCursor(projectionIn);
+        String[] coulmnNames = projectionIn != null ? projectionIn : ret.getColumnNames();
+        MatrixCursor currentCursor = new MatrixCursor(coulmnNames);
+        MatrixCursor parentCursor = new MatrixCursor(coulmnNames);
 
-        int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
         int numericIndex = ret.getColumnIndex(NUMERIC);
         int mvnoIndex = ret.getColumnIndex(MVNO_TYPE);
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
@@ -2830,28 +2830,19 @@ public class TelephonyProvider extends ContentProvider
         //Separate the result into MatrixCursor
         while (ret.moveToNext()) {
             List<String> data = new ArrayList<>();
-            for (String column : projectionIn) {
+            for (String column : coulmnNames) {
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
-            if (ret.getString(carrierIdIndex).equals(carrierId)) {
-                // 1. APN query result based on SIM carrier id
-                currentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
+            if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
                     ApnSettingUtils.mvnoMatches(iccRecords,
                             ApnSetting.getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
                             ret.getString(mvnoDataIndex))) {
-                // 1. APN query result based on legacy SIM MCC/MCC and MVNO in case APN carrier id
-                // migration is not 100%. some APNSettings can not find match id.
-                // TODO: remove legacy {mcc,mnc, mvno} support in the future.
+                // 1. APN query result based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
-            } else if (ret.getString(carrierIdIndex).equals(mnoCarrierId)) {
-                // 2. APN query result based on SIM MNO carrier id in case no APN found from
-                // exact carrier id fallback to query the MNO carrier id
-                parentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex))) {
+            } else if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
+                    TextUtils.isEmpty(ret.getString(mvnoIndex))) {
                 // 2. APN query result based on SIM MCC/MNC
-                // TODO: remove legacy {mcc, mnc} support in the future.
                 parentCursor.addRow(data);
             }
         }
@@ -2864,7 +2855,7 @@ public class TelephonyProvider extends ContentProvider
             return parentCursor;
         } else {
             if (DBG) log("APN no match");
-            return new MatrixCursor(projectionIn);
+            return new MatrixCursor(coulmnNames);
         }
     }
 
