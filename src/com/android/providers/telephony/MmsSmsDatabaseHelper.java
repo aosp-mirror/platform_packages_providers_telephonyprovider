@@ -262,6 +262,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
     private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
 
+    // TODO(sahinc): Turn this to true once the schema finalizes, so that people can update their
+    // messaging databases. NOTE: move the switch/case update to the latest version of the database
+    // before turning this flag to true.
+    private static final boolean IS_RCS_TABLE_SCHEMA_CODE_COMPLETE = false;
+
     /**
      * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
      * print a Slog.wtf so database corruption can be caught earlier.
@@ -546,6 +551,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createMmsTables(db);
         createSmsTables(db);
         createCommonTables(db);
+
+        if (IS_RCS_TABLE_SCHEMA_CODE_COMPLETE) {
+            RcsProviderHelper.createRcsTables(db);
+        }
+
         createCommonTriggers(db);
         createMmsTriggers(db);
         createWordsTables(db);
@@ -1649,6 +1659,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 67:
+            if (currentVersion <= 67 || !IS_RCS_TABLE_SCHEMA_CODE_COMPLETE) {
+                return;
+            }
+            RcsProviderHelper.createRcsTables(db);
             return;
         }
 
