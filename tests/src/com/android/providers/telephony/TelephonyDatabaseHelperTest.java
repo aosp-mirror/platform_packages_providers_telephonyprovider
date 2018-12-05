@@ -87,6 +87,19 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
+    public void databaseHelperOnUpgrade_hasCountryIsoField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasCountryIsoField");
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.DatabaseHelper.getVersion(mContext));
+
+        // the upgraded db must have the Telephony.Carriers.CARRIER_ID field
+        Cursor cursor = db.query("simInfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "iso columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(SubscriptionManager.ISO_COUNTRY_CODE));
+    }
+
+    @Test
     public void databaseHelperOnUpgrade_columnsMatchNewlyCreatedDb() {
         Log.d(TAG, "databaseHelperOnUpgrade_columnsMatchNewlyCreatedDb");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
