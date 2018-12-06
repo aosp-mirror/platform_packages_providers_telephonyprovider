@@ -1155,8 +1155,12 @@ public class TelephonyBackupAgent extends BackupAgent {
             values.put(Telephony.Mms.Part.NAME, srcName);
             values.put(Telephony.Mms.Part.CONTENT_ID, "<"+srcName+">");
             values.put(Telephony.Mms.Part.CONTENT_LOCATION, srcName);
-            values.put(Telephony.Mms.Part.CHARSET, mms.body.charSet);
-            values.put(Telephony.Mms.Part.TEXT, mms.body.text);
+
+            values.put(
+                    Telephony.Mms.Part.CHARSET,
+                    mms.body == null ? CharacterSets.DEFAULT_CHARSET : mms.body.charSet);
+            values.put(Telephony.Mms.Part.TEXT, mms.body == null ? "" : mms.body.text);
+
             if (mContentResolver.insert(partUri, values) == null) {
                 if (DEBUG) {
                     Log.e(TAG, "Could not insert body part");
