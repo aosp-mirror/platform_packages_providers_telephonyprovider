@@ -2815,7 +2815,6 @@ public class TelephonyProvider extends ContentProvider
      */
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
             String selection, String[] selectionArgs, String sort, int subId) {
-
         Cursor ret;
         final TelephonyManager tm = ((TelephonyManager)
                 getContext().getSystemService(Context.TELEPHONY_SERVICE))
@@ -2829,6 +2828,10 @@ public class TelephonyProvider extends ContentProvider
         qb.appendWhereStandalone(NUMERIC + " = '" + mccmnc + "' ");
 
         ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
+        if (ret == null) {
+            loge("query current APN but cursor is null.");
+            return null;
+        }
 
         if (DBG) log("match current APN size:  " + ret.getCount());
 
@@ -2861,6 +2864,7 @@ public class TelephonyProvider extends ContentProvider
                 parentCursor.addRow(data);
             }
         }
+        ret.close();
 
         if (currentCursor.getCount() > 0) {
             if (DBG) log("match Carrier Id APN: " + currentCursor.getCount());
