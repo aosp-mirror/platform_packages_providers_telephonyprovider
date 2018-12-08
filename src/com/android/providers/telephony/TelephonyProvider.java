@@ -169,6 +169,7 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_PREFERAPNSET_USING_SUBID = 22;
     private static final int URL_SIM_APN_LIST = 23;
     private static final int URL_SIM_APN_LIST_ID = 24;
+    private static final int URL_FILTERED_USING_SUBID = 25;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -420,6 +421,9 @@ public class TelephonyProvider extends ContentProvider
         // Only called by Settings app, DcTracker and other telephony components to get a
         // single APN according to whether DPC records are enforced.
         s_urlMatcher.addURI("telephony", "carriers/filtered/#", URL_FILTERED_ID);
+        // Used by DcTracker to pass a subId.
+        s_urlMatcher.addURI("telephony", "carriers/filtered/subId/*", URL_FILTERED_USING_SUBID);
+
         // Only Called by DevicePolicyManager to enforce DPC records.
         s_urlMatcher.addURI("telephony", "carriers/enforce_managed", URL_ENFORCE_MANAGED);
         s_urlMatcher.addURI("telephony", "carriers/sim_apn_list", URL_SIM_APN_LIST);
@@ -2701,8 +2705,19 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
-            case URL_FILTERED_ID: {
-                qb.appendWhere("_id = " + url.getLastPathSegment());
+            case URL_FILTERED_ID:
+            case URL_FILTERED_USING_SUBID: {
+                String idString = url.getLastPathSegment();
+                if (match == URL_FILTERED_ID) {
+                    qb.appendWhere("_id = " + idString);
+                } else {
+                    try {
+                        subId = Integer.parseInt(idString);
+                    } catch (NumberFormatException e) {
+                        loge("NumberFormatException" + e);
+                        return null;
+                    }
+                }
             }
             //intentional fall through from above case
             case URL_FILTERED: {
@@ -2889,6 +2904,7 @@ public class TelephonyProvider extends ContentProvider
 
         case URL_ID:
         case URL_FILTERED_ID:
+        case URL_FILTERED_USING_SUBID:
             return "vnd.android.cursor.item/telephony-carrier";
 
         case URL_PREFERAPN_USING_SUBID:
