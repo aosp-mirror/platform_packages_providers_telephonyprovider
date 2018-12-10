@@ -170,6 +170,8 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_SIM_APN_LIST = 23;
     private static final int URL_SIM_APN_LIST_ID = 24;
     private static final int URL_FILTERED_USING_SUBID = 25;
+    private static final int URL_SIM_APN_LIST_FILTERED = 26;
+    private static final int URL_SIM_APN_LIST_FILTERED_ID = 27;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -428,6 +430,10 @@ public class TelephonyProvider extends ContentProvider
         s_urlMatcher.addURI("telephony", "carriers/enforce_managed", URL_ENFORCE_MANAGED);
         s_urlMatcher.addURI("telephony", "carriers/sim_apn_list", URL_SIM_APN_LIST);
         s_urlMatcher.addURI("telephony", "carriers/sim_apn_list/#", URL_SIM_APN_LIST_ID);
+        s_urlMatcher.addURI("telephony", "carriers/sim_apn_list/filtered",
+            URL_SIM_APN_LIST_FILTERED);
+        s_urlMatcher.addURI("telephony", "carriers/sim_apn_list/filtered/subId/*",
+                URL_SIM_APN_LIST_FILTERED_ID);
 
         s_currentNullMap = new ContentValues(1);
         s_currentNullMap.put(CURRENT, "0");
@@ -2709,10 +2715,12 @@ public class TelephonyProvider extends ContentProvider
             case URL_FILTERED_USING_SUBID: {
                 String idString = url.getLastPathSegment();
                 if (match == URL_FILTERED_ID) {
-                    qb.appendWhere("_id = " + idString);
+                    constraints.add("_id = " + idString);
                 } else {
                     try {
                         subId = Integer.parseInt(idString);
+                        // TODO b/74213956 turn this back on once insertion includes correct sub id
+                        // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
                     } catch (NumberFormatException e) {
                         loge("NumberFormatException" + e);
                         return null;
@@ -2723,13 +2731,12 @@ public class TelephonyProvider extends ContentProvider
             case URL_FILTERED: {
                 if (isManagedApnEnforced()) {
                     // If enforced, return DPC records only.
-                    qb.appendWhereStandalone(IS_OWNED_BY_DPC);
+                    constraints.add(IS_OWNED_BY_DPC);
                 } else {
                     // Otherwise return non-DPC records only.
-                    qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
+                    constraints.add(IS_NOT_OWNED_BY_DPC);
                 }
-                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
-                        sort, subId);
+                break;
             }
 
             case URL_ENFORCE_MANAGED: {
@@ -2758,6 +2765,28 @@ public class TelephonyProvider extends ContentProvider
                 qb.appendWhere(IS_NOT_OWNED_BY_DPC);
                 return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
                         sort, subId);
+            }
+
+            case URL_SIM_APN_LIST_FILTERED_ID: {
+                subIdString = url.getLastPathSegment();
+                try {
+                    subId = Integer.parseInt(subIdString);
+                } catch (NumberFormatException e) {
+                    loge("NumberFormatException" + e);
+                    return null;
+                }
+            }
+            //intentional fall through from above case
+            case URL_SIM_APN_LIST_FILTERED: {
+                if (isManagedApnEnforced()) {
+                    // If enforced, return DPC records only.
+                    qb.appendWhereStandalone(IS_OWNED_BY_DPC);
+                } else {
+                    // Otherwise return non-DPC records only.
+                    qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
+                }
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                    sort, subId);
             }
 
             default: {
