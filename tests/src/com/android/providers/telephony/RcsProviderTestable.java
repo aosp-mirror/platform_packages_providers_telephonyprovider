@@ -39,7 +39,7 @@ public class RcsProviderTestable extends RcsProvider {
 
         @Override
         public void onCreate(SQLiteDatabase db) {
-            RcsProviderHelper.createRcsTables(db);
+            RcsProviderThreadHelper.createThreadTables(db);
         }
 
         @Override
