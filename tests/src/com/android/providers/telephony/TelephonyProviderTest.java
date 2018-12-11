@@ -42,14 +42,20 @@ import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 
+import com.android.internal.telephony.uicc.IccRecords;
+import com.android.internal.telephony.uicc.UiccController;
+
 import junit.framework.TestCase;
 
 import org.junit.Test;
+import org.mockito.ArgumentMatchers;
+import org.mockito.Mock;
+import org.mockito.MockitoAnnotations;
 
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
-
 
 /**
  * Tests for testing CRUD operations of TelephonyProvider.
@@ -70,6 +76,12 @@ public class TelephonyProviderTest extends TestCase {
     private MockContentResolver mContentResolver;
     private TelephonyProviderTestable mTelephonyProviderTestable;
 
+    @Mock
+    private UiccController mUiccController;
+
+    @Mock
+    private IccRecords mIcRecords;
+
     private int notifyChangeCount;
     private int notifyChangeRestoreCount;
     private int notifyWfcCount;
@@ -79,6 +91,7 @@ public class TelephonyProviderTest extends TestCase {
     private static final String TEST_OPERATOR = "123456";
     private static final String TEST_MCC = "123";
     private static final String TEST_MNC = "456";
+    private static final String TEST_SPN = TelephonyProviderTestable.TEST_SPN;
 
     // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 1
     private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
@@ -138,6 +151,9 @@ public class TelephonyProviderTest extends TestCase {
 
             doReturn(mTelephonyManager).when(mTelephonyManager).createForSubscriptionId(anyInt());
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator();
+            doReturn(mIcRecords).when(mUiccController).getIccRecords(anyInt(),
+                    ArgumentMatchers.eq(UiccController.APP_FAM_3GPP));
+            doReturn(TEST_SPN).when(mIcRecords).getServiceProviderName();
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
@@ -199,9 +215,11 @@ public class TelephonyProviderTest extends TestCase {
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        MockitoAnnotations.initMocks(this);
         mTelephonyProviderTestable = new TelephonyProviderTestable();
         mContext = new MockContextWithProvider(mTelephonyProviderTestable);
         mContentResolver = (MockContentResolver) mContext.getContentResolver();
+        replaceInstance(UiccController.class, "mInstance", null, mUiccController);
         notifyChangeCount = 0;
         notifyChangeRestoreCount = 0;
     }
@@ -724,7 +742,7 @@ public class TelephonyProviderTest extends TestCase {
         mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
 
         final int current = 1;
-        final String numeric = "123456789";
+        final String numeric = TEST_OPERATOR;
         final String selection = Carriers.NUMERIC + "=?";
         final String[] selectionArgs = { numeric };
 
@@ -802,7 +820,7 @@ public class TelephonyProviderTest extends TestCase {
             mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
 
             final int current = 1;
-            final String numeric = "123456789";
+            final String numeric = TEST_OPERATOR;
 
             // Insert DPC record.
             final String dpcRecordApn = "exampleApnNameDPC";
@@ -893,7 +911,7 @@ public class TelephonyProviderTest extends TestCase {
             mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
 
             final int current = 1;
-            final String numeric = "123456789";
+            final String numeric = TEST_OPERATOR;
 
             // Insert DPC record 1.
             final String dpcRecordApn1 = "exampleApnNameDPC";
@@ -1445,22 +1463,23 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(0, notifyWfcCountWithTestSubId);
     }
 
+    protected void replaceInstance(final Class c, final String instanceName,
+            final Object obj, final Object newValue)
+            throws Exception {
+        Field field = c.getDeclaredField(instanceName);
+        field.setAccessible(true);
+        field.set(obj, newValue);
+    }
+
     @Test
     @SmallTest
     public void testSIMAPNLIST_APNMatchTheMCCMNCAndMVNO() {
         // Test on getCurrentAPNList() step 1
-        TelephonyManager telephonyManager =
-                ((TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE));
-        doReturn(telephonyManager).when(telephonyManager).createForSubscriptionId(anyInt());
-
         final String apnName = "apnName";
         final String carrierName = "name";
         final String numeric = TEST_OPERATOR;
         final String mvnoType = "spn";
-        final String mvnoData = TelephonyProviderTestable.TEST_SPN;
-        final int carrierId = 100;
-        doReturn(carrierId).when(telephonyManager).getSimCarrierId();
-        doReturn(numeric).when(telephonyManager).getSimOperator();
+        final String mvnoData = TEST_SPN;
 
         // Insert the APN and DB only have the MCC/MNC and MVNO APN
         ContentValues contentValues = new ContentValues();
@@ -1473,12 +1492,12 @@ public class TelephonyProviderTest extends TestCase {
 
         // Query DB
         final String[] testProjection =
-            {
-                Carriers.APN,
-                Carriers.NAME,
-                Carriers.NUMERIC,
-                Carriers.MVNO_MATCH_DATA
-            };
+                {
+                        Carriers.APN,
+                        Carriers.NAME,
+                        Carriers.NUMERIC,
+                        Carriers.MVNO_MATCH_DATA
+                };
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
                 testProjection, null, null, null);
 
@@ -1493,21 +1512,9 @@ public class TelephonyProviderTest extends TestCase {
     @SmallTest
     public void testSIMAPNLIST_APNMatchTheParentMCCMNC() {
         // Test on getCurrentAPNList() step 2
-        TelephonyManager telephonyManager =
-                ((TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE));
-        doReturn(telephonyManager).when(telephonyManager).createForSubscriptionId(anyInt());
-
         final String apnName = "apnName";
         final String carrierName = "name";
         final String numeric = TEST_OPERATOR;
-        final String mvnoData = TelephonyProviderTestable.TEST_SPN;
-        final int carrierId = 100;
-        final int mnoCarrierId = 101;
-
-        doReturn(carrierId).when(telephonyManager).getSimCarrierId();
-        doReturn(numeric).when(telephonyManager).getSimOperator();
-        doReturn(mvnoData).when(telephonyManager).getSimOperatorName();
-        doReturn(mnoCarrierId).when(telephonyManager).getSimMNOCarrierId();
 
         // Insert the APN and DB only have the MNO APN
         ContentValues contentValues = new ContentValues();
@@ -1518,11 +1525,11 @@ public class TelephonyProviderTest extends TestCase {
 
         // Query DB
         final String[] testProjection =
-            {
-                Carriers.APN,
-                Carriers.NAME,
-                Carriers.NUMERIC,
-            };
+                {
+                        Carriers.APN,
+                        Carriers.NAME,
+                        Carriers.NUMERIC,
+                };
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
                 testProjection, null, null, null);
 
