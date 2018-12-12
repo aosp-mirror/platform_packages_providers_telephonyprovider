@@ -645,8 +645,6 @@ public class CarrierIdProvider extends ContentProvider {
                 row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.CARRIER_ID));
             } else if (CarrierId.CARRIER_NAME.equals(columnName)) {
                 row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.CARRIER_NAME));
-            } else if (CarrierId.MNO_CARRIER_ID.equals(columnName)) {
-                row.add(mCurrentSubscriptionMap.get(subId).get(CarrierId.MNO_CARRIER_ID));
             } else {
                 throw new IllegalArgumentException("Invalid column " + projectionIn[i]);
             }
