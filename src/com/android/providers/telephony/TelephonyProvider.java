@@ -609,7 +609,9 @@ public class TelephonyProvider extends ContentProvider
             File confFile = new File(Environment.getRootDirectory(), PARTNER_APNS_PATH);
             File oemConfFile =  new File(Environment.getOemDirectory(), OEM_APNS_PATH);
             File updatedConfFile = new File(Environment.getDataDirectory(), OTA_UPDATED_APNS_PATH);
+            File productConfFile = new File(Environment.getProductDirectory(), PARTNER_APNS_PATH);
             confFile = pickSecondIfExists(confFile, oemConfFile);
+            confFile = pickSecondIfExists(confFile, productConfFile);
             confFile = pickSecondIfExists(confFile, updatedConfFile);
             return confFile;
         }
