@@ -1502,12 +1502,10 @@ public class TelephonyProviderTest extends TestCase {
         final String numeric = TEST_OPERATOR;
         final String mvnoData = TelephonyProviderTestable.TEST_SPN;
         final int carrierId = 100;
-        final int mnoCarrierId = 101;
 
         doReturn(carrierId).when(telephonyManager).getSimCarrierId();
         doReturn(numeric).when(telephonyManager).getSimOperator();
         doReturn(mvnoData).when(telephonyManager).getSimOperatorName();
-        doReturn(mnoCarrierId).when(telephonyManager).getSimMNOCarrierId();
 
         // Insert the APN and DB only have the MNO APN
         ContentValues contentValues = new ContentValues();
