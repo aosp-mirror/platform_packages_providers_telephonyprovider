@@ -2887,7 +2887,12 @@ public class TelephonyProvider extends ContentProvider
         int mvnoIndex = ret.getColumnIndex(MVNO_TYPE);
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
 
-        IccRecords iccRecords = getIccRecords(subId);
+        IccRecords iccRecords = UiccController.getInstance().getIccRecords(
+                SubscriptionManager.getPhoneId(subId), UiccController.APP_FAM_3GPP);
+        if (iccRecords == null) {
+            loge("iccRecords is null");
+            return null;
+        }
 
         //Separate the result into MatrixCursor
         while (ret.moveToNext()) {
