@@ -544,11 +544,13 @@ public class TelephonyProviderTest extends TestCase {
         final String insertCarrierName = "exampleCarrierName";
         final String insertIccId = "exampleIccId";
         final String insertCardId = "exampleCardId";
+        final int insertProfileClass = SubscriptionManager.PROFILE_CLASS_DEFAULT;
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
         contentValues.put(SubscriptionManager.ICC_ID, insertIccId);
         contentValues.put(SubscriptionManager.CARD_ID, insertCardId);
+        contentValues.put(SubscriptionManager.PROFILE_CLASS, insertProfileClass);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SubscriptionManager.CONTENT_URI, contentValues);
@@ -559,6 +561,7 @@ public class TelephonyProviderTest extends TestCase {
             SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID,
             SubscriptionManager.CARRIER_NAME,
             SubscriptionManager.CARD_ID,
+            SubscriptionManager.PROFILE_CLASS,
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -574,9 +577,11 @@ public class TelephonyProviderTest extends TestCase {
         final int resultSubId = cursor.getInt(0);
         final String resultCarrierName = cursor.getString(1);
         final String resultCardId = cursor.getString(2);
+        final int resultProfileClass = cursor.getInt(3);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
+        assertEquals(insertProfileClass, resultProfileClass);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";

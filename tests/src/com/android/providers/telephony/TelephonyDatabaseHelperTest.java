@@ -100,6 +100,19 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
+    public void databaseHelperOnUpgrade_hasProfileClassField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasProfileClassField");
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.DatabaseHelper.getVersion(mContext));
+
+        // the upgraded db must have the PROFILE_CLASS field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "profile class columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(SubscriptionManager.PROFILE_CLASS));
+    }
+
+    @Test
     public void databaseHelperOnUpgrade_columnsMatchNewlyCreatedDb() {
         Log.d(TAG, "databaseHelperOnUpgrade_columnsMatchNewlyCreatedDb");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
