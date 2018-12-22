@@ -143,7 +143,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 33 << 16;
+    private static final int DATABASE_VERSION = 34 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -386,7 +386,9 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.GROUP_UUID + " TEXT,"
                 + SubscriptionManager.IS_METERED + " INTEGER DEFAULT 1,"
                 + SubscriptionManager.ISO_COUNTRY_CODE + " TEXT,"
-                + SubscriptionManager.CARRIER_ID + " INTEGER DEFAULT -1"
+                + SubscriptionManager.CARRIER_ID + " INTEGER DEFAULT -1,"
+                + SubscriptionManager.PROFILE_CLASS + " INTEGER DEFAULT "
+                + SubscriptionManager.PROFILE_CLASS_DEFAULT
                 + ");";
     }
 
@@ -1170,7 +1172,7 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 30 << 16 | 6;
             }
-            
+
             if (oldVersion < (31 << 16 | 6)) {
                 try {
                     // Try to update the siminfo table. It might not be there.
@@ -1211,6 +1213,21 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 33 << 16 | 6;
+            }
+
+            if (oldVersion < (34 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
+                            SubscriptionManager.PROFILE_CLASS + " INTEGER DEFAULT " +
+                            SubscriptionManager.PROFILE_CLASS_DEFAULT + ";");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 34 << 16 | 6;
             }
 
             if (DBG) {
