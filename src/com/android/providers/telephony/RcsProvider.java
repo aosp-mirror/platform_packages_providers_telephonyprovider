@@ -15,9 +15,6 @@
  */
 package com.android.providers.telephony;
 
-import static com.android.providers.telephony.RcsProviderHelper.ID;
-import static com.android.providers.telephony.RcsProviderHelper.THREAD_TABLE;
-
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
 import android.content.ContentValues;
@@ -32,19 +29,22 @@ import android.util.Log;
 /**
  * Content provider to handle RCS messages. The functionality here is similar to SmsProvider,
  * MmsProvider etc. This is not meant to be public.
+ *
  * @hide
  */
 public class RcsProvider extends ContentProvider {
-    private final static String TAG = "RcsProvider";
+    static final String TAG = "RcsProvider";
     static final String AUTHORITY = "rcs";
     private static final UriMatcher URL_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
 
     private static final int THREAD = 1;
+    private static final int PARTICIPANT = 2;
 
     SQLiteOpenHelper mDbOpenHelper;
 
     static {
         URL_MATCHER.addURI(AUTHORITY, "thread", THREAD);
+        URL_MATCHER.addURI(AUTHORITY, "participant", PARTICIPANT);
     }
 
     @Override
@@ -64,7 +64,10 @@ public class RcsProvider extends ContentProvider {
 
         switch (match) {
             case THREAD:
-                RcsProviderHelper.buildThreadQuery(qb);
+                RcsProviderThreadHelper.buildThreadQuery(qb);
+                break;
+            case PARTICIPANT:
+                RcsProviderParticipantHelper.buildParticipantsQuery(qb);
                 break;
             default:
                 Log.e(TAG, "Invalid query: " + uri);
@@ -83,13 +86,21 @@ public class RcsProvider extends ContentProvider {
     public Uri insert(Uri uri, ContentValues values) {
         int match = URL_MATCHER.match(uri);
         SQLiteDatabase writableDatabase = mDbOpenHelper.getWritableDatabase();
+        writableDatabase.beginTransaction();
 
-        switch (match) {
-            case THREAD:
-                writableDatabase.insert(THREAD_TABLE, ID, values);
-                break;
-            default:
-                Log.e(TAG, "Invalid insert: " + uri);
+        try {
+            switch (match) {
+                case THREAD:
+                    RcsProviderThreadHelper.insert(writableDatabase, values);
+                    break;
+                case PARTICIPANT:
+                    RcsProviderParticipantHelper.insert(writableDatabase, values);
+                    break;
+                default:
+                    Log.e(TAG, "Invalid insert: " + uri);
+            }
+        } finally {
+            writableDatabase.endTransaction();
         }
 
         return null;
@@ -100,13 +111,23 @@ public class RcsProvider extends ContentProvider {
         int match = URL_MATCHER.match(uri);
         int deletedCount = 0;
         SQLiteDatabase writableDatabase = mDbOpenHelper.getWritableDatabase();
+        writableDatabase.beginTransaction();
 
-        switch (match) {
-            case THREAD:
-                deletedCount = writableDatabase.delete(THREAD_TABLE, selection, selectionArgs);
-                break;
-            default:
-                Log.e(TAG, "Invalid delete: " + uri);
+        try {
+            switch (match) {
+                case THREAD:
+                    deletedCount = RcsProviderThreadHelper.delete(writableDatabase, selection,
+                            selectionArgs);
+                    break;
+                case PARTICIPANT:
+                    deletedCount = RcsProviderParticipantHelper.delete(writableDatabase, selection,
+                            selectionArgs);
+                    break;
+                default:
+                    Log.e(TAG, "Invalid delete: " + uri);
+            }
+        } finally {
+            writableDatabase.endTransaction();
         }
 
         return deletedCount;
@@ -118,15 +139,23 @@ public class RcsProvider extends ContentProvider {
         int updatedCount = 0;
         SQLiteDatabase writableDatabase = mDbOpenHelper.getWritableDatabase();
 
-        switch (match) {
-            case THREAD:
-                updatedCount = writableDatabase.update(
-                        THREAD_TABLE, values, selection, selectionArgs);
-                break;
-            default:
-                Log.e(TAG, "Invalid update: " + uri);
+        writableDatabase.beginTransaction();
+        try {
+            switch (match) {
+                case THREAD:
+                    updatedCount = RcsProviderThreadHelper.update(
+                            writableDatabase, values, selection, selectionArgs);
+                    break;
+                case PARTICIPANT:
+                    updatedCount = RcsProviderParticipantHelper.update(
+                            writableDatabase, values, selection, selectionArgs);
+                    break;
+                default:
+                    Log.e(TAG, "Invalid update: " + uri);
+            }
+        } finally {
+            writableDatabase.endTransaction();
         }
-
         return updatedCount;
     }
 }
