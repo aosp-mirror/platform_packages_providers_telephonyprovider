@@ -15,29 +15,49 @@
  */
 package com.android.providers.telephony;
 
+import android.content.ContentValues;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteQueryBuilder;
 
 import com.android.internal.annotations.VisibleForTesting;
 
 /**
- * Constants and helpers for RcsProvider to keep the code clean.
+ * Constants and helpers related to threads for {@link RcsProvider} to keep the code clean.
+ *
  * @hide
  */
-class RcsProviderHelper {
-    static final String ID = "_id";
+class RcsProviderThreadHelper {
+    static final String ID_COLUMN = "_id";
     static final String THREAD_TABLE = "rcs_thread";
     static final String OWNER_PARTICIPANT = "owner_participant";
 
     @VisibleForTesting
-    public static void createRcsTables(SQLiteDatabase db) {
+    public static void createThreadTables(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE " + THREAD_TABLE + " (" +
-                ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                ID_COLUMN + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 OWNER_PARTICIPANT + " INTEGER " +
                 ");");
     }
 
     static void buildThreadQuery(SQLiteQueryBuilder qb) {
         qb.setTables(THREAD_TABLE);
+    }
+
+    static void insert(SQLiteDatabase db, ContentValues values) {
+        db.insert(THREAD_TABLE, OWNER_PARTICIPANT, values);
+        db.setTransactionSuccessful();
+    }
+
+    static int delete(SQLiteDatabase db, String selection, String[] selectionArgs) {
+        int deletedRowCount = db.delete(THREAD_TABLE, selection, selectionArgs);
+        db.setTransactionSuccessful();
+        return deletedRowCount;
+    }
+
+    static int update(SQLiteDatabase db, ContentValues values, String selection,
+            String[] selectionArgs) {
+        int updatedRowCount = db.update(THREAD_TABLE, values, selection, selectionArgs);
+        db.setTransactionSuccessful();
+        return updatedRowCount;
     }
 }

@@ -5,7 +5,8 @@ LOCAL_MODULE_TAGS := tests
 
 LOCAL_STATIC_JAVA_LIBRARIES := mockito-target \
                                compatibility-device-util \
-                               android-support-test
+                               android-support-test \
+                               truth-prebuilt
 
 LOCAL_JAVA_LIBRARIES := \
     android.test.runner \
