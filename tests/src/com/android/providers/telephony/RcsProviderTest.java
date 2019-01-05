@@ -15,13 +15,13 @@
  */
 package com.android.providers.telephony;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static com.google.common.truth.Truth.assertThat;
 
 import android.app.AppOpsManager;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.ProviderInfo;
+import android.database.Cursor;
 import android.net.Uri;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
@@ -30,12 +30,14 @@ import android.test.mock.MockContext;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
+import org.mockito.MockitoAnnotations;
 
 public class RcsProviderTest {
     private MockContentResolver mContentResolver;
 
     @Before
     public void setUp() {
+        MockitoAnnotations.initMocks(this);
         RcsProvider rcsProvider = new RcsProviderTestable();
         MockContextWithProvider context = new MockContextWithProvider(rcsProvider);
         mContentResolver = context.getContentResolver();
@@ -46,23 +48,39 @@ public class RcsProviderTest {
     @Test
     public void testInsertThread() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(RcsProviderHelper.OWNER_PARTICIPANT, 5);
+        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 5);
 
         Uri uri = mContentResolver.insert(Uri.parse("content://rcs/thread"), contentValues);
-        assertNull(uri);
+        assertThat(uri).isNull();
     }
 
     @Test
     public void testUpdateThread() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(RcsProviderHelper.OWNER_PARTICIPANT, 5);
+        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 5);
         mContentResolver.insert(Uri.parse("content://rcs/thread"), contentValues);
 
-        contentValues.put(RcsProviderHelper.OWNER_PARTICIPANT, 12);
+        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 12);
         int updateCount = mContentResolver.update(Uri.parse("content://rcs/thread"),
                 contentValues, "owner_participant=5", null);
 
-        assertEquals(1, updateCount);
+        assertThat(updateCount).isEqualTo(1);
+    }
+
+    @Test
+    public void testCanQueryAllThreads() {
+        // insert two threads
+        ContentValues contentValues = new ContentValues();
+        Uri threadsUri = Uri.parse("content://rcs/thread");
+        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 7);
+        mContentResolver.insert(threadsUri, contentValues);
+
+        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 13);
+        mContentResolver.insert(threadsUri, contentValues);
+
+        //verify two threads are inserted
+        Cursor cursor = mContentResolver.query(threadsUri, null, null, null, null);
+        assertThat(cursor.getCount()).isEqualTo(2);
     }
 
     class MockContextWithProvider extends MockContext {
@@ -95,5 +113,4 @@ public class RcsProviderTest {
             }
         }
     }
-
 }
