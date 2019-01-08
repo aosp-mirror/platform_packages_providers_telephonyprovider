@@ -15,6 +15,10 @@
  */
 package com.android.providers.telephony;
 
+import static com.android.providers.telephony.RcsProviderParticipantHelper.CANONICAL_ADDRESS_ID_COLUMN;
+import static com.android.providers.telephony.RcsProviderParticipantHelper.RCS_ALIAS_COLUMN;
+import static com.android.providers.telephony.RcsProviderThreadHelper.OWNER_PARTICIPANT;
+
 import static com.google.common.truth.Truth.assertThat;
 
 import android.app.AppOpsManager;
@@ -48,19 +52,19 @@ public class RcsProviderTest {
     @Test
     public void testInsertThread() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 5);
+        contentValues.put(OWNER_PARTICIPANT, 5);
 
         Uri uri = mContentResolver.insert(Uri.parse("content://rcs/thread"), contentValues);
-        assertThat(uri).isNull();
+        assertThat(uri).isEqualTo(Uri.parse("content://rcs/thread/1"));
     }
 
     @Test
     public void testUpdateThread() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 5);
+        contentValues.put(OWNER_PARTICIPANT, 5);
         mContentResolver.insert(Uri.parse("content://rcs/thread"), contentValues);
 
-        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 12);
+        contentValues.put(OWNER_PARTICIPANT, 12);
         int updateCount = mContentResolver.update(Uri.parse("content://rcs/thread"),
                 contentValues, "owner_participant=5", null);
 
@@ -72,15 +76,67 @@ public class RcsProviderTest {
         // insert two threads
         ContentValues contentValues = new ContentValues();
         Uri threadsUri = Uri.parse("content://rcs/thread");
-        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 7);
+        contentValues.put(OWNER_PARTICIPANT, 7);
         mContentResolver.insert(threadsUri, contentValues);
 
-        contentValues.put(RcsProviderThreadHelper.OWNER_PARTICIPANT, 13);
+        contentValues.put(OWNER_PARTICIPANT, 13);
         mContentResolver.insert(threadsUri, contentValues);
 
         //verify two threads are inserted
         Cursor cursor = mContentResolver.query(threadsUri, null, null, null, null);
         assertThat(cursor.getCount()).isEqualTo(2);
+    }
+
+    @Test
+    public void testInsertParticipant() {
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(CANONICAL_ADDRESS_ID_COLUMN, 6);
+        contentValues.put(RCS_ALIAS_COLUMN, "Alias");
+
+        Uri uri = mContentResolver.insert(Uri.parse("content://rcs/participant"), contentValues);
+        assertThat(uri).isEqualTo(Uri.parse("content://rcs/participant/1"));
+    }
+
+    @Test
+    public void testUpdateParticipant() {
+        // insert a participant
+        Uri participantUri = Uri.parse("content://rcs/participant");
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(CANONICAL_ADDRESS_ID_COLUMN, 11);
+        contentValues.put(RCS_ALIAS_COLUMN, "Alias 1");
+
+        mContentResolver.insert(participantUri, contentValues);
+
+        // update the participant
+        contentValues.clear();
+        contentValues.put(RCS_ALIAS_COLUMN, "Alias 2");
+
+        int updatedRowCount = mContentResolver.update(participantUri, contentValues, "rcs_alias=?",
+                new String[]{"Alias 1"});
+        assertThat(updatedRowCount).isEqualTo(1);
+
+        // verify participant is actually updated
+        Cursor cursor = mContentResolver.query(participantUri, new String[]{RCS_ALIAS_COLUMN},
+                "rcs_alias=?", new String[]{"Alias 2"}, null);
+        cursor.moveToNext();
+        assertThat(cursor.getString(0)).isEqualTo("Alias 2");
+    }
+
+    @Test
+    public void testQueryParticipant() {
+        // insert a participant
+        Uri participantUri = Uri.parse("content://rcs/participant");
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(CANONICAL_ADDRESS_ID_COLUMN, 99);
+        contentValues.put(RCS_ALIAS_COLUMN, "Some alias");
+
+        mContentResolver.insert(participantUri, contentValues);
+
+        // Query the participant back
+        Cursor cursor = mContentResolver.query(Uri.parse("content://rcs/participant"),
+                new String[]{RCS_ALIAS_COLUMN}, null, null, null);
+        cursor.moveToNext();
+        assertThat(cursor.getString(0)).isEqualTo("Some alias");
     }
 
     class MockContextWithProvider extends MockContext {

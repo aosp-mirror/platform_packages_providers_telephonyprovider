@@ -31,21 +31,48 @@ class RcsProviderThreadHelper {
     static final String THREAD_TABLE = "rcs_thread";
     static final String OWNER_PARTICIPANT = "owner_participant";
 
+    static final String RCS_1_TO_1_THREAD_TABLE = "rcs_1_to_1_thread";
+    static final String RCS_THREAD_ID_COLUMN = "rcs_thread_id";
+    static final String FALLBACK_THREAD_ID_COLUMN = "rcs_fallback_thread_id";
+
+    static final String RCS_GROUP_THREAD_TABLE = "rcs_group_thread";
+    static final String GROUP_NAME_COLUMN = "group_name";
+    static final String ICON_COLUMN = "icon";
+    static final String CONFERENCE_URI_COLUMN = "conference_uri";
+
     @VisibleForTesting
     public static void createThreadTables(SQLiteDatabase db) {
         db.execSQL("CREATE TABLE " + THREAD_TABLE + " (" +
                 ID_COLUMN + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
                 OWNER_PARTICIPANT + " INTEGER " +
                 ");");
+
+        db.execSQL("CREATE TABLE " + RCS_1_TO_1_THREAD_TABLE + " (" +
+                RCS_THREAD_ID_COLUMN + " INTEGER PRIMARY KEY, " +
+                FALLBACK_THREAD_ID_COLUMN + " INTEGER, " +
+                "FOREIGN KEY(" + RCS_THREAD_ID_COLUMN
+                    + ") REFERENCES " + THREAD_TABLE + "(" + ID_COLUMN + ")," +
+                "FOREIGN KEY(" + FALLBACK_THREAD_ID_COLUMN
+                    + ") REFERENCES threads( " + ID_COLUMN + "))" );
+
+        db.execSQL("CREATE TABLE " + RCS_GROUP_THREAD_TABLE + " (" +
+                RCS_THREAD_ID_COLUMN + " INTEGER PRIMARY KEY, " +
+                GROUP_NAME_COLUMN + " TEXT, " +
+                ICON_COLUMN + " TEXT, " +
+                CONFERENCE_URI_COLUMN + " TEXT, " +
+                "FOREIGN KEY(" + RCS_THREAD_ID_COLUMN
+                    + ") REFERENCES " + THREAD_TABLE + "(" + ID_COLUMN + "))" );
+
     }
 
     static void buildThreadQuery(SQLiteQueryBuilder qb) {
         qb.setTables(THREAD_TABLE);
     }
 
-    static void insert(SQLiteDatabase db, ContentValues values) {
-        db.insert(THREAD_TABLE, OWNER_PARTICIPANT, values);
+    static long insert(SQLiteDatabase db, ContentValues values) {
+        long rowId = db.insert(THREAD_TABLE, OWNER_PARTICIPANT, values);
         db.setTransactionSuccessful();
+        return rowId;
     }
 
     static int delete(SQLiteDatabase db, String selection, String[] selectionArgs) {
