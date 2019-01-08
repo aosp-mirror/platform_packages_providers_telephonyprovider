@@ -35,8 +35,12 @@ import android.util.Log;
 public class RcsProvider extends ContentProvider {
     static final String TAG = "RcsProvider";
     static final String AUTHORITY = "rcs";
-    private static final UriMatcher URL_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
 
+    private static final Uri THREAD_URI_PREFIX = Uri.parse("content://" + AUTHORITY + "/thread");
+    private static final Uri PARTICIPANT_URI_PREFIX = Uri.parse(
+            "content://" + AUTHORITY + "/participant");
+
+    private static final UriMatcher URL_MATCHER = new UriMatcher(UriMatcher.NO_MATCH);
     private static final int THREAD = 1;
     private static final int PARTICIPANT = 2;
 
@@ -88,13 +92,20 @@ public class RcsProvider extends ContentProvider {
         SQLiteDatabase writableDatabase = mDbOpenHelper.getWritableDatabase();
         writableDatabase.beginTransaction();
 
+        Uri returnUri = null;
+        long rowId;
+
         try {
             switch (match) {
                 case THREAD:
-                    RcsProviderThreadHelper.insert(writableDatabase, values);
+                    rowId = RcsProviderThreadHelper.insert(writableDatabase, values);
+                    returnUri = THREAD_URI_PREFIX.buildUpon().appendPath(
+                            Long.toString(rowId)).build();
                     break;
                 case PARTICIPANT:
-                    RcsProviderParticipantHelper.insert(writableDatabase, values);
+                    rowId = RcsProviderParticipantHelper.insert(writableDatabase, values);
+                    returnUri = PARTICIPANT_URI_PREFIX.buildUpon().appendPath(
+                            Long.toString(rowId)).build();
                     break;
                 default:
                     Log.e(TAG, "Invalid insert: " + uri);
@@ -103,7 +114,7 @@ public class RcsProvider extends ContentProvider {
             writableDatabase.endTransaction();
         }
 
-        return null;
+        return returnUri;
     }
 
     @Override
