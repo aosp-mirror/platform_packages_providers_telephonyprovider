@@ -259,7 +259,12 @@ class RcsProviderParticipantHelper {
             return TRANSACTION_FAILED;
         }
         SQLiteDatabase db = mSqLiteOpenHelper.getWritableDatabase();
-        return db.insert(RCS_PARTICIPANT_TABLE, RCS_PARTICIPANT_ID_COLUMN, contentValues);
+        long rowId = db.insert(RCS_PARTICIPANT_TABLE, RCS_PARTICIPANT_ID_COLUMN, contentValues);
+        Log.e(TAG, "Inserted participant with rowId=" + rowId);
+        if (rowId < 0) {
+            return TRANSACTION_FAILED;
+        }
+        return rowId;
     }
 
     long insertParticipantIntoP2pThread(Uri uri) {
