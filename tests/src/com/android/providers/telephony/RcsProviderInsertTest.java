@@ -15,7 +15,6 @@
  */
 package com.android.providers.telephony;
 
-import static android.provider.Telephony.RcsColumns.Rcs1To1ThreadColumns.FALLBACK_THREAD_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.CONFERENCE_URI_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.GROUP_ICON_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.GROUP_NAME_COLUMN;
@@ -24,6 +23,8 @@ import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.CANONI
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_ALIAS_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantEventColumns.NEW_ALIAS_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.NEW_NAME_COLUMN;
+
+import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -65,12 +66,10 @@ public class RcsProviderInsertTest {
     }
 
     @Test
-    public void testInsert1To1Thread() {
-        ContentValues values = new ContentValues(1);
-        values.put(FALLBACK_THREAD_ID_COLUMN, 445);
-        assertThat(
-                mContentResolver.insert(Uri.parse("content://rcs/p2p_thread"), values)).isEqualTo(
-                Uri.parse("content://rcs/p2p_thread/1"));
+    public void testDuplicate1To1ThreadInsertion() {
+        Uri uri = setup1To1Thread(mContentResolver);
+
+        assertThat(mContentResolver.insert(uri, null)).isNull();
     }
 
     @Test
@@ -91,27 +90,6 @@ public class RcsProviderInsertTest {
 
         Uri uri = mContentResolver.insert(Uri.parse("content://rcs/participant"), contentValues);
         assertThat(uri).isEqualTo(Uri.parse("content://rcs/participant/1"));
-    }
-
-    @Test
-    public void testInsertParticipantInto1To1Thread() {
-        // create a participant
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(CANONICAL_ADDRESS_ID_COLUMN, 15);
-        contentValues.put(RCS_ALIAS_COLUMN, "Alias");
-        mContentResolver.insert(Uri.parse("content://rcs/participant"), contentValues);
-
-        // create a thread
-        ContentValues values = new ContentValues(1);
-        values.put(FALLBACK_THREAD_ID_COLUMN, 699);
-        mContentResolver.insert(Uri.parse("content://rcs/p2p_thread"), values);
-
-        // add participant to the thread
-        Uri uri = Uri.parse("content://rcs/p2p_thread/1/participant/1");
-        assertThat(mContentResolver.insert(uri, null)).isEqualTo(uri);
-
-        // assert that adding again fails
-        assertThat(mContentResolver.insert(uri, null)).isNull();
     }
 
     @Test
@@ -164,9 +142,8 @@ public class RcsProviderInsertTest {
     @Ignore // TODO: fix and un-ignore
     public void testInsertMessageIntoThread() {
         // create two threads
+        setup1To1Thread(mContentResolver);
         ContentValues values = new ContentValues();
-        assertThat(
-                mContentResolver.insert(Uri.parse("content://rcs/p2p_thread"), values)).isNotNull();
         assertThat(mContentResolver.insert(Uri.parse("content://rcs/group_thread"),
                 values)).isNotNull();
 
@@ -192,10 +169,9 @@ public class RcsProviderInsertTest {
 
     @Test
     public void testInsertMessageDelivery() {
-        // create a thread
+        setup1To1Thread(mContentResolver);
+
         ContentValues values = new ContentValues();
-        assertThat(
-                mContentResolver.insert(Uri.parse("content://rcs/p2p_thread"), values)).isNotNull();
 
         // add an outgoing message to the thread
         assertThat(mContentResolver.insert(Uri.parse("content://rcs/p2p_thread/1/outgoing_message"),
@@ -208,10 +184,9 @@ public class RcsProviderInsertTest {
 
     @Test
     public void testInsertFileTransfer() {
-        // create a thread
+        setup1To1Thread(mContentResolver);
+
         ContentValues values = new ContentValues();
-        assertThat(
-                mContentResolver.insert(Uri.parse("content://rcs/p2p_thread"), values)).isNotNull();
 
         // add an outgoing message to the thread
         assertThat(mContentResolver.insert(Uri.parse("content://rcs/p2p_thread/1/outgoing_message"),
