@@ -30,9 +30,9 @@ import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.NEW_NA
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.SOURCE_PARTICIPANT_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.TIMESTAMP_COLUMN;
 import static android.provider.Telephony.RcsColumns.TRANSACTION_FAILED;
-import static android.telephony.ims.RcsEventQueryParameters.ALL_EVENTS;
-import static android.telephony.ims.RcsEventQueryParameters.ALL_GROUP_THREAD_EVENTS;
-import static android.telephony.ims.RcsEventQueryParameters.EVENT_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsEventQueryParams.ALL_EVENTS;
+import static android.telephony.ims.RcsEventQueryParams.ALL_GROUP_THREAD_EVENTS;
+import static android.telephony.ims.RcsEventQueryParams.EVENT_QUERY_PARAMETERS_KEY;
 
 import static android.telephony.ims.RcsQueryContinuationToken.EVENT_QUERY_CONTINUATION_TOKEN_TYPE;
 import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION_TOKEN;
@@ -51,7 +51,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
 import android.os.Bundle;
-import android.telephony.ims.RcsEventQueryParameters;
+import android.telephony.ims.RcsEventQueryParams;
 import android.telephony.ims.RcsQueryContinuationToken;
 import android.util.Log;
 
@@ -107,7 +107,7 @@ class RcsProviderEventHelper {
     private final SQLiteOpenHelper mSqLiteOpenHelper;
 
     Cursor queryEvents(Bundle bundle) {
-        RcsEventQueryParameters queryParameters = null;
+        RcsEventQueryParams queryParameters = null;
         RcsQueryContinuationToken continuationToken = null;
 
         if (bundle != null) {
@@ -122,13 +122,13 @@ class RcsProviderEventHelper {
 
         // if no query parameters were entered, build an empty query parameters object
         if (queryParameters == null) {
-            queryParameters = new RcsEventQueryParameters.Builder().build();
+            queryParameters = new RcsEventQueryParams.Builder().build();
         }
 
         return performInitialQuery(queryParameters);
     }
 
-    private Cursor performInitialQuery(RcsEventQueryParameters queryParameters) {
+    private Cursor performInitialQuery(RcsEventQueryParams queryParameters) {
         SQLiteDatabase db = mSqLiteOpenHelper.getReadableDatabase();
         StringBuilder rawQuery = new StringBuilder("SELECT * FROM ").append(RCS_UNIFIED_EVENT_VIEW);
 
@@ -150,7 +150,7 @@ class RcsProviderEventHelper {
         rawQuery.append(" ORDER BY ");
 
         int sortingProperty = queryParameters.getSortingProperty();
-        if (sortingProperty == RcsEventQueryParameters.SORT_BY_TIMESTAMP) {
+        if (sortingProperty == RcsEventQueryParams.SORT_BY_TIMESTAMP) {
             rawQuery.append(TIMESTAMP_COLUMN);
         } else {
             rawQuery.append(EVENT_ID_COLUMN);

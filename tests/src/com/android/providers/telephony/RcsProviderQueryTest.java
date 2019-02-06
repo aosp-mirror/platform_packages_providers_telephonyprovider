@@ -32,12 +32,12 @@ import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.EVENT_
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.NEW_NAME_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.SOURCE_PARTICIPANT_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsUnifiedThreadColumns.THREAD_TYPE_COLUMN;
-import static android.telephony.ims.RcsEventQueryParameters.EVENT_QUERY_PARAMETERS_KEY;
-import static android.telephony.ims.RcsEventQueryParameters.GROUP_THREAD_NAME_CHANGED_EVENT;
-import static android.telephony.ims.RcsMessageQueryParameters.MESSAGE_QUERY_PARAMETERS_KEY;
-import static android.telephony.ims.RcsParticipantQueryParameters.PARTICIPANT_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsEventQueryParams.EVENT_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsEventQueryParams.GROUP_THREAD_NAME_CHANGED_EVENT;
+import static android.telephony.ims.RcsMessageQueryParams.MESSAGE_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsParticipantQueryParams.PARTICIPANT_QUERY_PARAMETERS_KEY;
 import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION_TOKEN;
-import static android.telephony.ims.RcsThreadQueryParameters.THREAD_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsThreadQueryParams.THREAD_QUERY_PARAMETERS_KEY;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -46,12 +46,12 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.test.runner.AndroidJUnit4;
-import android.telephony.ims.RcsEventQueryParameters;
+import android.telephony.ims.RcsEventQueryParams;
 import android.telephony.ims.RcsGroupThread;
-import android.telephony.ims.RcsMessageQueryParameters;
-import android.telephony.ims.RcsParticipantQueryParameters;
+import android.telephony.ims.RcsMessageQueryParams;
+import android.telephony.ims.RcsParticipantQueryParams;
 import android.telephony.ims.RcsQueryContinuationToken;
-import android.telephony.ims.RcsThreadQueryParameters;
+import android.telephony.ims.RcsThreadQueryParams;
 import android.test.mock.MockContentResolver;
 
 import com.android.providers.telephony.RcsProviderTestable.MockContextWithProvider;
@@ -156,7 +156,7 @@ public class RcsProviderQueryTest {
 
     @Test
     public void testCanQueryUnifiedThreads() {
-        RcsThreadQueryParameters queryParameters = new RcsThreadQueryParameters.Builder().build();
+        RcsThreadQueryParams queryParameters = new RcsThreadQueryParams.Builder().build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(THREAD_QUERY_PARAMETERS_KEY, queryParameters);
 
@@ -188,9 +188,9 @@ public class RcsProviderQueryTest {
 
     @Test
     public void testCanQueryUnifiedThreadsWithLimitAndSorting() {
-        RcsThreadQueryParameters queryParameters = new RcsThreadQueryParameters.Builder()
-                .setThreadType(RcsThreadQueryParameters.THREAD_TYPE_1_TO_1).setResultLimit(1)
-                .setSortProperty(RcsThreadQueryParameters.SORT_BY_TIMESTAMP).setSortDirection(true)
+        RcsThreadQueryParams queryParameters = new RcsThreadQueryParams.Builder()
+                .setThreadType(RcsThreadQueryParams.THREAD_TYPE_1_TO_1).setResultLimit(1)
+                .setSortProperty(RcsThreadQueryParams.SORT_BY_TIMESTAMP).setSortDirection(true)
                 .build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(THREAD_QUERY_PARAMETERS_KEY, queryParameters);
@@ -209,8 +209,8 @@ public class RcsProviderQueryTest {
     @Test
     public void testCanContinueThreadQuery() {
         // Limit results to 1.
-        RcsThreadQueryParameters queryParameters =
-                new RcsThreadQueryParameters.Builder().setResultLimit(1).build();
+        RcsThreadQueryParams queryParameters =
+                new RcsThreadQueryParams.Builder().setResultLimit(1).build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(THREAD_QUERY_PARAMETERS_KEY, queryParameters);
 
@@ -284,7 +284,7 @@ public class RcsProviderQueryTest {
 
     @Test
     public void testQueryParticipant() {
-        RcsParticipantQueryParameters queryParameters = new RcsParticipantQueryParameters.Builder()
+        RcsParticipantQueryParams queryParameters = new RcsParticipantQueryParams.Builder()
                 .build();
 
         Bundle bundle = new Bundle();
@@ -313,9 +313,9 @@ public class RcsProviderQueryTest {
         Uri participantUri = Uri.parse("content://rcs/participant");
 
         // Perform the initial query
-        RcsParticipantQueryParameters queryParameters =
-                new RcsParticipantQueryParameters.Builder().setAliasLike("%ali%").setSortProperty(
-                        RcsParticipantQueryParameters.SORT_BY_ALIAS).setSortDirection(true)
+        RcsParticipantQueryParams queryParameters =
+                new RcsParticipantQueryParams.Builder().setAliasLike("%ali%").setSortProperty(
+                        RcsParticipantQueryParams.SORT_BY_ALIAS).setSortDirection(true)
                         .setResultLimit(1).build();
 
         Bundle bundle = new Bundle();
@@ -362,7 +362,7 @@ public class RcsProviderQueryTest {
     @Test
     @Ignore // TODO: fix and un-ignore
     public void testQueryEvents() {
-        RcsEventQueryParameters queryParameters = new RcsEventQueryParameters.Builder().build();
+        RcsEventQueryParams queryParameters = new RcsEventQueryParams.Builder().build();
 
         Bundle bundle = new Bundle();
         bundle.putParcelable(EVENT_QUERY_PARAMETERS_KEY, queryParameters);
@@ -389,8 +389,8 @@ public class RcsProviderQueryTest {
     @Test
     @Ignore // TODO: fix and un-ignore
     public void testQueryEventsWithContinuation() {
-        RcsEventQueryParameters queryParameters =
-                new RcsEventQueryParameters.Builder().setResultLimit(1).setSortDirection(true)
+        RcsEventQueryParams queryParameters =
+                new RcsEventQueryParams.Builder().setResultLimit(1).setSortDirection(true)
                         .build();
 
         Bundle bundle = new Bundle();
@@ -410,8 +410,8 @@ public class RcsProviderQueryTest {
     @Test
     @Ignore // TODO: fix and un-ignore
     public void testQueryEventsWithTypeLimitation() {
-        RcsEventQueryParameters queryParameters =
-                new RcsEventQueryParameters.Builder().setEventType(
+        RcsEventQueryParams queryParameters =
+                new RcsEventQueryParams.Builder().setEventType(
                         GROUP_THREAD_NAME_CHANGED_EVENT).build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(EVENT_QUERY_PARAMETERS_KEY, queryParameters);
@@ -430,7 +430,7 @@ public class RcsProviderQueryTest {
     @Test
     @Ignore // TODO: fix and un-ignore
     public void testQueryMessages() {
-        RcsMessageQueryParameters queryParameters = new RcsMessageQueryParameters.Builder().build();
+        RcsMessageQueryParams queryParameters = new RcsMessageQueryParams.Builder().build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(MESSAGE_QUERY_PARAMETERS_KEY, queryParameters);
 
@@ -454,9 +454,9 @@ public class RcsProviderQueryTest {
     @Test
     @Ignore // TODO: fix and un-ignore
     public void testQueryMessagesWithContinuation() {
-        RcsMessageQueryParameters queryParameters =
-                new RcsMessageQueryParameters.Builder().setMessageLike("%o%message").setResultLimit(
-                        1).setSortProperty(RcsMessageQueryParameters.SORT_BY_TIMESTAMP)
+        RcsMessageQueryParams queryParameters =
+                new RcsMessageQueryParams.Builder().setMessageLike("%o%message").setResultLimit(
+                        1).setSortProperty(RcsMessageQueryParams.SORT_BY_TIMESTAMP)
                         .setSortDirection(true).build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(MESSAGE_QUERY_PARAMETERS_KEY, queryParameters);
@@ -496,8 +496,8 @@ public class RcsProviderQueryTest {
     @Test
     @Ignore // TODO: fix and un-ignore
     public void testQueryMessagesWithThreadFilter() {
-        RcsMessageQueryParameters queryParameters =
-                new RcsMessageQueryParameters.Builder().setThread(new RcsGroupThread(3))
+        RcsMessageQueryParams queryParameters =
+                new RcsMessageQueryParams.Builder().setThread(new RcsGroupThread(3))
                         .build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(MESSAGE_QUERY_PARAMETERS_KEY, queryParameters);
