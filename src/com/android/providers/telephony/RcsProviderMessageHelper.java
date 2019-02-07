@@ -51,8 +51,8 @@ import static android.provider.Telephony.RcsColumns.RcsUnifiedMessageColumns.MES
 import static android.provider.Telephony.RcsColumns.RcsUnifiedMessageColumns.UNIFIED_INCOMING_MESSAGE_VIEW;
 import static android.provider.Telephony.RcsColumns.RcsUnifiedMessageColumns.UNIFIED_OUTGOING_MESSAGE_VIEW;
 import static android.provider.Telephony.RcsColumns.TRANSACTION_FAILED;
-import static android.telephony.ims.RcsMessageQueryParameters.MESSAGE_QUERY_PARAMETERS_KEY;
-import static android.telephony.ims.RcsMessageQueryParameters.THREAD_ID_NOT_SET;
+import static android.telephony.ims.RcsMessageQueryParams.MESSAGE_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsMessageQueryParams.THREAD_ID_NOT_SET;
 
 import static android.telephony.ims.RcsQueryContinuationToken.MESSAGE_QUERY_CONTINUATION_TOKEN_TYPE;
 import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION_TOKEN;
@@ -77,7 +77,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Telephony.RcsColumns.RcsIncomingMessageColumns;
 import android.provider.Telephony.RcsColumns.RcsMessageDeliveryColumns;
-import android.telephony.ims.RcsMessageQueryParameters;
+import android.telephony.ims.RcsMessageQueryParams;
 import android.telephony.ims.RcsQueryContinuationToken;
 import android.text.TextUtils;
 import android.util.Log;
@@ -320,7 +320,7 @@ public class RcsProviderMessageHelper {
     }
 
     Cursor queryMessages(Bundle bundle) {
-        RcsMessageQueryParameters queryParameters = null;
+        RcsMessageQueryParams queryParameters = null;
         RcsQueryContinuationToken continuationToken = null;
 
         if (bundle != null) {
@@ -335,13 +335,13 @@ public class RcsProviderMessageHelper {
 
         // if no parameters were entered, build an empty query parameters object
         if (queryParameters == null) {
-            queryParameters = new RcsMessageQueryParameters.Builder().build();
+            queryParameters = new RcsMessageQueryParams.Builder().build();
         }
 
         return performInitialQuery(queryParameters);
     }
 
-    private Cursor performInitialQuery(RcsMessageQueryParameters queryParameters) {
+    private Cursor performInitialQuery(RcsMessageQueryParams queryParameters) {
         SQLiteDatabase db = mSqLiteOpenHelper.getReadableDatabase();
 
         StringBuilder rawQuery = new StringBuilder("SELECT * FROM ").append(UNIFIED_MESSAGE_VIEW);
@@ -387,7 +387,7 @@ public class RcsProviderMessageHelper {
         rawQuery.append(" ORDER BY ");
 
         int sortingProperty = queryParameters.getSortingProperty();
-        if (sortingProperty == RcsMessageQueryParameters.SORT_BY_TIMESTAMP) {
+        if (sortingProperty == RcsMessageQueryParams.SORT_BY_TIMESTAMP) {
             rawQuery.append(ORIGINATION_TIMESTAMP_COLUMN);
         } else {
             rawQuery.append(MESSAGE_ID_COLUMN);
