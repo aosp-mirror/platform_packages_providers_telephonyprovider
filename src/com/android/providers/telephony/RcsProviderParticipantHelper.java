@@ -24,7 +24,7 @@ import static android.provider.Telephony.RcsColumns.RcsParticipantHelpers.RCS_PA
 import static android.provider.Telephony.RcsColumns.RcsParticipantHelpers.RCS_PARTICIPANT_WITH_THREAD_VIEW;
 import static android.provider.Telephony.RcsColumns.RcsThreadColumns.RCS_THREAD_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.TRANSACTION_FAILED;
-import static android.telephony.ims.RcsParticipantQueryParameters.PARTICIPANT_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsParticipantQueryParams.PARTICIPANT_QUERY_PARAMETERS_KEY;
 
 import static android.telephony.ims.RcsQueryContinuationToken.PARTICIPANT_QUERY_CONTINUATION_TOKEN_TYPE;
 import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION_TOKEN;
@@ -42,7 +42,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.net.Uri;
 import android.os.Bundle;
-import android.telephony.ims.RcsParticipantQueryParameters;
+import android.telephony.ims.RcsParticipantQueryParams;
 import android.telephony.ims.RcsQueryContinuationToken;
 import android.text.TextUtils;
 import android.util.Log;
@@ -112,7 +112,7 @@ class RcsProviderParticipantHelper {
     }
 
     Cursor queryParticipant(Bundle bundle) {
-        RcsParticipantQueryParameters queryParameters = null;
+        RcsParticipantQueryParams queryParameters = null;
         RcsQueryContinuationToken continuationToken = null;
 
         if (bundle != null) {
@@ -126,13 +126,13 @@ class RcsProviderParticipantHelper {
         }
 
         if (queryParameters == null) {
-            queryParameters = new RcsParticipantQueryParameters.Builder().build();
+            queryParameters = new RcsParticipantQueryParams.Builder().build();
         }
 
         return performInitialQuery(queryParameters);
     }
 
-    private Cursor performInitialQuery(RcsParticipantQueryParameters queryParameters) {
+    private Cursor performInitialQuery(RcsParticipantQueryParams queryParameters) {
         SQLiteDatabase db = mSqLiteOpenHelper.getWritableDatabase();
 
         StringBuilder rawQuery = buildInitialRawQuery(queryParameters);
@@ -151,7 +151,7 @@ class RcsProviderParticipantHelper {
         return cursor;
     }
 
-    private StringBuilder buildInitialRawQuery(RcsParticipantQueryParameters queryParameters) {
+    private StringBuilder buildInitialRawQuery(RcsParticipantQueryParams queryParameters) {
         StringBuilder rawQuery = new StringBuilder("SELECT * FROM ");
 
         boolean isThreadFiltered = queryParameters.getThreadId() > 0;
@@ -193,9 +193,9 @@ class RcsProviderParticipantHelper {
         rawQuery.append(" ORDER BY ");
 
         int sortingProperty = queryParameters.getSortingProperty();
-        if (sortingProperty == RcsParticipantQueryParameters.SORT_BY_ALIAS) {
+        if (sortingProperty == RcsParticipantQueryParams.SORT_BY_ALIAS) {
             rawQuery.append(RCS_ALIAS_COLUMN);
-        } else if (sortingProperty == RcsParticipantQueryParameters.SORT_BY_CANONICAL_ADDRESS) {
+        } else if (sortingProperty == RcsParticipantQueryParams.SORT_BY_CANONICAL_ADDRESS) {
             rawQuery.append(ADDRESS);
         } else {
             rawQuery.append(RCS_PARTICIPANT_ID_COLUMN);
