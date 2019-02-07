@@ -28,7 +28,7 @@ import static android.provider.Telephony.RcsColumns.RcsUnifiedThreadColumns.THRE
 import static android.provider.Telephony.RcsColumns.TRANSACTION_FAILED;
 import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION_TOKEN;
 import static android.telephony.ims.RcsQueryContinuationToken.THREAD_QUERY_CONTINUATION_TOKEN_TYPE;
-import static android.telephony.ims.RcsThreadQueryParameters.THREAD_QUERY_PARAMETERS_KEY;
+import static android.telephony.ims.RcsThreadQueryParams.THREAD_QUERY_PARAMETERS_KEY;
 
 import static com.android.providers.telephony.RcsProvider.RCS_1_TO_1_THREAD_TABLE;
 import static com.android.providers.telephony.RcsProvider.RCS_GROUP_THREAD_TABLE;
@@ -47,7 +47,7 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.BaseColumns;
 import android.telephony.ims.RcsQueryContinuationToken;
-import android.telephony.ims.RcsThreadQueryParameters;
+import android.telephony.ims.RcsThreadQueryParams;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -224,7 +224,7 @@ class RcsProviderThreadHelper {
     }
 
     Cursor queryUnifiedThread(Bundle bundle) {
-        RcsThreadQueryParameters queryParameters = null;
+        RcsThreadQueryParams queryParameters = null;
         RcsQueryContinuationToken continuationToken = null;
         if (bundle != null) {
             queryParameters = bundle.getParcelable(
@@ -238,31 +238,31 @@ class RcsProviderThreadHelper {
         }
 
         if (queryParameters == null) {
-            queryParameters = new RcsThreadQueryParameters.Builder().build();
+            queryParameters = new RcsThreadQueryParams.Builder().build();
         }
 
         return performInitialQuery(queryParameters);
     }
 
-    private Cursor performInitialQuery(RcsThreadQueryParameters queryParameters) {
+    private Cursor performInitialQuery(RcsThreadQueryParams queryParameters) {
         if (queryParameters == null) {
             // return everything for test purposes
-            queryParameters = new RcsThreadQueryParameters.Builder().build();
+            queryParameters = new RcsThreadQueryParams.Builder().build();
         }
 
         SQLiteDatabase db = mSqLiteOpenHelper.getReadableDatabase();
         StringBuilder rawQuery = new StringBuilder("SELECT * FROM ").append(
                 UNIFIED_RCS_THREAD_VIEW);
 
-        if (queryParameters.getThreadType() == RcsThreadQueryParameters.THREAD_TYPE_1_TO_1) {
+        if (queryParameters.getThreadType() == RcsThreadQueryParams.THREAD_TYPE_1_TO_1) {
             rawQuery.append(" WHERE ").append(THREAD_TYPE_COLUMN).append("=0");
-        } else if (queryParameters.getThreadType() == RcsThreadQueryParameters.THREAD_TYPE_GROUP) {
+        } else if (queryParameters.getThreadType() == RcsThreadQueryParams.THREAD_TYPE_GROUP) {
             rawQuery.append(" WHERE ").append(THREAD_TYPE_COLUMN).append("=1");
         }
 
         rawQuery.append(" ORDER BY ");
 
-        if (queryParameters.getSortingProperty() == RcsThreadQueryParameters.SORT_BY_TIMESTAMP) {
+        if (queryParameters.getSortingProperty() == RcsThreadQueryParams.SORT_BY_TIMESTAMP) {
             rawQuery.append(ORIGINATION_TIMESTAMP_COLUMN);
         } else {
             rawQuery.append(RCS_THREAD_ID_COLUMN);
