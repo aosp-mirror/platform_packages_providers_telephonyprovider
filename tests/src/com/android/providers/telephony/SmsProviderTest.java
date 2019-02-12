@@ -52,7 +52,7 @@ import org.mockito.Mockito;
  *                 --test-method testInsertUri
  */
 public class SmsProviderTest extends TestCase {
-    private static final String TAG = "TelephonyProviderTest";
+    private static final String TAG = "SmsProviderTest";
 
     private MockContextWithProvider mContext;
     private MockContentResolver mContentResolver;
