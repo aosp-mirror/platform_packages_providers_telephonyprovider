@@ -119,6 +119,7 @@ public class RcsProvider extends ContentProvider {
     private static final int OUTGOING_MESSAGE_ON_GROUP_THREAD_WITH_ID = 41;
     private static final int FILE_TRANSFER_WITH_ID = 42;
     private static final int EVENT = 43;
+    private static final int CANONICAL_ADDRESS = 44;
 
     SQLiteOpenHelper mDbOpenHelper;
 
@@ -130,6 +131,8 @@ public class RcsProvider extends ContentProvider {
     RcsProviderMessageHelper mMessageHelper;
     @VisibleForTesting
     RcsProviderEventHelper mEventHelper;
+    @VisibleForTesting
+    RcsProviderCanonicalAddressHelper mCanonicalAddressHelper;
 
     static {
         // example URI: content://rcs/thread
@@ -294,17 +297,19 @@ public class RcsProvider extends ContentProvider {
 
         // example URI: content://rcs/event
         URL_MATCHER.addURI(AUTHORITY, "event", EVENT);
+
+        URL_MATCHER.addURI(AUTHORITY, "canonical-address", CANONICAL_ADDRESS);
     }
 
     @Override
     public boolean onCreate() {
-        setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         // Use the credential encrypted mmssms.db for RCS messages.
         mDbOpenHelper = MmsSmsDatabaseHelper.getInstanceForCe(getContext());
         mParticipantHelper = new RcsProviderParticipantHelper(mDbOpenHelper);
         mThreadHelper = new RcsProviderThreadHelper(mDbOpenHelper);
         mMessageHelper = new RcsProviderMessageHelper(mDbOpenHelper);
         mEventHelper = new RcsProviderEventHelper(mDbOpenHelper);
+        mCanonicalAddressHelper = new RcsProviderCanonicalAddressHelper(mDbOpenHelper);
         return true;
     }
 
@@ -447,6 +452,9 @@ public class RcsProvider extends ContentProvider {
                 return mMessageHelper.queryFileTransfer(uri);
             case EVENT:
                 return mEventHelper.queryEvents(queryArgs);
+            case CANONICAL_ADDRESS:
+                String canonicalAddress = uri.getQueryParameter("address");
+                return mCanonicalAddressHelper.getOrCreateCanonicalAddress(canonicalAddress);
             default:
                 Log.e(TAG, "Invalid query: " + uri);
         }
