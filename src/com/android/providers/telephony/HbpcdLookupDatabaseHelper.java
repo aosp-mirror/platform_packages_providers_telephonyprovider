@@ -102,6 +102,7 @@ public class HbpcdLookupDatabaseHelper extends SQLiteOpenHelper {
         mContext = context;
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
+        setWriteAheadLoggingEnabled(false);
     }
 
     @Override
