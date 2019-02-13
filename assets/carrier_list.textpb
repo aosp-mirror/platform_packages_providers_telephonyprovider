@@ -3401,9 +3401,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1475
-  carrier_name: "Elisa Matkapuhelinpalvelut Ltd."
+  carrier_name: "Elisa"
   carrier_attribute {
     mccmnc_tuple: "24405"
+    mccmnc_tuple: "24421"
   }
 }
 carrier_id {
@@ -3425,17 +3426,6 @@ carrier_id {
   carrier_name: "Oy Finland Tele2 AB"
   carrier_attribute {
     mccmnc_tuple: "24416"
-  }
-}
-carrier_id {
-  canonical_id: 1479
-  carrier_name: "Saunalahti Group Ltd."
-  carrier_attribute {
-    mccmnc_tuple: "24421"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "24405"
-    imsi_prefix_xpattern: "2440541"
   }
 }
 carrier_id {
@@ -6531,7 +6521,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1930
-  carrier_name: "Nextel"
+  carrier_name: "Entel"
   carrier_attribute {
     mccmnc_tuple: "71617"
   }
@@ -7072,6 +7062,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "45403"
     gid1: "0206"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "0306"
   }
   carrier_attribute {
     mccmnc_tuple: "310120"
@@ -9853,6 +9847,24 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2360
+  carrier_name: "Telefonica"
+  carrier_attribute {
+    mccmnc_tuple: "26203"
+    gid1: "010301"
+    gid1: "010901"
+  }
+}
+carrier_id {
+  canonical_id: 2361
+  carrier_name: "o2"
+  carrier_attribute {
+    mccmnc_tuple: "26207"
+    gid1: "010301"
+    gid1: "010901"
+  }
+}
+carrier_id {
   canonical_id: 2362
   carrier_name: "Vodacom"
   carrier_attribute {
@@ -10153,4 +10165,83 @@ carrier_id {
     mccmnc_tuple: "22208"
   }
 }
-version: 6
+carrier_id {
+  canonical_id: 10000
+  carrier_name: "Tracfone-ATT"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "DDFF"
+    gid1: "DEFF"
+  }
+  parent_canonical_id: 2022
+}
+carrier_id {
+  canonical_id: 10001
+  carrier_name: "Tracfone-TMO"
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "DDFF"
+    gid1: "DEFF"
+  }
+  parent_canonical_id: 2022
+}
+carrier_id {
+  canonical_id: 10002
+  carrier_name: "o2prepaid_gb"
+  carrier_attribute {
+    mccmnc_tuple: "23410"
+    gid1: "61"
+    gid1: "67"
+    gid1: "85"
+    gid1: "99"
+  }
+  parent_canonical_id: 1492
+}
+carrier_id {
+  canonical_id: 10003
+  carrier_name: "o2prepaid_de"
+  carrier_attribute {
+    mccmnc_tuple: "26207"
+    imsi_prefix_xpattern: "2620749"
+  }
+  parent_canonical_id: 1454
+}
+carrier_id {
+  canonical_id: 10004
+  carrier_name: "sprintprepaid_us"
+  carrier_attribute {
+    mccmnc_tuple: "310120"
+    gid1: "000004"
+  }
+  parent_canonical_id: 1788
+}
+carrier_id {
+  canonical_id: 10005
+  carrier_name: "pcmobile_prepaid_bell"
+  carrier_attribute {
+    mccmnc_tuple: "30264"
+    mccmnc_tuple: "302610"
+    mccmnc_tuple: "302630"
+    mccmnc_tuple: "302640"
+    gid1: "40"
+  }
+  parent_canonical_id: 2053
+}
+carrier_id {
+  canonical_id: 10006
+  carrier_name: "pcmobile_postpaid_telus"
+  carrier_attribute {
+    mccmnc_tuple: "302220"
+    mccmnc_tuple: "302221"
+    gid1: "5043"
+  }
+  parent_canonical_id: 2053
+}
+carrier_id {
+  canonical_id: 10007
+  carrier_name: "docomo_mvno"
+  carrier_attribute {
+    mccmnc_tuple: "44010"
+  }
+}
+version: 7
