@@ -123,8 +123,7 @@
                   android:authorities="rcs"
                   android:multiprocess="false"
                   android:exported="true"
-                  android:singleUser="true"
-                  android:readPermission="android.permission.READ_SMS" />
+                  android:singleUser="true" />
 
         <service
             android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
