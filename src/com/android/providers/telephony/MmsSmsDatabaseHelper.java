@@ -300,6 +300,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         } catch (IllegalArgumentException e) {
             // ignore
         }
+        setWriteAheadLoggingEnabled(false);
     }
 
     private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {
