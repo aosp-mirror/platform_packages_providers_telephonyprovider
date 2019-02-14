@@ -547,9 +547,9 @@ public class CarrierIdProvider extends ContentProvider {
             version = assets.version;
         }
         // bypass version check for ota carrier id test
-        if ((Build.IS_DEBUGGABLE && SystemProperties.getBoolean(
+        if (ota != null && ((Build.IS_DEBUGGABLE && SystemProperties.getBoolean(
                 "persist.telephony.test.carrierid.ota", false))
-                || (ota != null && ota.version > version)) {
+                || (ota.version > version))) {
             carrierList = ota;
             version = ota.version;
         }
