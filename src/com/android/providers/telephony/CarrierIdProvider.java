@@ -384,6 +384,7 @@ public class CarrierIdProvider extends ContentProvider {
                     cv = new ContentValues();
                     cv.put(CarrierId.CARRIER_ID, id.canonicalId);
                     cv.put(CarrierId.CARRIER_NAME, id.carrierName);
+                    cv.put(CarrierId.PARENT_CARRIER_ID, id.parentCanonicalId);
                     cvs = new ArrayList<>();
                     convertCarrierAttrToContentValues(cv, cvs, attr, 0);
                     for (ContentValues contentVal : cvs) {
