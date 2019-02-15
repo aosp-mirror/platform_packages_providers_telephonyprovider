@@ -15,6 +15,7 @@
  */
 package com.android.providers.telephony;
 
+import static android.provider.Telephony.RcsColumns.RcsEventTypes.PARTICIPANT_ALIAS_CHANGED_EVENT_TYPE;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_PARTICIPANT_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantEventColumns.NEW_ALIAS_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsEventTypes.ICON_CHANGED_EVENT_TYPE;
@@ -92,16 +93,19 @@ class RcsProviderEventHelper {
 
         // The following is a unified event view that puts every entry in both tables into one query
         db.execSQL("CREATE VIEW " + RCS_UNIFIED_EVENT_VIEW + " AS "
-                + "SELECT 1 AS event_type, event_id, originating_participant, "
-                + "origination_timestamp, old_alias, new_alias, NULL as rcs_thread_id, NULL as "
-                + "destination_participant, NULL as old_icon_uri, NULL as new_icon_uri, NULL as "
-                + "old_name, NULL as new_name "
-                + "FROM rcs_participant_event"
-                + " UNION "
-                + "SELECT event_type, event_id, originating_participant, origination_timestamp, "
-                + "NULL as old_alias, NULL as new_alias, rcs_thread_id, destination_participant, "
-                + "old_icon_uri, new_icon_uri, old_name, new_name "
-                + "FROM rcs_thread_event");
+                + "SELECT " + PARTICIPANT_ALIAS_CHANGED_EVENT_TYPE + " AS " + EVENT_TYPE_COLUMN
+                + ", " + EVENT_ID_COLUMN + ", " + SOURCE_PARTICIPANT_ID_COLUMN + ", "
+                + TIMESTAMP_COLUMN + ", " + NEW_ALIAS_COLUMN + ", NULL as " + RCS_THREAD_ID_COLUMN
+                + ", NULL as " + DESTINATION_PARTICIPANT_ID_COLUMN + ", NULL as "
+                + NEW_ICON_URI_COLUMN + ", NULL as " + NEW_NAME_COLUMN + " "
+                + "FROM " + RCS_PARTICIPANT_EVENT_TABLE + " "
+                + "UNION "
+                + "SELECT " + EVENT_TYPE_COLUMN + ", " + EVENT_ID_COLUMN + ", "
+                + SOURCE_PARTICIPANT_ID_COLUMN + ", " + TIMESTAMP_COLUMN + ", "
+                + "NULL as " + NEW_ALIAS_COLUMN + ", " + RCS_THREAD_ID_COLUMN + ", "
+                + DESTINATION_PARTICIPANT_ID_COLUMN + ", " + NEW_ICON_URI_COLUMN + ", "
+                + NEW_NAME_COLUMN + " "
+                + "FROM " + RCS_THREAD_EVENT_TABLE);
     }
 
     private final SQLiteOpenHelper mSqLiteOpenHelper;
