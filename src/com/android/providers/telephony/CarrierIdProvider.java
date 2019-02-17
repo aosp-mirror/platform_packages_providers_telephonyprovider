@@ -30,7 +30,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
+import android.os.SystemProperties;
 import android.provider.Telephony.CarrierId;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
@@ -544,7 +546,10 @@ public class CarrierIdProvider extends ContentProvider {
             carrierList = assets;
             version = assets.version;
         }
-        if (ota != null && ota.version > version) {
+        // bypass version check for ota carrier id test
+        if (ota != null && ((Build.IS_DEBUGGABLE && SystemProperties.getBoolean(
+                "persist.telephony.test.carrierid.ota", false))
+                || (ota.version > version))) {
             carrierList = ota;
             version = ota.version;
         }
