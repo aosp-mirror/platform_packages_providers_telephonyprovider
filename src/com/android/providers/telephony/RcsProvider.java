@@ -15,6 +15,7 @@
  */
 package com.android.providers.telephony;
 
+import static android.provider.Telephony.RcsColumns.RcsThreadColumns.RCS_THREAD_URI_PART;
 import static android.provider.Telephony.RcsColumns.TRANSACTION_FAILED;
 
 import static com.android.providers.telephony.RcsProviderUtil.buildUriWithRowIdAppended;
@@ -136,7 +137,7 @@ public class RcsProvider extends ContentProvider {
 
     static {
         // example URI: content://rcs/thread
-        URL_MATCHER.addURI(AUTHORITY, "thread", UNIFIED_RCS_THREAD);
+        URL_MATCHER.addURI(AUTHORITY, RCS_THREAD_URI_PART, UNIFIED_RCS_THREAD);
 
         // example URI: content://rcs/thread/4, where 4 is the thread id.
         URL_MATCHER.addURI(AUTHORITY, "thread/#", UNIFIED_RCS_THREAD_WITH_ID);
@@ -503,8 +504,10 @@ public class RcsProvider extends ContentProvider {
                                 + uri);
                 break;
             case P2P_THREAD_PARTICIPANT_WITH_ID:
-                return returnUriAsIsIfSuccessful(uri,
-                        mParticipantHelper.insertParticipantIntoP2pThread(uri));
+                Log.e(TAG,
+                        "Inserting participant into a thread via URI is not supported, uri: "
+                                + uri);
+                break;
             case GROUP_THREAD:
                 return buildUriWithRowIdAppended(GROUP_THREAD_URI_PREFIX,
                         mThreadHelper.insertGroupThread(values));
