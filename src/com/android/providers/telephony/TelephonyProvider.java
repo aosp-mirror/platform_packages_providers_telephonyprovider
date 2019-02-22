@@ -56,6 +56,8 @@ import static android.provider.Telephony.Carriers.PROTOCOL;
 import static android.provider.Telephony.Carriers.PROXY;
 import static android.provider.Telephony.Carriers.ROAMING_PROTOCOL;
 import static android.provider.Telephony.Carriers.SERVER;
+import static android.provider.Telephony.Carriers.SKIP_464XLAT;
+import static android.provider.Telephony.Carriers.SKIP_464XLAT_DEFAULT;
 import static android.provider.Telephony.Carriers.SUBSCRIPTION_ID;
 import static android.provider.Telephony.Carriers.TYPE;
 import static android.provider.Telephony.Carriers.UNEDITED;
@@ -143,7 +145,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 35 << 16;
+    private static final int DATABASE_VERSION = 36 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -250,7 +252,8 @@ public class TelephonyProvider extends ContentProvider
     static {
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
-        // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible, network_type_bitmask
+        // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible, network_type_bitmask,
+        // skip_464xlat
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
@@ -326,12 +329,13 @@ public class TelephonyProvider extends ContentProvider
                 USER_EDITABLE + " BOOLEAN DEFAULT 1," +
                 OWNED_BY + " INTEGER DEFAULT " + OWNED_BY_OTHERS + "," +
                 APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
+                SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
                 // user, server, password, authtype, type, sub_id, modem_cognitive, max_conns,
                 // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible,
-                // network_type_bitmask.
+                // network_type_bitmask, skip_464xlat.
                 "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
     }
 
@@ -1249,6 +1253,21 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 35 << 16 | 6;
             }
 
+            if (oldVersion < (36 << 16 | 6)) {
+                // Add a new column Carriers.SKIP_464XLAT into the database and set the value to
+                // SKIP_464XLAT_DEFAULT.
+                try {
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN " +
+                            SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + ";");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 36 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -1686,6 +1705,7 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, USER_EDITABLE);
             getIntValueFromCursor(cv, c, OWNED_BY);
             getIntValueFromCursor(cv, c, APN_SET_ID);
+            getIntValueFromCursor(cv, c, SKIP_464XLAT);
         }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
@@ -1892,6 +1912,7 @@ public class TelephonyProvider extends ContentProvider
             addIntAttribute(parser, "mtu", map, MTU);
             addIntAttribute(parser, "apn_set_id", map, APN_SET_ID);
             addIntAttribute(parser, "carrier_id", map, CARRIER_ID);
+            addIntAttribute(parser, "skip_464xlat", map, SKIP_464XLAT);
 
             addBoolAttribute(parser, "carrier_enabled", map, CARRIER_ENABLED);
             addBoolAttribute(parser, "modem_cognitive", map, MODEM_PERSIST);
