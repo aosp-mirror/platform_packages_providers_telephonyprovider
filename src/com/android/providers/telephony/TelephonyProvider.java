@@ -1246,7 +1246,7 @@ public class TelephonyProvider extends ContentProvider
                             "The table will get created in onOpen.");
                     }
                 }
-                oldVersion = 29 << 16 | 6;
+                oldVersion = 35 << 16 | 6;
             }
 
             if (DBG) {
