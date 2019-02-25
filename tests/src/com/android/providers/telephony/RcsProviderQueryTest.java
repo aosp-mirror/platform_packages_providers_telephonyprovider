@@ -15,6 +15,7 @@
  */
 package com.android.providers.telephony;
 
+import static android.provider.Telephony.RcsColumns.RcsEventTypes.PARTICIPANT_JOINED_EVENT_TYPE;
 import static android.provider.Telephony.RcsColumns.RcsFileTransferColumns.FILE_SIZE_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsFileTransferColumns.SESSION_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.GROUP_NAME_COLUMN;
@@ -25,7 +26,6 @@ import static android.provider.Telephony.RcsColumns.RcsMessageColumns.ORIGINATIO
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.CANONICAL_ADDRESS_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_ALIAS_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_PARTICIPANT_ID_COLUMN;
-import static android.provider.Telephony.RcsColumns.RcsEventTypes.PARTICIPANT_JOINED_EVENT_TYPE;
 import static android.provider.Telephony.RcsColumns.RcsThreadColumns.RCS_THREAD_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.DESTINATION_PARTICIPANT_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.EVENT_TYPE_COLUMN;
@@ -38,6 +38,8 @@ import static android.telephony.ims.RcsMessageQueryParams.MESSAGE_QUERY_PARAMETE
 import static android.telephony.ims.RcsParticipantQueryParams.PARTICIPANT_QUERY_PARAMETERS_KEY;
 import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION_TOKEN;
 import static android.telephony.ims.RcsThreadQueryParams.THREAD_QUERY_PARAMETERS_KEY;
+
+import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -90,12 +92,8 @@ public class RcsProviderQueryTest {
         mContentResolver.insert(participantUri, contentValues);
 
         // insert two 1 to 1 threads
-        ContentValues p2pContentValues = new ContentValues(0);
-        Uri threadsUri = Uri.parse("content://rcs/p2p_thread");
-        assertThat(mContentResolver.insert(threadsUri, p2pContentValues)).isEqualTo(
-                Uri.parse("content://rcs/p2p_thread/1"));
-        assertThat(mContentResolver.insert(threadsUri, p2pContentValues)).isEqualTo(
-                Uri.parse("content://rcs/p2p_thread/2"));
+        setup1To1Thread(mContentResolver, 1, 1);
+        setup1To1Thread(mContentResolver, 2, 2);
 
         // insert one group thread
         ContentValues groupContentValues = new ContentValues(1);
@@ -519,10 +517,6 @@ public class RcsProviderQueryTest {
 
     @Test
     public void testQueryParticipantOf1To1Thread() {
-        // insert the participant into a 1 to 1 thread
-        Uri insertUri = Uri.parse("content://rcs/p2p_thread/1/participant/1");
-        assertThat(mContentResolver.insert(insertUri, null)).isNotNull();
-
         // query the participant back
         Uri queryUri = Uri.parse("content://rcs/p2p_thread/1/participant");
         Cursor cursor = mContentResolver.query(queryUri, null, null, null, null);
