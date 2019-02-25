@@ -25,6 +25,9 @@ import static android.provider.Telephony.RcsColumns.RcsMessageColumns.ORIGINATIO
 import static android.provider.Telephony.RcsColumns.RcsMessageDeliveryColumns.DELIVERED_TIMESTAMP_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.CANONICAL_ADDRESS_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_ALIAS_COLUMN;
+import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_PARTICIPANT_ID_COLUMN;
+
+import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -71,12 +74,7 @@ public class RcsProviderUpdateTest {
         mRcsProvider.getWritableDatabase().execSQL("INSERT INTO threads(_id) VALUES (1)");
         mRcsProvider.getWritableDatabase().execSQL("INSERT INTO threads(_id) VALUES (2)");
 
-        // insert one 1 to 1 thread
-        ContentValues p2pContentValues = new ContentValues();
-        Uri p2pThreadUri = Uri.parse("content://rcs/p2p_thread");
-        p2pContentValues.put(FALLBACK_THREAD_ID_COLUMN, 1);
-        assertThat(mContentResolver.insert(p2pThreadUri, p2pContentValues)).isEqualTo(
-                Uri.parse("content://rcs/p2p_thread/1"));
+        setup1To1Thread(mContentResolver);
 
         // insert one group thread
         ContentValues groupContentValues = new ContentValues();
@@ -85,10 +83,6 @@ public class RcsProviderUpdateTest {
         Uri groupThreadUri = Uri.parse("content://rcs/group_thread");
         assertThat(mContentResolver.insert(groupThreadUri, groupContentValues)).isEqualTo(
                 Uri.parse("content://rcs/group_thread/2"));
-
-        // Add participant to both threads
-        Uri p2pInsertionUri = Uri.parse("content://rcs/p2p_thread/1/participant/1");
-        assertThat(mContentResolver.insert(p2pInsertionUri, null)).isEqualTo(p2pInsertionUri);
 
         Uri groupInsertionUri = Uri.parse("content://rcs/group_thread/2/participant/1");
         assertThat(mContentResolver.insert(groupInsertionUri, null)).isEqualTo(groupInsertionUri);
