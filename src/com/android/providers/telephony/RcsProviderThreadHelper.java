@@ -23,6 +23,7 @@ import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.OWNER_
 import static android.provider.Telephony.RcsColumns.RcsMessageColumns.MESSAGE_TEXT_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsMessageColumns.ORIGINATION_TIMESTAMP_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsMessageColumns.STATUS_COLUMN;
+import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_PARTICIPANT_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsThreadColumns.RCS_THREAD_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsUnifiedThreadColumns.THREAD_TYPE_COLUMN;
 import static android.provider.Telephony.RcsColumns.TRANSACTION_FAILED;
@@ -317,32 +318,94 @@ class RcsProviderThreadHelper {
         return queryGroupThread(projection, getThreadIdSelection(uri), null, null);
     }
 
+    /**
+     * @param contentValues should contain the participant ID of the other participant under key
+     *                      {@link RCS_PARTICIPANT_ID_COLUMN}
+     */
     long insert1To1Thread(ContentValues contentValues) {
-        long returnValue = TRANSACTION_FAILED;
         if (contentValues.containsKey(RCS_THREAD_ID_COLUMN)) {
             Log.e(RcsProvider.TAG,
                     "RcsProviderThreadHelper: inserting threads with IDs is not supported");
-            return returnValue;
+            return TRANSACTION_FAILED;
+        }
+
+        Long participantId = contentValues.getAsLong(RCS_PARTICIPANT_ID_COLUMN);
+        if (participantId == null) {
+            Log.e(RcsProvider.TAG,
+                    "inserting threads without participant IDs is not supported");
+            return TRANSACTION_FAILED;
         }
 
         SQLiteDatabase db = mSqLiteOpenHelper.getWritableDatabase();
         try {
             db.beginTransaction();
 
-            // Insert into the common rcs_threads table
-            long rowId = insertIntoCommonRcsThreads(db);
+            if (hasExisting1To1ThreadForParticipant(db, participantId)) {
+                return TRANSACTION_FAILED;
+            }
 
-            // Add the rowId in rcs_threads table as a foreign key in rcs_1_to_1_table
-            contentValues.put(RCS_THREAD_ID_COLUMN, rowId);
-            db.insert(RCS_1_TO_1_THREAD_TABLE, RCS_THREAD_ID_COLUMN, contentValues);
-            contentValues.remove(RCS_THREAD_ID_COLUMN);
+            long threadId = insertIntoCommonRcsThreads(db);
+            if (threadId == -1) {
+                return TRANSACTION_FAILED;
+            }
+
+            if (insertP2pThread(db, threadId) == -1) {
+                return TRANSACTION_FAILED;
+            }
+
+            if (insertParticipantIntoP2pThread(db, threadId, participantId) == -1) {
+                return TRANSACTION_FAILED;
+            }
 
             db.setTransactionSuccessful();
-            returnValue = rowId;
+
+            return threadId;
         } finally {
             db.endTransaction();
         }
-        return returnValue;
+    }
+
+    private long insertP2pThread(SQLiteDatabase db, long threadId) {
+        ContentValues contentValues = new ContentValues(1);
+        contentValues.put(RCS_THREAD_ID_COLUMN, threadId);
+
+        return db.insert(RCS_1_TO_1_THREAD_TABLE, RCS_THREAD_ID_COLUMN, contentValues);
+    }
+
+    private long insertParticipantIntoP2pThread(
+            SQLiteDatabase db, long threadId, long participantId) {
+        ContentValues contentValues = new ContentValues(2);
+        contentValues.put(RCS_THREAD_ID_COLUMN, threadId);
+        contentValues.put(RCS_PARTICIPANT_ID_COLUMN, participantId);
+
+        return db.insert(
+                RCS_PARTICIPANT_THREAD_JUNCTION_TABLE, RCS_PARTICIPANT_ID_COLUMN, contentValues);
+    }
+
+    private boolean hasExisting1To1ThreadForParticipant(SQLiteDatabase db, long participantId) {
+        String table = joinOnColumn(
+                RCS_PARTICIPANT_THREAD_JUNCTION_TABLE,
+                RCS_1_TO_1_THREAD_TABLE,
+                RCS_THREAD_ID_COLUMN);
+
+        try (Cursor cursor = db.query(
+                table,
+                null,
+                RCS_PARTICIPANT_ID_COLUMN + "=?",
+                new String[]{Long.toString(participantId)},
+                null,
+                null,
+                null)) {
+            if (cursor == null || cursor.getCount() == 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private String joinOnColumn(String t1, String t2, String col) {
+        return t1 + " JOIN " + t2 + " ON (" + t1 + "." + col + "=" + t2 + "." + col + ")";
     }
 
     long insertGroupThread(ContentValues contentValues) {
