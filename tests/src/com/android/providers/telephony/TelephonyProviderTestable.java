@@ -15,23 +15,20 @@
  */
 package com.android.providers.telephony;
 
-import android.content.Context;
+import static android.provider.Telephony.Carriers.*;
+
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.mock;
+
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
-import android.provider.Telephony;
-import android.support.test.InstrumentationRegistry;
-import android.telephony.SubscriptionManager;
-import android.text.TextUtils;
 import android.util.Log;
 
-import java.util.List;
-import java.util.ArrayList;
+import androidx.test.InstrumentationRegistry;
+
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.providers.telephony.TelephonyProvider;
-import static android.provider.Telephony.Carriers.*;
-import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 
 /**
  * A subclass of TelephonyProvider used for testing on an in-memory database

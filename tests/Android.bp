@@ -2,8 +2,8 @@ android_test {
     name: "TelephonyProviderTests",
     static_libs: [
         "mockito-target",
-        "compatibility-device-util",
-        "android-support-test",
+        "compatibility-device-util-axt",
+        "androidx.test.rules",
         "truth-prebuilt",
     ],
     libs: [
