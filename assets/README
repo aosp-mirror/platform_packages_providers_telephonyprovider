@@ -1,0 +1,12 @@
+====== carrier_list.textpb ======
+
+DO NOT MANUALLY EDIT THIS FILE
+
+This file is the textpb verion of carrier_list.pb files under assets/, for readability purpose only.
+
+This file is not build into pb, thus modification of this file won't take any effect.
+
+===== carrier_list.pb =====
+DO NOT MANUALLY EDIT THIS FILE
+
+This file defines carrier id and should be single versioned.
