@@ -40,14 +40,12 @@ import static android.telephony.ims.RcsQueryContinuationToken.QUERY_CONTINUATION
 import static android.telephony.ims.RcsThreadQueryParams.THREAD_QUERY_PARAMETERS_KEY;
 
 import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.test.runner.AndroidJUnit4;
 import android.telephony.ims.RcsEventQueryParams;
 import android.telephony.ims.RcsGroupThread;
 import android.telephony.ims.RcsMessageQueryParams;
@@ -55,6 +53,8 @@ import android.telephony.ims.RcsParticipantQueryParams;
 import android.telephony.ims.RcsQueryContinuationToken;
 import android.telephony.ims.RcsThreadQueryParams;
 import android.test.mock.MockContentResolver;
+
+import androidx.test.runner.AndroidJUnit4;
 
 import com.android.providers.telephony.RcsProviderTestable.MockContextWithProvider;
 
