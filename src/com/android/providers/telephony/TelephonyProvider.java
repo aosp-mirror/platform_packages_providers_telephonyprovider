@@ -2939,6 +2939,11 @@ public class TelephonyProvider extends ContentProvider
         SQLiteDatabase db = getReadableDatabase();
         String mccmnc = tm.getSimOperator();
 
+        qb.appendWhereStandalone(IS_NOT_USER_DELETED + " and " +
+                IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and " +
+                IS_NOT_CARRIER_DELETED + " and " +
+                IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML);
+
         // For query db one time, append step 1 and step 2 condition in one selection and
         // separate results after the query is completed. Because IMSI has special match rule,
         // so just query the MCC / MNC and filter the MVNO by ourselves
@@ -2989,10 +2994,10 @@ public class TelephonyProvider extends ContentProvider
         ret.close();
 
         if (currentCursor.getCount() > 0) {
-            if (DBG) log("match Carrier Id APN: " + currentCursor.getCount());
+            if (DBG) log("match MVNO APN: " + currentCursor.getCount());
             return currentCursor;
         } else if (parentCursor.getCount() > 0) {
-            if (DBG) log("match MNO Carrier ID APN: " + parentCursor.getCount());
+            if (DBG) log("match MNO APN: " + parentCursor.getCount());
             return parentCursor;
         } else {
             if (DBG) log("APN no match");
