@@ -321,7 +321,7 @@ public class SmsProvider extends ContentProvider {
     private Cursor getSingleMessageFromIcc(String messageIndexString) {
         int messageIndex = -1;
         try {
-            Integer.parseInt(messageIndexString);
+            messageIndex = Integer.parseInt(messageIndexString);
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException("Bad SMS ICC ID: " + messageIndexString);
         }
