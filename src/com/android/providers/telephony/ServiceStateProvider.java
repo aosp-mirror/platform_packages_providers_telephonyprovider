@@ -33,6 +33,8 @@ import static android.provider.Telephony.ServiceStateTable.IS_EMERGENCY_ONLY;
 import static android.provider.Telephony.ServiceStateTable.IS_MANUAL_NETWORK_SELECTION;
 import static android.provider.Telephony.ServiceStateTable.IS_USING_CARRIER_AGGREGATION;
 import static android.provider.Telephony.ServiceStateTable.NETWORK_ID;
+import static android.provider.Telephony.ServiceStateTable.OPERATOR_ALPHA_LONG_RAW;
+import static android.provider.Telephony.ServiceStateTable.OPERATOR_ALPHA_SHORT_RAW;
 import static android.provider.Telephony.ServiceStateTable.RIL_DATA_RADIO_TECHNOLOGY;
 import static android.provider.Telephony.ServiceStateTable.RIL_VOICE_RADIO_TECHNOLOGY;
 import static android.provider.Telephony.ServiceStateTable.SERVICE_STATE;
@@ -93,6 +95,8 @@ public class ServiceStateProvider extends ContentProvider {
         CDMA_ERI_ICON_MODE,
         IS_EMERGENCY_ONLY,
         IS_USING_CARRIER_AGGREGATION,
+        OPERATOR_ALPHA_LONG_RAW,
+        OPERATOR_ALPHA_SHORT_RAW,
     };
 
     @Override
@@ -215,6 +219,8 @@ public class ServiceStateProvider extends ContentProvider {
             final int cdma_eri_icon_mode = ss.getCdmaEriIconMode();
             final int is_emergency_only = (ss.isEmergencyOnly()) ? 1 : 0;
             final int is_using_carrier_aggregation = (ss.isUsingCarrierAggregation()) ? 1 : 0;
+            final String operator_alpha_long_raw = ss.getOperatorAlphaLongRaw();
+            final String operator_alpha_short_raw = ss.getOperatorAlphaShortRaw();
 
             return buildSingleRowResult(projection, sColumns, new Object[] {
                         voice_reg_state,
@@ -239,6 +245,8 @@ public class ServiceStateProvider extends ContentProvider {
                         cdma_eri_icon_mode,
                         is_emergency_only,
                         is_using_carrier_aggregation,
+                        operator_alpha_long_raw,
+                        operator_alpha_short_raw,
             });
         }
     }
