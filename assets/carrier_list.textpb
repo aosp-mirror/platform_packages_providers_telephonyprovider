@@ -4045,6 +4045,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "22299"
   }
+  carrier_attribute {
+    mccmnc_tuple: "22288"
+    gid1: "0000000099"
+  }
 }
 carrier_id {
   canonical_id: 1576
@@ -7632,6 +7636,10 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "7031"
   }
+  carrier_attribute {
+    mccmnc_tuple: "23222"
+    spn: "Plintron"
+  }
 }
 carrier_id {
   canonical_id: 2073
@@ -10166,6 +10174,49 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2417
+  carrier_name: "FIZZ"
+  carrier_attribute {
+    mccmnc_tuple: "302500"
+    gid1: "55"
+  }
+}
+carrier_id {
+  canonical_id: 2418
+  carrier_name: "TalkMobile"
+  carrier_attribute {
+    mccmnc_tuple: "23415"
+    spn: "Talkmobile"
+  }
+}
+carrier_id {
+  canonical_id: 2419
+  carrier_name: "EE Business"
+  carrier_attribute {
+    mccmnc_tuple: "23433"
+    gid1: "ec"
+    gid1: "ecff"
+  }
+}
+carrier_id {
+  canonical_id: 2420
+  carrier_name: "ION Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "21434"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "21405"
+    imsi_prefix_xpattern: "214050104"
+  }
+}
+carrier_id {
+  canonical_id: 2421
+  carrier_name: "Spectrum CBRS"
+  carrier_attribute {
+    mccmnc_tuple: "310014"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10244,4 +10295,4 @@ carrier_id {
     mccmnc_tuple: "44010"
   }
 }
-version: 8
+version: 16777225
