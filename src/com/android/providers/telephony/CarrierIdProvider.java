@@ -81,6 +81,8 @@ public class CarrierIdProvider extends ContentProvider {
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
     private static final String VERSION_KEY = "version";
+    // The version number is offset by SDK level, the MSB 8 bits is reserved for SDK.
+    private static final int VERSION_BITMASK = 0x00FFFFFF;
     private static final String OTA_UPDATED_PB_PATH = "misc/carrierid/" + ASSETS_PB_FILE;
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
 
@@ -568,6 +570,9 @@ public class CarrierIdProvider extends ContentProvider {
     }
 
     private void setAppliedVersion(int version) {
+        int relative_version = version & VERSION_BITMASK;
+        Log.d(TAG, "update version number: " +  Integer.toHexString(version)
+                + " relative version: " + relative_version);
         final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE,
                 Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
