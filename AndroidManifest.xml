@@ -123,7 +123,7 @@
         <provider android:name="RcsProvider"
                   android:authorities="rcs"
                   android:multiprocess="false"
-                  android:exported="true"
+                  android:exported="false"
                   android:singleUser="true" />
 
         <service
