@@ -80,6 +80,8 @@ public class ServiceStateProviderTest {
         ServiceStateTable.CDMA_ERI_ICON_MODE,
         ServiceStateTable.IS_EMERGENCY_ONLY,
         ServiceStateTable.IS_USING_CARRIER_AGGREGATION,
+        ServiceStateTable.OPERATOR_ALPHA_LONG_RAW,
+        ServiceStateTable.OPERATOR_ALPHA_SHORT_RAW,
     };
 
     @Before
@@ -180,6 +182,8 @@ public class ServiceStateProviderTest {
         final int cdmaEriIconMode = ss.getCdmaEriIconMode();
         final int isEmergencyOnly = (ss.isEmergencyOnly()) ? 1 : 0;
         final int isUsingCarrierAggregation = (ss.isUsingCarrierAggregation()) ? 1 : 0;
+        final String operatorAlphaLongRaw = ss.getOperatorAlphaLongRaw();
+        final String operatorAlphaShortRaw = ss.getOperatorAlphaShortRaw();
 
         assertEquals(voiceRegState, cursor.getInt(0));
         assertEquals(dataRegState, cursor.getInt(1));
@@ -201,6 +205,8 @@ public class ServiceStateProviderTest {
         assertEquals(cdmaEriIconMode, cursor.getInt(17));
         assertEquals(isEmergencyOnly, cursor.getInt(18));
         assertEquals(isUsingCarrierAggregation, cursor.getInt(19));
+        assertEquals(operatorAlphaLongRaw, cursor.getString(20));
+        assertEquals(operatorAlphaShortRaw, cursor.getString(21));
     }
 
     /**
