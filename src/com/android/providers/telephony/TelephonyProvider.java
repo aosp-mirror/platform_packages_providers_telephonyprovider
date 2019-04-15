@@ -145,7 +145,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 36 << 16;
+    private static final int DATABASE_VERSION = 37 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -362,6 +362,8 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
                 + SubscriptionManager.MCC_STRING + " TEXT,"
                 + SubscriptionManager.MNC_STRING + " TEXT,"
+                + SubscriptionManager.EHPLMNS + " TEXT,"
+                + SubscriptionManager.HPLMNS + " TEXT,"
                 + SubscriptionManager.SIM_PROVISIONING_STATUS
                 + " INTEGER DEFAULT " + SubscriptionManager.SIM_PROVISIONED + ","
                 + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
@@ -1266,6 +1268,23 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 36 << 16 | 6;
+            }
+
+            if (oldVersion < (37 << 16 | 6)) {
+                // Add new columns SubscriptionManager.EHPLMNS and SubscriptionManager.HPLMNS into
+                // the database.
+                try {
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.EHPLMNS + " TEXT;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.HPLMNS + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade for ehplmns. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 37 << 16 | 6;
             }
 
             if (DBG) {
