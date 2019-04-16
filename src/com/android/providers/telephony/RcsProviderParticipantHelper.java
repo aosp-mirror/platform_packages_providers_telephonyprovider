@@ -267,38 +267,6 @@ class RcsProviderParticipantHelper {
         return rowId;
     }
 
-    long insertParticipantIntoP2pThread(Uri uri) {
-        String threadId = getThreadIdFromUri(uri);
-        String participantId = getParticipantIdFromUri(uri);
-        SQLiteDatabase db = mSqLiteOpenHelper.getWritableDatabase();
-
-        Cursor cursor = db.query(RCS_PARTICIPANT_THREAD_JUNCTION_TABLE, null,
-                RCS_THREAD_ID_COLUMN + "=? AND " + RCS_PARTICIPANT_ID_COLUMN + "=?",
-                new String[]{threadId, participantId}, null, null, null);
-
-        int existingEntryCount = 0;
-        if (cursor != null) {
-            existingEntryCount = cursor.getCount();
-            cursor.close();
-        }
-
-        // if this 1 to 1 thread already has a participant, fail the transaction.
-        if (existingEntryCount > 0) {
-            return TRANSACTION_FAILED;
-        }
-
-        ContentValues contentValues = new ContentValues(2);
-        contentValues.put(RCS_THREAD_ID_COLUMN, threadId);
-        contentValues.put(RCS_PARTICIPANT_ID_COLUMN, participantId);
-        long rowId = db.insert(RCS_PARTICIPANT_THREAD_JUNCTION_TABLE, RCS_PARTICIPANT_ID_COLUMN,
-                contentValues);
-
-        if (rowId == INSERTION_FAILED) {
-            return TRANSACTION_FAILED;
-        }
-        return Long.parseLong(participantId);
-    }
-
     /**
      * Inserts a participant into group thread. This function returns the participant ID instead of
      * the row id in the junction table

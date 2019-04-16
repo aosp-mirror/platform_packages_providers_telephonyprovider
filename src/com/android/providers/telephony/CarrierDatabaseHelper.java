@@ -40,6 +40,7 @@ public class CarrierDatabaseHelper extends SQLiteOpenHelper {
      */
     public CarrierDatabaseHelper(Context context) {
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
+        setWriteAheadLoggingEnabled(false);
     }
 
     public static final String KEY_TYPE = "key_type";
