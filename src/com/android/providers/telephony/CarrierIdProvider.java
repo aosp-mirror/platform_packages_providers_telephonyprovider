@@ -30,7 +30,9 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
+import android.os.SystemProperties;
 import android.provider.Telephony.CarrierId;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
@@ -79,6 +81,8 @@ public class CarrierIdProvider extends ContentProvider {
 
     private static final String ASSETS_PB_FILE = "carrier_list.pb";
     private static final String VERSION_KEY = "version";
+    // The version number is offset by SDK level, the MSB 8 bits is reserved for SDK.
+    private static final int VERSION_BITMASK = 0x00FFFFFF;
     private static final String OTA_UPDATED_PB_PATH = "misc/carrierid/" + ASSETS_PB_FILE;
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
 
@@ -383,6 +387,11 @@ public class CarrierIdProvider extends ContentProvider {
                     cv = new ContentValues();
                     cv.put(CarrierId.CARRIER_ID, id.canonicalId);
                     cv.put(CarrierId.CARRIER_NAME, id.carrierName);
+                    // 0 is the default proto value. if parentCanonicalId is unset, apply default
+                    // unknown carrier id -1.
+                    if (id.parentCanonicalId > 0) {
+                        cv.put(CarrierId.PARENT_CARRIER_ID, id.parentCanonicalId);
+                    }
                     cvs = new ArrayList<>();
                     convertCarrierAttrToContentValues(cv, cvs, attr, 0);
                     for (ContentValues contentVal : cvs) {
@@ -542,7 +551,10 @@ public class CarrierIdProvider extends ContentProvider {
             carrierList = assets;
             version = assets.version;
         }
-        if (ota != null && ota.version > version) {
+        // bypass version check for ota carrier id test
+        if (ota != null && ((Build.IS_DEBUGGABLE && SystemProperties.getBoolean(
+                "persist.telephony.test.carrierid.ota", false))
+                || (ota.version > version))) {
             carrierList = ota;
             version = ota.version;
         }
@@ -557,6 +569,9 @@ public class CarrierIdProvider extends ContentProvider {
     }
 
     private void setAppliedVersion(int version) {
+        int relative_version = version & VERSION_BITMASK;
+        Log.d(TAG, "update version number: " +  Integer.toHexString(version)
+                + " relative version: " + relative_version);
         final SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE,
                 Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
@@ -597,7 +612,7 @@ public class CarrierIdProvider extends ContentProvider {
         if (!SubscriptionController.getInstance().isActiveSubId(subId)) {
             // Remove absent subId from the currentSubscriptionMap.
             final List activeSubscriptions = Arrays.asList(SubscriptionController.getInstance()
-                    .getActiveSubIdList());
+                    .getActiveSubIdList(false));
             int count = 0;
             for (int subscription : mCurrentSubscriptionMap.keySet()) {
                 if (!activeSubscriptions.contains(subscription)) {

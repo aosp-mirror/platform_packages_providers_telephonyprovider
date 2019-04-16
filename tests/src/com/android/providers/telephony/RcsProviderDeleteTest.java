@@ -15,7 +15,6 @@
  */
 package com.android.providers.telephony;
 
-import static android.provider.Telephony.RcsColumns.Rcs1To1ThreadColumns.FALLBACK_THREAD_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.GROUP_NAME_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsGroupThreadColumns.OWNER_PARTICIPANT_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.CANONICAL_ADDRESS_ID_COLUMN;
@@ -24,6 +23,7 @@ import static android.provider.Telephony.RcsColumns.RcsParticipantEventColumns.N
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.NEW_NAME_COLUMN;
 
 import static com.android.providers.telephony.RcsProvider.RCS_MESSAGE_TABLE;
+import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
 
 import static com.google.common.truth.Truth.assertThat;
 
@@ -66,12 +66,7 @@ public class RcsProviderDeleteTest {
         assertThat(mContentResolver.insert(Uri.parse("content://rcs/participant"),
                 participantValues)).isEqualTo(Uri.parse("content://rcs/participant/1"));
 
-        // insert one 1 to 1 thread
-        ContentValues p2pContentValues = new ContentValues();
-        Uri p2pThreadUri = Uri.parse("content://rcs/p2p_thread");
-        p2pContentValues.put(FALLBACK_THREAD_ID_COLUMN, 1);
-        assertThat(mContentResolver.insert(p2pThreadUri, p2pContentValues)).isEqualTo(
-                Uri.parse("content://rcs/p2p_thread/1"));
+        setup1To1Thread(mContentResolver);
 
         // insert one group thread
         ContentValues groupContentValues = new ContentValues();
@@ -80,11 +75,6 @@ public class RcsProviderDeleteTest {
         Uri groupThreadUri = Uri.parse("content://rcs/group_thread");
         assertThat(mContentResolver.insert(groupThreadUri, groupContentValues)).isEqualTo(
                 Uri.parse("content://rcs/group_thread/2"));
-
-        // add the participant into both threads
-        Uri addParticipantTo1To1Thread = Uri.parse("content://rcs/p2p_thread/1/participant/1");
-        assertThat(mContentResolver.insert(addParticipantTo1To1Thread, null)).isEqualTo(
-                addParticipantTo1To1Thread);
 
         Uri addParticipantToGroupThread = Uri.parse("content://rcs/group_thread/2/participant/1");
         assertThat(mContentResolver.insert(addParticipantToGroupThread, null)).isEqualTo(

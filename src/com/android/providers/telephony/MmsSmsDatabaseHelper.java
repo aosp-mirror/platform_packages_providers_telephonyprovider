@@ -16,6 +16,8 @@
 
 package com.android.providers.telephony;
 
+import static android.provider.Telephony.RcsColumns.IS_RCS_TABLE_SCHEMA_CODE_COMPLETE;
+
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -261,11 +263,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
     private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
 
-    // TODO(sahinc): Turn this to true once the schema finalizes, so that people can update their
-    // messaging databases. NOTE: move the switch/case update to the latest version of the database
-    // before turning this flag to true.
-    private static final boolean IS_RCS_TABLE_SCHEMA_CODE_COMPLETE = false;
-
     /**
      * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
      * print a Slog.wtf so database corruption can be caught earlier.
@@ -300,6 +297,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         } catch (IllegalArgumentException e) {
             // ignore
         }
+        setWriteAheadLoggingEnabled(false);
     }
 
     private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {

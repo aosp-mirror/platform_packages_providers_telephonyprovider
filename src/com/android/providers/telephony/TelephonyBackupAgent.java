@@ -16,11 +16,6 @@
 
 package com.android.providers.telephony;
 
-import com.google.android.mms.ContentType;
-import com.google.android.mms.pdu.CharacterSets;
-
-import com.android.internal.annotations.VisibleForTesting;
-
 import android.annotation.TargetApi;
 import android.app.AlarmManager;
 import android.app.IntentService;
@@ -52,6 +47,11 @@ import android.util.JsonReader;
 import android.util.JsonWriter;
 import android.util.Log;
 import android.util.SparseArray;
+
+import com.android.internal.annotations.VisibleForTesting;
+
+import com.google.android.mms.ContentType;
+import com.google.android.mms.pdu.CharacterSets;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -319,7 +319,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         final SubscriptionManager subscriptionManager = SubscriptionManager.from(this);
         if (subscriptionManager != null) {
             final List<SubscriptionInfo> subInfo =
-                    subscriptionManager.getActiveSubscriptionInfoList();
+                    subscriptionManager.getActiveSubscriptionInfoList(/* userVisibleonly */false);
             if (subInfo != null) {
                 for (SubscriptionInfo sub : subInfo) {
                     final String phoneNumber = getNormalizedNumber(sub);
