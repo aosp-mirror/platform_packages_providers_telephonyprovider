@@ -495,7 +495,7 @@ public class RcsProviderQueryTest {
     @Ignore // TODO: fix and un-ignore
     public void testQueryMessagesWithThreadFilter() {
         RcsMessageQueryParams queryParameters =
-                new RcsMessageQueryParams.Builder().setThread(new RcsGroupThread(3))
+                new RcsMessageQueryParams.Builder().setThread(new RcsGroupThread(null, 3))
                         .build();
         Bundle bundle = new Bundle();
         bundle.putParcelable(MESSAGE_QUERY_PARAMETERS_KEY, queryParameters);
