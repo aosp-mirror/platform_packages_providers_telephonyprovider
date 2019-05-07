@@ -16,6 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label" product="tablet" msgid="9194799012395299737">"ম\'বাইল নেটৱৰ্ক কনফিগাৰেশ্বন"</string>
+    <string name="app_label" product="tablet" msgid="9194799012395299737">"ম’বাইল নেটৱৰ্ক কনফিগাৰেশ্বন"</string>
     <string name="app_label" product="default" msgid="8338087656149558019">"ফ\'ন আৰু বাৰ্তাৰ সঞ্চয়াগাৰ"</string>
 </resources>
