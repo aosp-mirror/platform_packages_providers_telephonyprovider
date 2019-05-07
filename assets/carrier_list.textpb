@@ -1303,9 +1303,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 866
-  carrier_name: "Kencell Communications Ltd."
+  carrier_name: "Airtel Kenya"
   carrier_attribute {
     mccmnc_tuple: "63903"
+    mccmnc_tuple: "63904"
   }
 }
 carrier_id {
@@ -1480,7 +1481,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 945
-  carrier_name: "Celtel"
+  carrier_name: "Airtel Niger"
   carrier_attribute {
     mccmnc_tuple: "61402"
   }
@@ -1830,7 +1831,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1093
-  carrier_name: "Celtel"
+  carrier_name: "Airtel Chad"
   carrier_attribute {
     mccmnc_tuple: "62201"
   }
@@ -2314,7 +2315,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1319
-  carrier_name: "Celtel Zambia Ltd."
+  carrier_name: "Airtel Zambia"
   carrier_attribute {
     mccmnc_tuple: "64501"
   }
@@ -2940,7 +2941,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1411
-  carrier_name: "Celtel"
+  carrier_name: "Airtel Congo"
   carrier_attribute {
     mccmnc_tuple: "62901"
   }
@@ -3497,7 +3498,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1490
-  carrier_name: "Celtel Gabon S.A."
+  carrier_name: "Airtel Gabon"
   carrier_attribute {
     mccmnc_tuple: "62803"
   }
@@ -4244,7 +4245,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1605
-  carrier_name: "MADACOM"
+  carrier_name: "Airtel Madagascar"
   carrier_attribute {
     mccmnc_tuple: "64601"
   }
@@ -4393,7 +4394,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1626
-  carrier_name: "Celtel ltd."
+  carrier_name: "Airtel Malawi"
   carrier_attribute {
     mccmnc_tuple: "65010"
   }
@@ -4475,7 +4476,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1638
-  carrier_name: "Econet Wireless Nigeria Ltd."
+  carrier_name: "Airtel Nigeria"
   carrier_attribute {
     mccmnc_tuple: "62120"
   }
@@ -4743,7 +4744,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1677
-  carrier_name: "Outremer Telecom"
+  carrier_name: "Telco OI"
   carrier_attribute {
     mccmnc_tuple: "64702"
   }
@@ -4813,7 +4814,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1687
-  carrier_name: "Telecom (Seychelles) Ltd."
+  carrier_name: "Airtel Seychelles"
   carrier_attribute {
     mccmnc_tuple: "63310"
   }
@@ -5232,7 +5233,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1745
-  carrier_name: "Celtel (T) Ltd."
+  carrier_name: "Airtel Tanzania"
   carrier_attribute {
     mccmnc_tuple: "64005"
   }
@@ -5288,9 +5289,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1753
-  carrier_name: "Celtel Uganda"
+  carrier_name: "Airtel Uganda"
   carrier_attribute {
     mccmnc_tuple: "64101"
+    mccmnc_tuple: "64122"
   }
 }
 carrier_id {
@@ -5312,13 +5314,6 @@ carrier_id {
   carrier_name: "House of Integrated Technology and Systems Uganda Ltd"
   carrier_attribute {
     mccmnc_tuple: "64114"
-  }
-}
-carrier_id {
-  canonical_id: 1757
-  carrier_name: "Warid Telecom Uganda Ltd."
-  carrier_attribute {
-    mccmnc_tuple: "64122"
   }
 }
 carrier_id {
@@ -5584,10 +5579,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1802
-  carrier_name: "New Cell Inc. dba Cellcom"
+  carrier_name: "cellcom"
   carrier_attribute {
     mccmnc_tuple: "310600"
-    mccmnc_tuple: "31060"
+    spn: "CELLCOM"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310600"
+    gid1: "BA"
   }
 }
 carrier_id {
@@ -5817,6 +5816,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20404"
     spn: "C Spire"
+    spn: "C Spire"
   }
 }
 carrier_id {
@@ -7344,6 +7344,10 @@ carrier_id {
     gid1: "DDFF"
     gid1: "DEFF"
   }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA01270000000000"
+  }
 }
 carrier_id {
   canonical_id: 2023
@@ -7636,10 +7640,6 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "7031"
   }
-  carrier_attribute {
-    mccmnc_tuple: "23222"
-    spn: "Plintron"
-  }
 }
 carrier_id {
   canonical_id: 2073
@@ -7894,6 +7894,9 @@ carrier_id {
     mccmnc_tuple: "20601"
     spn: "IIJ"
   }
+  carrier_attribute {
+    mccmnc_tuple: "44003"
+  }
 }
 carrier_id {
   canonical_id: 2107
@@ -7921,6 +7924,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44051"
     preferred_apn: "a.rmobile.jp"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "44011"
   }
 }
 carrier_id {
@@ -8025,6 +8031,10 @@ carrier_id {
   carrier_name: "FirstNet"
   carrier_attribute {
     mccmnc_tuple: "313100"
+    mccmnc_tuple: "313110"
+    mccmnc_tuple: "313120"
+    mccmnc_tuple: "313130"
+    mccmnc_tuple: "313140"
   }
 }
 carrier_id {
@@ -8718,15 +8728,9 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2203
-  carrier_name: "Tigo"
+  carrier_name: "Airtel Rwanda"
   carrier_attribute {
     mccmnc_tuple: "63513"
-  }
-}
-carrier_id {
-  canonical_id: 2204
-  carrier_name: "Airtel"
-  carrier_attribute {
     mccmnc_tuple: "63514"
   }
 }
@@ -9859,8 +9863,8 @@ carrier_id {
   carrier_name: "Telefonica"
   carrier_attribute {
     mccmnc_tuple: "26203"
-    gid1: "010301"
-    gid1: "010901"
+    gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -9868,8 +9872,8 @@ carrier_id {
   carrier_name: "o2"
   carrier_attribute {
     mccmnc_tuple: "26207"
-    gid1: "010301"
-    gid1: "010901"
+    gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -10217,6 +10221,45 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2422
+  carrier_name: "MTX"
+  carrier_attribute {
+    mccmnc_tuple: "27002"
+  }
+}
+carrier_id {
+  canonical_id: 2423
+  carrier_name: "Plintron IT"
+  carrier_attribute {
+    mccmnc_tuple: "22254"
+    spn: "Plintron"
+  }
+}
+carrier_id {
+  canonical_id: 2424
+  carrier_name: "Plintron AT"
+  carrier_attribute {
+    mccmnc_tuple: "23222"
+    spn: "Plintron"
+  }
+}
+carrier_id {
+  canonical_id: 2425
+  carrier_name: "iD Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "23420"
+    gid1: "0305"
+  }
+}
+carrier_id {
+  canonical_id: 2426
+  carrier_name: "comcast CBRS"
+  carrier_attribute {
+    mccmnc_tuple: "54314"
+    mccmnc_tuple: "543214"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10295,4 +10338,140 @@ carrier_id {
     mccmnc_tuple: "44010"
   }
 }
-version: 16777225
+carrier_id {
+  canonical_id: 10008
+  carrier_name: "Tracfone-VZW"
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA01270000000000"
+  }
+  parent_canonical_id: 2022
+}
+carrier_id {
+  canonical_id: 10009
+  carrier_name: "C Spire-US"
+  carrier_attribute {
+    mccmnc_tuple: "311230"
+    mccmnc_tuple: "310023"
+  }
+  parent_canonical_id: 1836
+}
+carrier_id {
+  canonical_id: 10010
+  carrier_name: "C Spire-NL"
+  carrier_attribute {
+    mccmnc_tuple: "20404"
+    spn: "C Spire"
+    spn: "C Spire"
+  }
+  parent_canonical_id: 1836
+}
+carrier_id {
+  canonical_id: 10011
+  carrier_name: "Red Pocket-TMO"
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4201"
+  }
+  parent_canonical_id: 2026
+}
+carrier_id {
+  canonical_id: 10012
+  carrier_name: "Red Pocket-ATT"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "4201"
+  }
+  parent_canonical_id: 2026
+}
+carrier_id {
+  canonical_id: 10013
+  carrier_name: "FirstNet Pacific"
+  carrier_attribute {
+    mccmnc_tuple: "313110"
+    mccmnc_tuple: "313120"
+  }
+  parent_canonical_id: 2119
+}
+carrier_id {
+  canonical_id: 10014
+  carrier_name: "Google Fi-TMO"
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    imsi_prefix_xpattern: "31026097"
+  }
+  parent_canonical_id: 1989
+}
+carrier_id {
+  canonical_id: 10015
+  carrier_name: "Google Fi-Sprint"
+  carrier_attribute {
+    mccmnc_tuple: "310120"
+    spn: "Fi Network"
+    spn: "nova"
+    spn: "Google Fi"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310120"
+    gid1: "A00184"
+    gid1: "A00184FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310120"
+    privilege_access_rule: "4C36AF4A5BDAD97C1F3D8B283416D244496C2AC5EAFE8226079EF6F676FD1859"
+  }
+  parent_canonical_id: 1989
+}
+carrier_id {
+  canonical_id: 10016
+  carrier_name: "Google Fi-USCellular"
+  carrier_attribute {
+    mccmnc_tuple: "311580"
+    imsi_prefix_xpattern: "3115801"
+  }
+  parent_canonical_id: 1989
+}
+carrier_id {
+  canonical_id: 10017
+  carrier_name: "Google Fi-3UK"
+  carrier_attribute {
+    mccmnc_tuple: "23420"
+    gid1: "0306"
+  }
+  parent_canonical_id: 1989
+}
+carrier_id {
+  canonical_id: 10018
+  carrier_name: "Google Fi-3HK"
+  carrier_attribute {
+    mccmnc_tuple: "45403"
+    gid1: "0206"
+  }
+  parent_canonical_id: 1989
+}
+carrier_id {
+  canonical_id: 10019
+  carrier_name: "Google Fi-3AT"
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "0306"
+  }
+  parent_canonical_id: 1989
+}
+carrier_id {
+  canonical_id: 10020
+  carrier_name: "Comcast LAB Network CBRS"
+  carrier_attribute {
+    mccmnc_tuple: "54314"
+  }
+  parent_canonical_id: 2426
+}
+carrier_id {
+  canonical_id: 10021
+  carrier_name: "Comcast Field Network CBRS"
+  carrier_attribute {
+    mccmnc_tuple: "543214"
+  }
+  parent_canonical_id: 2426
+}
+version: 16777226
