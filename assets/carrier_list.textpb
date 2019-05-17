@@ -5582,11 +5582,6 @@ carrier_id {
   carrier_name: "cellcom"
   carrier_attribute {
     mccmnc_tuple: "310600"
-    spn: "CELLCOM"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "310600"
-    gid1: "BA"
   }
 }
 carrier_id {
@@ -10215,9 +10210,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2421
-  carrier_name: "Spectrum CBRS"
+  carrier_name: "Testing US"
   carrier_attribute {
     mccmnc_tuple: "310014"
+    mccmnc_tuple: "311400"
   }
 }
 carrier_id {
@@ -10252,11 +10248,11 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2426
-  carrier_name: "comcast CBRS"
+  canonical_id: 2427
+  carrier_name: "京东通信"
   carrier_attribute {
-    mccmnc_tuple: "54314"
-    mccmnc_tuple: "543214"
+    mccmnc_tuple: "46000"
+    spn: "京东通信"
   }
 }
 carrier_id {
@@ -10458,20 +10454,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-carrier_id {
-  canonical_id: 10020
-  carrier_name: "Comcast LAB Network CBRS"
-  carrier_attribute {
-    mccmnc_tuple: "54314"
-  }
-  parent_canonical_id: 2426
-}
-carrier_id {
-  canonical_id: 10021
-  carrier_name: "Comcast Field Network CBRS"
-  carrier_attribute {
-    mccmnc_tuple: "543214"
-  }
-  parent_canonical_id: 2426
-}
-version: 16777226
+version: 16777227
