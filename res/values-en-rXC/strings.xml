@@ -16,6 +16,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="app_label" product="tablet" msgid="9194799012395299737">"‎‏‎‎‎‎‎‏‎‏‏‏‎‎‎‎‎‏‎‎‏‎‎‎‎‎‏‏‏‏‏‏‏‏‏‏‏‏‏‏‎‎‏‏‎‏‎‎‏‏‏‏‏‎‎‏‏‏‏‏‏‎‎‎‏‎‏‎‎‏‎‏‏‏‎‏‏‏‏‎‎‏‏‎‎‏‏‏‎‎‏‏‎‎‏‎Mobile Network Configuration‎‏‎‎‏‎"</string>
-    <string name="app_label" product="default" msgid="8338087656149558019">"‎‏‎‎‎‎‎‏‎‏‏‏‎‎‎‎‎‏‎‎‏‎‎‎‎‎‏‏‏‏‏‏‏‏‏‎‎‏‏‏‎‏‏‎‏‏‎‏‏‎‏‎‏‏‎‏‎‎‎‏‎‏‏‏‏‎‏‎‎‏‎‏‏‎‏‏‏‎‏‎‎‏‎‎‎‏‏‎‎‎‎‎‎‏‏‎Phone and Messaging Storage‎‏‎‎‏‎"</string>
+    <string name="app_label" product="tablet" msgid="9194799012395299737">"‎‏‎‎‎‎‎‏‎‏‏‏‎‎‎‎‎‎‏‎‎‏‎‎‎‎‎‏‏‏‏‏‏‏‏‏‏‏‏‏‏‎‎‏‏‎‏‎‎‏‏‏‏‏‎‎‏‏‏‏‏‏‎‎‎‏‎‏‎‎‏‎‏‏‏‎‏‏‏‏‎‎‏‏‎‎‏‏‏‎‎‏‏‎‎‏‎Mobile Network Configuration‎‏‎‎‏‎"</string>
+    <string name="app_label" product="default" msgid="8338087656149558019">"‎‏‎‎‎‎‎‏‎‏‏‏‎‎‎‎‎‎‏‎‎‏‎‎‎‎‎‏‏‏‏‏‏‏‏‏‎‎‏‏‏‎‏‏‎‏‏‎‏‏‎‏‎‏‏‎‏‎‎‎‏‎‏‏‏‏‎‏‎‎‏‎‏‏‎‏‏‏‎‏‎‎‏‎‎‎‏‏‎‎‎‎‎‎‏‏‎Phone and Messaging Storage‎‏‎‎‏‎"</string>
 </resources>
