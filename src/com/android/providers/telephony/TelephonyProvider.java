@@ -145,7 +145,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 36 << 16;
+    private static final int DATABASE_VERSION = 39 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -362,6 +362,8 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
                 + SubscriptionManager.MCC_STRING + " TEXT,"
                 + SubscriptionManager.MNC_STRING + " TEXT,"
+                + SubscriptionManager.EHPLMNS + " TEXT,"
+                + SubscriptionManager.HPLMNS + " TEXT,"
                 + SubscriptionManager.SIM_PROVISIONING_STATUS
                 + " INTEGER DEFAULT " + SubscriptionManager.SIM_PROVISIONED + ","
                 + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
@@ -393,8 +395,10 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.CARRIER_ID + " INTEGER DEFAULT -1,"
                 + SubscriptionManager.PROFILE_CLASS + " INTEGER DEFAULT "
                 + SubscriptionManager.PROFILE_CLASS_DEFAULT + ","
-                + SubscriptionManager.SUBSCRIPTION_TYPE
-                + " INTEGER DEFAULT " + SubscriptionManager.SUBSCRIPTION_TYPE_LOCAL_SIM
+                + SubscriptionManager.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
+                + SubscriptionManager.SUBSCRIPTION_TYPE_LOCAL_SIM + ","
+                + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0,"
+                + SubscriptionManager.GROUP_OWNER + " TEXT"
                 + ");";
     }
 
@@ -1266,6 +1270,51 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 36 << 16 | 6;
+            }
+
+            if (oldVersion < (37 << 16 | 6)) {
+                // Add new columns SubscriptionManager.EHPLMNS and SubscriptionManager.HPLMNS into
+                // the database.
+                try {
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.EHPLMNS + " TEXT;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
+                            " ADD COLUMN " + SubscriptionManager.HPLMNS + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade for ehplmns. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 37 << 16 | 6;
+            }
+
+            if (oldVersion < (38 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 38 << 16 | 6;
+            }
+
+            if (oldVersion < (39 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.GROUP_OWNER + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 39 << 16 | 6;
             }
 
             if (DBG) {
