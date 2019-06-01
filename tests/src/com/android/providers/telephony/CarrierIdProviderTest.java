@@ -148,6 +148,9 @@ public class CarrierIdProviderTest extends TestCase {
         mContext = new MockContextWithProvider(mCarrierIdProviderTestable);
         mContentResolver = mContext.getContentResolver();
         mContentObserver = new FakeContentObserver(null);
+
+        doReturn("").when(mSubController).getDataEnabledOverrideRules(anyInt());
+
         Field field = SubscriptionController.class.getDeclaredField("sInstance");
         field.setAccessible(true);
         field.set(null, mSubController);
