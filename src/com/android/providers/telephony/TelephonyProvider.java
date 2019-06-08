@@ -148,7 +148,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 40 << 16;
+    private static final int DATABASE_VERSION = 41 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -402,7 +402,8 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.SUBSCRIPTION_TYPE_LOCAL_SIM + ","
                 + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0,"
                 + SubscriptionManager.GROUP_OWNER + " TEXT,"
-                + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT"
+                + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
+                + SubscriptionManager.IMSI + " TEXT"
                 + ");";
     }
 
@@ -1334,6 +1335,21 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 40 << 16 | 6;
             }
+
+            if (oldVersion < (41 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.IMSI + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 41 << 16 | 6;
+            }
+
 
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3013,7 +3029,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private void checkQueryPermission(int match, String[] projectionIn, String selection) {
-        if (match != URL_SIMINFO) {
+        if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
             // Determine if we need to do a check for fields in the selection
             boolean selectionContainsSensitiveFields;
             try {
@@ -3051,6 +3067,9 @@ public class TelephonyProvider extends ContentProvider
                 // null returns all columns, so need permission check
                 checkPermission();
             }
+        } else {
+            // if querying siminfo, caller should have read privilege permissions
+            checkPhonePrivilegePermission();
         }
     }
 
@@ -3835,6 +3854,15 @@ public class TelephonyProvider extends ContentProvider
             }
         }
         throw new SecurityException("No permission to write APN settings");
+    }
+
+    private void checkPhonePrivilegePermission() {
+        int status = getContext().checkCallingOrSelfPermission(
+                "android.permission.READ_PRIVILEGED_PHONE_STATE");
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No phone privilege permission");
     }
 
     private DatabaseHelper mOpenHelper;
