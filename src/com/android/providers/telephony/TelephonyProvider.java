@@ -2555,25 +2555,6 @@ public class TelephonyProvider extends ContentProvider
 
         if (isNewBuild) {
             if (!apnSourceServiceExists(getContext())) {
-                // Call getReadableDatabase() to make sure onUpgrade is called
-                if (VDBG) log("onCreate: calling getReadableDatabase to trigger onUpgrade");
-                SQLiteDatabase db = getReadableDatabase();
-
-                // Get rid of old preferred apn shared preferences
-                SubscriptionManager sm = SubscriptionManager.from(getContext());
-                if (sm != null) {
-                    List<SubscriptionInfo> subInfoList = sm.getAllSubscriptionInfoList();
-                    for (SubscriptionInfo subInfo : subInfoList) {
-                        SharedPreferences spPrefFile = getContext().getSharedPreferences(
-                                PREF_FILE_APN + subInfo.getSubscriptionId(), Context.MODE_PRIVATE);
-                        if (spPrefFile != null) {
-                            SharedPreferences.Editor editor = spPrefFile.edit();
-                            editor.clear();
-                            editor.apply();
-                        }
-                    }
-                }
-
                 // Update APN DB
                 updateApnDb();
             }
@@ -2687,26 +2668,6 @@ public class TelephonyProvider extends ContentProvider
     private void deletePreferredApnId() {
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_APN,
                 Context.MODE_PRIVATE);
-
-        // Before deleting, save actual preferred apns (not the ids) in a separate SP.
-        // NOTE: This code to call setPreferredApn() can be removed since the function is now called
-        // from setPreferredApnId(). However older builds (pre oc-mr1) do not have that change, so
-        // when devices upgrade from those builds and this function is called, this code is needed
-        // otherwise the preferred APN will be lost.
-        Map<String, ?> allPrefApnId = sp.getAll();
-        for (String key : allPrefApnId.keySet()) {
-            // extract subId from key by removing COLUMN_APN_ID
-            try {
-                int subId = Integer.parseInt(key.replace(COLUMN_APN_ID, ""));
-                long apnId = getPreferredApnId(subId, false);
-                if (apnId != INVALID_APN_ID) {
-                    setPreferredApn(apnId, subId);
-                }
-            } catch (Exception e) {
-                loge("Skipping over key " + key + " due to exception " + e);
-            }
-        }
-
         SharedPreferences.Editor editor = sp.edit();
         editor.clear();
         editor.apply();
