@@ -632,7 +632,12 @@ public class SmsProvider extends ContentProvider {
             db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
         }
         if (rowID > 0) {
-            Uri uri = Uri.withAppendedPath(url, String.valueOf(rowID));
+            Uri uri = null;
+            if (table == TABLE_SMS) {
+                uri = Uri.withAppendedPath(Sms.CONTENT_URI, String.valueOf(rowID));
+            } else {
+                uri = Uri.withAppendedPath(url, String.valueOf(rowID));
+            }
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "insert " + uri + " succeeded");
             }
