@@ -1397,7 +1397,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 898
-  carrier_name: "LMT/Amigo"
+  carrier_name: "LMT"
   carrier_attribute {
     mccmnc_tuple: "24701"
   }
@@ -4202,7 +4202,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1599
-  carrier_name: "MTN Network Ltd."
+  carrier_name: "Dialog Sri Lanka"
   carrier_attribute {
     mccmnc_tuple: "41302"
   }
@@ -7025,7 +7025,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1985
-  carrier_name: "Inwi"
+  carrier_name: "inwi"
   carrier_attribute {
     mccmnc_tuple: "60402"
   }
@@ -7082,12 +7082,21 @@ carrier_id {
     privilege_access_rule: "4C36AF4A5BDAD97C1F3D8B283416D244496C2AC5EAFE8226079EF6F676FD1859"
   }
   carrier_attribute {
+    mccmnc_tuple: "312530"
+    gid1: "A00184"
+    gid1: "A00184FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+  }
+  carrier_attribute {
     mccmnc_tuple: "310260"
     imsi_prefix_xpattern: "31026097"
   }
   carrier_attribute {
     mccmnc_tuple: "311580"
     imsi_prefix_xpattern: "3115801"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "312580"
+    gid1: "0001"
   }
 }
 carrier_id {
@@ -7424,7 +7433,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2032
-  carrier_name: "XFINITY Mobile"
+  carrier_name: "Xfinity Mobile"
   carrier_attribute {
     mccmnc_tuple: "311480"
     gid1: "BA01450000000000"
@@ -7919,9 +7928,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44051"
     preferred_apn: "a.rmobile.jp"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "44011"
   }
 }
 carrier_id {
@@ -10256,6 +10262,21 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2428
+  carrier_name: "Telin"
+  carrier_attribute {
+    mccmnc_tuple: "45400"
+    imsi_prefix_xpattern: "454006081"
+  }
+}
+carrier_id {
+  canonical_id: 2429
+  carrier_name: "Rakuten Mobile(MNO)"
+  carrier_attribute {
+    mccmnc_tuple: "44011"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10454,4 +10475,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 16777227
+version: 16777228
