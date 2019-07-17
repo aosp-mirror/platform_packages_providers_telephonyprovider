@@ -138,7 +138,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
@@ -2819,7 +2818,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkQueryPermission(match, projectionIn, selection);
+        checkQueryPermission(match, projectionIn, selection, sort);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -3028,19 +3027,21 @@ public class TelephonyProvider extends ContentProvider
         return ret;
     }
 
-    private void checkQueryPermission(int match, String[] projectionIn, String selection) {
+    private void checkQueryPermission(int match, String[] projectionIn, String selection,
+            String sort) {
         if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
             // Determine if we need to do a check for fields in the selection
-            boolean selectionContainsSensitiveFields;
+            boolean selectionOrSortContainsSensitiveFields;
             try {
-                selectionContainsSensitiveFields = containsSensitiveFields(selection);
+                selectionOrSortContainsSensitiveFields = containsSensitiveFields(selection);
+                selectionOrSortContainsSensitiveFields |= containsSensitiveFields(sort);
             } catch (IllegalArgumentException e) {
                 // Malformed sql, check permission anyway and return.
                 checkPermission();
                 return;
             }
 
-            if (selectionContainsSensitiveFields) {
+            if (selectionOrSortContainsSensitiveFields) {
                 try {
                     checkPermission();
                 } catch (SecurityException e) {
