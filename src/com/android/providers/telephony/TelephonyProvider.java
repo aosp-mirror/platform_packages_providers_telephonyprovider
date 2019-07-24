@@ -2060,15 +2060,16 @@ public class TelephonyProvider extends ContentProvider
 
         if (match != URL_SIMINFO) {
             // Determine if we need to do a check for fields in the selection
-            boolean selectionContainsSensitiveFields;
+            boolean selectionOrSortContainsSensitiveFields;
             try {
-                selectionContainsSensitiveFields = containsSensitiveFields(selection);
+                selectionOrSortContainsSensitiveFields = containsSensitiveFields(selection);
+                selectionOrSortContainsSensitiveFields |= containsSensitiveFields(sort);
             } catch (Exception e) {
                 // Malformed sql, check permission anyway.
-                selectionContainsSensitiveFields = true;
+                selectionOrSortContainsSensitiveFields = true;
             }
 
-            if (selectionContainsSensitiveFields) {
+            if (selectionOrSortContainsSensitiveFields) {
                 try {
                     checkPermission();
                 } catch (SecurityException e) {
