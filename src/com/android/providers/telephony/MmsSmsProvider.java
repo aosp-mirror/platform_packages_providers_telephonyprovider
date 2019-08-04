@@ -305,6 +305,7 @@ public class MmsSmsProvider extends ContentProvider {
     private SQLiteOpenHelper mOpenHelper;
 
     private boolean mUseStrictPhoneNumberComparation;
+    private int mMinMatch;
 
     private static final String METHOD_IS_RESTORING = "is_restoring";
     private static final String IS_RESTORING_KEY = "restoring";
@@ -316,6 +317,9 @@ public class MmsSmsProvider extends ContentProvider {
         mUseStrictPhoneNumberComparation =
             getContext().getResources().getBoolean(
                     com.android.internal.R.bool.config_use_strict_phone_number_comparation);
+        mMinMatch =
+            getContext().getResources().getInteger(
+                    com.android.internal.R.integer.config_phonenumber_compare_min_match);
         TelephonyBackupAgent.DeferredSmsMmsRestoreService.startIfFilesExist(getContext());
         return true;
     }
@@ -542,7 +546,7 @@ public class MmsSmsProvider extends ContentProvider {
             selectionArgs = new String[] { refinedAddress };
         } else {
             selection += " OR PHONE_NUMBERS_EQUAL(address, ?, " +
-                        (mUseStrictPhoneNumberComparation ? 1 : 0) + ")";
+                        (mUseStrictPhoneNumberComparation ? "1)" : "0, " + mMinMatch + ")");
             selectionArgs = new String[] { refinedAddress, refinedAddress };
         }
 
@@ -997,13 +1001,14 @@ public class MmsSmsProvider extends ContentProvider {
      *   FROM pdu, (SELECT msg_id AS address_msg_id
      *              FROM addr
      *              WHERE (address='<phoneNumber>' OR
-     *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0)))
+     *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0, none/mMinMatch)))
      *             AS matching_addresses
      *   WHERE pdu._id = matching_addresses.address_msg_id
      * UNION
      * SELECT ...
      *   FROM sms
-     *   WHERE (address='<phoneNumber>' OR PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>', 1/0));
+     *   WHERE (address='<phoneNumber>' OR
+     *          PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>', 1/0, none/mMinMatch));
      */
     private Cursor getMessagesByPhoneNumber(
             String phoneNumber, String[] projection, String selection,
@@ -1018,7 +1023,7 @@ public class MmsSmsProvider extends ContentProvider {
                         selection,
                         "(address=" + escapedPhoneNumber + " OR PHONE_NUMBERS_EQUAL(address, " +
                         escapedPhoneNumber +
-                        (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0))"));
+                        (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0, " + mMinMatch + "))"));
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
@@ -1030,7 +1035,7 @@ public class MmsSmsProvider extends ContentProvider {
                 "FROM addr WHERE (address=" + escapedPhoneNumber +
                 " OR PHONE_NUMBERS_EQUAL(addr.address, " +
                 escapedPhoneNumber +
-                (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0))) ") +
+                (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0, " + mMinMatch + "))) ") +
                 "AS matching_addresses");
         smsQueryBuilder.setTables(smsTable);
 
