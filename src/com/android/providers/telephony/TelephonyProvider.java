@@ -106,6 +106,7 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
+import android.util.EventLog;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
@@ -114,6 +115,7 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.IApnSourceService;
 import com.android.internal.telephony.PhoneConstants;
+import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.dataconnection.ApnSettingUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
@@ -145,7 +147,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 39 << 16;
+    private static final int DATABASE_VERSION = 41 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -398,7 +400,9 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
                 + SubscriptionManager.SUBSCRIPTION_TYPE_LOCAL_SIM + ","
                 + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.GROUP_OWNER + " TEXT"
+                + SubscriptionManager.GROUP_OWNER + " TEXT,"
+                + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
+                + SubscriptionManager.IMSI + " TEXT"
                 + ");";
     }
 
@@ -1316,6 +1320,35 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 39 << 16 | 6;
             }
+
+            if (oldVersion < (40 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 40 << 16 | 6;
+            }
+
+            if (oldVersion < (41 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.IMSI + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 41 << 16 | 6;
+            }
+
 
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -2495,46 +2528,38 @@ public class TelephonyProvider extends ContentProvider
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
 
-        if (!apnSourceServiceExists(getContext())) {
-            // Call getReadableDatabase() to make sure onUpgrade is called
-            if (VDBG) log("onCreate: calling getReadableDatabase to trigger onUpgrade");
-            SQLiteDatabase db = getReadableDatabase();
+        try {
+            PhoneFactory.addLocalLog(TAG, 100);
+        } catch (IllegalArgumentException e) {
+            // ignore
+        }
 
-            // Update APN db on build update
-            String newBuildId = SystemProperties.get("ro.build.id", null);
-            if (!TextUtils.isEmpty(newBuildId)) {
-                // Check if build id has changed
-                SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
-                        Context.MODE_PRIVATE);
-                String oldBuildId = sp.getString(RO_BUILD_ID, "");
-                if (!newBuildId.equals(oldBuildId)) {
-                    if (DBG) log("onCreate: build id changed from " + oldBuildId + " to " +
-                            newBuildId);
-
-                    // Get rid of old preferred apn shared preferences
-                    SubscriptionManager sm = SubscriptionManager.from(getContext());
-                    if (sm != null) {
-                        List<SubscriptionInfo> subInfoList = sm.getAllSubscriptionInfoList();
-                        for (SubscriptionInfo subInfo : subInfoList) {
-                            SharedPreferences spPrefFile = getContext().getSharedPreferences(
-                                    PREF_FILE_APN + subInfo.getSubscriptionId(), Context.MODE_PRIVATE);
-                            if (spPrefFile != null) {
-                                SharedPreferences.Editor editor = spPrefFile.edit();
-                                editor.clear();
-                                editor.apply();
-                            }
-                        }
-                    }
-
-                    // Update APN DB
-                    updateApnDb();
-                } else {
-                    if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
-                }
-                sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
+        boolean isNewBuild = false;
+        String newBuildId = SystemProperties.get("ro.build.id", null);
+        if (!TextUtils.isEmpty(newBuildId)) {
+            // Check if build id has changed
+            SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
+                    Context.MODE_PRIVATE);
+            String oldBuildId = sp.getString(RO_BUILD_ID, "");
+            if (!newBuildId.equals(oldBuildId)) {
+                localLog("onCreate: build id changed from " + oldBuildId + " to " + newBuildId);
+                isNewBuild = true;
             } else {
-                if (VDBG) log("onCreate: newBuildId is empty");
+                if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
             }
+            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
+        } else {
+            if (VDBG) log("onCreate: newBuildId is empty");
+        }
+
+        if (isNewBuild) {
+            if (!apnSourceServiceExists(getContext())) {
+                // Update APN DB
+                updateApnDb();
+            }
+
+            // Add all APN related shared prefs to local log for dumpsys
+            if (DBG) addAllApnSharedPrefToLocalLog();
         }
 
         SharedPreferences sp = getContext().getSharedPreferences(ENFORCED_FILE,
@@ -2544,6 +2569,38 @@ public class TelephonyProvider extends ContentProvider
         if (VDBG) log("onCreate:- ret true");
 
         return true;
+    }
+
+    private void addAllApnSharedPrefToLocalLog() {
+        localLog("addAllApnSharedPrefToLocalLog");
+        SharedPreferences spApn = getContext().getSharedPreferences(PREF_FILE_APN,
+                Context.MODE_PRIVATE);
+
+        Map<String, ?> allPrefApnId = spApn.getAll();
+        for (String key : allPrefApnId.keySet()) {
+            try {
+                localLog(key + ":" + allPrefApnId.get(key).toString());
+            } catch (Exception e) {
+                localLog("Skipping over key " + key + " due to exception " + e);
+            }
+        }
+
+        SharedPreferences spFullApn = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
+                Context.MODE_PRIVATE);
+
+        Map<String, ?> allPrefFullApn = spFullApn.getAll();
+        for (String key : allPrefFullApn.keySet()) {
+            try {
+                localLog(key + ":" + allPrefFullApn.get(key).toString());
+            } catch (Exception e) {
+                localLog("Skipping over key " + key + " due to exception " + e);
+            }
+        }
+    }
+
+    private static void localLog(String logMsg) {
+        Log.d(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private synchronized boolean isManagedApnEnforced() {
@@ -2566,9 +2623,12 @@ public class TelephonyProvider extends ContentProvider
                 Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
         editor.putLong(COLUMN_APN_ID + subId, id != null ? id : INVALID_APN_ID);
+        localLog("setPreferredApnId: " + COLUMN_APN_ID + subId + ":"
+                + (id != null ? id : INVALID_APN_ID));
         // This is for debug purposes. It indicates if this APN was set by DcTracker or user (true)
         // or if this was restored from APN saved in PREF_FILE_FULL_APN (false).
         editor.putBoolean(EXPLICIT_SET_CALLED + subId, saveApn);
+        localLog("setPreferredApnId: " + EXPLICIT_SET_CALLED + subId + ":" + saveApn);
         editor.apply();
         if (id == null || id.longValue() == INVALID_APN_ID) {
             deletePreferredApn(subId);
@@ -2607,33 +2667,13 @@ public class TelephonyProvider extends ContentProvider
     private void deletePreferredApnId() {
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_APN,
                 Context.MODE_PRIVATE);
-
-        // Before deleting, save actual preferred apns (not the ids) in a separate SP.
-        // NOTE: This code to call setPreferredApn() can be removed since the function is now called
-        // from setPreferredApnId(). However older builds (pre oc-mr1) do not have that change, so
-        // when devices upgrade from those builds and this function is called, this code is needed
-        // otherwise the preferred APN will be lost.
-        Map<String, ?> allPrefApnId = sp.getAll();
-        for (String key : allPrefApnId.keySet()) {
-            // extract subId from key by removing COLUMN_APN_ID
-            try {
-                int subId = Integer.parseInt(key.replace(COLUMN_APN_ID, ""));
-                long apnId = getPreferredApnId(subId, false);
-                if (apnId != INVALID_APN_ID) {
-                    setPreferredApn(apnId, subId);
-                }
-            } catch (Exception e) {
-                loge("Skipping over key " + key + " due to exception " + e);
-            }
-        }
-
         SharedPreferences.Editor editor = sp.edit();
         editor.clear();
         editor.apply();
     }
 
     private void setPreferredApn(Long id, int subId) {
-        log("setPreferredApn: _id " + id + " subId " + subId);
+        localLog("setPreferredApn: _id " + id + " subId " + subId);
         SQLiteDatabase db = getWritableDatabase();
         // query all unique fields from id
         String[] proj = CARRIERS_UNIQUE_FIELDS.toArray(new String[CARRIERS_UNIQUE_FIELDS.size()]);
@@ -2648,9 +2688,12 @@ public class TelephonyProvider extends ContentProvider
                 // store values of all unique fields to SP
                 for (String key : CARRIERS_UNIQUE_FIELDS) {
                     editor.putString(key + subId, c.getString(c.getColumnIndex(key)));
+                    localLog("setPreferredApn: " + key + subId + ":"
+                            + c.getString(c.getColumnIndex(key)));
                 }
                 // also store the version number
                 editor.putString(DB_VERSION_KEY + subId, "" + DATABASE_VERSION);
+                localLog("setPreferredApn: " + DB_VERSION_KEY + subId + ":" + DATABASE_VERSION);
                 editor.apply();
             } else {
                 log("setPreferredApn: # matching APNs found " + c.getCount());
@@ -2920,6 +2963,26 @@ public class TelephonyProvider extends ContentProvider
             qb.appendWhere(TextUtils.join(" AND ", constraints));
         }
 
+        if (match != URL_SIMINFO) {
+            // Determine if we need to do a check for fields in the selection
+            boolean selectionContainsSensitiveFields;
+            try {
+                selectionContainsSensitiveFields = containsSensitiveFields(selection);
+            } catch (Exception e) {
+                // Malformed sql, check permission anyway.
+                selectionContainsSensitiveFields = true;
+            }
+
+            if (selectionContainsSensitiveFields) {
+                try {
+                    checkPermission();
+                } catch (SecurityException e) {
+                    EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
+                    throw e;
+                }
+            }
+        }
+
         SQLiteDatabase db = getReadableDatabase();
         Cursor ret = null;
         try {
@@ -3052,6 +3115,21 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) log("APN no match");
             return new MatrixCursor(coulmnNames);
         }
+    }
+
+    private boolean containsSensitiveFields(String sqlStatement) {
+        try {
+            SqlTokenFinder.findTokens(sqlStatement, s -> {
+                switch (s) {
+                    case USER:
+                    case PASSWORD:
+                        throw new SecurityException();
+                }
+            });
+        } catch (SecurityException e) {
+            return true;
+        }
+        return false;
     }
 
     @Override
