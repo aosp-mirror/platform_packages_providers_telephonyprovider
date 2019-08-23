@@ -25,14 +25,14 @@ import static android.provider.Telephony.RcsColumns.RcsParticipantEventColumns.N
 import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.NEW_NAME_COLUMN;
 
 import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
-import android.support.test.runner.AndroidJUnit4;
 import android.test.mock.MockContentResolver;
+
+import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.After;
 import org.junit.Before;
