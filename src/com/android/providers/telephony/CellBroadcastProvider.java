@@ -78,7 +78,10 @@ public class CellBroadcastProvider extends ContentProvider {
 
     /** Authority string for content URIs. */
     @VisibleForTesting
-    public static final String AUTHORITY = "cellbroadcasts";
+    public static final String AUTHORITY = "cellbroadcasts_fwk";
+
+    /** Content uri of this provider. */
+    public static final Uri CONTENT_URI = Uri.parse("content://cellbroadcasts_fwk");
 
     @VisibleForTesting
     public PermissionChecker mPermissionChecker;
@@ -171,9 +174,9 @@ public class CellBroadcastProvider extends ContentProvider {
                 long row = getWritableDatabase().insertOrThrow(CELL_BROADCASTS_TABLE_NAME, null,
                         values);
                 if (row > 0) {
-                    Uri newUri = ContentUris.withAppendedId(CellBroadcasts.CONTENT_URI, row);
+                    Uri newUri = ContentUris.withAppendedId(CONTENT_URI, row);
                     getContext().getContentResolver()
-                            .notifyChange(CellBroadcasts.CONTENT_URI, null /* observer */);
+                            .notifyChange(CONTENT_URI, null /* observer */);
                     return newUri;
                 } else {
                     Log.e(TAG, "Insert record failed because of unknown reason, uri = " + uri);
@@ -300,14 +303,14 @@ public class CellBroadcastProvider extends ContentProvider {
     private class CellBroadcastPermissionChecker implements PermissionChecker {
         @Override
         public boolean hasWritePermission() {
-            // Only the phone process has the write permission for CellBroadcast content provider.
+            // Only the phone process has the write permission to modify this provider. 
             return Binder.getCallingUid() == Process.PHONE_UID;
         }
 
         @Override
         public boolean hasReadPermission() {
-            return getContext().checkCallingOrSelfPermission(
-                    "android.permission.READ_CELL_BROADCASTS") == PackageManager.PERMISSION_GRANTED;
+            // Only the phone process has the read permission to query data from this provider. 
+            return Binder.getCallingUid() == Process.PHONE_UID;
         }
     }
 }

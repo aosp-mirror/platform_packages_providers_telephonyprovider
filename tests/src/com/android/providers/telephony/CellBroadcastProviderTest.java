@@ -40,6 +40,8 @@ import org.mockito.MockitoAnnotations;
 public class CellBroadcastProviderTest extends TestCase {
     private static final String TAG = CellBroadcastProviderTest.class.getSimpleName();
 
+    public static final Uri CONTENT_URI = Uri.parse("content://cellbroadcasts_fwk");
+
     private static final int GEO_SCOPE = 1;
     private static final String PLMN = "123456";
     private static final int LAC = 13;
@@ -117,7 +119,7 @@ public class CellBroadcastProviderTest extends TestCase {
     public void testUpdate() {
         // Insert a cellbroadcast to the database.
         ContentValues cv = fakeCellBroadcast();
-        Uri uri = mContentResolver.insert(CellBroadcasts.CONTENT_URI, cv);
+        Uri uri = mContentResolver.insert(CONTENT_URI, cv);
         assertThat(uri).isNotNull();
 
         // Change some fields of this cell broadcast.
@@ -125,11 +127,11 @@ public class CellBroadcastProviderTest extends TestCase {
         int receivedTime = 1234555555;
         cv.put(CellBroadcasts.MESSAGE_BROADCASTED, messageBroadcasted);
         cv.put(CellBroadcasts.RECEIVED_TIME, receivedTime);
-        mContentResolver.update(CellBroadcasts.CONTENT_URI, cv, SELECT_BY_ID,
+        mContentResolver.update(CONTENT_URI, cv, SELECT_BY_ID,
                 new String[] { uri.getLastPathSegment() });
 
         // Query and check if the update is successed.
-        Cursor cursor = mContentResolver.query(CellBroadcasts.CONTENT_URI, QUERY_COLUMNS,
+        Cursor cursor = mContentResolver.query(CONTENT_URI, QUERY_COLUMNS,
                 SELECT_BY_ID, new String[] { uri.getLastPathSegment() }, null /* orderBy */);
         cursor.moveToNext();
 
@@ -143,14 +145,14 @@ public class CellBroadcastProviderTest extends TestCase {
     @Test
     public void testUpdate_WithoutWritePermission_fail() {
         ContentValues cv = fakeCellBroadcast();
-        Uri uri = mContentResolver.insert(CellBroadcasts.CONTENT_URI, cv);
+        Uri uri = mContentResolver.insert(CONTENT_URI, cv);
         assertThat(uri).isNotNull();
 
         // Revoke the write permission
         doReturn(false).when(mMockPermissionChecker).hasWritePermission();
 
         try {
-            mContentResolver.update(CellBroadcasts.CONTENT_URI, cv, SELECT_BY_ID,
+            mContentResolver.update(CONTENT_URI, cv, SELECT_BY_ID,
                     new String[] { uri.getLastPathSegment() });
             fail();
         } catch (SecurityException ex) {
@@ -165,19 +167,19 @@ public class CellBroadcastProviderTest extends TestCase {
         ContentValues cv = fakeCellBroadcast();
         cv.put(CellBroadcasts.MESSAGE_BROADCASTED, 0);
         for (int i = 0; i < messageNotBroadcastedCount; i++) {
-            mContentResolver.insert(CellBroadcasts.CONTENT_URI, cv);
+            mContentResolver.insert(CONTENT_URI, cv);
         }
 
         // Insert some cell broadcasts which message_broadcasted is true
         int messageBroadcastedCount = 6;
         cv.put(CellBroadcasts.MESSAGE_BROADCASTED, 1);
         for (int i = 0; i < messageBroadcastedCount; i++) {
-            mContentResolver.insert(CellBroadcasts.CONTENT_URI, cv);
+            mContentResolver.insert(CONTENT_URI, cv);
         }
 
         // Query the broadcast with message_broadcasted is false
         Cursor cursor = mContentResolver.query(
-                CellBroadcasts.CONTENT_URI,
+                CONTENT_URI,
                 QUERY_COLUMNS,
                 String.format("%s=?", CellBroadcasts.MESSAGE_BROADCASTED), /* selection */
                 new String[] {"0"}, /* selectionArgs */
@@ -187,14 +189,14 @@ public class CellBroadcastProviderTest extends TestCase {
 
     @Test
     public void testDelete_withoutWritePermission_throwSecurityException() {
-        Uri uri = mContentResolver.insert(CellBroadcasts.CONTENT_URI, fakeCellBroadcast());
+        Uri uri = mContentResolver.insert(CONTENT_URI, fakeCellBroadcast());
         assertThat(uri).isNotNull();
 
         // Revoke the write permission
         doReturn(false).when(mMockPermissionChecker).hasWritePermission();
 
         try {
-            mContentResolver.delete(CellBroadcasts.CONTENT_URI, SELECT_BY_ID,
+            mContentResolver.delete(CONTENT_URI, SELECT_BY_ID,
                     new String[] { uri.getLastPathSegment() });
             fail();
         } catch (SecurityException ex) {
@@ -207,24 +209,24 @@ public class CellBroadcastProviderTest extends TestCase {
     public void testDelete_oneRecord_success() {
         // Insert a cellbroadcast to the database.
         ContentValues cv = fakeCellBroadcast();
-        Uri uri = mContentResolver.insert(CellBroadcasts.CONTENT_URI, cv);
+        Uri uri = mContentResolver.insert(CONTENT_URI, cv);
         assertThat(uri).isNotNull();
 
         String[] selectionArgs = new String[] { uri.getLastPathSegment() };
 
         // Ensure the cell broadcast is inserted.
-        Cursor cursor = mContentResolver.query(CellBroadcasts.CONTENT_URI, QUERY_COLUMNS,
+        Cursor cursor = mContentResolver.query(CONTENT_URI, QUERY_COLUMNS,
                 SELECT_BY_ID, selectionArgs, null /* orderBy */);
         assertThat(cursor.getCount()).isEqualTo(1);
         cursor.close();
 
         // Delete the cell broadcast
-        int rowCount = mContentResolver.delete(CellBroadcasts.CONTENT_URI, SELECT_BY_ID,
+        int rowCount = mContentResolver.delete(CONTENT_URI, SELECT_BY_ID,
                 selectionArgs);
         assertThat(rowCount).isEqualTo(1);
 
         // Ensure the cell broadcast is deleted.
-        cursor = mContentResolver.query(CellBroadcasts.CONTENT_URI, QUERY_COLUMNS, SELECT_BY_ID,
+        cursor = mContentResolver.query(CONTENT_URI, QUERY_COLUMNS, SELECT_BY_ID,
                 selectionArgs, null /* orderBy */);
         assertThat(cursor.getCount()).isEqualTo(0);
         cursor.close();
@@ -233,23 +235,23 @@ public class CellBroadcastProviderTest extends TestCase {
     @Test
     public void testDelete_all_success() {
         // Insert a cellbroadcast to the database.
-        mContentResolver.insert(CellBroadcasts.CONTENT_URI, fakeCellBroadcast());
-        mContentResolver.insert(CellBroadcasts.CONTENT_URI, fakeCellBroadcast());
+        mContentResolver.insert(CONTENT_URI, fakeCellBroadcast());
+        mContentResolver.insert(CONTENT_URI, fakeCellBroadcast());
 
         // Ensure the cell broadcast are inserted.
-        Cursor cursor = mContentResolver.query(CellBroadcasts.CONTENT_URI, QUERY_COLUMNS,
+        Cursor cursor = mContentResolver.query(CONTENT_URI, QUERY_COLUMNS,
                 null /* selection */, null /* selectionArgs */, null /* orderBy */);
         assertThat(cursor.getCount()).isEqualTo(2);
         cursor.close();
 
         // Delete all cell broadcasts.
         int rowCount = mContentResolver.delete(
-                CellBroadcasts.CONTENT_URI, null /* selection */, null /* selectionArgs */);
+                CONTENT_URI, null /* selection */, null /* selectionArgs */);
         assertThat(rowCount).isEqualTo(2);
         cursor.close();
 
         // Ensure all cell broadcasts are deleted.
-        cursor = mContentResolver.query(CellBroadcasts.CONTENT_URI, QUERY_COLUMNS,
+        cursor = mContentResolver.query(CONTENT_URI, QUERY_COLUMNS,
                 null /* selection */, null /* selectionArgs */, null /* orderBy */);
         assertThat(cursor.getCount()).isEqualTo(0);
         cursor.close();
@@ -260,7 +262,7 @@ public class CellBroadcastProviderTest extends TestCase {
         doReturn(false).when(mMockPermissionChecker).hasWritePermission();
 
         try {
-            mContentResolver.insert(CellBroadcasts.CONTENT_URI, fakeCellBroadcast());
+            mContentResolver.insert(CONTENT_URI, fakeCellBroadcast());
             fail();
         } catch (SecurityException ex) {
             // pass the test
@@ -270,13 +272,13 @@ public class CellBroadcastProviderTest extends TestCase {
     @Test
     public void testInsertAndQuery() {
         // Insert a cell broadcast message
-        Uri uri = mContentResolver.insert(CellBroadcasts.CONTENT_URI, fakeCellBroadcast());
+        Uri uri = mContentResolver.insert(CONTENT_URI, fakeCellBroadcast());
 
         // Verify that the return uri is not null and the record is inserted into the database
         // correctly.
         assertThat(uri).isNotNull();
         Cursor cursor = mContentResolver.query(
-                CellBroadcasts.CONTENT_URI, QUERY_COLUMNS, SELECT_BY_ID,
+                CONTENT_URI, QUERY_COLUMNS, SELECT_BY_ID,
                 new String[] { uri.getLastPathSegment() }, null /* orderBy */);
         assertThat(cursor.getCount()).isEqualTo(1);
 
