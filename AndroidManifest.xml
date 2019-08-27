@@ -108,11 +108,10 @@
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
 
         <provider android:name="CellBroadcastProvider"
-                  android:authorities="cellbroadcasts"
+                  android:authorities="cellbroadcasts_fwk"
                   android:exported="true"
                   android:singleUser="true"
-                  android:multiprocess="false"
-                  android:readPermission="android.permission.READ_CELL_BROADCASTS" />
+                  android:multiprocess="false" />
 
         <provider android:name="HbpcdLookupProvider"
                   android:authorities="hbpcd_lookup"
