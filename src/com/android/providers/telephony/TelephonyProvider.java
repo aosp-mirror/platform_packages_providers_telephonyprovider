@@ -138,6 +138,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
@@ -2779,7 +2780,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkQueryPermission(match, projectionIn);
+        checkQueryPermission(match, projectionIn, selection);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -2963,26 +2964,6 @@ public class TelephonyProvider extends ContentProvider
             qb.appendWhere(TextUtils.join(" AND ", constraints));
         }
 
-        if (match != URL_SIMINFO) {
-            // Determine if we need to do a check for fields in the selection
-            boolean selectionContainsSensitiveFields;
-            try {
-                selectionContainsSensitiveFields = containsSensitiveFields(selection);
-            } catch (Exception e) {
-                // Malformed sql, check permission anyway.
-                selectionContainsSensitiveFields = true;
-            }
-
-            if (selectionContainsSensitiveFields) {
-                try {
-                    checkPermission();
-                } catch (SecurityException e) {
-                    EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
-                    throw e;
-                }
-            }
-        }
-
         SQLiteDatabase db = getReadableDatabase();
         Cursor ret = null;
         try {
@@ -3008,8 +2989,27 @@ public class TelephonyProvider extends ContentProvider
         return ret;
     }
 
-    private void checkQueryPermission(int match, String[] projectionIn) {
-        if (match != URL_SIMINFO) {
+    private void checkQueryPermission(int match, String[] projectionIn, String selection) {
+        if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
+            // Determine if we need to do a check for fields in the selection
+            boolean selectionContainsSensitiveFields;
+            try {
+                selectionContainsSensitiveFields = containsSensitiveFields(selection);
+            } catch (IllegalArgumentException e) {
+                // Malformed sql, check permission anyway and return.
+                checkPermission();
+                return;
+            }
+
+            if (selectionContainsSensitiveFields) {
+                try {
+                    checkPermission();
+                } catch (SecurityException e) {
+                    EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
+                    throw e;
+                }
+            }
+
             if (projectionIn != null) {
                 for (String column : projectionIn) {
                     if (TYPE.equals(column) ||
@@ -3019,7 +3019,6 @@ public class TelephonyProvider extends ContentProvider
                             MVNO_TYPE.equals(column) ||
                             MVNO_MATCH_DATA.equals(column) ||
                             APN.equals(column)) {
-                        // noop
                     } else {
                         checkPermission();
                         break;
@@ -3029,7 +3028,25 @@ public class TelephonyProvider extends ContentProvider
                 // null returns all columns, so need permission check
                 checkPermission();
             }
+        } else {
+            // if querying siminfo, caller should have read privilege permissions
+            checkPhonePrivilegePermission();
         }
+    }
+
+    private boolean containsSensitiveFields(String sqlStatement) {
+        try {
+            SqlTokenFinder.findTokens(sqlStatement, s -> {
+                switch (s) {
+                    case USER:
+                    case PASSWORD:
+                        throw new SecurityException();
+                }
+            });
+        } catch (SecurityException e) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -3115,21 +3132,6 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) log("APN no match");
             return new MatrixCursor(coulmnNames);
         }
-    }
-
-    private boolean containsSensitiveFields(String sqlStatement) {
-        try {
-            SqlTokenFinder.findTokens(sqlStatement, s -> {
-                switch (s) {
-                    case USER:
-                    case PASSWORD:
-                        throw new SecurityException();
-                }
-            });
-        } catch (SecurityException e) {
-            return true;
-        }
-        return false;
     }
 
     @Override
@@ -3813,6 +3815,15 @@ public class TelephonyProvider extends ContentProvider
             }
         }
         throw new SecurityException("No permission to write APN settings");
+    }
+
+    private void checkPhonePrivilegePermission() {
+        int status = getContext().checkCallingOrSelfPermission(
+                "android.permission.READ_PRIVILEGED_PHONE_STATE");
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No phone privilege permission");
     }
 
     private DatabaseHelper mOpenHelper;
