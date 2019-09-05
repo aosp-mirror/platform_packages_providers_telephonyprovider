@@ -21,6 +21,7 @@
 
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission android:name="android.permission.READ_DEVICE_CONFIG" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS" />
     <uses-permission android:name="android.permission.INTERACT_ACROSS_USERS_FULL" />
     <uses-permission android:name="android.permission.USE_RESERVED_DISK" />
@@ -61,6 +62,13 @@
              as well. -->
         <provider android:name="SmsProvider"
                   android:authorities="sms"
+                  android:multiprocess="false"
+                  android:exported="true"
+                  android:singleUser="true"
+                  android:readPermission="android.permission.READ_SMS" />
+
+        <provider android:name="SmsChangesProvider"
+                  android:authorities="sms-changes"
                   android:multiprocess="false"
                   android:exported="true"
                   android:singleUser="true"
