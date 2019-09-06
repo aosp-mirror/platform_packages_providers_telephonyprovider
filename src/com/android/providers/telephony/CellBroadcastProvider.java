@@ -242,6 +242,7 @@ public class CellBroadcastProvider extends ContentProvider {
     public static String getStringForCellBroadcastTableCreation(String tableName) {
         return "CREATE TABLE " + tableName + " ("
                 + CellBroadcasts._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
+                + CellBroadcasts.SUB_ID + " INTEGER,"
                 + CellBroadcasts.GEOGRAPHICAL_SCOPE + " INTEGER,"
                 + CellBroadcasts.PLMN + " TEXT,"
                 + CellBroadcasts.LAC + " INTEGER,"
@@ -261,7 +262,8 @@ public class CellBroadcastProvider extends ContentProvider {
                 + CellBroadcasts.CMAS_CERTAINTY + " INTEGER,"
                 + CellBroadcasts.RECEIVED_TIME + " BIGINT,"
                 + CellBroadcasts.MESSAGE_BROADCASTED + " BOOLEAN DEFAULT 0,"
-                + CellBroadcasts.GEOMETRIES + " TEXT);";
+                + CellBroadcasts.GEOMETRIES + " TEXT,"
+                + CellBroadcasts.MAXIMUM_WAIT_TIME + " INTEGER);";
     }
 
     private SQLiteDatabase getWritableDatabase() {
