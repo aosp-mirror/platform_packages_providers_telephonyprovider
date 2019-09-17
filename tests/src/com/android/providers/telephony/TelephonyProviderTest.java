@@ -152,9 +152,9 @@ public class TelephonyProviderTest extends TestCase {
 
             doReturn(mTelephonyManager).when(mTelephonyManager).createForSubscriptionId(anyInt());
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator();
-            doReturn(mIcRecords).when(mUiccController).getIccRecords(anyInt(),
-                    ArgumentMatchers.eq(UiccController.APP_FAM_3GPP));
+            doReturn(mIcRecords).when(mUiccController).getIccRecords(anyInt(), anyInt());
             doReturn(TEST_SPN).when(mIcRecords).getServiceProviderName();
+            doReturn(TEST_SPN).when(mIcRecords).getServiceProviderNameWithBrandOverride();
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
