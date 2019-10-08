@@ -40,6 +40,8 @@ import android.util.JsonWriter;
 import android.util.Log;
 import android.util.SparseArray;
 
+import com.google.android.mms.pdu.CharacterSets;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -74,6 +76,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private final List<ContentValues> mMmsTable = new ArrayList<>();
     /* Table contains parts, addresses of mms */
     private final List<ContentValues> mMmsAllContentValues = new ArrayList<>();
+    /* Table contains parts, addresses of mms for null body test case */
+    private final List<ContentValues> mMmsNullBodyContentValues = new ArrayList<>();
     /* Cursors being used to access sms, mms tables */
     private FakeCursor mSmsCursor, mMmsCursor;
     /* Test data with sms and mms */
@@ -81,7 +85,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     /* Json representation for the test data */
     private String[] mSmsJson, mMmsJson, mMmsAttachmentJson;
     /* sms, mms json concatenated as json array */
-    private String mAllSmsJson, mAllMmsJson, mMmsAllAttachmentJson;
+    private String mAllSmsJson, mAllMmsJson, mMmsAllAttachmentJson, mMmsAllNullBodyJson;
 
     private StringWriter mStringWriter;
 
@@ -169,7 +173,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 new String[]{"+111 (111) 11111111", "+11121212", "example@example.com",
                         "+999999999"} /*addresses*/,
                 3 /*threadId*/, false /*read*/, null /*smil*/, null /*attachmentTypes*/,
-                null /*attachmentFilenames*/);
+                null /*attachmentFilenames*/, mMmsAllContentValues);
 
         mMmsJson[0] = "{\"self_phone\":\"+111111111111111\",\"sub\":\"Subject 1\"," +
                 "\"date\":\"111111\",\"date_sent\":\"111112\",\"m_type\":\"3\",\"v\":\"17\"," +
@@ -191,7 +195,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 121 /*body charset*/,
                 new String[]{"+7 (333) ", "example@example.com", "+999999999"} /*addresses*/,
                 4 /*threadId*/, true /*read*/, null /*smil*/, null /*attachmentTypes*/,
-                null /*attachmentFilenames*/);
+                null /*attachmentFilenames*/, mMmsAllContentValues);
         mMmsJson[1] = "{\"date\":\"111122\",\"date_sent\":\"1111112\",\"m_type\":\"4\"," +
                 "\"v\":\"18\",\"msg_box\":\"222\",\"ct_l\":\"location 2\"," +
                 "\"recipients\":[\"example@example.com\",\"+999999999\"]," +
@@ -210,7 +214,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 131 /*body charset*/,
                 new String[]{"333 333333333333", "+1232132214124"} /*addresses*/,
                 1 /*threadId*/, false /*read*/, null /*smil*/, null /*attachmentTypes*/,
-                null /*attachmentFilenames*/);
+                null /*attachmentFilenames*/, mMmsAllContentValues);
 
         mMmsJson[2] = "{\"self_phone\":\"+333333333333333\",\"sub\":\"Subject 10\"," +
                 "\"date\":\"111133\",\"date_sent\":\"1111132\",\"m_type\":\"5\",\"v\":\"19\"," +
@@ -239,7 +243,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                         + " width='100%'/></layout></head><body><par dur='5000ms'>"
                         + "<img src='image000000.jpg' region='Image' /></par></body></smil>",
                 new String[] {"image/jpg"} /*attachmentTypes*/,
-                new String[] {"GreatPict.jpg"}  /*attachmentFilenames*/);
+                new String[] {"GreatPict.jpg"}  /*attachmentFilenames*/, mMmsAllContentValues);
 
         mMmsAttachmentJson[0] = "{\"self_phone\":\"+111111111111111\",\"sub\":\"Subject 1\"," +
                 "\"date\":\"111111\",\"date_sent\":\"111112\",\"m_type\":\"3\",\"v\":\"17\"," +
@@ -254,6 +258,20 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 "sub_cs\":\"100\"}";
 
         mMmsAllAttachmentJson = makeJsonArray(mMmsAttachmentJson);
+
+        createMmsRow(10 /*id*/, 1 /*subid*/, "Subject 1" /*subject*/,
+                100 /*subcharset*/, 111111 /*date*/, 111112 /*datesent*/, 3 /*type*/,
+                17 /*version*/, 0 /*textonly*/,
+                11 /*msgBox*/, "location 1" /*contentLocation*/, "" /*body*/,
+                CharacterSets.DEFAULT_CHARSET /*body charset*/, new String[] {} /*addresses*/,
+                3 /*threadId*/, false /*read*/, null /*smil*/, null /*attachmentTypes*/,
+                null /*attachmentFilenames*/, mMmsNullBodyContentValues);
+
+        mMmsAllNullBodyJson = makeJsonArray(new String[] {"{\"self_phone\":\"+111111111111111\"," +
+                "\"sub\":\"Subject 1\",\"date\":\"111111\",\"date_sent\":\"111112\",\"m_type\":" +
+                "\"3\",\"v\":\"17\",\"msg_box\":\"11\",\"ct_l\":\"location 1\"," +
+                "\"recipients\":[\"+11121212\",\"example@example.com\",\"+999999999\"]," +
+                "\"read\":\"0\", \"mms_addresses\":[],\"mms_charset\":111,\"sub_cs\":\"100\"}"});
 
 
         ContentProvider contentProvider = new MockContentProvider() {
@@ -341,7 +359,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                                        String contentLocation, String body,
                                        int bodyCharset, String[] addresses, long threadId,
                                        boolean read, String smil, String[] attachmentTypes,
-                                       String[] attachmentFilenames) {
+                                       String[] attachmentFilenames,
+                                       List<ContentValues> rowsContainer) {
         ContentValues mmsRow = new ContentValues();
         mmsRow.put(Telephony.Mms._ID, id);
         mmsRow.put(Telephony.Mms.SUBSCRIPTION_ID, subId);
@@ -364,8 +383,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         final Uri partUri = Telephony.Mms.CONTENT_URI.buildUpon().appendPath(String.valueOf(id)).
                 appendPath("part").build();
         mCursors.put(partUri, createBodyCursor(body, bodyCharset, smil, attachmentTypes,
-                attachmentFilenames));
-        mMmsAllContentValues.add(mmsRow);
+                attachmentFilenames, rowsContainer));
+        rowsContainer.add(mmsRow);
 
         final Uri addrUri = Telephony.Mms.CONTENT_URI.buildUpon().appendPath(String.valueOf(id)).
                 appendPath("addr").build();
@@ -380,7 +399,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
     // Cursor with parts of Mms.
     private FakeCursor createBodyCursor(String body, int charset, String existingSmil,
-            String[] attachmentTypes, String[] attachmentFilenames) {
+            String[] attachmentTypes, String[] attachmentFilenames,
+            List<ContentValues> rowsContainer) {
         List<ContentValues> table = new ArrayList<>();
         final String srcName = String.format("text.%06d.txt", 0);
         final String smilBody = TextUtils.isEmpty(existingSmil) ?
@@ -395,7 +415,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         smilPart.put(Telephony.Mms.Part.CONTENT_ID, "<smil>");
         smilPart.put(Telephony.Mms.Part.CONTENT_LOCATION, "smil.xml");
         smilPart.put(Telephony.Mms.Part.TEXT, smil);
-        mMmsAllContentValues.add(smilPart);
+        rowsContainer.add(smilPart);
 
         // Text part
         final ContentValues bodyPart = new ContentValues();
@@ -407,7 +427,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         bodyPart.put(Telephony.Mms.Part.CHARSET, charset);
         bodyPart.put(Telephony.Mms.Part.TEXT, body);
         table.add(bodyPart);
-        mMmsAllContentValues.add(bodyPart);
+        rowsContainer.add(bodyPart);
 
         // Attachments
         if (attachmentTypes != null) {
@@ -421,7 +441,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 attachmentPart.put(Telephony.Mms.Part.CONTENT_ID, "<"+attachmentFilename+">");
                 attachmentPart.put(Telephony.Mms.Part.CONTENT_LOCATION, attachmentFilename);
                 table.add(attachmentPart);
-                mMmsAllContentValues.add(attachmentPart);
+                rowsContainer.add(attachmentPart);
             }
         }
 
@@ -620,6 +640,17 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mMockContentResolver.addProvider("mms", mmsProvider);
         mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
         assertEquals(7, mmsProvider.getRowsAdded());
+    }
+
+    public void testRestoreMmsWithNullBody() throws Exception {
+        JsonReader jsonReader = new JsonReader
+                (new StringReader(addRandomDataToJson(mMmsAllNullBodyJson)));
+        FakeMmsProvider mmsProvider = new FakeMmsProvider(mMmsNullBodyContentValues);
+        mMockContentResolver.addProvider("mms", mmsProvider);
+
+        mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
+
+        assertEquals(3, mmsProvider.getRowsAdded());
     }
 
     /**
