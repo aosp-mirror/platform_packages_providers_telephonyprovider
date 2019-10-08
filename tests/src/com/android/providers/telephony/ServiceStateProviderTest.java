@@ -16,24 +16,6 @@
 
 package com.android.providers.telephony;
 
-import android.content.Context;
-import android.content.pm.ProviderInfo;
-import android.database.ContentObserver;
-import android.database.Cursor;
-import android.net.Uri;
-import android.support.test.InstrumentationRegistry;
-import android.telephony.ServiceState;
-import android.telephony.SubscriptionManager;
-import android.test.mock.MockContentResolver;
-import android.test.suitebuilder.annotation.SmallTest;
-
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
-import org.mockito.Spy;
-
 import static android.provider.Telephony.ServiceStateTable;
 import static android.provider.Telephony.ServiceStateTable.getUriForSubscriptionId;
 
@@ -41,12 +23,22 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-
-import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+
+import android.content.Context;
+import android.content.pm.ProviderInfo;
+import android.database.ContentObserver;
+import android.database.Cursor;
+import android.net.Uri;
+import android.telephony.ServiceState;
+import android.telephony.SubscriptionManager;
+import android.test.mock.MockContentResolver;
+import android.test.suitebuilder.annotation.SmallTest;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.mockito.Mock;
 
 /**
  * Tests for simple queries of ServiceStateProvider.

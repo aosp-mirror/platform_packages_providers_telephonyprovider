@@ -24,15 +24,15 @@ import static android.provider.Telephony.RcsColumns.RcsThreadEventColumns.NEW_NA
 
 import static com.android.providers.telephony.RcsProvider.RCS_MESSAGE_TABLE;
 import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
-import android.support.test.runner.AndroidJUnit4;
 import android.test.mock.MockContentResolver;
+
+import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.After;
 import org.junit.Before;
