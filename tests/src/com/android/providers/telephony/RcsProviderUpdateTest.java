@@ -25,18 +25,17 @@ import static android.provider.Telephony.RcsColumns.RcsMessageColumns.ORIGINATIO
 import static android.provider.Telephony.RcsColumns.RcsMessageDeliveryColumns.DELIVERED_TIMESTAMP_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.CANONICAL_ADDRESS_ID_COLUMN;
 import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_ALIAS_COLUMN;
-import static android.provider.Telephony.RcsColumns.RcsParticipantColumns.RCS_PARTICIPANT_ID_COLUMN;
 
 import static com.android.providers.telephony.RcsProviderHelper.setup1To1Thread;
-
 import static com.google.common.truth.Truth.assertThat;
 
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.net.Uri;
 import android.provider.Telephony.RcsColumns.RcsMessageDeliveryColumns;
-import android.support.test.runner.AndroidJUnit4;
 import android.test.mock.MockContentResolver;
+
+import androidx.test.runner.AndroidJUnit4;
 
 import org.junit.After;
 import org.junit.Before;
