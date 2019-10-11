@@ -138,6 +138,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
@@ -479,7 +480,41 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @VisibleForTesting
-    public static class DatabaseHelper extends SQLiteOpenHelper {
+    public static int getVersion(Context context) {
+        if (VDBG) log("getVersion:+");
+        // Get the database version, combining a static schema version and the XML version
+        Resources r = context.getResources();
+        if (r == null) {
+            loge("resources=null, return version=" + Integer.toHexString(DATABASE_VERSION));
+            return DATABASE_VERSION;
+        }
+        XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
+        try {
+            XmlUtils.beginDocument(parser, "apns");
+            int publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
+            int version = DATABASE_VERSION | publicversion;
+            if (VDBG) log("getVersion:- version=0x" + Integer.toHexString(version));
+            return version;
+        } catch (Exception e) {
+            loge("Can't get version of APN database" + e + " return version=" +
+                    Integer.toHexString(DATABASE_VERSION));
+            return DATABASE_VERSION;
+        } finally {
+            parser.close();
+        }
+    }
+
+    static public ContentValues setDefaultValue(ContentValues values) {
+        if (!values.containsKey(SUBSCRIPTION_ID)) {
+            int subId = SubscriptionManager.getDefaultSubscriptionId();
+            values.put(SUBSCRIPTION_ID, subId);
+        }
+
+        return values;
+    }
+
+    @VisibleForTesting
+    public class DatabaseHelper extends SQLiteOpenHelper {
         // Context to access resources with
         private Context mContext;
 
@@ -494,31 +529,6 @@ public class TelephonyProvider extends ContentProvider
             // Memory optimization - close idle connections after 30s of inactivity
             setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
             setWriteAheadLoggingEnabled(false);
-        }
-
-        @VisibleForTesting
-        public static int getVersion(Context context) {
-            if (VDBG) log("getVersion:+");
-            // Get the database version, combining a static schema version and the XML version
-            Resources r = context.getResources();
-            if (r == null) {
-                loge("resources=null, return version=" + Integer.toHexString(DATABASE_VERSION));
-                return DATABASE_VERSION;
-            }
-            XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
-            try {
-                XmlUtils.beginDocument(parser, "apns");
-                int publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
-                int version = DATABASE_VERSION | publicversion;
-                if (VDBG) log("getVersion:- version=0x" + Integer.toHexString(version));
-                return version;
-            } catch (Exception e) {
-                loge("Can't get version of APN database" + e + " return version=" +
-                        Integer.toHexString(DATABASE_VERSION));
-                return DATABASE_VERSION;
-            } finally {
-                parser.close();
-            }
         }
 
         @Override
@@ -600,7 +610,7 @@ public class TelephonyProvider extends ContentProvider
             return checksum;
         }
 
-        private static byte[] toByteArray(InputStream input) throws IOException {
+        private byte[] toByteArray(InputStream input) throws IOException {
             byte[] buffer = new byte[128];
             int bytesRead;
             ByteArrayOutputStream output = new ByteArrayOutputStream();
@@ -757,6 +767,8 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) {
                 log("dbh.onUpgrade:+ db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
+
+            deletePreferredApnId(mContext);
 
             if (oldVersion < (5 << 16 | 6)) {
                 // 5 << 16 is the Database version and 6 in the xml version.
@@ -1860,7 +1872,7 @@ public class TelephonyProvider extends ContentProvider
                                         e + " for cv " + cv);
                             // Insertion failed which could be due to a conflict. Check if that is
                             // the case and merge the entries
-                            Cursor oldRow = DatabaseHelper.selectConflictingRow(db,
+                            Cursor oldRow = selectConflictingRow(db,
                                     CARRIERS_TABLE_TMP, cv);
                             if (oldRow != null) {
                                 ContentValues mergedValues = new ContentValues();
@@ -2093,15 +2105,6 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        static public ContentValues setDefaultValue(ContentValues values) {
-            if (!values.containsKey(SUBSCRIPTION_ID)) {
-                int subId = SubscriptionManager.getDefaultSubscriptionId();
-                values.put(SUBSCRIPTION_ID, subId);
-            }
-
-            return values;
-        }
-
         private void insertAddingDefaults(SQLiteDatabase db, ContentValues row) {
             row = setDefaultValue(row);
             try {
@@ -2144,264 +2147,264 @@ public class TelephonyProvider extends ContentProvider
                 }
             }
         }
+    }
 
-        public static void mergeFieldsAndUpdateDb(SQLiteDatabase db, String table, Cursor oldRow,
-                                                  ContentValues newRow, ContentValues mergedValues,
-                                                  boolean onUpgrade, Context context) {
-            if (newRow.containsKey(TYPE)) {
-                // Merge the types
-                String oldType = oldRow.getString(oldRow.getColumnIndex(TYPE));
-                String newType = newRow.getAsString(TYPE);
+    public static void mergeFieldsAndUpdateDb(SQLiteDatabase db, String table, Cursor oldRow,
+            ContentValues newRow, ContentValues mergedValues,
+            boolean onUpgrade, Context context) {
+        if (newRow.containsKey(TYPE)) {
+            // Merge the types
+            String oldType = oldRow.getString(oldRow.getColumnIndex(TYPE));
+            String newType = newRow.getAsString(TYPE);
 
-                if (!oldType.equalsIgnoreCase(newType)) {
-                    if (oldType.equals("") || newType.equals("")) {
-                        newRow.put(TYPE, "");
-                    } else {
-                        String[] oldTypes = oldType.toLowerCase().split(",");
-                        String[] newTypes = newType.toLowerCase().split(",");
+            if (!oldType.equalsIgnoreCase(newType)) {
+                if (oldType.equals("") || newType.equals("")) {
+                    newRow.put(TYPE, "");
+                } else {
+                    String[] oldTypes = oldType.toLowerCase().split(",");
+                    String[] newTypes = newType.toLowerCase().split(",");
 
-                        if (VDBG) {
-                            log("mergeFieldsAndUpdateDb: Calling separateRowsNeeded() oldType=" +
-                                    oldType + " old bearer=" + oldRow.getInt(oldRow.getColumnIndex(
-                                    BEARER_BITMASK)) +  " old networkType=" +
-                                    oldRow.getInt(oldRow.getColumnIndex(NETWORK_TYPE_BITMASK)) +
-                                    " old profile_id=" + oldRow.getInt(oldRow.getColumnIndex(
-                                    PROFILE_ID)) + " newRow " + newRow);
-                        }
-
-                        // If separate rows are needed, do not need to merge any further
-                        if (separateRowsNeeded(db, table, oldRow, newRow, context, oldTypes,
-                                newTypes)) {
-                            if (VDBG) log("mergeFieldsAndUpdateDb: separateRowsNeeded() returned " +
-                                    "true");
-                            return;
-                        }
-
-                        // Merge the 2 types
-                        ArrayList<String> mergedTypes = new ArrayList<String>();
-                        mergedTypes.addAll(Arrays.asList(oldTypes));
-                        for (String s : newTypes) {
-                            if (!mergedTypes.contains(s.trim())) {
-                                mergedTypes.add(s);
-                            }
-                        }
-                        StringBuilder mergedType = new StringBuilder();
-                        for (int i = 0; i < mergedTypes.size(); i++) {
-                            mergedType.append((i == 0 ? "" : ",") + mergedTypes.get(i));
-                        }
-                        newRow.put(TYPE, mergedType.toString());
+                    if (VDBG) {
+                        log("mergeFieldsAndUpdateDb: Calling separateRowsNeeded() oldType=" +
+                                oldType + " old bearer=" + oldRow.getInt(oldRow.getColumnIndex(
+                                BEARER_BITMASK)) +  " old networkType=" +
+                                oldRow.getInt(oldRow.getColumnIndex(NETWORK_TYPE_BITMASK)) +
+                                " old profile_id=" + oldRow.getInt(oldRow.getColumnIndex(
+                                PROFILE_ID)) + " newRow " + newRow);
                     }
-                }
-                mergedValues.put(TYPE, newRow.getAsString(TYPE));
-            }
 
-            if (newRow.containsKey(BEARER_BITMASK)) {
-                int oldBearer = oldRow.getInt(oldRow.getColumnIndex(BEARER_BITMASK));
-                int newBearer = newRow.getAsInteger(BEARER_BITMASK);
-                if (oldBearer != newBearer) {
-                    if (oldBearer == 0 || newBearer == 0) {
-                        newRow.put(BEARER_BITMASK, 0);
-                    } else {
-                        newRow.put(BEARER_BITMASK, (oldBearer | newBearer));
+                    // If separate rows are needed, do not need to merge any further
+                    if (separateRowsNeeded(db, table, oldRow, newRow, context, oldTypes,
+                            newTypes)) {
+                        if (VDBG) log("mergeFieldsAndUpdateDb: separateRowsNeeded() returned " +
+                                "true");
+                        return;
                     }
-                }
-                mergedValues.put(BEARER_BITMASK, newRow.getAsInteger(BEARER_BITMASK));
-            }
 
-            if (newRow.containsKey(NETWORK_TYPE_BITMASK)) {
-                int oldBitmask = oldRow.getInt(oldRow.getColumnIndex(NETWORK_TYPE_BITMASK));
-                int newBitmask = newRow.getAsInteger(NETWORK_TYPE_BITMASK);
-                if (oldBitmask != newBitmask) {
-                    if (oldBitmask == 0 || newBitmask == 0) {
-                        newRow.put(NETWORK_TYPE_BITMASK, 0);
-                    } else {
-                        newRow.put(NETWORK_TYPE_BITMASK, (oldBitmask | newBitmask));
+                    // Merge the 2 types
+                    ArrayList<String> mergedTypes = new ArrayList<String>();
+                    mergedTypes.addAll(Arrays.asList(oldTypes));
+                    for (String s : newTypes) {
+                        if (!mergedTypes.contains(s.trim())) {
+                            mergedTypes.add(s);
+                        }
                     }
-                }
-                mergedValues.put(NETWORK_TYPE_BITMASK, newRow.getAsInteger(NETWORK_TYPE_BITMASK));
-            }
-
-            if (newRow.containsKey(BEARER_BITMASK)
-                    && newRow.containsKey(NETWORK_TYPE_BITMASK)) {
-                syncBearerBitmaskAndNetworkTypeBitmask(mergedValues);
-            }
-
-            if (!onUpgrade) {
-                // Do not overwrite a carrier or user edit with EDITED=UNEDITED
-                if (newRow.containsKey(EDITED_STATUS)) {
-                    int oldEdited = oldRow.getInt(oldRow.getColumnIndex(EDITED_STATUS));
-                    int newEdited = newRow.getAsInteger(EDITED_STATUS);
-                    if (newEdited == UNEDITED && (oldEdited == CARRIER_EDITED
-                                || oldEdited == CARRIER_DELETED
-                                || oldEdited == CARRIER_DELETED_BUT_PRESENT_IN_XML
-                                || oldEdited == USER_EDITED
-                                || oldEdited == USER_DELETED
-                                || oldEdited == USER_DELETED_BUT_PRESENT_IN_XML)) {
-                        newRow.remove(EDITED_STATUS);
+                    StringBuilder mergedType = new StringBuilder();
+                    for (int i = 0; i < mergedTypes.size(); i++) {
+                        mergedType.append((i == 0 ? "" : ",") + mergedTypes.get(i));
                     }
+                    newRow.put(TYPE, mergedType.toString());
                 }
-                mergedValues.putAll(newRow);
             }
-
-            if (mergedValues.size() > 0) {
-                db.update(table, mergedValues, "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")),
-                        null);
-            }
+            mergedValues.put(TYPE, newRow.getAsString(TYPE));
         }
 
-        private static boolean separateRowsNeeded(SQLiteDatabase db, String table, Cursor oldRow,
-                                                  ContentValues newRow, Context context,
-                                                  String[] oldTypes, String[] newTypes) {
-            // If this APN falls under persist_apns_for_plmn, and the
-            // only difference between old type and new type is that one has dun, and
-            // the APNs have profile_id 0 or not set, then set the profile_id to 1 for
-            // the dun APN/remove dun from type. This will ensure both oldRow and newRow exist
-            // separately in db.
-
-            boolean match = false;
-
-            // Check if APN falls under persist_apns_for_plmn
-            if (context.getResources() != null) {
-                String[] persistApnsForPlmns = context.getResources().getStringArray(
-                        R.array.persist_apns_for_plmn);
-                for (String s : persistApnsForPlmns) {
-                    if (s.equalsIgnoreCase(newRow.getAsString(NUMERIC))) {
-                        match = true;
-                        break;
-                    }
+        if (newRow.containsKey(BEARER_BITMASK)) {
+            int oldBearer = oldRow.getInt(oldRow.getColumnIndex(BEARER_BITMASK));
+            int newBearer = newRow.getAsInteger(BEARER_BITMASK);
+            if (oldBearer != newBearer) {
+                if (oldBearer == 0 || newBearer == 0) {
+                    newRow.put(BEARER_BITMASK, 0);
+                } else {
+                    newRow.put(BEARER_BITMASK, (oldBearer | newBearer));
                 }
-            } else {
-                loge("separateRowsNeeded: resources=null");
+            }
+            mergedValues.put(BEARER_BITMASK, newRow.getAsInteger(BEARER_BITMASK));
+        }
+
+        if (newRow.containsKey(NETWORK_TYPE_BITMASK)) {
+            int oldBitmask = oldRow.getInt(oldRow.getColumnIndex(NETWORK_TYPE_BITMASK));
+            int newBitmask = newRow.getAsInteger(NETWORK_TYPE_BITMASK);
+            if (oldBitmask != newBitmask) {
+                if (oldBitmask == 0 || newBitmask == 0) {
+                    newRow.put(NETWORK_TYPE_BITMASK, 0);
+                } else {
+                    newRow.put(NETWORK_TYPE_BITMASK, (oldBitmask | newBitmask));
+                }
+            }
+            mergedValues.put(NETWORK_TYPE_BITMASK, newRow.getAsInteger(NETWORK_TYPE_BITMASK));
+        }
+
+        if (newRow.containsKey(BEARER_BITMASK)
+                && newRow.containsKey(NETWORK_TYPE_BITMASK)) {
+            syncBearerBitmaskAndNetworkTypeBitmask(mergedValues);
+        }
+
+        if (!onUpgrade) {
+            // Do not overwrite a carrier or user edit with EDITED=UNEDITED
+            if (newRow.containsKey(EDITED_STATUS)) {
+                int oldEdited = oldRow.getInt(oldRow.getColumnIndex(EDITED_STATUS));
+                int newEdited = newRow.getAsInteger(EDITED_STATUS);
+                if (newEdited == UNEDITED && (oldEdited == CARRIER_EDITED
+                        || oldEdited == CARRIER_DELETED
+                        || oldEdited == CARRIER_DELETED_BUT_PRESENT_IN_XML
+                        || oldEdited == USER_EDITED
+                        || oldEdited == USER_DELETED
+                        || oldEdited == USER_DELETED_BUT_PRESENT_IN_XML)) {
+                    newRow.remove(EDITED_STATUS);
+                }
+            }
+            mergedValues.putAll(newRow);
+        }
+
+        if (mergedValues.size() > 0) {
+            db.update(table, mergedValues, "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")),
+                    null);
+        }
+    }
+
+    private static boolean separateRowsNeeded(SQLiteDatabase db, String table, Cursor oldRow,
+            ContentValues newRow, Context context,
+            String[] oldTypes, String[] newTypes) {
+        // If this APN falls under persist_apns_for_plmn, and the
+        // only difference between old type and new type is that one has dun, and
+        // the APNs have profile_id 0 or not set, then set the profile_id to 1 for
+        // the dun APN/remove dun from type. This will ensure both oldRow and newRow exist
+        // separately in db.
+
+        boolean match = false;
+
+        // Check if APN falls under persist_apns_for_plmn
+        if (context.getResources() != null) {
+            String[] persistApnsForPlmns = context.getResources().getStringArray(
+                    R.array.persist_apns_for_plmn);
+            for (String s : persistApnsForPlmns) {
+                if (s.equalsIgnoreCase(newRow.getAsString(NUMERIC))) {
+                    match = true;
+                    break;
+                }
+            }
+        } else {
+            loge("separateRowsNeeded: resources=null");
+        }
+
+        if (!match) return false;
+
+        // APN falls under persist_apns_for_plmn
+        // Check if only difference between old type and new type is that
+        // one has dun
+        ArrayList<String> oldTypesAl = new ArrayList<String>(Arrays.asList(oldTypes));
+        ArrayList<String> newTypesAl = new ArrayList<String>(Arrays.asList(newTypes));
+        ArrayList<String> listWithDun = null;
+        ArrayList<String> listWithoutDun = null;
+        boolean dunInOld = false;
+        if (oldTypesAl.size() == newTypesAl.size() + 1) {
+            listWithDun = oldTypesAl;
+            listWithoutDun = newTypesAl;
+            dunInOld = true;
+        } else if (oldTypesAl.size() + 1 == newTypesAl.size()) {
+            listWithDun = newTypesAl;
+            listWithoutDun = oldTypesAl;
+        } else {
+            return false;
+        }
+
+        if (listWithDun.contains("dun") && !listWithoutDun.contains("dun")) {
+            listWithoutDun.add("dun");
+            if (!listWithDun.containsAll(listWithoutDun)) {
+                return false;
             }
 
-            if (!match) return false;
-
-            // APN falls under persist_apns_for_plmn
-            // Check if only difference between old type and new type is that
+            // Only difference between old type and new type is that
             // one has dun
-            ArrayList<String> oldTypesAl = new ArrayList<String>(Arrays.asList(oldTypes));
-            ArrayList<String> newTypesAl = new ArrayList<String>(Arrays.asList(newTypes));
-            ArrayList<String> listWithDun = null;
-            ArrayList<String> listWithoutDun = null;
-            boolean dunInOld = false;
-            if (oldTypesAl.size() == newTypesAl.size() + 1) {
-                listWithDun = oldTypesAl;
-                listWithoutDun = newTypesAl;
-                dunInOld = true;
-            } else if (oldTypesAl.size() + 1 == newTypesAl.size()) {
-                listWithDun = newTypesAl;
-                listWithoutDun = oldTypesAl;
+            // Check if profile_id is 0/not set
+            if (oldRow.getInt(oldRow.getColumnIndex(PROFILE_ID)) == 0) {
+                if (dunInOld) {
+                    // Update oldRow to remove dun from its type field
+                    ContentValues updateOldRow = new ContentValues();
+                    StringBuilder sb = new StringBuilder();
+                    boolean first = true;
+                    for (String s : listWithDun) {
+                        if (!s.equalsIgnoreCase("dun")) {
+                            sb.append(first ? s : "," + s);
+                            first = false;
+                        }
+                    }
+                    String updatedType = sb.toString();
+                    if (VDBG) {
+                        log("separateRowsNeeded: updating type in oldRow to " + updatedType);
+                    }
+                    updateOldRow.put(TYPE, updatedType);
+                    db.update(table, updateOldRow,
+                            "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")), null);
+                    return true;
+                } else {
+                    if (VDBG) log("separateRowsNeeded: adding profile id 1 to newRow");
+                    // Update newRow to set profile_id to 1
+                    newRow.put(PROFILE_ID, new Integer(1));
+                }
             } else {
                 return false;
             }
 
-            if (listWithDun.contains("dun") && !listWithoutDun.contains("dun")) {
-                listWithoutDun.add("dun");
-                if (!listWithDun.containsAll(listWithoutDun)) {
-                    return false;
-                }
-
-                // Only difference between old type and new type is that
-                // one has dun
-                // Check if profile_id is 0/not set
-                if (oldRow.getInt(oldRow.getColumnIndex(PROFILE_ID)) == 0) {
-                    if (dunInOld) {
-                        // Update oldRow to remove dun from its type field
-                        ContentValues updateOldRow = new ContentValues();
-                        StringBuilder sb = new StringBuilder();
-                        boolean first = true;
-                        for (String s : listWithDun) {
-                            if (!s.equalsIgnoreCase("dun")) {
-                                sb.append(first ? s : "," + s);
-                                first = false;
-                            }
-                        }
-                        String updatedType = sb.toString();
-                        if (VDBG) {
-                            log("separateRowsNeeded: updating type in oldRow to " + updatedType);
-                        }
-                        updateOldRow.put(TYPE, updatedType);
-                        db.update(table, updateOldRow,
-                                "_id=" + oldRow.getInt(oldRow.getColumnIndex("_id")), null);
-                        return true;
-                    } else {
-                        if (VDBG) log("separateRowsNeeded: adding profile id 1 to newRow");
-                        // Update newRow to set profile_id to 1
-                        newRow.put(PROFILE_ID, new Integer(1));
-                    }
-                } else {
-                    return false;
-                }
-
-                // If match was found, both oldRow and newRow need to exist
-                // separately in db. Add newRow to db.
-                try {
-                    db.insertWithOnConflict(table, null, newRow, SQLiteDatabase.CONFLICT_REPLACE);
-                    if (VDBG) log("separateRowsNeeded: added newRow with profile id 1 to db");
-                    return true;
-                } catch (SQLException e) {
-                    loge("Exception on trying to add new row after updating profile_id");
-                }
+            // If match was found, both oldRow and newRow need to exist
+            // separately in db. Add newRow to db.
+            try {
+                db.insertWithOnConflict(table, null, newRow, SQLiteDatabase.CONFLICT_REPLACE);
+                if (VDBG) log("separateRowsNeeded: added newRow with profile id 1 to db");
+                return true;
+            } catch (SQLException e) {
+                loge("Exception on trying to add new row after updating profile_id");
             }
-
-            return false;
         }
 
-        public static Cursor selectConflictingRow(SQLiteDatabase db, String table,
-                                                  ContentValues row) {
-            // Conflict is possible only when numeric, mcc, mnc (fields without any default value)
-            // are set in the new row
-            if (!row.containsKey(NUMERIC) || !row.containsKey(MCC) || !row.containsKey(MNC)) {
-                loge("dbh.selectConflictingRow: called for non-conflicting row: " + row);
-                return null;
-            }
+        return false;
+    }
 
-            String[] columns = { "_id",
-                    TYPE,
-                    EDITED_STATUS,
-                    BEARER_BITMASK,
-                    NETWORK_TYPE_BITMASK,
-                    PROFILE_ID };
-            String selection = TextUtils.join("=? AND ", CARRIERS_UNIQUE_FIELDS) + "=?";
-            int i = 0;
-            String[] selectionArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
-            for (String field : CARRIERS_UNIQUE_FIELDS) {
-                if (!row.containsKey(field)) {
-                    selectionArgs[i++] = CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
-                } else {
-                    if (CARRIERS_BOOLEAN_FIELDS.contains(field)) {
-                        // for boolean fields we overwrite the strings "true" and "false" with "1"
-                        // and "0"
-                        selectionArgs[i++] = convertStringToIntString(row.getAsString(field));
-                    } else {
-                        selectionArgs[i++] = row.getAsString(field);
-                    }
-                }
-            }
-
-            Cursor c = db.query(table, columns, selection, selectionArgs, null, null, null);
-
-            if (c != null) {
-                if (c.getCount() == 1) {
-                    if (VDBG) log("dbh.selectConflictingRow: " + c.getCount() + " conflicting " +
-                            "row found");
-                    if (c.moveToFirst()) {
-                        return c;
-                    } else {
-                        loge("dbh.selectConflictingRow: moveToFirst() failed");
-                    }
-                } else {
-                    loge("dbh.selectConflictingRow: Expected 1 but found " + c.getCount() +
-                            " matching rows found for cv " + row);
-                }
-                c.close();
-            } else {
-                loge("dbh.selectConflictingRow: Error - c is null; no matching row found for " +
-                        "cv " + row);
-            }
-
+    public static Cursor selectConflictingRow(SQLiteDatabase db, String table,
+            ContentValues row) {
+        // Conflict is possible only when numeric, mcc, mnc (fields without any default value)
+        // are set in the new row
+        if (!row.containsKey(NUMERIC) || !row.containsKey(MCC) || !row.containsKey(MNC)) {
+            loge("dbh.selectConflictingRow: called for non-conflicting row: " + row);
             return null;
         }
+
+        String[] columns = { "_id",
+                TYPE,
+                EDITED_STATUS,
+                BEARER_BITMASK,
+                NETWORK_TYPE_BITMASK,
+                PROFILE_ID };
+        String selection = TextUtils.join("=? AND ", CARRIERS_UNIQUE_FIELDS) + "=?";
+        int i = 0;
+        String[] selectionArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
+        for (String field : CARRIERS_UNIQUE_FIELDS) {
+            if (!row.containsKey(field)) {
+                selectionArgs[i++] = CARRIERS_UNIQUE_FIELDS_DEFAULTS.get(field);
+            } else {
+                if (CARRIERS_BOOLEAN_FIELDS.contains(field)) {
+                    // for boolean fields we overwrite the strings "true" and "false" with "1"
+                    // and "0"
+                    selectionArgs[i++] = convertStringToIntString(row.getAsString(field));
+                } else {
+                    selectionArgs[i++] = row.getAsString(field);
+                }
+            }
+        }
+
+        Cursor c = db.query(table, columns, selection, selectionArgs, null, null, null);
+
+        if (c != null) {
+            if (c.getCount() == 1) {
+                if (VDBG) log("dbh.selectConflictingRow: " + c.getCount() + " conflicting " +
+                        "row found");
+                if (c.moveToFirst()) {
+                    return c;
+                } else {
+                    loge("dbh.selectConflictingRow: moveToFirst() failed");
+                }
+            } else {
+                loge("dbh.selectConflictingRow: Expected 1 but found " + c.getCount() +
+                        " matching rows found for cv " + row);
+            }
+            c.close();
+        } else {
+            loge("dbh.selectConflictingRow: Error - c is null; no matching row found for " +
+                    "cv " + row);
+        }
+
+        return null;
     }
 
     /**
@@ -2664,8 +2667,8 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
-    private void deletePreferredApnId() {
-        SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_APN,
+    private void deletePreferredApnId(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(PREF_FILE_APN,
                 Context.MODE_PRIVATE);
         SharedPreferences.Editor editor = sp.edit();
         editor.clear();
@@ -2707,19 +2710,27 @@ public class TelephonyProvider extends ContentProvider
     private long getPreferredApnIdFromApn(int subId) {
         log("getPreferredApnIdFromApn: for subId " + subId);
         SQLiteDatabase db = getReadableDatabase();
-        String where = TextUtils.join("=? and ", CARRIERS_UNIQUE_FIELDS) + "=?";
-        String[] whereArgs = new String[CARRIERS_UNIQUE_FIELDS.size()];
+
+        List<String> whereList = new ArrayList<>();
+        List<String> whereArgsList = new ArrayList<>();
         SharedPreferences sp = getContext().getSharedPreferences(PREF_FILE_FULL_APN,
                 Context.MODE_PRIVATE);
-        long apnId = INVALID_APN_ID;
-        int i = 0;
         for (String key : CARRIERS_UNIQUE_FIELDS) {
-            whereArgs[i] = sp.getString(key + subId, null);
-            if (whereArgs[i] == null) {
-                return INVALID_APN_ID;
+            String value = sp.getString(key + subId, null);
+            if (value == null) {
+                continue;
+            } else {
+                whereList.add(key);
+                whereArgsList.add(value);
             }
-            i++;
         }
+        if (whereList.size() == 0) return INVALID_APN_ID;
+
+        String where = TextUtils.join("=? and ", whereList) + "=?";
+        String[] whereArgs = new String[whereArgsList.size()];
+        whereArgs = whereArgsList.toArray(whereArgs);
+
+        long apnId = INVALID_APN_ID;
         Cursor c = db.query(CARRIERS_TABLE, new String[]{"_id"}, where, whereArgs, null, null,
                 null);
         if (c != null) {
@@ -2779,7 +2790,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkQueryPermission(match, projectionIn);
+        checkQueryPermission(match, projectionIn, selection);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -2963,26 +2974,6 @@ public class TelephonyProvider extends ContentProvider
             qb.appendWhere(TextUtils.join(" AND ", constraints));
         }
 
-        if (match != URL_SIMINFO) {
-            // Determine if we need to do a check for fields in the selection
-            boolean selectionContainsSensitiveFields;
-            try {
-                selectionContainsSensitiveFields = containsSensitiveFields(selection);
-            } catch (Exception e) {
-                // Malformed sql, check permission anyway.
-                selectionContainsSensitiveFields = true;
-            }
-
-            if (selectionContainsSensitiveFields) {
-                try {
-                    checkPermission();
-                } catch (SecurityException e) {
-                    EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
-                    throw e;
-                }
-            }
-        }
-
         SQLiteDatabase db = getReadableDatabase();
         Cursor ret = null;
         try {
@@ -3008,8 +2999,27 @@ public class TelephonyProvider extends ContentProvider
         return ret;
     }
 
-    private void checkQueryPermission(int match, String[] projectionIn) {
-        if (match != URL_SIMINFO) {
+    private void checkQueryPermission(int match, String[] projectionIn, String selection) {
+        if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
+            // Determine if we need to do a check for fields in the selection
+            boolean selectionContainsSensitiveFields;
+            try {
+                selectionContainsSensitiveFields = containsSensitiveFields(selection);
+            } catch (IllegalArgumentException e) {
+                // Malformed sql, check permission anyway and return.
+                checkPermission();
+                return;
+            }
+
+            if (selectionContainsSensitiveFields) {
+                try {
+                    checkPermission();
+                } catch (SecurityException e) {
+                    EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
+                    throw e;
+                }
+            }
+
             if (projectionIn != null) {
                 for (String column : projectionIn) {
                     if (TYPE.equals(column) ||
@@ -3019,7 +3029,6 @@ public class TelephonyProvider extends ContentProvider
                             MVNO_TYPE.equals(column) ||
                             MVNO_MATCH_DATA.equals(column) ||
                             APN.equals(column)) {
-                        // noop
                     } else {
                         checkPermission();
                         break;
@@ -3029,7 +3038,25 @@ public class TelephonyProvider extends ContentProvider
                 // null returns all columns, so need permission check
                 checkPermission();
             }
+        } else {
+            // if querying siminfo, caller should have read privilege permissions
+            checkPhonePrivilegePermission();
         }
+    }
+
+    private boolean containsSensitiveFields(String sqlStatement) {
+        try {
+            SqlTokenFinder.findTokens(sqlStatement, s -> {
+                switch (s) {
+                    case USER:
+                    case PASSWORD:
+                        throw new SecurityException();
+                }
+            });
+        } catch (SecurityException e) {
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -3115,21 +3142,6 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) log("APN no match");
             return new MatrixCursor(coulmnNames);
         }
-    }
-
-    private boolean containsSensitiveFields(String sqlStatement) {
-        try {
-            SqlTokenFinder.findTokens(sqlStatement, s -> {
-                switch (s) {
-                    case USER:
-                    case PASSWORD:
-                        throw new SecurityException();
-                }
-            });
-        } catch (SecurityException e) {
-            return true;
-        }
-        return false;
     }
 
     @Override
@@ -3224,10 +3236,10 @@ public class TelephonyProvider extends ContentProvider
             log("insert: exception " + e);
             // Insertion failed which could be due to a conflict. Check if that is the case
             // and merge the entries
-            Cursor oldRow = DatabaseHelper.selectConflictingRow(db, CARRIERS_TABLE, values);
+            Cursor oldRow = selectConflictingRow(db, CARRIERS_TABLE, values);
             if (oldRow != null) {
                 ContentValues mergedValues = new ContentValues();
-                DatabaseHelper.mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
+                mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
                         mergedValues, false, getContext());
                 oldRow.close();
                 notify = true;
@@ -3270,7 +3282,7 @@ public class TelephonyProvider extends ContentProvider
                     values = new ContentValues();
                 }
 
-                values = DatabaseHelper.setDefaultValue(values);
+                values = setDefaultValue(values);
                 if (!values.containsKey(EDITED_STATUS)) {
                     values.put(EDITED_STATUS, CARRIER_EDITED);
                 }
@@ -3401,7 +3413,7 @@ public class TelephonyProvider extends ContentProvider
             case URL_DELETE:
             {
                 // Delete preferred APN for all subIds
-                deletePreferredApnId();
+                deletePreferredApnId(getContext());
                 // Delete unedited entries
                 count = db.delete(CARRIERS_TABLE, "(" + where + unedited + " and " +
                         IS_NOT_OWNED_BY_DPC, whereArgs);
@@ -3637,10 +3649,10 @@ public class TelephonyProvider extends ContentProvider
                     // Update failed which could be due to a conflict. Check if that is
                     // the case and merge the entries
                     log("update: exception " + e);
-                    Cursor oldRow = DatabaseHelper.selectConflictingRow(db, CARRIERS_TABLE, values);
+                    Cursor oldRow = selectConflictingRow(db, CARRIERS_TABLE, values);
                     if (oldRow != null) {
                         ContentValues mergedValues = new ContentValues();
-                        DatabaseHelper.mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
+                        mergeFieldsAndUpdateDb(db, CARRIERS_TABLE, oldRow, values,
                                 mergedValues, false, getContext());
                         oldRow.close();
                         db.delete(CARRIERS_TABLE, _ID + "=?" + " and " + IS_NOT_OWNED_BY_DPC,
@@ -3815,6 +3827,15 @@ public class TelephonyProvider extends ContentProvider
         throw new SecurityException("No permission to write APN settings");
     }
 
+    private void checkPhonePrivilegePermission() {
+        int status = getContext().checkCallingOrSelfPermission(
+                "android.permission.READ_PRIVILEGED_PHONE_STATE");
+        if (status == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No phone privilege permission");
+    }
+
     private DatabaseHelper mOpenHelper;
 
     private void restoreDefaultAPN(int subId) {
@@ -3920,7 +3941,7 @@ public class TelephonyProvider extends ContentProvider
         SQLiteDatabase db = getWritableDatabase();
 
         // Delete preferred APN for all subIds
-        deletePreferredApnId();
+        deletePreferredApnId(getContext());
 
         // Delete entries in db
         try {

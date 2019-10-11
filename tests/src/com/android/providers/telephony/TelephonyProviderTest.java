@@ -34,13 +34,14 @@ import android.net.Uri;
 import android.os.Process;
 import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
-import android.support.test.InstrumentationRegistry;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
+
+import androidx.test.InstrumentationRegistry;
 
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
