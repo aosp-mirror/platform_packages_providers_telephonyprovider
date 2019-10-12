@@ -25,23 +25,23 @@ import android.content.UriMatcher;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.MatrixCursor;
-import android.database.SQLException;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Environment;
+import android.os.FileUtils;
 import android.os.SystemProperties;
 import android.provider.Telephony.CarrierId;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
-import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.nano.CarrierIdProto;
+import com.android.internal.telephony.util.TelephonyUtils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -53,8 +53,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-
-import libcore.io.IoUtils;
 
 /**
  * This class provides the ability to query the Carrier Identification databases
@@ -536,7 +534,7 @@ public class CarrierIdProvider extends ContentProvider {
         } catch (IOException ex) {
             Log.e(TAG, "read carrier list from assets pb failure: " + ex);
         } finally {
-            IoUtils.closeQuietly(is);
+            FileUtils.closeQuietly(is);
         }
         try {
             is = new FileInputStream(new File(Environment.getDataDirectory(), OTA_UPDATED_PB_PATH));
@@ -544,7 +542,7 @@ public class CarrierIdProvider extends ContentProvider {
         } catch (IOException ex) {
             Log.e(TAG, "read carrier list from ota pb failure: " + ex);
         } finally {
-            IoUtils.closeQuietly(is);
+            FileUtils.closeQuietly(is);
         }
 
         // compare version
@@ -553,7 +551,7 @@ public class CarrierIdProvider extends ContentProvider {
             version = assets.version;
         }
         // bypass version check for ota carrier id test
-        if (ota != null && ((Build.IS_DEBUGGABLE && SystemProperties.getBoolean(
+        if (ota != null && ((TelephonyUtils.IS_DEBUGGABLE && SystemProperties.getBoolean(
                 "persist.telephony.test.carrierid.ota", false))
                 || (ota.version > version))) {
             carrierList = ota;
