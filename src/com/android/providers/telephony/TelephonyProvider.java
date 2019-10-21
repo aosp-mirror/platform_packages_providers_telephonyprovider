@@ -93,7 +93,6 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Environment;
-import android.os.FileUtils;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
@@ -101,7 +100,6 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
 import android.telephony.ServiceState;
-import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
@@ -125,6 +123,7 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
@@ -137,6 +136,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.CheckedInputStream;
 import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
@@ -584,10 +584,18 @@ public class TelephonyProvider extends ContentProvider
         }
 
         private long getChecksum(File file) {
-            long checksum = -1;
-            try {
-                checksum = FileUtils.checksumCrc32(file);
-                if (DBG) log("Checksum for " + file.getAbsolutePath() + " is " + checksum);
+            CRC32 checkSummer = new CRC32();
+            long checkSum = -1;
+            try (CheckedInputStream cis =
+                new CheckedInputStream(new FileInputStream(file), checkSummer)){
+                byte[] buf = new byte[128];
+                if(cis != null) {
+                    while(cis.read(buf) >= 0) {
+                        // Just read for checksum to get calculated.
+                    }
+                }
+                checkSum = checkSummer.getValue();
+                if (DBG) log("Checksum for " + file.getAbsolutePath() + " is " + checkSum);
             } catch (FileNotFoundException e) {
                 loge("FileNotFoundException for " + file.getAbsolutePath() + ":" + e);
             } catch (IOException e) {
@@ -599,14 +607,14 @@ public class TelephonyProvider extends ContentProvider
             try (InputStream inputStream = mContext.getResources().
                         openRawResource(com.android.internal.R.xml.apns)) {
                 byte[] array = toByteArray(inputStream);
-                CRC32 c = new CRC32();
-                c.update(array);
-                checksum += c.getValue();
-                if (DBG) log("Checksum after adding resource is " + checksum);
+                checkSummer.reset();
+                checkSummer.update(array);
+                checkSum += checkSummer.getValue();
+                if (DBG) log("Checksum after adding resource is " + checkSummer.getValue());
             } catch (IOException | Resources.NotFoundException e) {
                 loge("Exception when calculating checksum for internal apn resources: " + e);
             }
-            return checksum;
+            return checkSum;
         }
 
         private byte[] toByteArray(InputStream input) throws IOException {
