@@ -531,9 +531,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
                 for (File file : files) {
                     final String fileName = file.getName();
-                    if (DEBUG) {
-                        Log.d(TAG, "onHandleIntent restoring file " + fileName);
-                    }
+                    Log.d(TAG, "onHandleIntent restoring file " + fileName);
                     try (FileInputStream fileInputStream = new FileInputStream(file)) {
                         mTelephonyBackupAgent.doRestoreFile(fileName, fileInputStream.getFD());
                         didRestore = true;
@@ -547,9 +545,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 if (didRestore) {
                   // Tell the default sms app to do a full sync now that the messages have been
                   // restored.
-                  if (DEBUG) {
-                    Log.d(TAG, "onHandleIntent done - notifying default sms app");
-                  }
+                  Log.d(TAG, "onHandleIntent done - notifying default sms app");
                   ProviderUtil.notifyIfNotDefaultSmsApp(null /*uri*/, null /*calling package*/,
                       this);
                 }
@@ -605,25 +601,17 @@ public class TelephonyBackupAgent extends BackupAgent {
     }
 
     private void doRestoreFile(String fileName, FileDescriptor fd) throws IOException {
-        if (DEBUG) {
-            Log.d(TAG, "Restoring file " + fileName);
-        }
+        Log.d(TAG, "Restoring file " + fileName);
 
         try (JsonReader jsonReader = getJsonReader(fd)) {
             if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
-                if (DEBUG) {
-                    Log.d(TAG, "Restoring SMS");
-                }
+                Log.d(TAG, "Restoring SMS");
                 putSmsMessagesToProvider(jsonReader);
             } else if (fileName.endsWith(MMS_BACKUP_FILE_SUFFIX)) {
-                if (DEBUG) {
-                    Log.d(TAG, "Restoring text MMS");
-                }
+                Log.d(TAG, "Restoring text MMS");
                 putMmsMessagesToProvider(jsonReader);
             } else {
-                if (DEBUG) {
-                    Log.e(TAG, "Unknown file to restore:" + fileName);
-                }
+                Log.e(TAG, "Unknown file to restore:" + fileName);
             }
         }
     }
@@ -654,6 +642,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     @VisibleForTesting
     void putMmsMessagesToProvider(JsonReader jsonReader) throws IOException {
         jsonReader.beginArray();
+        int total = 0;
         while (jsonReader.hasNext()) {
             final Mms mms = readMmsFromReader(jsonReader);
             if (DEBUG) {
@@ -662,11 +651,15 @@ public class TelephonyBackupAgent extends BackupAgent {
             if (doesMmsExist(mms)) {
                 if (DEBUG) {
                     Log.e(TAG, String.format("Mms: %s already exists", mms.toString()));
+                } else {
+                    Log.w(TAG, "Mms: Found duplicate MMS");
                 }
                 continue;
             }
+            total++;
             addMmsMessage(mms);
         }
+        Log.d(TAG, "putMmsMessagesToProvider handled " + total + " new messages.");
     }
 
     @VisibleForTesting
@@ -823,6 +816,8 @@ public class TelephonyBackupAgent extends BackupAgent {
                 default:
                     if (DEBUG) {
                         Log.w(TAG, "readSmsValuesFromReader Unknown name:" + name);
+                    } else {
+                        Log.w(TAG, "readSmsValuesFromReader encountered unknown name.");
                     }
                     jsonReader.skipValue();
                     break;
@@ -955,9 +950,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                     mms.values.put(name, jsonReader.nextString());
                     break;
                 default:
-                    if (DEBUG) {
-                        Log.d(TAG, "Unknown name:" + name);
-                    }
+                    Log.d(TAG, "Unknown JSON element name:" + name);
                     jsonReader.skipValue();
                     break;
             }
@@ -995,9 +988,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 values,
                 ARCHIVE_THREAD_SELECTION,
                 new String[] { Long.toString(threadId)}) != 1) {
-            if (DEBUG) {
-                Log.e(TAG, "archiveThread: failed to update database");
-            }
+            Log.e(TAG, "archiveThread: failed to update database");
         }
     }
 
@@ -1066,9 +1057,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                         addrValues.put(name, jsonReader.nextString());
                         break;
                     default:
-                        if (DEBUG) {
-                            Log.d(TAG, "Unknown name:" + name);
-                        }
+                        Log.d(TAG, "Unknown JSON Element name:" + name);
                         jsonReader.skipValue();
                         break;
                 }
@@ -1099,9 +1088,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                         attachmentValues.put(name, jsonReader.nextString());
                         break;
                     default:
-                        if (DEBUG) {
-                            Log.d(TAG, "getMmsAttachmentsFromReader Unknown name:" + name);
-                        }
+                        Log.d(TAG, "getMmsAttachmentsFromReader Unknown name:" + name);
                         jsonReader.skipValue();
                         break;
                 }
@@ -1110,9 +1097,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             if (attachmentValues.containsKey(MMS_ATTACHMENT_FILENAME)) {
                 mms.attachments.add(attachmentValues);
             } else {
-                if (DEBUG) {
-                    Log.d(TAG, "Attachment json with no filenames");
-                }
+                Log.d(TAG, "Attachment json with no filenames");
             }
         }
         jsonReader.endArray();
@@ -1140,9 +1125,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             values.put(Telephony.Mms.Part.CONTENT_LOCATION, "smil.xml");
             values.put(Telephony.Mms.Part.TEXT, smil);
             if (mContentResolver.insert(partUri, values) == null) {
-                if (DEBUG) {
-                    Log.e(TAG, "Could not insert SMIL part");
-                }
+                Log.e(TAG, "Could not insert SMIL part");
                 return;
             }
         }
@@ -1162,9 +1145,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             values.put(Telephony.Mms.Part.TEXT, mms.body == null ? "" : mms.body.text);
 
             if (mContentResolver.insert(partUri, values) == null) {
-                if (DEBUG) {
-                    Log.e(TAG, "Could not insert body part");
-                }
+                Log.e(TAG, "Could not insert body part");
                 return;
             }
         }
@@ -1184,9 +1165,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                         getDataDir() + ATTACHMENT_DATA_PATH + filename);
                 Uri newPartUri = mContentResolver.insert(partUri, values);
                 if (newPartUri == null) {
-                    if (DEBUG) {
-                        Log.e(TAG, "Could not insert attachment part");
-                    }
+                    Log.e(TAG, "Could not insert attachment part");
                     return;
                 }
             }
@@ -1195,9 +1174,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         // Insert mms.
         final Uri mmsUri = mContentResolver.insert(Telephony.Mms.CONTENT_URI, mms.values);
         if (mmsUri == null) {
-            if (DEBUG) {
-                Log.e(TAG, "Could not insert mms");
-            }
+            Log.e(TAG, "Could not insert mms");
             return;
         }
 
@@ -1301,9 +1278,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             try {
                 threadId = Telephony.Threads.getOrCreateThreadId(this, recipients);
             } catch (RuntimeException e) {
-                if (DEBUG) {
-                    Log.e(TAG, e.toString());
-                }
+                Log.e(TAG, "Problem obtaining thread.", e);
             }
             mCacheGetOrCreateThreadId.put(recipients, threadId);
             return threadId;
@@ -1377,15 +1352,11 @@ public class TelephonyBackupAgent extends BackupAgent {
             try {
                 longId = Long.parseLong(id);
                 if (longId < 0) {
-                    if (DEBUG) {
-                        Log.e(TAG, "getAddresses: invalid id " + longId);
-                    }
+                    Log.e(TAG, "getAddresses: invalid id " + longId);
                     continue;
                 }
             } catch (final NumberFormatException ex) {
-                if (DEBUG) {
-                    Log.e(TAG, "getAddresses: invalid id. " + ex, ex);
-                }
+                Log.e(TAG, "getAddresses: invalid id " + ex, ex);
                 // skip this id
                 continue;
             }
@@ -1397,10 +1368,9 @@ public class TelephonyBackupAgent extends BackupAgent {
                         ContentUris.withAppendedId(SINGLE_CANONICAL_ADDRESS_URI, longId),
                         null, null, null, null);
             } catch (final Exception e) {
-                if (DEBUG) {
-                    Log.e(TAG, "getAddresses: query failed for id " + longId, e);
-                }
+                Log.e(TAG, "getAddresses: query failed for id " + longId, e);
             }
+
             if (c != null) {
                 try {
                     if (c.moveToFirst()) {
@@ -1408,9 +1378,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                         if (!TextUtils.isEmpty(number)) {
                             numbers.add(number);
                         } else {
-                            if (DEBUG) {
-                                Log.d(TAG, "Canonical MMS/SMS address is empty for id: " + longId);
-                            }
+                            Log.d(TAG, "Canonical MMS/SMS address is empty for id: " + longId);
                         }
                     }
                 } finally {
@@ -1419,9 +1387,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             }
         }
         if (numbers.isEmpty()) {
-            if (DEBUG) {
-                Log.d(TAG, "No MMS addresses found from ids string [" + spaceSepIds + "]");
-            }
+            Log.d(TAG, "No MMS addresses found from ids string [" + spaceSepIds + "]");
         }
         return numbers;
     }
