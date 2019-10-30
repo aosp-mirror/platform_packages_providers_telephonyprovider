@@ -26,9 +26,11 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Process;
+import android.provider.Telephony;
 import android.provider.Telephony.CellBroadcasts;
 import android.text.TextUtils;
 import android.util.Log;
@@ -49,8 +51,14 @@ public class CellBroadcastProvider extends ContentProvider {
         /** Return {@code True} if the caller has the permission to write/update the database. */
         boolean hasWritePermission();
 
-        /** Return {@code True} if the caller has the permission to query the database. */
+        /** Return {@code True} if the caller has the permission to query the complete database. */
         boolean hasReadPermission();
+
+        /**
+         * Return {@code True} if the caller has the permission to query the database for
+         * cell broadcast message history.
+         */
+        boolean hasReadPermissionForHistory();
     }
 
     private static final String TAG = CellBroadcastProvider.class.getSimpleName();
@@ -69,6 +77,14 @@ public class CellBroadcastProvider extends ContentProvider {
     /** URI matcher type to get all cell broadcasts. */
     private static final int ALL = 0;
 
+    /**
+     * URI matcher type for get all message history, this is used primarily for default
+     * cellbroadcast app or messaging app to display message history. some information is not
+     * exposed for messaging history, e.g, messages which are out of broadcast geometrics will not
+     * be delivered to end users thus will not be returned as message history query result.
+     */
+    private static final int MESSAGE_HISTORY = 1;
+
     /** MIME type for the list of all cell broadcasts. */
     private static final String LIST_TYPE = "vnd.android.cursor.dir/cellbroadcast";
 
@@ -78,10 +94,10 @@ public class CellBroadcastProvider extends ContentProvider {
 
     /** Authority string for content URIs. */
     @VisibleForTesting
-    public static final String AUTHORITY = "cellbroadcasts_fwk";
+    public static final String AUTHORITY = "cellbroadcasts";
 
     /** Content uri of this provider. */
-    public static final Uri CONTENT_URI = Uri.parse("content://cellbroadcasts_fwk");
+    public static final Uri CONTENT_URI = Uri.parse("content://cellbroadcasts");
 
     @VisibleForTesting
     public PermissionChecker mPermissionChecker;
@@ -92,6 +108,7 @@ public class CellBroadcastProvider extends ContentProvider {
 
     static {
         sUriMatcher.addURI(AUTHORITY, null, ALL);
+        sUriMatcher.addURI(AUTHORITY, "history", MESSAGE_HISTORY);
     }
 
     public CellBroadcastProvider() {}
@@ -129,7 +146,7 @@ public class CellBroadcastProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,
             String sortOrder) {
-        checkReadPermission();
+        checkReadPermission(uri);
 
         if (DBG) {
             Log.d(TAG, "query:"
@@ -139,6 +156,9 @@ public class CellBroadcastProvider extends ContentProvider {
                     + " selectionArgs = " + Arrays.toString(selectionArgs)
                     + " sortOrder = " + sortOrder);
         }
+        SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+        qb.setStrict(true); // a little protection from injection attacks
+        qb.setTables(CELL_BROADCASTS_TABLE_NAME);
 
         String orderBy;
         if (!TextUtils.isEmpty(sortOrder)) {
@@ -153,6 +173,11 @@ public class CellBroadcastProvider extends ContentProvider {
                 return getReadableDatabase().query(
                         CELL_BROADCASTS_TABLE_NAME, projection, selection, selectionArgs,
                         null /* groupBy */, null /* having */, orderBy);
+            case MESSAGE_HISTORY:
+                // limit projections to certain columns. limit result to broadcasted messages only.
+                qb.appendWhere(CellBroadcasts.MESSAGE_BROADCASTED  + "=1");
+                return qb.query(getReadableDatabase(), projection, selection, selectionArgs, null,
+                        null, orderBy);
             default:
                 throw new IllegalArgumentException(
                         "Query method doesn't support this uri = " + uri);
@@ -282,10 +307,24 @@ public class CellBroadcastProvider extends ContentProvider {
         }
     }
 
-    private void checkReadPermission() {
-        if (!mPermissionChecker.hasReadPermission()) {
-            throw new SecurityException(
-                    "No permission to read CellBroadcast provider");
+    private void checkReadPermission(Uri uri) {
+        int match = sUriMatcher.match(uri);
+        switch (match) {
+            case ALL:
+                if (!mPermissionChecker.hasReadPermission()) {
+                    throw new SecurityException(
+                            "No permission to read CellBroadcast provider");
+                }
+                break;
+            case MESSAGE_HISTORY:
+                // TODO: if we plan to allow apps to query db in framework, we should migrate data
+                // first before deprecating app's database. otherwise users will lose all history.
+                if (!mPermissionChecker.hasReadPermissionForHistory()) {
+                    throw new SecurityException(
+                            "No permission to read CellBroadcast provider for message history");
+                }
+            default:
+                return;
         }
     }
 
@@ -315,14 +354,28 @@ public class CellBroadcastProvider extends ContentProvider {
     private class CellBroadcastPermissionChecker implements PermissionChecker {
         @Override
         public boolean hasWritePermission() {
-            // Only the phone process has the write permission to modify this provider. 
-            return Binder.getCallingUid() == Process.PHONE_UID;
+            // Only the phone and network statck process has the write permission to modify this
+            // provider.
+            return Binder.getCallingUid() == Process.PHONE_UID
+                    || Binder.getCallingUid() == Process.NETWORK_STACK_UID;
         }
 
         @Override
         public boolean hasReadPermission() {
-            // Only the phone process has the read permission to query data from this provider. 
-            return Binder.getCallingUid() == Process.PHONE_UID;
+            // Only the phone and network stack process has the read permission to query data from
+            // this provider.
+            return Binder.getCallingUid() == Process.PHONE_UID
+                    || Binder.getCallingUid() == Process.NETWORK_STACK_UID;
+        }
+
+        @Override
+        public boolean hasReadPermissionForHistory() {
+            int status = getContext().checkCallingOrSelfPermission(
+                    "android.permission.RECEIVE_EMERGENCY_BROADCAST");
+            if (status == PackageManager.PERMISSION_GRANTED) {
+                return true;
+            }
+            return false;
         }
     }
 }

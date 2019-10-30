@@ -108,7 +108,7 @@
                   android:writePermission="android.permission.MODIFY_PHONE_STATE" />
 
         <provider android:name="CellBroadcastProvider"
-                  android:authorities="cellbroadcasts_fwk"
+                  android:authorities="cellbroadcasts"
                   android:exported="true"
                   android:singleUser="true"
                   android:multiprocess="false" />
