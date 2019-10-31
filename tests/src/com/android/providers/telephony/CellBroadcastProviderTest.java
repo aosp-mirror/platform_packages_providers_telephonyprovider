@@ -40,7 +40,7 @@ import org.mockito.MockitoAnnotations;
 public class CellBroadcastProviderTest extends TestCase {
     private static final String TAG = CellBroadcastProviderTest.class.getSimpleName();
 
-    public static final Uri CONTENT_URI = Uri.parse("content://cellbroadcasts_fwk");
+    public static final Uri CONTENT_URI = Uri.parse("content://cellbroadcasts");
 
     private static final int GEO_SCOPE = 1;
     private static final String PLMN = "123456";
