@@ -2802,7 +2802,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkQueryPermission(match, projectionIn);
+        checkPermission();
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -3009,33 +3009,6 @@ public class TelephonyProvider extends ContentProvider
         if (ret != null)
             ret.setNotificationUri(getContext().getContentResolver(), url);
         return ret;
-    }
-
-    private void checkQueryPermission(int match, String[] projectionIn) {
-                if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
-            if (projectionIn != null) {
-                for (String column : projectionIn) {
-                    if (TYPE.equals(column) ||
-                            MMSC.equals(column) ||
-                            MMSPROXY.equals(column) ||
-                            MMSPORT.equals(column) ||
-                            MVNO_TYPE.equals(column) ||
-                            MVNO_MATCH_DATA.equals(column) ||
-                            APN.equals(column)) {
-                        // noop
-                    } else {
-                        checkPermission();
-                        break;
-                    }
-                }
-            } else {
-                // null returns all columns, so need permission check
-                checkPermission();
-            }
-        } else {
-            // if querying siminfo, caller should have read privilege permissions
-            checkPhonePrivilegePermission();
-        }
     }
 
     /**
