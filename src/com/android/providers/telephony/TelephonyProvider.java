@@ -106,7 +106,6 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
-import android.util.EventLog;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
@@ -206,10 +205,6 @@ public class TelephonyProvider extends ContentProvider
 
     private static final String DEFAULT_PROTOCOL = "IP";
     private static final String DEFAULT_ROAMING_PROTOCOL = "IP";
-
-    // Used to check if certain queries contain subqueries that may attempt to access sensitive
-    // fields in the carriers db.
-    private static final String SQL_SELECT_TOKEN = "select";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -2807,7 +2802,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkQueryPermission(match, projectionIn, selection, sort);
+        checkQueryPermission(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -3016,29 +3011,8 @@ public class TelephonyProvider extends ContentProvider
         return ret;
     }
 
-    private void checkQueryPermission(int match, String[] projectionIn, String selection,
-            String sort) {
-        // Determine if we need to do a check for fields in the selection
-        boolean selectionOrSortContainsSensitiveFields;
-        try {
-            selectionOrSortContainsSensitiveFields = containsSensitiveFields(selection);
-            selectionOrSortContainsSensitiveFields |= containsSensitiveFields(sort);
-        } catch (IllegalArgumentException e) {
-            // Malformed sql, check permission anyway and return.
-            checkPermission();
-            return;
-        }
-
-        if (selectionOrSortContainsSensitiveFields) {
-            try {
-                checkPermission();
-            } catch (SecurityException e) {
-                EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
-                throw e;
-            }
-        }
-
-        if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
+    private void checkQueryPermission(int match, String[] projectionIn) {
+                if (match != URL_SIMINFO && match != URL_SIMINFO_USING_SUBID) {
             if (projectionIn != null) {
                 for (String column : projectionIn) {
                     if (TYPE.equals(column) ||
@@ -3048,6 +3022,7 @@ public class TelephonyProvider extends ContentProvider
                             MVNO_TYPE.equals(column) ||
                             MVNO_MATCH_DATA.equals(column) ||
                             APN.equals(column)) {
+                        // noop
                     } else {
                         checkPermission();
                         break;
@@ -3061,22 +3036,6 @@ public class TelephonyProvider extends ContentProvider
             // if querying siminfo, caller should have read privilege permissions
             checkPhonePrivilegePermission();
         }
-    }
-
-    private boolean containsSensitiveFields(String sqlStatement) {
-        try {
-            SqlTokenFinder.findTokens(sqlStatement, s -> {
-                switch (s.toLowerCase()) {
-                    case USER:
-                    case PASSWORD:
-                    case SQL_SELECT_TOKEN:
-                        throw new SecurityException();
-                }
-            });
-        } catch (SecurityException e) {
-            return true;
-        }
-        return false;
     }
 
     /**
