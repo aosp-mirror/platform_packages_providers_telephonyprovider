@@ -61,7 +61,7 @@ public class CellBroadcastProvider extends ContentProvider {
     private static final String DATABASE_NAME = "cellbroadcasts.db";
 
     /** Database version. */
-    private static final int DATABASE_VERSION = 1;
+    private static final int DATABASE_VERSION = 2;
 
     /** URI matcher for ContentProvider queries. */
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
@@ -243,6 +243,7 @@ public class CellBroadcastProvider extends ContentProvider {
         return "CREATE TABLE " + tableName + " ("
                 + CellBroadcasts._ID + " INTEGER PRIMARY KEY AUTOINCREMENT,"
                 + CellBroadcasts.SUB_ID + " INTEGER,"
+                + CellBroadcasts.SLOT_INDEX + " INTEGER DEFAULT 0,"
                 + CellBroadcasts.GEOGRAPHICAL_SCOPE + " INTEGER,"
                 + CellBroadcasts.PLMN + " TEXT,"
                 + CellBroadcasts.LAC + " INTEGER,"
@@ -299,7 +300,16 @@ public class CellBroadcastProvider extends ContentProvider {
         }
 
         @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {}
+        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            if (DBG) {
+                Log.d(TAG, "onUpgrade: oldV=" + oldVersion + " newV=" + newVersion);
+            }
+            if (newVersion == 2) {
+                db.execSQL("ALTER TABLE " + CELL_BROADCASTS_TABLE_NAME + " ADD COLUMN "
+                        + CellBroadcasts.SLOT_INDEX + " INTEGER DEFAULT 0;");
+                Log.d(TAG, "add slotIndex column");
+            }
+        }
     }
 
     private class CellBroadcastPermissionChecker implements PermissionChecker {
