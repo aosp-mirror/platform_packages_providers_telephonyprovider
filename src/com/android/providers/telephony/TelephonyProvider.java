@@ -104,6 +104,7 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
@@ -175,6 +176,11 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_FILTERED_USING_SUBID = 25;
     private static final int URL_SIM_APN_LIST_FILTERED = 26;
     private static final int URL_SIM_APN_LIST_FILTERED_ID = 27;
+
+    /**
+     * Default value for mtu if it's not set. Moved from PhoneConstants.
+     */
+    private static final int UNSPECIFIED_INT = -1;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -250,6 +256,8 @@ public class TelephonyProvider extends ContentProvider
 
     private boolean mManagedApnEnforced;
 
+    private static final Map<String, Integer> MVNO_TYPE_STRING_MAP;
+
     static {
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
@@ -286,6 +294,12 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_BOOLEAN_FIELDS.add(MODEM_PERSIST);
         CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
         CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
+
+        MVNO_TYPE_STRING_MAP = new ArrayMap<String, Integer>();
+        MVNO_TYPE_STRING_MAP.put("spn", ApnSetting.MVNO_TYPE_SPN);
+        MVNO_TYPE_STRING_MAP.put("imsi", ApnSetting.MVNO_TYPE_IMSI);
+        MVNO_TYPE_STRING_MAP.put("gid", ApnSetting.MVNO_TYPE_GID);
+        MVNO_TYPE_STRING_MAP.put("iccid", ApnSetting.MVNO_TYPE_ICCID);
     }
 
     @VisibleForTesting
@@ -3080,7 +3094,7 @@ public class TelephonyProvider extends ContentProvider
 
             if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
                     ApnSettingUtils.mvnoMatches(iccRecords,
-                            ApnSetting.getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
                             ret.getString(mvnoDataIndex))) {
                 // 1. APN query result based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
@@ -3848,7 +3862,7 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
                         && ApnSettingUtils.mvnoMatches(iccRecords,
-                        ApnSetting.getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
+                        getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
                             + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
@@ -3994,5 +4008,11 @@ public class TelephonyProvider extends ContentProvider
 
     private static void loge(String s) {
         Log.e(TAG, s);
+    }
+
+    private static int getMvnoTypeIntFromString(String mvnoType) {
+        String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase();
+        Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
+        return  mvnoTypeInt == null ? UNSPECIFIED_INT : mvnoTypeInt;
     }
 }
