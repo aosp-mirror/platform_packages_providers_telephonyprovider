@@ -81,8 +81,8 @@ public class CarrierIdProviderTest extends TestCase {
 
     private class FakeContentResolver extends MockContentResolver {
         @Override
-        public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork) {
-            super.notifyChange(uri, observer, syncToNetwork);
+        public void notifyChange(Uri uri, ContentObserver observer) {
+            super.notifyChange(uri, observer);
             Log.d(TAG, "onChanged(uri=" + uri + ")" + observer);
             mContentObserver.dispatchChange(false, uri);
         }
