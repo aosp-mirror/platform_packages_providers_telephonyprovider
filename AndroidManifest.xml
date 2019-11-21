@@ -31,6 +31,8 @@
 
     <!-- This permission is only used to send the ACTION_EXTERNAL_PROVIDER_CHANGE intent. -->
     <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
+    <!-- Allows accessing the messages on ICC -->
+    <uses-permission android:name="android.permission.ACCESS_MESSAGES_ON_ICC" />
 
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
