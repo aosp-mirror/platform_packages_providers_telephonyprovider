@@ -47,7 +47,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
-import java.util.ArrayList;
+import java.util.List;
 import java.util.HashMap;
 
 public class SmsProvider extends ContentProvider {
@@ -341,12 +341,12 @@ public class SmsProvider extends ContentProvider {
         } catch (NumberFormatException exception) {
             throw new IllegalArgumentException("Bad SMS ICC ID: " + messageIndexString);
         }
-        ArrayList<SmsMessage> messages;
+        List<SmsMessage> messages;
         final SmsManager smsManager = SmsManager.getDefault();
         // Use phone id to avoid AppOps uid mismatch in telephony
         long token = Binder.clearCallingIdentity();
         try {
-            messages = smsManager.getAllMessagesFromIcc();
+            messages = smsManager.getMessagesFromIcc();
         } finally {
             Binder.restoreCallingIdentity(token);
         }
@@ -368,12 +368,12 @@ public class SmsProvider extends ContentProvider {
      */
     private Cursor getAllMessagesFromIcc() {
         SmsManager smsManager = SmsManager.getDefault();
-        ArrayList<SmsMessage> messages;
+        List<SmsMessage> messages;
 
         // use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call
         long token = Binder.clearCallingIdentity();
         try {
-            messages = smsManager.getAllMessagesFromIcc();
+            messages = smsManager.getMessagesFromIcc();
         } finally {
             Binder.restoreCallingIdentity(token);
         }
