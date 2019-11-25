@@ -96,7 +96,6 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
@@ -112,7 +111,6 @@ import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.compat.IPlatformCompat;
 import com.android.internal.telephony.PhoneConstants;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.dataconnection.ApnSettingUtils;
@@ -3800,20 +3798,7 @@ public class TelephonyProvider extends ContentProvider
                 return;
             }
         }
-
-        IPlatformCompat platformCompat = IPlatformCompat.Stub.asInterface(
-                ServiceManager.getService(Context.PLATFORM_COMPAT_SERVICE));
-        if (platformCompat != null) {
-            try {
-                platformCompat.reportChangeByUid(
-                        Telephony.Carriers.APN_READING_PERMISSION_CHANGE_ID,
-                        Binder.getCallingUid());
-            } catch (RemoteException e) {
-                //ignore
-            }
-        }
-
-        throw new SecurityException("No permission to access APN settings");
+        throw new SecurityException("No permission to write APN settings");
     }
 
     private DatabaseHelper mOpenHelper;
