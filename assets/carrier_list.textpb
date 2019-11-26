@@ -354,6 +354,7 @@ carrier_id {
     mccmnc_tuple: "23415"
     mccmnc_tuple: "23491"
     spn: ""
+    spn: "Vodafone"
     spn: "vodafone UK"
   }
 }
@@ -390,6 +391,7 @@ carrier_id {
     mccmnc_tuple: "20800"
     mccmnc_tuple: "20801"
     mccmnc_tuple: "20802"
+    spn: "Orange F"
   }
 }
 carrier_id {
@@ -3749,7 +3751,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1526
-  carrier_name: "1O1O / csl"
+  carrier_name: "1O1O / csl / Club Sim"
   carrier_attribute {
     mccmnc_tuple: "45400"
     mccmnc_tuple: "45419"
@@ -4094,6 +4096,7 @@ carrier_id {
     mccmnc_tuple: "44050"
     mccmnc_tuple: "44051"
     mccmnc_tuple: "44052"
+    gid1: "10"
   }
 }
 carrier_id {
@@ -5582,6 +5585,10 @@ carrier_id {
   carrier_name: "cellcom"
   carrier_attribute {
     mccmnc_tuple: "310600"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA00040000000000"
   }
 }
 carrier_id {
@@ -7936,7 +7943,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44050"
     mccmnc_tuple: "44051"
-    preferred_apn: "uqmobile.jp"
+    gid1: "20"
   }
 }
 carrier_id {
@@ -8337,7 +8344,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "44051"
-    preferred_apn: "biglobe.jp"
+    gid1: "24"
   }
 }
 carrier_id {
@@ -10277,6 +10284,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2430
+  carrier_name: "Syma Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "20801"
+    spn: "SYMA"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10475,4 +10490,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 16777228
+version: 16777229
