@@ -183,6 +183,16 @@ public class TelephonyProviderTest extends TestCase {
         }
 
         @Override
+        public String getSystemServiceName(Class<?> serviceClass) {
+            if (serviceClass.equals(TelephonyManager.class)) {
+              return Context.TELEPHONY_SERVICE;
+            } else {
+                Log.d(TAG, "getSystemServiceName: returning null");
+                return null;
+            }
+        }
+
+        @Override
         public Resources getResources() {
             Log.d(TAG, "getResources: returning null");
             return null;
