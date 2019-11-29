@@ -16,6 +16,7 @@
 
 package com.android.providers.telephony;
 
+import android.annotation.NonNull;
 import android.annotation.TargetApi;
 import android.app.AlarmManager;
 import android.app.IntentService;
@@ -443,48 +444,54 @@ public class TelephonyBackupAgent extends BackupAgent {
             return;
         }
 
-        int messagesWritten = 0;
+        // Backups consist of multiple chunks; each chunk consists of a set of messages
+        // of the same type in a chronological order.
+        BackupChunkInformation chunk;
         try (JsonWriter jsonWriter = getJsonWriter(fileName)) {
             if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
-                messagesWritten = putSmsMessagesToJson(cursor, jsonWriter);
+                chunk = putSmsMessagesToJson(cursor, jsonWriter);
             } else {
-                messagesWritten = putMmsMessagesToJson(cursor, jsonWriter);
+                chunk = putMmsMessagesToJson(cursor, jsonWriter);
             }
         }
-        backupFile(messagesWritten, fileName, data);
+        backupFile(chunk, fileName, data);
     }
 
     @VisibleForTesting
-    int putMmsMessagesToJson(Cursor cursor,
+    @NonNull
+    BackupChunkInformation putMmsMessagesToJson(Cursor cursor,
                              JsonWriter jsonWriter) throws IOException {
+        BackupChunkInformation results = new BackupChunkInformation();
         jsonWriter.beginArray();
-        int msgCount;
-        for (msgCount = 0; msgCount < mMaxMsgPerFile && !cursor.isAfterLast();
+        for (; results.count < mMaxMsgPerFile && !cursor.isAfterLast();
                 cursor.moveToNext()) {
-            msgCount += writeMmsToWriter(jsonWriter, cursor);
+            writeMmsToWriter(jsonWriter, cursor, results);
         }
         jsonWriter.endArray();
-        return msgCount;
+        return results;
     }
 
     @VisibleForTesting
-    int putSmsMessagesToJson(Cursor cursor, JsonWriter jsonWriter) throws IOException {
-
+    @NonNull
+    BackupChunkInformation putSmsMessagesToJson(Cursor cursor, JsonWriter jsonWriter)
+      throws IOException {
+        BackupChunkInformation results = new BackupChunkInformation();
         jsonWriter.beginArray();
-        int msgCount;
-        for (msgCount = 0; msgCount < mMaxMsgPerFile && !cursor.isAfterLast();
-                ++msgCount, cursor.moveToNext()) {
-            writeSmsToWriter(jsonWriter, cursor);
+        for (; results.count < mMaxMsgPerFile && !cursor.isAfterLast();
+                ++results.count, cursor.moveToNext()) {
+            writeSmsToWriter(jsonWriter, cursor, results);
         }
         jsonWriter.endArray();
-        return msgCount;
+        return results;
     }
 
-    private void backupFile(int messagesWritten, String fileName, FullBackupDataOutput data)
+    private void backupFile(BackupChunkInformation chunkInformation, String fileName,
+        FullBackupDataOutput data)
             throws IOException {
         final File file = new File(getFilesDir().getPath() + "/" + fileName);
+        file.setLastModified(chunkInformation.timestamp);
         try {
-            if (messagesWritten > 0) {
+            if (chunkInformation.count > 0) {
                 if (mBytesOverQuota > 0) {
                     mBytesOverQuota -= file.length();
                     return;
@@ -703,7 +710,8 @@ public class TelephonyBackupAgent extends BackupAgent {
                 subscriptionInfo.getCountryIso().toUpperCase(Locale.US));
     }
 
-    private void writeSmsToWriter(JsonWriter jsonWriter, Cursor cursor) throws IOException {
+    private void writeSmsToWriter(JsonWriter jsonWriter, Cursor cursor,
+            BackupChunkInformation chunk) throws IOException {
         jsonWriter.beginObject();
 
         for (int i=0; i<cursor.getColumnCount(); ++i) {
@@ -726,12 +734,31 @@ public class TelephonyBackupAgent extends BackupAgent {
                     break;
                 case Telephony.Sms._ID:
                     break;
+                case Telephony.Sms.DATE:
+                case Telephony.Sms.DATE_SENT:
+                    chunk.timestamp = findNewestValue(chunk.timestamp, value);
+                    jsonWriter.name(name).value(value);
+                    break;
                 default:
                     jsonWriter.name(name).value(value);
                     break;
             }
         }
         jsonWriter.endObject();
+    }
+
+    private long findNewestValue(long current, String latest) {
+        if(latest == null) {
+            return current;
+        }
+
+        try {
+            long latestLong = Long.valueOf(latest);
+            return Math.max(current, latestLong);
+        } catch (NumberFormatException e) {
+            Log.d(TAG, "Unable to parse value "+latest);
+            return current;
+        }
 
     }
 
@@ -838,12 +865,13 @@ public class TelephonyBackupAgent extends BackupAgent {
         return recipients;
     }
 
-    private int writeMmsToWriter(JsonWriter jsonWriter, Cursor cursor) throws IOException {
+    private void writeMmsToWriter(JsonWriter jsonWriter, Cursor cursor,
+            BackupChunkInformation chunk) throws IOException {
         final int mmsId = cursor.getInt(ID_IDX);
         final MmsBody body = getMmsBody(mmsId);
         // We backup any message that contains text, but only backup the text part.
         if (body == null || body.text == null) {
-            return 0;
+            return;
         }
 
         boolean subjectNull = true;
@@ -872,6 +900,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                 case Telephony.Mms._ID:
                 case Telephony.Mms.SUBJECT_CHARSET:
                     break;
+                case Telephony.Mms.DATE:
+                case Telephony.Mms.DATE_SENT:
+                    chunk.timestamp = findNewestValue(chunk.timestamp, value);
+                    jsonWriter.name(name).value(value);
+                    break;
                 case Telephony.Mms.SUBJECT:
                     subjectNull = false;
                 default:
@@ -891,7 +924,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             writeStringToWriter(jsonWriter, cursor, Telephony.Mms.SUBJECT_CHARSET);
         }
         jsonWriter.endObject();
-        return 1;
+        chunk.count++;
     }
 
     private Mms readMmsFromReader(JsonReader jsonReader) throws IOException {
@@ -1406,5 +1439,13 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     public static boolean getIsRestoring() {
         return sIsRestoring;
+    }
+
+    private static class BackupChunkInformation {
+        // Timestamp of the recent message in the file
+        private long timestamp;
+
+        // The number of messages in the backup file
+        private int count = 0;
     }
 }
