@@ -20,6 +20,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
+
 import android.Manifest;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -34,6 +35,7 @@ import android.net.Uri;
 import android.os.Process;
 import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
+import android.provider.Telephony.SimInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
@@ -336,13 +338,13 @@ public class TelephonyProviderTest extends TestCase {
                     return cv;
         }).toArray(ContentValues[]::new);
 
-        mContentResolver.bulkInsert(SubscriptionManager.CONTENT_URI, existingSimInfoEntries);
+        mContentResolver.bulkInsert(SimInfo.CONTENT_URI, existingSimInfoEntries);
 
         // Run the upgrade helper on all the sim info entries.
         String[] proj = {SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID,
                 SubscriptionManager.MCC, SubscriptionManager.MNC,
                 SubscriptionManager.MCC_STRING, SubscriptionManager.MNC_STRING};
-        try (Cursor c = mContentResolver.query(SubscriptionManager.CONTENT_URI, proj,
+        try (Cursor c = mContentResolver.query(SimInfo.CONTENT_URI, proj,
                 null, null, null)) {
             while (c.moveToNext()) {
                 TelephonyProvider.fillInMccMncStringAtCursor(mContext,
@@ -351,7 +353,7 @@ public class TelephonyProviderTest extends TestCase {
         }
 
         // Loop through and make sure that everything got filled in correctly.
-        try (Cursor c = mContentResolver.query(SubscriptionManager.CONTENT_URI, proj,
+        try (Cursor c = mContentResolver.query(SimInfo.CONTENT_URI, proj,
                 null, null, null)) {
             while (c.moveToNext()) {
                 String mcc = c.getString(c.getColumnIndexOrThrow(SubscriptionManager.MCC_STRING));
@@ -554,7 +556,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(SubscriptionManager.PROFILE_CLASS, insertProfileClass);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, contentValues);
+        mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
 
         // get values in table
         final String[] testProjection =
@@ -568,7 +570,7 @@ public class TelephonyProviderTest extends TestCase {
         String[] selectionArgs = { insertDisplayName };
         Log.d(TAG,"\ntestSimTable selection: " + selection
                 + "\ntestSimTable selectionArgs: " + selectionArgs.toString());
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+        Cursor cursor = mContentResolver.query(SimInfo.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
 
         // verify that inserted values match results of query
@@ -589,12 +591,12 @@ public class TelephonyProviderTest extends TestCase {
         String[] selectionArgsToDelete = { insertDisplayName };
         Log.d(TAG, "testSimTable deleting selection: " + selectionToDelete
                 + "testSimTable selectionArgs: " + selectionArgs);
-        int numRowsDeleted = mContentResolver.delete(SubscriptionManager.CONTENT_URI,
+        int numRowsDeleted = mContentResolver.delete(SimInfo.CONTENT_URI,
                 selectionToDelete, selectionArgsToDelete);
         assertEquals(1, numRowsDeleted);
 
         // verify that deleted values are gone
-        cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+        cursor = mContentResolver.query(SimInfo.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
         assertEquals(0, cursor.getCount());
     }
@@ -1440,7 +1442,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(SubscriptionManager.CARD_ID, insertCardId);
 
         Log.d(TAG, "testSimTable Inserting wfc contentValues: " + contentValues);
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, contentValues);
+        mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
         assertEquals(0, notifyWfcCount);
 
         // update wfc_enabled
@@ -1448,14 +1450,14 @@ public class TelephonyProviderTest extends TestCase {
         values.put(SubscriptionManager.WFC_IMS_ENABLED, true);
         final String selection = SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + "=?";
         final String[] selectionArgs = { "" + insertSubId };
-        mContentResolver.update(SubscriptionManager.CONTENT_URI, values, selection, selectionArgs);
+        mContentResolver.update(SimInfo.CONTENT_URI, values, selection, selectionArgs);
         assertEquals(1, notifyWfcCount);
         assertEquals(0, notifyWfcCountWithTestSubId);
 
         // update other fields
         values = new ContentValues();
         values.put(SubscriptionManager.DISPLAY_NAME, "exampleDisplayNameNew");
-        mContentResolver.update(SubscriptionManager.CONTENT_URI, values, selection, selectionArgs);
+        mContentResolver.update(SimInfo.CONTENT_URI, values, selection, selectionArgs);
         // expect no change on wfc count
         assertEquals(1, notifyWfcCount);
         assertEquals(0, notifyWfcCountWithTestSubId);
