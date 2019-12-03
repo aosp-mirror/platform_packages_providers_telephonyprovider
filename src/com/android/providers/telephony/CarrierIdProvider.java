@@ -34,12 +34,12 @@ import android.os.Environment;
 import android.os.FileUtils;
 import android.os.SystemProperties;
 import android.provider.Telephony.CarrierId;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.SubscriptionController;
 import com.android.internal.telephony.util.TelephonyUtils;
 import com.android.providers.telephony.nano.CarrierIdProto;
 
@@ -605,13 +605,21 @@ public class CarrierIdProvider extends ContentProvider {
 
         // Handle DEFAULT_SUBSCRIPTION_ID
         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
-            subId = SubscriptionController.getInstance().getDefaultSubId();
+            subId = SubscriptionManager.getDefaultSubscriptionId();
         }
 
-        if (!SubscriptionController.getInstance().isActiveSubId(subId)) {
+        SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(
+            Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        if (!sm.isActiveSubscriptionId(subId)) {
             // Remove absent subId from the currentSubscriptionMap.
-            final List activeSubscriptions = Arrays.asList(SubscriptionController.getInstance()
-                    .getActiveSubIdList(false));
+            List activeSubscriptions = new ArrayList<>();
+            final List<SubscriptionInfo> subscriptionInfoList =
+                sm.getActiveAndHiddenSubscriptionInfoList();
+            if (subscriptionInfoList != null) {
+                for (SubscriptionInfo subInfo : subscriptionInfoList) {
+                    activeSubscriptions.add(subInfo.getSubscriptionId());
+                }
+            }
             int count = 0;
             for (int subscription : mCurrentSubscriptionMap.keySet()) {
                 if (!activeSubscriptions.contains(subscription)) {
@@ -631,7 +639,7 @@ public class CarrierIdProvider extends ContentProvider {
 
     private Cursor queryCarrierIdForCurrentSubscription(Uri uri, String[] projectionIn) {
         // Parse the subId, using the default subId if subId is not provided
-        int subId = SubscriptionController.getInstance().getDefaultSubId();
+        int subId = SubscriptionManager.getDefaultSubscriptionId();
         if (!TextUtils.isEmpty(uri.getLastPathSegment())) {
             try {
                 subId = Integer.parseInt(uri.getLastPathSegment());
@@ -643,7 +651,7 @@ public class CarrierIdProvider extends ContentProvider {
 
         // Handle DEFAULT_SUBSCRIPTION_ID
         if (subId == SubscriptionManager.DEFAULT_SUBSCRIPTION_ID) {
-            subId = SubscriptionController.getInstance().getDefaultSubId();
+            subId = SubscriptionManager.getDefaultSubscriptionId();
         }
 
         if (!mCurrentSubscriptionMap.containsKey(subId)) {

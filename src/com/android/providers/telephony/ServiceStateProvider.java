@@ -60,7 +60,6 @@ import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.SubscriptionController;
 
 import java.util.HashMap;
 
@@ -111,7 +110,7 @@ public class ServiceStateProvider extends ContentProvider {
 
     @VisibleForTesting
     public int getDefaultSubId() {
-        return SubscriptionController.getInstance().getDefaultSubId();
+        return SubscriptionManager.getDefaultSubscriptionId();
     }
 
     @Override

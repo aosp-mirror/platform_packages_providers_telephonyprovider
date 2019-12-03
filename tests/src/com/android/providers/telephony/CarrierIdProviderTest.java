@@ -17,6 +17,7 @@
 package com.android.providers.telephony;
 
 import android.content.ContentValues;
+import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
@@ -26,23 +27,21 @@ import android.database.SQLException;
 import android.net.Uri;
 import android.os.Handler;
 import android.provider.Telephony.CarrierId;
+import android.telephony.SubscriptionManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.util.Log;
-
-import com.android.internal.telephony.SubscriptionController;
 
 import junit.framework.TestCase;
 
 import org.junit.Assert;
 import org.junit.Test;
 
-import java.lang.reflect.Field;
-
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * Tests for testing CRUD operations of CarrierIdProvider.
@@ -77,7 +76,7 @@ public class CarrierIdProviderTest extends TestCase {
     private CarrierIdProviderTestable mCarrierIdProviderTestable;
     private FakeContentObserver mContentObserver;
     private SharedPreferences mSharedPreferences = mock(SharedPreferences.class);
-    private SubscriptionController mSubController = mock(SubscriptionController.class);
+    private SubscriptionManager subscriptionManager = mock(SubscriptionManager.class);
 
     private class FakeContentResolver extends MockContentResolver {
         @Override
@@ -121,8 +120,13 @@ public class CarrierIdProviderTest extends TestCase {
 
         @Override
         public Object getSystemService(String name) {
-            Log.d(TAG, "getSystemService: returning null");
-            return null;
+            switch (name) {
+                case Context.TELEPHONY_SUBSCRIPTION_SERVICE:
+                    return subscriptionManager;
+                default:
+                    Log.d(TAG, "getSystemService: returning null");
+                    return null;
+            }
         }
 
         @Override
@@ -148,12 +152,6 @@ public class CarrierIdProviderTest extends TestCase {
         mContext = new MockContextWithProvider(mCarrierIdProviderTestable);
         mContentResolver = mContext.getContentResolver();
         mContentObserver = new FakeContentObserver(null);
-
-        doReturn("").when(mSubController).getDataEnabledOverrideRules(anyInt());
-
-        Field field = SubscriptionController.class.getDeclaredField("sInstance");
-        field.setAccessible(true);
-        field.set(null, mSubController);
     }
 
     @Override
@@ -341,8 +339,7 @@ public class CarrierIdProviderTest extends TestCase {
             ContentValues cv = new ContentValues();
             cv.put(CarrierId.CARRIER_ID, dummy_cid);
             cv.put(CarrierId.CARRIER_NAME, dummy_name);
-            doReturn(1).when(mSubController).getDefaultSubId();
-            doReturn(true).when(mSubController).isActiveSubId(eq(1));
+            when(subscriptionManager.isActiveSubscriptionId(eq(1))).thenReturn(true);
             mContext.getContentResolver().update(Uri.withAppendedPath(CarrierId.CONTENT_URI,
                     "1"), cv, null, null);
         } catch (Exception e) {
@@ -351,7 +348,6 @@ public class CarrierIdProviderTest extends TestCase {
         }
         int carrierId = -1;
         String carrierName = null;
-
         // query carrier id for subId 1
         try {
             final Cursor c = mContext.getContentResolver().query(
@@ -416,9 +412,6 @@ public class CarrierIdProviderTest extends TestCase {
             ContentValues cv = new ContentValues();
             cv.put(CarrierId.CARRIER_ID, dummy_cid);
             cv.put(CarrierId.CARRIER_NAME, dummy_name);
-            doReturn(1).when(mSubController).getDefaultSubId();
-            doReturn(true).when(mSubController).isActiveSubId(eq(1));
-
             mContext.getContentResolver().update(CarrierId.CONTENT_URI, cv, null, null);
             Assert.fail("should throw an exception for wrong uri");
         } catch (IllegalArgumentException ex) {
