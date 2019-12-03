@@ -1,1 +1,0 @@
-rule com.android.internal.util.XmlUtils* com.android.internal.telephony.XmlUtils@1
