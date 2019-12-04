@@ -1,15 +1,9 @@
-filegroup {
-    name: "jarjar-rules",
-    srcs: ["jarjar-rules.txt"],
-}
-
 android_app {
     name: "TelephonyProvider",
     privileged: true,
-    srcs: ["src/**/*.java", "proto/**/*.proto"],
-    jarjar_rules: ":jarjar-rules",
+    srcs: ["src/**/*.java"],
     platform_apis: true,
     certificate: "platform",
     libs: ["telephony-common"],
-    static_libs: ["android-common", "telephonyprovider-protos"],
+    static_libs: ["android-common"],
 }
