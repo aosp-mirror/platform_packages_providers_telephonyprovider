@@ -1454,7 +1454,7 @@ public class TelephonyProviderTest extends TestCase {
 
         // update wfc_enabled
         ContentValues values = new ContentValues();
-        values.put(SubscriptionManager.WFC_IMS_ENABLED, true);
+        values.put(Telephony.SimInfo.WFC_IMS_ENABLED, true);
         final String selection = SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + "=?";
         final String[] selectionArgs = { "" + insertSubId };
         mContentResolver.update(SimInfo.CONTENT_URI, values, selection, selectionArgs);
@@ -1471,7 +1471,7 @@ public class TelephonyProviderTest extends TestCase {
 
         // update WFC using subId
         values = new ContentValues();
-        values.put(SubscriptionManager.WFC_IMS_ENABLED, false);
+        values.put(Telephony.SimInfo.WFC_IMS_ENABLED, false);
         mContentResolver.update(SubscriptionManager.getUriForSubscriptionId(insertSubId),
                 values, null, null);
         assertEquals(1, notifyWfcCount);
