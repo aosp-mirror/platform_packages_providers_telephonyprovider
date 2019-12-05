@@ -147,7 +147,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 42 << 16;
+    private static final int DATABASE_VERSION = 43 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -416,7 +416,8 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0,"
                 + SubscriptionManager.GROUP_OWNER + " TEXT,"
                 + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
-                + SubscriptionManager.IMSI + " TEXT"
+                + SubscriptionManager.IMSI + " TEXT,"
+                + SubscriptionManager.UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1"
                 + ");";
     }
 
@@ -1393,6 +1394,21 @@ public class TelephonyProvider extends ContentProvider
                                 "The table will get created in onOpen.");
                     }
                 }
+            }
+
+            if (oldVersion < (43 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + SubscriptionManager.UICC_APPLICATIONS_ENABLED
+                            + " INTEGER DEFAULT 1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 43 << 16 | 6;
             }
 
 
