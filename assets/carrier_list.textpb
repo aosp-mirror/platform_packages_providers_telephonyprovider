@@ -5232,7 +5232,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1745
-  carrier_name: "Airtel Tanzania"
+  carrier_name: "Airtel"
   carrier_attribute {
     mccmnc_tuple: "64005"
   }
@@ -10645,4 +10645,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 16777235
+version: 16777236
