@@ -115,8 +115,6 @@ import android.util.Xml;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.dataconnection.ApnSettingUtils;
-import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
 import android.service.carrier.IApnSourceService;
@@ -3082,13 +3080,6 @@ public class TelephonyProvider extends ContentProvider
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
         int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
 
-        IccRecords iccRecords = UiccController.getInstance().getIccRecords(
-                SubscriptionManager.getPhoneId(subId), UiccController.APP_FAM_3GPP);
-        if (iccRecords == null) {
-            loge("iccRecords is null");
-            return null;
-        }
-
         //Separate the result into MatrixCursor
         while (ret.moveToNext()) {
             List<String> data = new ArrayList<>();
@@ -3097,17 +3088,17 @@ public class TelephonyProvider extends ContentProvider
             }
 
             if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
-                    ApnSettingUtils.mvnoMatches(iccRecords,
-                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                            ret.getString(mvnoDataIndex))) {
+                tm.isCurrentSimOperator(ret.getString(numericIndex),
+                    getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                    ret.getString(mvnoDataIndex))) {
                 // 1. The APN that query based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
             } else if (!TextUtils.isEmpty(ret.getString(numericIndex))
-                    && TextUtils.isEmpty(ret.getString(mvnoIndex))) {
+                && TextUtils.isEmpty(ret.getString(mvnoIndex))) {
                 // 2. The APN that query based on SIM MCC/MNC
                 parentCursor.addRow(data);
             } else if (!TextUtils.isEmpty(ret.getString(carrierIdIndex))
-                    && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))) {
+                && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))) {
                 // The APN that query based on carrier Id (not include the MVNO or MNO APN)
                 carrierIdCursor.addRow(data);
             }
@@ -3892,10 +3883,6 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private String getWhereClauseForRestoreDefaultApn(SQLiteDatabase db, int subId) {
-        IccRecords iccRecords = getIccRecords(subId);
-        if (iccRecords == null) {
-            return null;
-        }
         TelephonyManager telephonyManager =
             getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         String simOperator = telephonyManager.getSimOperator();
@@ -3909,8 +3896,8 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
-                        && ApnSettingUtils.mvnoMatches(iccRecords,
-                        getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
+                        && telephonyManager.isCurrentSimOperator(simOperator,
+                            getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
                             + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
@@ -3928,16 +3915,6 @@ public class TelephonyProvider extends ContentProvider
             }
         }
         return where;
-    }
-
-    @VisibleForTesting
-    IccRecords getIccRecords(int subId) {
-        TelephonyManager telephonyManager =
-            getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
-        int family = telephonyManager.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ?
-                UiccController.APP_FAM_3GPP : UiccController.APP_FAM_3GPP2;
-        return UiccController.getInstance().getIccRecords(
-                SubscriptionManager.getPhoneId(subId), family);
     }
 
     private synchronized void updateApnDb() {
