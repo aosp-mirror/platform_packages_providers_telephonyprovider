@@ -354,15 +354,8 @@ carrier_id {
     mccmnc_tuple: "23415"
     mccmnc_tuple: "23491"
     spn: ""
+    spn: "Vodafone"
     spn: "vodafone UK"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "23415"
-    spn: "Vodafone"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "23491"
-    spn: "Vodafone"
   }
 }
 carrier_id {
@@ -398,6 +391,7 @@ carrier_id {
     mccmnc_tuple: "20800"
     mccmnc_tuple: "20801"
     mccmnc_tuple: "20802"
+    spn: "Orange F"
   }
 }
 carrier_id {
@@ -4102,6 +4096,7 @@ carrier_id {
     mccmnc_tuple: "44050"
     mccmnc_tuple: "44051"
     mccmnc_tuple: "44052"
+    gid1: "10"
   }
 }
 carrier_id {
@@ -5241,7 +5236,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1745
-  carrier_name: "Airtel Tanzania"
+  carrier_name: "Airtel"
   carrier_attribute {
     mccmnc_tuple: "64005"
   }
@@ -7094,20 +7089,17 @@ carrier_id {
     privilege_access_rule: "4C36AF4A5BDAD97C1F3D8B283416D244496C2AC5EAFE8226079EF6F676FD1859"
   }
   carrier_attribute {
+    mccmnc_tuple: "312530"
+    gid1: "A00184"
+    gid1: "A00184FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+  }
+  carrier_attribute {
     mccmnc_tuple: "310260"
     imsi_prefix_xpattern: "31026097"
   }
   carrier_attribute {
     mccmnc_tuple: "311580"
     imsi_prefix_xpattern: "3115801"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "312530"
-    gid1: "A00184"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "312530"
-    gid1: "A00184FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
   carrier_attribute {
     mccmnc_tuple: "312580"
@@ -7944,9 +7936,6 @@ carrier_id {
     mccmnc_tuple: "44051"
     preferred_apn: "a.rmobile.jp"
   }
-  carrier_attribute {
-    mccmnc_tuple: "44011"
-  }
 }
 carrier_id {
   canonical_id: 2110
@@ -7954,7 +7943,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44050"
     mccmnc_tuple: "44051"
-    preferred_apn: "uqmobile.jp"
+    gid1: "20"
   }
 }
 carrier_id {
@@ -8355,7 +8344,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "44051"
-    preferred_apn: "biglobe.jp"
+    gid1: "24"
   }
 }
 carrier_id {
@@ -10288,6 +10277,21 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2429
+  carrier_name: "Rakuten Mobile(MNO)"
+  carrier_attribute {
+    mccmnc_tuple: "44011"
+  }
+}
+carrier_id {
+  canonical_id: 2430
+  carrier_name: "Syma Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "20801"
+    spn: "SYMA"
+  }
+}
+carrier_id {
   canonical_id: 2433
   carrier_name: "Assurance Wireless"
   carrier_attribute {
@@ -10618,204 +10622,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-carrier_id {
-  canonical_id: 10000
-  carrier_name: "Tracfone-ATT"
-  carrier_attribute {
-    mccmnc_tuple: "310410"
-    gid1: "DDFF"
-    gid1: "DEFF"
-  }
-  parent_canonical_id: 2022
-}
-carrier_id {
-  canonical_id: 10001
-  carrier_name: "Tracfone-TMO"
-  carrier_attribute {
-    mccmnc_tuple: "310260"
-    gid1: "DDFF"
-    gid1: "DEFF"
-  }
-  parent_canonical_id: 2022
-}
-carrier_id {
-  canonical_id: 10002
-  carrier_name: "o2prepaid_gb"
-  carrier_attribute {
-    mccmnc_tuple: "23410"
-    gid1: "61"
-    gid1: "67"
-    gid1: "85"
-    gid1: "99"
-  }
-  parent_canonical_id: 1492
-}
-carrier_id {
-  canonical_id: 10003
-  carrier_name: "o2prepaid_de"
-  carrier_attribute {
-    mccmnc_tuple: "26207"
-    imsi_prefix_xpattern: "2620749"
-  }
-  parent_canonical_id: 1454
-}
-carrier_id {
-  canonical_id: 10004
-  carrier_name: "sprintprepaid_us"
-  carrier_attribute {
-    mccmnc_tuple: "310120"
-    gid1: "000004"
-  }
-  parent_canonical_id: 1788
-}
-carrier_id {
-  canonical_id: 10005
-  carrier_name: "pcmobile_prepaid_bell"
-  carrier_attribute {
-    mccmnc_tuple: "30264"
-    mccmnc_tuple: "302610"
-    mccmnc_tuple: "302630"
-    mccmnc_tuple: "302640"
-    gid1: "40"
-  }
-  parent_canonical_id: 2053
-}
-carrier_id {
-  canonical_id: 10006
-  carrier_name: "pcmobile_postpaid_telus"
-  carrier_attribute {
-    mccmnc_tuple: "302220"
-    mccmnc_tuple: "302221"
-    gid1: "5043"
-  }
-  parent_canonical_id: 2053
-}
-carrier_id {
-  canonical_id: 10007
-  carrier_name: "docomo_mvno"
-  carrier_attribute {
-    mccmnc_tuple: "44010"
-  }
-  parent_canonical_id: 850
-}
-carrier_id {
-  canonical_id: 10008
-  carrier_name: "Tracfone-VZW"
-  carrier_attribute {
-    mccmnc_tuple: "311480"
-    gid1: "BA01270000000000"
-  }
-  parent_canonical_id: 2022
-}
-carrier_id {
-  canonical_id: 10009
-  carrier_name: "C Spire-US"
-  carrier_attribute {
-    mccmnc_tuple: "311230"
-    mccmnc_tuple: "310023"
-  }
-  parent_canonical_id: 1836
-}
-carrier_id {
-  canonical_id: 10010
-  carrier_name: "C Spire-NL"
-  carrier_attribute {
-    mccmnc_tuple: "20404"
-    spn: "C Spire"
-    spn: "C Spire"
-  }
-  parent_canonical_id: 1836
-}
-carrier_id {
-  canonical_id: 10011
-  carrier_name: "Red Pocket-TMO"
-  carrier_attribute {
-    mccmnc_tuple: "310260"
-    gid1: "4201"
-  }
-  parent_canonical_id: 2026
-}
-carrier_id {
-  canonical_id: 10012
-  carrier_name: "Red Pocket-ATT"
-  carrier_attribute {
-    mccmnc_tuple: "310410"
-    gid1: "4201"
-  }
-  parent_canonical_id: 2026
-}
-carrier_id {
-  canonical_id: 10013
-  carrier_name: "FirstNet Pacific"
-  carrier_attribute {
-    mccmnc_tuple: "313110"
-    mccmnc_tuple: "313120"
-  }
-  parent_canonical_id: 2119
-}
-carrier_id {
-  canonical_id: 10014
-  carrier_name: "Google Fi-TMO"
-  carrier_attribute {
-    mccmnc_tuple: "310260"
-    imsi_prefix_xpattern: "31026097"
-  }
-  parent_canonical_id: 1989
-}
-carrier_id {
-  canonical_id: 10015
-  carrier_name: "Google Fi-Sprint"
-  carrier_attribute {
-    mccmnc_tuple: "310120"
-    spn: "Fi Network"
-    spn: "nova"
-    spn: "Google Fi"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "310120"
-    gid1: "A00184"
-    gid1: "A00184FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "310120"
-    privilege_access_rule: "4C36AF4A5BDAD97C1F3D8B283416D244496C2AC5EAFE8226079EF6F676FD1859"
-  }
-  parent_canonical_id: 1989
-}
-carrier_id {
-  canonical_id: 10016
-  carrier_name: "Google Fi-USCellular"
-  carrier_attribute {
-    mccmnc_tuple: "311580"
-    imsi_prefix_xpattern: "3115801"
-  }
-  parent_canonical_id: 1989
-}
-carrier_id {
-  canonical_id: 10017
-  carrier_name: "Google Fi-3UK"
-  carrier_attribute {
-    mccmnc_tuple: "23420"
-    gid1: "0306"
-  }
-  parent_canonical_id: 1989
-}
-carrier_id {
-  canonical_id: 10018
-  carrier_name: "Google Fi-3HK"
-  carrier_attribute {
-    mccmnc_tuple: "45403"
-    gid1: "0206"
-  }
-  parent_canonical_id: 1989
-}
-carrier_id {
-  canonical_id: 10019
-  carrier_name: "Google Fi-3AT"
-  carrier_attribute {
-    mccmnc_tuple: "23210"
-    gid1: "0306"
-  }
-  parent_canonical_id: 1989
-}
-version: 16777228
+version: 16777232
