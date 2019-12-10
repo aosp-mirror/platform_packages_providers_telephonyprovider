@@ -112,7 +112,6 @@ import android.util.Xml;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.dataconnection.ApnSettingUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
@@ -2565,12 +2564,6 @@ public class TelephonyProvider extends ContentProvider
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
 
-        try {
-            PhoneFactory.addLocalLog(TAG, 100);
-        } catch (IllegalArgumentException e) {
-            // ignore
-        }
-
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
         if (!TextUtils.isEmpty(newBuildId)) {
@@ -2637,7 +2630,6 @@ public class TelephonyProvider extends ContentProvider
 
     private static void localLog(String logMsg) {
         Log.d(TAG, logMsg);
-        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private synchronized boolean isManagedApnEnforced() {
@@ -3356,7 +3348,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_SIMINFO: {
                long id = db.insert(SIMINFO_TABLE, null, initialValues);
-               result = ContentUris.withAppendedId(SubscriptionManager.CONTENT_URI, id);
+               result = ContentUris.withAppendedId(Telephony.SimInfo.CONTENT_URI, id);
                break;
             }
         }
@@ -3730,7 +3722,7 @@ public class TelephonyProvider extends ContentProvider
                     // If not set, any change to SIMINFO will notify observers which listens to
                     // specific field of SIMINFO.
                     getContext().getContentResolver().notifyChange(
-                            SubscriptionManager.CONTENT_URI, null,
+                        Telephony.SimInfo.CONTENT_URI, null,
                             ContentResolver.NOTIFY_SYNC_TO_NETWORK
                                     | ContentResolver.NOTIFY_SKIP_NOTIFY_FOR_DESCENDANTS,
                             UserHandle.USER_ALL);
