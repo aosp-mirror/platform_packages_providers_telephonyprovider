@@ -41,6 +41,7 @@ import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
+import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
@@ -95,6 +96,7 @@ public class TelephonyProviderTest extends TestCase {
     private static final String TEST_MCC = "123";
     private static final String TEST_MNC = "456";
     private static final String TEST_SPN = TelephonyProviderTestable.TEST_SPN;
+    private static final int TEST_CARRIERID = 1;
 
     // Used to test the path for URL_TELEPHONY_USING_SUBID with subid 1
     private static final Uri CONTENT_URI_WITH_SUBID = Uri.parse(
@@ -157,6 +159,7 @@ public class TelephonyProviderTest extends TestCase {
             doReturn(mIcRecords).when(mUiccController).getIccRecords(anyInt(), anyInt());
             doReturn(TEST_SPN).when(mIcRecords).getServiceProviderName();
             doReturn(TEST_SPN).when(mIcRecords).getServiceProviderNameWithBrandOverride();
+            doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimCarrierId();
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
@@ -1491,21 +1494,28 @@ public class TelephonyProviderTest extends TestCase {
 
     @Test
     @SmallTest
-    public void testSIMAPNLIST_APNMatchTheMCCMNCAndMVNO() {
-        // Test on getCurrentAPNList() step 1
+    public void testSIMAPNLIST_MatchTheMVNOAPN() {
+        // Test on getSubscriptionMatchingAPNList() step 1
         final String apnName = "apnName";
         final String carrierName = "name";
         final String numeric = TEST_OPERATOR;
         final String mvnoType = "spn";
         final String mvnoData = TEST_SPN;
 
-        // Insert the APN and DB only have the MCC/MNC and MVNO APN
+        // Insert the MVNO APN
         ContentValues contentValues = new ContentValues();
         contentValues.put(Carriers.APN, apnName);
         contentValues.put(Carriers.NAME, carrierName);
         contentValues.put(Carriers.NUMERIC, numeric);
         contentValues.put(Carriers.MVNO_TYPE, mvnoType);
         contentValues.put(Carriers.MVNO_MATCH_DATA, mvnoData);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Insert the MNO APN
+        contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.NUMERIC, numeric);
         mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
 
         // Query DB
@@ -1519,7 +1529,9 @@ public class TelephonyProviderTest extends TestCase {
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
                 testProjection, null, null, null);
 
+        // When the DB has MVNO and MNO APN, the query based on SIM_APN_LIST will return MVNO APN
         cursor.moveToFirst();
+        assertEquals(cursor.getCount(), 1);
         assertEquals(apnName, cursor.getString(0));
         assertEquals(carrierName, cursor.getString(1));
         assertEquals(numeric, cursor.getString(2));
@@ -1528,13 +1540,13 @@ public class TelephonyProviderTest extends TestCase {
 
     @Test
     @SmallTest
-    public void testSIMAPNLIST_APNMatchTheParentMCCMNC() {
-        // Test on getCurrentAPNList() step 2
+    public void testSIMAPNLIST_MatchTheMNOAPN() {
+        // Test on getSubscriptionMatchingAPNList() step 2
         final String apnName = "apnName";
         final String carrierName = "name";
         final String numeric = TEST_OPERATOR;
 
-        // Insert the APN and DB only have the MNO APN
+        // Insert the MNO APN
         ContentValues contentValues = new ContentValues();
         contentValues.put(Carriers.APN, apnName);
         contentValues.put(Carriers.NAME, carrierName);
@@ -1555,5 +1567,92 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(apnName, cursor.getString(0));
         assertEquals(carrierName, cursor.getString(1));
         assertEquals(numeric, cursor.getString(2));
+    }
+
+    @Test
+    @SmallTest
+    public void testSIMAPNLIST_MatchTheCarrierIDANDMNOAPN() {
+        // Test on getSubscriptionMatchingAPNList() will return the {MCCMNC}
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final int carrierId = TEST_CARRIERID;
+
+        // Add the APN that only have carrier id
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierId);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Add MNO APN that added by user
+        contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        contentValues.put(Carriers.EDITED_STATUS, Carriers.UNEDITED);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Query DB
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+            };
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST, testProjection, null, null, null);
+
+        // The query based on SIM_APN_LIST will return MNO APN and the APN that has carrier id
+        assertEquals(cursor.getCount(), 2);
+    }
+
+    @Test
+    @SmallTest
+    public void testSIMAPNLIST_MatchTheCarrierAPNAndMVNOAPN() {
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final String mvnoType = "spn";
+        final String mvnoData = TEST_SPN;
+        final int carrierId = TEST_CARRIERID;
+
+        // Add the APN that only have carrier id
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierId);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Add MVNO APN that added by user
+        contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        contentValues.put(Carriers.MVNO_TYPE, mvnoType);
+        contentValues.put(Carriers.MVNO_MATCH_DATA, mvnoData);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Add MNO APN that added by user
+        contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Query DB
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+                Carriers.MVNO_TYPE,
+            };
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
+            testProjection, null, null, null);
+
+        // The query based on SIM_APN_LIST will return MVNO APN and the APN that has carrier id
+        assertEquals(cursor.getCount(), 2);
+        while(cursor.moveToNext()) {
+            assertTrue(!TextUtils.isEmpty(cursor.getString(2))
+                    || !TextUtils.isEmpty(cursor.getString(3)));
+        }
     }
 }
