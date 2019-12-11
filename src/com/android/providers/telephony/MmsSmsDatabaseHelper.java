@@ -545,14 +545,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createMmsTables(db);
         createSmsTables(db);
         createCommonTables(db);
-
-        if (IS_RCS_TABLE_SCHEMA_CODE_COMPLETE) {
-            RcsProviderThreadHelper.createThreadTables(db);
-            RcsProviderParticipantHelper.createParticipantTables(db);
-            RcsProviderMessageHelper.createRcsMessageTables(db);
-            RcsProviderEventHelper.createRcsEventTables(db);
-        }
-
         createCommonTriggers(db);
         createMmsTriggers(db);
         createWordsTables(db);
@@ -1658,15 +1650,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.endTransaction();
             }
             // fall through
-        case 67:
-            if (currentVersion <= 67 || !IS_RCS_TABLE_SCHEMA_CODE_COMPLETE) {
-                return;
-            }
-            RcsProviderThreadHelper.createThreadTables(db);
-            RcsProviderParticipantHelper.createParticipantTables(db);
-            RcsProviderMessageHelper.createRcsMessageTables(db);
-            RcsProviderEventHelper.createRcsEventTables(db);
-            return;
         }
 
         Log.e(TAG, "Destroying all old data.");
