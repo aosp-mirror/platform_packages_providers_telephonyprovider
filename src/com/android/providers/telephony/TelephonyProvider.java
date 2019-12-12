@@ -2798,8 +2798,6 @@ public class TelephonyProvider extends ContentProvider
             String[] selectionArgs, String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
                 + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
-        TelephonyManager mTelephonyManager =
-                (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -2820,7 +2818,9 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                constraints.add(NUMERIC + " = '" + mTelephonyManager.getSimOperator(subId) + "'");
+                TelephonyManager telephonyManager = getContext()
+                    .getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
+                constraints.add(NUMERIC + " = '" + telephonyManager.getSimOperator() + "'");
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -3881,8 +3881,8 @@ public class TelephonyProvider extends ContentProvider
             return null;
         }
         TelephonyManager telephonyManager =
-                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        String simOperator = telephonyManager.getSimOperator(subId);
+            getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
+        String simOperator = telephonyManager.getSimOperator();
         Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
                 NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
         String where = null;
@@ -3917,7 +3917,7 @@ public class TelephonyProvider extends ContentProvider
     @VisibleForTesting
     IccRecords getIccRecords(int subId) {
         TelephonyManager telephonyManager =
-                TelephonyManager.from(getContext()).createForSubscriptionId(subId);
+            getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         int family = telephonyManager.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ?
                 UiccController.APP_FAM_3GPP : UiccController.APP_FAM_3GPP2;
         return UiccController.getInstance().getIccRecords(
