@@ -319,7 +319,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         final SubscriptionManager subscriptionManager = SubscriptionManager.from(this);
         if (subscriptionManager != null) {
             final List<SubscriptionInfo> subInfo =
-                    subscriptionManager.getActiveSubscriptionInfoList(/* userVisibleonly */false);
+                    subscriptionManager.getActiveAndHiddenSubscriptionInfoList();
             if (subInfo != null) {
                 for (SubscriptionInfo sub : subInfo) {
                     final String phoneNumber = getNormalizedNumber(sub);
