@@ -164,12 +164,12 @@ public class ServiceStateProviderTest {
 
         final int voiceRegState = ss.getVoiceRegState();
         final int dataRegState = ss.getDataRegState();
-        final String voiceOperatorAlphaLong = ss.getVoiceOperatorAlphaLong();
-        final String voiceOperatorAlphaShort = ss.getVoiceOperatorAlphaShort();
-        final String voiceOperatorNumeric = ss.getVoiceOperatorNumeric();
-        final String dataOperatorAlphaLong = ss.getDataOperatorAlphaLong();
-        final String dataOperatorAlphaShort = ss.getDataOperatorAlphaShort();
-        final String dataOperatorNumeric = ss.getDataOperatorNumeric();
+        final String voiceOperatorAlphaLong = ss.getOperatorAlphaLong();
+        final String voiceOperatorAlphaShort = ss.getOperatorAlphaShort();
+        final String voiceOperatorNumeric = ss.getOperatorNumeric();
+        final String dataOperatorAlphaLong = ss.getOperatorAlphaLong();
+        final String dataOperatorAlphaShort = ss.getOperatorAlphaShort();
+        final String dataOperatorNumeric = ss.getOperatorNumeric();
         final int isManualNetworkSelection = (ss.getIsManualSelection()) ? 1 : 0;
         final int rilVoiceRadioTechnology = ss.getRilVoiceRadioTechnology();
         final int rilDataRadioTechnology = ss.getRilDataRadioTechnology();
