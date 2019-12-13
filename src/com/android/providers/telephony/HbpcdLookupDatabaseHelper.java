@@ -65,7 +65,6 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.util.Log;
 import android.util.Xml;
-import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -79,6 +78,7 @@ import com.android.internal.telephony.HbpcdLookup.MccSidConflicts;
 import com.android.internal.telephony.HbpcdLookup.MccSidRange;
 import com.android.internal.telephony.HbpcdLookup.ArbitraryMccSidMatch;
 import com.android.internal.telephony.HbpcdLookup.NanpAreaCode;
+import com.android.internal.util.XmlUtils;
 
 public class HbpcdLookupDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "HbpcdLockupDatabaseHelper";
