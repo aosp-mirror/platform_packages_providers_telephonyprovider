@@ -50,7 +50,6 @@ import android.util.Log;
 import android.util.Slog;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.PhoneFactory;
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
 
@@ -295,11 +294,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         setWriteAheadLoggingEnabled(false);
-        try {
-            PhoneFactory.addLocalLog(TAG, 100);
-        } catch (IllegalArgumentException e) {
-            // ignore
-        }
     }
 
     private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {
@@ -546,19 +540,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
             }
 
-            mContext.sendBroadcast(intent, android.Manifest.permission.READ_SMS);
+            mContext.sendBroadcast(intent);
         }
         createMmsTables(db);
         createSmsTables(db);
         createCommonTables(db);
-
-        if (IS_RCS_TABLE_SCHEMA_CODE_COMPLETE) {
-            RcsProviderThreadHelper.createThreadTables(db);
-            RcsProviderParticipantHelper.createParticipantTables(db);
-            RcsProviderMessageHelper.createRcsMessageTables(db);
-            RcsProviderEventHelper.createRcsEventTables(db);
-        }
-
         createCommonTriggers(db);
         createMmsTriggers(db);
         createWordsTables(db);
@@ -567,12 +553,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private static void localLog(String logMsg) {
         Log.d(TAG, logMsg);
-        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private static void localLogWtf(String logMsg) {
         Slog.wtf(TAG, logMsg);
-        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private boolean isInitialCreateDone() {
@@ -1666,15 +1650,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.endTransaction();
             }
             // fall through
-        case 67:
-            if (currentVersion <= 67 || !IS_RCS_TABLE_SCHEMA_CODE_COMPLETE) {
-                return;
-            }
-            RcsProviderThreadHelper.createThreadTables(db);
-            RcsProviderParticipantHelper.createParticipantTables(db);
-            RcsProviderMessageHelper.createRcsMessageTables(db);
-            RcsProviderEventHelper.createRcsEventTables(db);
-            return;
         }
 
         Log.e(TAG, "Destroying all old data.");

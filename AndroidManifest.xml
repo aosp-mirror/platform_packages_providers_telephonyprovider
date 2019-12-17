@@ -120,12 +120,6 @@
                   android:singleUser="true"
                   android:multiprocess="false" />
 
-        <provider android:name="RcsProvider"
-                  android:authorities="rcs"
-                  android:multiprocess="false"
-                  android:exported="false"
-                  android:singleUser="true" />
-
         <service
             android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
             android:exported="false" />

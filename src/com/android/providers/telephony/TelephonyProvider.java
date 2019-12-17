@@ -70,6 +70,7 @@ import static android.provider.Telephony.Carriers.USER_VISIBLE;
 import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
 
+import android.annotation.NonNull;
 import android.content.ComponentName;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -106,19 +107,19 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
+import android.util.ArrayMap;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.IApnSourceService;
 import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.dataconnection.ApnSettingUtils;
 import com.android.internal.telephony.uicc.IccRecords;
 import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
+import android.service.carrier.IApnSourceService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
@@ -175,6 +176,11 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_FILTERED_USING_SUBID = 25;
     private static final int URL_SIM_APN_LIST_FILTERED = 26;
     private static final int URL_SIM_APN_LIST_FILTERED_ID = 27;
+
+    /**
+     * Default value for mtu if it's not set. Moved from PhoneConstants.
+     */
+    private static final int UNSPECIFIED_INT = -1;
 
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
@@ -250,6 +256,8 @@ public class TelephonyProvider extends ContentProvider
 
     private boolean mManagedApnEnforced;
 
+    private static final Map<String, Integer> MVNO_TYPE_STRING_MAP;
+
     static {
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
@@ -286,6 +294,12 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_BOOLEAN_FIELDS.add(MODEM_PERSIST);
         CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
         CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
+
+        MVNO_TYPE_STRING_MAP = new ArrayMap<String, Integer>();
+        MVNO_TYPE_STRING_MAP.put("spn", ApnSetting.MVNO_TYPE_SPN);
+        MVNO_TYPE_STRING_MAP.put("imsi", ApnSetting.MVNO_TYPE_IMSI);
+        MVNO_TYPE_STRING_MAP.put("gid", ApnSetting.MVNO_TYPE_GID);
+        MVNO_TYPE_STRING_MAP.put("iccid", ApnSetting.MVNO_TYPE_ICCID);
     }
 
     @VisibleForTesting
@@ -2543,12 +2557,6 @@ public class TelephonyProvider extends ContentProvider
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
 
-        try {
-            PhoneFactory.addLocalLog(TAG, 100);
-        } catch (IllegalArgumentException e) {
-            // ignore
-        }
-
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
         if (!TextUtils.isEmpty(newBuildId)) {
@@ -2615,7 +2623,6 @@ public class TelephonyProvider extends ContentProvider
 
     private static void localLog(String logMsg) {
         Log.d(TAG, logMsg);
-        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private synchronized boolean isManagedApnEnforced() {
@@ -2791,8 +2798,6 @@ public class TelephonyProvider extends ContentProvider
             String[] selectionArgs, String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
                 + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
-        TelephonyManager mTelephonyManager =
-                (TelephonyManager)getContext().getSystemService(Context.TELEPHONY_SERVICE);
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -2813,7 +2818,9 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                constraints.add(NUMERIC + " = '" + mTelephonyManager.getSimOperator(subId) + "'");
+                TelephonyManager telephonyManager = getContext()
+                    .getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
+                constraints.add(NUMERIC + " = '" + telephonyManager.getSimOperator() + "'");
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -3012,33 +3019,34 @@ public class TelephonyProvider extends ContentProvider
     }
 
     /**
-     * To find the current sim APN. Query APN based on {MCC, MNC, MVNO} to support backward
-     * compatibility but will move to carrier id in the future.
+     * To find the current sim APN. Query APN based on {MCC, MNC, MVNO} and {Carrier_ID}.
      *
      * There has three steps:
-     * 1. Query the APN based on { MCC, MNC, MVNO }.
-     * 2. If can't find the current APN, then query the parent APN. Query based on { MCC, MNC }.
-     * 3. else return empty cursor
-     *
+     * 1. Query the APN based on { MCC, MNC, MVNO } and if has results jump to step 3, else jump to
+     *    step 2.
+     * 2. Fallback to query the parent APN that query based on { MCC, MNC }.
+     * 3. Append the result with the APN that query based on { Carrier_ID }
      */
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
             String selection, String[] selectionArgs, String sort, int subId) {
         Cursor ret;
-        final TelephonyManager tm = ((TelephonyManager)
-                getContext().getSystemService(Context.TELEPHONY_SERVICE))
+        final TelephonyManager tm = ((TelephonyManager) getContext()
+                .getSystemService(Context.TELEPHONY_SERVICE))
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
         String mccmnc = tm.getSimOperator();
+        int carrierId = tm.getSimCarrierId();
 
         qb.appendWhereStandalone(IS_NOT_USER_DELETED + " and " +
                 IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and " +
                 IS_NOT_CARRIER_DELETED + " and " +
                 IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML);
 
-        // For query db one time, append step 1 and step 2 condition in one selection and
-        // separate results after the query is completed. Because IMSI has special match rule,
-        // so just query the MCC / MNC and filter the MVNO by ourselves
-        qb.appendWhereStandalone(NUMERIC + " = '" + mccmnc + "' ");
+        // For query db one time, append all conditions in one selection and separate results after
+        // the query is completed. IMSI has special match rule, so just query the MCC / MNC and
+        // filter the MVNO by ourselves
+        qb.appendWhereStandalone(NUMERIC + " = '" + mccmnc + "' OR " +
+                CARRIER_ID + " = '" + carrierId + "'");
 
         ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
         if (ret == null) {
@@ -3048,13 +3056,15 @@ public class TelephonyProvider extends ContentProvider
 
         if (DBG) log("match current APN size:  " + ret.getCount());
 
-        String[] coulmnNames = projectionIn != null ? projectionIn : ret.getColumnNames();
-        MatrixCursor currentCursor = new MatrixCursor(coulmnNames);
-        MatrixCursor parentCursor = new MatrixCursor(coulmnNames);
+        String[] columnNames = projectionIn != null ? projectionIn : ret.getColumnNames();
+        MatrixCursor currentCursor = new MatrixCursor(columnNames);
+        MatrixCursor parentCursor = new MatrixCursor(columnNames);
+        MatrixCursor carrierIdCursor = new MatrixCursor(columnNames);
 
         int numericIndex = ret.getColumnIndex(NUMERIC);
         int mvnoIndex = ret.getColumnIndex(MVNO_TYPE);
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
+        int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
 
         IccRecords iccRecords = UiccController.getInstance().getIccRecords(
                 SubscriptionManager.getPhoneId(subId), UiccController.APP_FAM_3GPP);
@@ -3066,33 +3076,68 @@ public class TelephonyProvider extends ContentProvider
         //Separate the result into MatrixCursor
         while (ret.moveToNext()) {
             List<String> data = new ArrayList<>();
-            for (String column : coulmnNames) {
+            for (String column : columnNames) {
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
             if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
                     ApnSettingUtils.mvnoMatches(iccRecords,
-                            ApnSetting.getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
                             ret.getString(mvnoDataIndex))) {
-                // 1. APN query result based on legacy SIM MCC/MCC and MVNO
+                // 1. The APN that query based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
-                    TextUtils.isEmpty(ret.getString(mvnoIndex))) {
-                // 2. APN query result based on SIM MCC/MNC
+            } else if (!TextUtils.isEmpty(ret.getString(numericIndex))
+                    && TextUtils.isEmpty(ret.getString(mvnoIndex))) {
+                // 2. The APN that query based on SIM MCC/MNC
                 parentCursor.addRow(data);
+            } else if (!TextUtils.isEmpty(ret.getString(carrierIdIndex))
+                    && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))) {
+                // The APN that query based on carrier Id (not include the MVNO or MNO APN)
+                carrierIdCursor.addRow(data);
             }
         }
         ret.close();
 
+        MatrixCursor result;
         if (currentCursor.getCount() > 0) {
             if (DBG) log("match MVNO APN: " + currentCursor.getCount());
-            return currentCursor;
+            result = currentCursor;
         } else if (parentCursor.getCount() > 0) {
             if (DBG) log("match MNO APN: " + parentCursor.getCount());
-            return parentCursor;
+            result = parentCursor;
         } else {
-            if (DBG) log("APN no match");
-            return new MatrixCursor(coulmnNames);
+            if (DBG) log("can't find the MVNO and MNO APN");
+            result = new MatrixCursor(columnNames);
+        }
+
+        if (DBG) log("match carrier id APN: " + carrierIdCursor.getCount());
+        appendCursorData(result, carrierIdCursor);
+        return result;
+    }
+
+    private static void appendCursorData(@NonNull MatrixCursor from, @NonNull MatrixCursor to) {
+        while (to.moveToNext()) {
+            List<Object> data = new ArrayList<>();
+            for (String column : to.getColumnNames()) {
+                int index = to.getColumnIndex(column);
+                switch (to.getType(index)) {
+                    case Cursor.FIELD_TYPE_NULL:
+                        break;
+                    case Cursor.FIELD_TYPE_INTEGER:
+                        data.add(to.getInt(index));
+                        break;
+                    case Cursor.FIELD_TYPE_FLOAT:
+                        data.add(to.getFloat(index));
+                        break;
+                    case Cursor.FIELD_TYPE_BLOB:
+                        data.add(to.getBlob(index));
+                        break;
+                    case Cursor.FIELD_TYPE_STRING:
+                        data.add(to.getString(index));
+                        break;
+                }
+            }
+            from.addRow(data);
         }
     }
 
@@ -3334,7 +3379,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_SIMINFO: {
                long id = db.insert(SIMINFO_TABLE, null, initialValues);
-               result = ContentUris.withAppendedId(SubscriptionManager.CONTENT_URI, id);
+               result = ContentUris.withAppendedId(Telephony.SimInfo.CONTENT_URI, id);
                break;
             }
         }
@@ -3708,7 +3753,7 @@ public class TelephonyProvider extends ContentProvider
                     // If not set, any change to SIMINFO will notify observers which listens to
                     // specific field of SIMINFO.
                     getContext().getContentResolver().notifyChange(
-                            SubscriptionManager.CONTENT_URI, null,
+                        Telephony.SimInfo.CONTENT_URI, null,
                             ContentResolver.NOTIFY_SYNC_TO_NETWORK
                                     | ContentResolver.NOTIFY_SKIP_NOTIFY_FOR_DESCENDANTS,
                             UserHandle.USER_ALL);
@@ -3836,8 +3881,8 @@ public class TelephonyProvider extends ContentProvider
             return null;
         }
         TelephonyManager telephonyManager =
-                (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        String simOperator = telephonyManager.getSimOperator(subId);
+            getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
+        String simOperator = telephonyManager.getSimOperator();
         Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
                 NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
         String where = null;
@@ -3849,7 +3894,7 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
                         && ApnSettingUtils.mvnoMatches(iccRecords,
-                        ApnSetting.getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
+                        getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
                             + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
@@ -3872,7 +3917,7 @@ public class TelephonyProvider extends ContentProvider
     @VisibleForTesting
     IccRecords getIccRecords(int subId) {
         TelephonyManager telephonyManager =
-                TelephonyManager.from(getContext()).createForSubscriptionId(subId);
+            getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         int family = telephonyManager.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ?
                 UiccController.APP_FAM_3GPP : UiccController.APP_FAM_3GPP2;
         return UiccController.getInstance().getIccRecords(
@@ -3995,5 +4040,11 @@ public class TelephonyProvider extends ContentProvider
 
     private static void loge(String s) {
         Log.e(TAG, s);
+    }
+
+    private static int getMvnoTypeIntFromString(String mvnoType) {
+        String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase();
+        Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
+        return  mvnoTypeInt == null ? UNSPECIFIED_INT : mvnoTypeInt;
     }
 }
