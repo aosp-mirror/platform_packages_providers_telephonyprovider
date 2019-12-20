@@ -2099,6 +2099,9 @@ public class TelephonyProvider extends ContentProvider
                 // null returns all columns, so need permission check
                 checkPermission();
             }
+        } else {
+            // For the sim_info table, we only require READ_PHONE_STATE
+            checkReadSimInfoPermission();
         }
 
         SQLiteDatabase db = getReadableDatabase();
@@ -2651,6 +2654,23 @@ public class TelephonyProvider extends ContentProvider
             }
         }
         throw new SecurityException("No permission to write APN settings");
+    }
+
+    private void checkReadSimInfoPermission() {
+        try {
+            // Even if the caller doesn't have READ_PHONE_STATE, we'll let them access sim_info as
+            // long as they have the more restrictive write_apn_settings or carrier priv.
+            checkPermission();
+            return;
+        } catch (SecurityException e) {
+            int status = getContext().checkCallingOrSelfPermission(
+                    "android.permission.READ_PHONE_STATE");
+            if (status == PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+            EventLog.writeEvent(0x534e4554, "124107808", Binder.getCallingUid());
+            throw new SecurityException("No READ_PHONE_STATE permission");
+        }
     }
 
     private DatabaseHelper mOpenHelper;
