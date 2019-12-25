@@ -16,7 +16,10 @@
 
 package com.android.providers.telephony;
 
+import static org.junit.Assert.assertArrayEquals;
+
 import android.annotation.TargetApi;
+import android.app.backup.BackupDataOutput;
 import android.app.backup.FullBackupDataOutput;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -26,6 +29,7 @@ import android.content.ContextWrapper;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.test.AndroidTestCase;
@@ -40,22 +44,29 @@ import android.util.JsonWriter;
 import android.util.Log;
 import android.util.SparseArray;
 
+import libcore.io.IoUtils;
+
 import com.google.android.mms.pdu.CharacterSets;
 
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests for testing backup/restore of SMS and text MMS messages.
@@ -682,6 +693,44 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSizeAfterSecondQuotaHit, fullBackupDataOutput.getSize());
+    }
+
+    /**
+     * Test backups are consistent between runs. This ensures that when no data
+     * has changed between backup runs we don't generate a diff which needs to
+     * be sent to the server.
+     * @throws Exception
+     */
+    public void testBackup_WithoutChanges_DoesNotChangeOutput() throws Exception {
+        mSmsTable.addAll(Arrays.asList(mSmsRows));
+        mMmsTable.addAll(Arrays.asList(mMmsRows));
+
+        byte[] firstBackup = getBackup("1");
+        // Ensure there is some time between backup runs. This is the way to identify
+        // time dependent backup contents.
+        Thread.sleep(TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS));
+        byte[] secondBackup = getBackup("2");
+
+        // Make sure something has been backed up.
+        assertFalse(firstBackup == null || firstBackup.length == 0);
+
+        // Make sure the two backups are the same.
+        assertArrayEquals(firstBackup, secondBackup);
+    }
+
+    private byte[] getBackup(String runId) throws IOException {
+        File cacheDir = getContext().getCacheDir();
+        File backupOutput = File.createTempFile("backup", runId, cacheDir);
+        ParcelFileDescriptor outputFd =
+                ParcelFileDescriptor.open(backupOutput, ParcelFileDescriptor.MODE_WRITE_ONLY);
+        try {
+            FullBackupDataOutput fullBackupDataOutput = new FullBackupDataOutput(outputFd);
+            mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
+            return IoUtils.readFileAsByteArray(backupOutput.getAbsolutePath());
+        } finally {
+            outputFd.close();
+            backupOutput.delete();
+        }
     }
 
     // Adding random keys to JSON to test handling it by the BackupAgent on restore.
