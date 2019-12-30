@@ -27,7 +27,6 @@ import android.util.Log;
 import androidx.test.InstrumentationRegistry;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.uicc.IccRecords;
 import com.android.providers.telephony.TelephonyProvider;
 
 /**
@@ -85,15 +84,6 @@ public class TelephonyProviderTestable extends TelephonyProvider {
     boolean needApnDbUpdate() {
         Log.d(TAG, "needApnDbUpdate called; returning false");
         return false;
-    }
-
-    @Override
-    IccRecords getIccRecords(int subId) {
-        Log.d(TAG, "getIccRecords called");
-        IccRecords iccRecords = mock(IccRecords.class);
-        doReturn(TEST_SPN).when(iccRecords).getServiceProviderName();
-        doReturn(TEST_SPN).when(iccRecords).getServiceProviderNameWithBrandOverride();
-        return iccRecords;
     }
 
     public void fakeCallingUid(int uid) {
