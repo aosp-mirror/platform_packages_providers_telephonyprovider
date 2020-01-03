@@ -92,6 +92,7 @@ public class TelephonyProviderTestable extends TelephonyProvider {
         Log.d(TAG, "getIccRecords called");
         IccRecords iccRecords = mock(IccRecords.class);
         doReturn(TEST_SPN).when(iccRecords).getServiceProviderName();
+        doReturn(TEST_SPN).when(iccRecords).getServiceProviderNameWithBrandOverride();
         return iccRecords;
     }
 
