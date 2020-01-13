@@ -122,6 +122,16 @@ public class SmsProvider extends ContentProvider {
         final String smsTable = getSmsTable(accessRestricted);
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
+        // If access is restricted, we don't allow subqueries in the query.
+        if (accessRestricted) {
+            try {
+                SqlQueryChecker.checkQueryParametersForSubqueries(projectionIn, selection, sort);
+            } catch (IllegalArgumentException e) {
+                Log.w(TAG, "Query rejected: " + e.getMessage());
+                return null;
+            }
+        }
+
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getReadableDatabase(match);
