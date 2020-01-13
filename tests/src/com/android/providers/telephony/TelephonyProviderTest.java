@@ -17,7 +17,9 @@
 package com.android.providers.telephony;
 
 import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 
 
@@ -45,9 +47,6 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
-
-import com.android.internal.telephony.uicc.IccRecords;
-import com.android.internal.telephony.uicc.UiccController;
 
 import junit.framework.TestCase;
 
@@ -79,12 +78,6 @@ public class TelephonyProviderTest extends TestCase {
     private MockContextWithProvider mContext;
     private MockContentResolver mContentResolver;
     private TelephonyProviderTestable mTelephonyProviderTestable;
-
-    @Mock
-    private UiccController mUiccController;
-
-    @Mock
-    private IccRecords mIcRecords;
 
     private int notifyChangeCount;
     private int notifyChangeRestoreCount;
@@ -156,9 +149,6 @@ public class TelephonyProviderTest extends TestCase {
 
             doReturn(mTelephonyManager).when(mTelephonyManager).createForSubscriptionId(anyInt());
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator();
-            doReturn(mIcRecords).when(mUiccController).getIccRecords(anyInt(), anyInt());
-            doReturn(TEST_SPN).when(mIcRecords).getServiceProviderName();
-            doReturn(TEST_SPN).when(mIcRecords).getServiceProviderNameWithBrandOverride();
             doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimCarrierId();
 
             // Add authority="telephony" to given telephonyProvider
@@ -235,7 +225,6 @@ public class TelephonyProviderTest extends TestCase {
         mTelephonyProviderTestable = new TelephonyProviderTestable();
         mContext = new MockContextWithProvider(mTelephonyProviderTestable);
         mContentResolver = (MockContentResolver) mContext.getContentResolver();
-        replaceInstance(UiccController.class, "mInstance", null, mUiccController);
         notifyChangeCount = 0;
         notifyChangeRestoreCount = 0;
     }
@@ -1374,6 +1363,11 @@ public class TelephonyProviderTest extends TestCase {
         otherValues.put(Carriers.MVNO_TYPE, otherMvnoTyp);
         otherValues.put(Carriers.MVNO_MATCH_DATA, otherMvnoMatchData);
 
+        doReturn(true).when(telephonyManager).isCurrentSimOperator(
+            anyString(), anyInt(), eq(TelephonyProviderTestable.TEST_SPN));
+        doReturn(false).when(telephonyManager).isCurrentSimOperator(
+            anyString(), anyInt(), eq(otherMvnoMatchData));
+
         // insert APNs
         Log.d(TAG, "testRestoreDefaultApn: Bulk inserting contentValues=" + targetValues + ", "
                 + otherValues);
@@ -1484,14 +1478,6 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(0, notifyWfcCountWithTestSubId);
     }
 
-    protected void replaceInstance(final Class c, final String instanceName,
-            final Object obj, final Object newValue)
-            throws Exception {
-        Field field = c.getDeclaredField(instanceName);
-        field.setAccessible(true);
-        field.set(obj, newValue);
-    }
-
     @Test
     @SmallTest
     public void testSIMAPNLIST_MatchTheMVNOAPN() {
@@ -1517,6 +1503,13 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(Carriers.NAME, carrierName);
         contentValues.put(Carriers.NUMERIC, numeric);
         mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        TelephonyManager telephonyManager =
+            (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
+        doReturn(true).when(telephonyManager).isCurrentSimOperator(
+            anyString(), anyInt(), eq(mvnoData));
+        doReturn(false).when(telephonyManager).isCurrentSimOperator(
+            anyString(), anyInt(), eq(""));
 
         // Query DB
         final String[] testProjection =
