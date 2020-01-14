@@ -3080,25 +3080,31 @@ public class TelephonyProvider extends ContentProvider
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
         int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
 
-        //Separate the result into MatrixCursor
+        // Separate the result into MatrixCursor
         while (ret.moveToNext()) {
             List<String> data = new ArrayList<>();
             for (String column : columnNames) {
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
-            if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
-                tm.isCurrentSimOperator(ret.getString(numericIndex),
-                    getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                    ret.getString(mvnoDataIndex))) {
+            boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
+                    && tm.isCurrentSimOperator(ret.getString(numericIndex),
+                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                            ret.getString(mvnoDataIndex));
+            boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
+                    && ret.getString(numericIndex).equals(mccmnc)
+                    && TextUtils.isEmpty(ret.getString(mvnoIndex));
+            boolean isCarrierIdAPN = !TextUtils.isEmpty(ret.getString(carrierIdIndex))
+                    && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))
+                    && carrierId != TelephonyManager.UNKNOWN_CARRIER_ID;
+
+            if (isMVNOAPN) {
                 // 1. The APN that query based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex))
-                && TextUtils.isEmpty(ret.getString(mvnoIndex))) {
+            } else if (isMNOAPN) {
                 // 2. The APN that query based on SIM MCC/MNC
                 parentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(carrierIdIndex))
-                && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))) {
+            } else if (isCarrierIdAPN) {
                 // The APN that query based on carrier Id (not include the MVNO or MNO APN)
                 carrierIdCursor.addRow(data);
             }
@@ -3128,8 +3134,6 @@ public class TelephonyProvider extends ContentProvider
             for (String column : to.getColumnNames()) {
                 int index = to.getColumnIndex(column);
                 switch (to.getType(index)) {
-                    case Cursor.FIELD_TYPE_NULL:
-                        break;
                     case Cursor.FIELD_TYPE_INTEGER:
                         data.add(to.getInt(index));
                         break;
@@ -3140,6 +3144,7 @@ public class TelephonyProvider extends ContentProvider
                         data.add(to.getBlob(index));
                         break;
                     case Cursor.FIELD_TYPE_STRING:
+                    case Cursor.FIELD_TYPE_NULL:
                         data.add(to.getString(index));
                         break;
                 }
