@@ -114,8 +114,6 @@ import android.util.Xml;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.compat.IPlatformCompat;
-import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
 import android.service.carrier.IApnSourceService;
 
