@@ -129,7 +129,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 9
-  carrier_name: "Hrvaski Telekom"
+  carrier_name: "Hrvatski Telekom"
   carrier_attribute {
     mccmnc_tuple: "21901"
     spn: "T-Mobile HR"
@@ -4407,7 +4407,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1628
-  carrier_name: "Maxis/Hotlink/Ookyo"
+  carrier_name: "Maxis/Hotlink"
   carrier_attribute {
     mccmnc_tuple: "50212"
   }
@@ -7123,7 +7123,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1992
-  carrier_name: "Viva"
+  carrier_name: "STC"
   carrier_attribute {
     mccmnc_tuple: "41904"
   }
@@ -7280,7 +7280,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2015
-  carrier_name: "VIVA"
+  carrier_name: "stc BH"
   carrier_attribute {
     mccmnc_tuple: "42604"
   }
@@ -9915,7 +9915,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2365
-  carrier_name: "Hrvaski Telekom"
+  carrier_name: "Hrvatski Telekom"
   carrier_attribute {
     mccmnc_tuple: "21901"
   }
@@ -10434,8 +10434,6 @@ carrier_id {
   carrier_name: "VTB Mobile"
   carrier_attribute {
     mccmnc_tuple: "25026"
-    imsi_prefix_xpattern: "2502674"
-    imsi_prefix_xpattern: "2502633"
   }
 }
 carrier_id {
@@ -10443,6 +10441,14 @@ carrier_id {
   carrier_name: "Spectrum CBRS"
   carrier_attribute {
     mccmnc_tuple: "314020"
+  }
+}
+carrier_id {
+  canonical_id: 2450
+  carrier_name: "SunMobile"
+  carrier_attribute {
+    mccmnc_tuple: "45400"
+    gid1: "01030000FFFFFFFF"
   }
 }
 carrier_id {
@@ -10645,4 +10651,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 16777236
+version: 33554453
