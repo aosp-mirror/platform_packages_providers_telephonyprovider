@@ -512,11 +512,16 @@ public class SmsProvider extends ContentProvider {
         try {
             Uri insertUri = insertInner(url, initialValues, callerUid, callerPkg);
 
-            // The raw table is used by the telephony layer for storing an sms before
-            // sending out a notification that an sms has arrived. We don't want to notify
-            // the default sms app of changes to this table.
-            final boolean notifyIfNotDefault = sURLMatcher.match(url) != SMS_RAW_MESSAGE;
-            notifyChange(notifyIfNotDefault, insertUri, callerPkg);
+            int match = sURLMatcher.match(url);
+            // Skip notifyChange() if insertUri is null for SMS_ALL_ICC or SMS_ALL_ICC_SUBID caused
+            // by failure of insertMessageToIcc()(e.g. SIM full).
+            if (insertUri != null || (match != SMS_ALL_ICC && match != SMS_ALL_ICC_SUBID)) {
+                // The raw table is used by the telephony layer for storing an sms before sending
+                // out a notification that an sms has arrived. We don't want to notify the default
+                // sms app of changes to this table.
+                final boolean notifyIfNotDefault = match != SMS_RAW_MESSAGE;
+                notifyChange(notifyIfNotDefault, insertUri, callerPkg);
+            }
             return insertUri;
         } finally {
             Binder.restoreCallingIdentity(token);
@@ -581,6 +586,47 @@ public class SmsProvider extends ContentProvider {
             case SMS_NEW_THREAD_ID:
                 table = "canonical_addresses";
                 break;
+
+            case SMS_ALL_ICC:
+            case SMS_ALL_ICC_SUBID:
+                int subId;
+                if (match == SMS_ALL_ICC) {
+                    subId = SmsManager.getDefaultSmsSubscriptionId();
+                } else {
+                    try {
+                        subId = Integer.parseInt(url.getPathSegments().get(1));
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException(
+                                "Wrong path segements for SMS_ALL_ICC_SUBID, uri= " + url);
+                    }
+                }
+
+                if (initialValues == null) {
+                    throw new IllegalArgumentException("ContentValues is null");
+                }
+
+                String scAddress = initialValues.getAsString(Sms.SERVICE_CENTER);
+                String address = initialValues.getAsString(Sms.ADDRESS);
+                String message = initialValues.getAsString(Sms.BODY);
+                boolean isRead = true;
+                Integer obj = initialValues.getAsInteger(Sms.TYPE);
+
+                if (obj == null || address == null || message == null) {
+                    throw new IllegalArgumentException("Missing SMS data");
+                }
+
+                type = obj.intValue();
+                if (!isSupportedType(type)) {
+                    throw new IllegalArgumentException("Unsupported message type= " + type);
+                }
+                obj = initialValues.getAsInteger(Sms.READ); // 0: Unread, 1: Read
+                if (obj != null && obj.intValue() == 0) {
+                    isRead = false;
+                }
+
+                Long date = initialValues.getAsLong(Sms.DATE);
+                return insertMessageToIcc(subId, scAddress, address, message, type, isRead,
+                        date != null ? date : 0) ? url : null;
 
             default:
                 Log.e(TAG, "Invalid request: " + url);
@@ -713,6 +759,63 @@ public class SmsProvider extends ContentProvider {
         }
 
         return null;
+    }
+
+    private boolean isSupportedType(int messageType) {
+        return (messageType == Sms.MESSAGE_TYPE_INBOX)
+                || (messageType == Sms.MESSAGE_TYPE_OUTBOX)
+                || (messageType == Sms.MESSAGE_TYPE_SENT);
+    }
+
+    private int getMessageStatusForIcc(int messageType, boolean isRead) {
+        if (messageType == Sms.MESSAGE_TYPE_SENT) {
+            return SmsManager.STATUS_ON_ICC_SENT;
+        } else if (messageType == Sms.MESSAGE_TYPE_OUTBOX) {
+            return SmsManager.STATUS_ON_ICC_UNSENT;
+        } else { // Sms.MESSAGE_BOX_INBOX
+            if (isRead) {
+                return SmsManager.STATUS_ON_ICC_READ;
+            } else {
+                return SmsManager.STATUS_ON_ICC_UNREAD;
+            }
+        }
+    }
+
+    /**
+     * Inserts new message to the ICC for a subscription ID.
+     *
+     * @param subId the subscription ID.
+     * @param scAddress the SMSC for this message.
+     * @param address destination or originating address.
+     * @param message the message text.
+     * @param messageType type of the message.
+     * @param isRead ture if the message has been read. Otherwise false.
+     * @param date the date the message was received.
+     * @return true for succeess. Otherwise false.
+     */
+    private boolean insertMessageToIcc(int subId, String scAddress, String address, String message,
+            int messageType, boolean isRead, long date) {
+        if (!SubscriptionManager.isValidSubscriptionId(subId)) {
+            throw new IllegalArgumentException("Invalid Subscription ID " + subId);
+        }
+        SmsManager smsManager = SmsManager.getSmsManagerForSubscriptionId(subId);
+
+        int status = getMessageStatusForIcc(messageType, isRead);
+        SmsMessage.SubmitPdu smsPdu =
+                SmsMessage.getSmsPdu(subId, status, scAddress, address, message, date);
+
+        if (smsPdu == null) {
+            throw new IllegalArgumentException("Failed to create SMS PDU");
+        }
+
+        // Use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call.
+        long token = Binder.clearCallingIdentity();
+        try {
+            return smsManager.copyMessageToIcc(
+                    smsPdu.encodedScAddress, smsPdu.encodedMessage, status);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
     }
 
     @Override
