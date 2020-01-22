@@ -16,8 +16,6 @@
 
 package com.android.providers.telephony;
 
-import static com.android.internal.telephony.SmsResponse.NO_ERROR_CODE;
-
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
@@ -38,7 +36,6 @@ import android.provider.Contacts;
 import android.provider.Telephony;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Sms;
-import android.provider.Telephony.TextBasedSmsColumns;
 import android.provider.Telephony.Threads;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
@@ -47,10 +44,13 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 
 public class SmsProvider extends ContentProvider {
+    /* No response constant from SmsResponse */
+    static final int NO_ERROR_CODE = -1;
+
     private static final Uri NOTIFICATION_URI = Uri.parse("content://sms");
     private static final Uri ICC_URI = Uri.parse("content://sms/icc");
     static final String TABLE_SMS = "sms";
