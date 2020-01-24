@@ -25,6 +25,7 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.provider.Telephony;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
@@ -242,22 +243,22 @@ public final class TelephonyDatabaseHelperTest {
             Log.d(TAG, "InMemoryTelephonyProviderV5DbHelper onCreate creating the siminfo table");
             db.execSQL(
                     "CREATE TABLE siminfo ("
-                    + SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID
+                    + Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID
                     + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
-                    + SubscriptionManager.SIM_SLOT_INDEX
-                        + " INTEGER DEFAULT " + SubscriptionManager.SIM_NOT_INSERTED + ","
-                    + SubscriptionManager.DISPLAY_NAME + " TEXT,"
-                    + SubscriptionManager.NAME_SOURCE
-                        + " INTEGER DEFAULT " + SubscriptionManager.NAME_SOURCE_DEFAULT_SOURCE + ","
-                    + SubscriptionManager.COLOR
-                        + " INTEGER DEFAULT " + SubscriptionManager.COLOR_DEFAULT + ","
-                    + SubscriptionManager.NUMBER + " TEXT,"
-                    + SubscriptionManager.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL"
-                        + " DEFAULT " + SubscriptionManager.DISPLAY_NUMBER_DEFAULT + ","
-                    + SubscriptionManager.DATA_ROAMING
-                        + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT + ","
-                    + SubscriptionManager.CARD_ID + " TEXT NOT NULL"
+                    + Telephony.SimInfo.ICC_ID + " TEXT NOT NULL,"
+                    + Telephony.SimInfo.SIM_SLOT_INDEX
+                        + " INTEGER DEFAULT " + Telephony.SimInfo.SIM_NOT_INSERTED + ","
+                    + Telephony.SimInfo.DISPLAY_NAME + " TEXT,"
+                    + Telephony.SimInfo.NAME_SOURCE
+                        + " INTEGER DEFAULT " + Telephony.SimInfo.NAME_SOURCE_DEFAULT + ","
+                    + Telephony.SimInfo.COLOR
+                        + " INTEGER DEFAULT " + Telephony.SimInfo.COLOR_DEFAULT + ","
+                    + Telephony.SimInfo.NUMBER + " TEXT,"
+                    + Telephony.SimInfo.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL"
+                        + " DEFAULT " + Telephony.SimInfo.DISPLAY_NUMBER_DEFAULT + ","
+                    + Telephony.SimInfo.DATA_ROAMING
+                        + " INTEGER DEFAULT " + Telephony.SimInfo.DATA_ROAMING_DEFAULT + ","
+                    + Telephony.SimInfo.CARD_ID + " TEXT NOT NULL"
                     + ");");
         }
 
