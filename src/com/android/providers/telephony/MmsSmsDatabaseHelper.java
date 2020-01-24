@@ -16,8 +16,7 @@
 
 package com.android.providers.telephony;
 
-import static android.provider.Telephony.RcsColumns.IS_RCS_TABLE_SCHEMA_CODE_COMPLETE;
-import static com.android.internal.telephony.SmsResponse.NO_ERROR_CODE;
+import static com.android.providers.telephony.SmsProvider.NO_ERROR_CODE;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
@@ -49,6 +48,7 @@ import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
 
