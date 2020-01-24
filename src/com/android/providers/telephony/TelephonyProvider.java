@@ -143,7 +143,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 43 << 16;
+    private static final int DATABASE_VERSION = 44 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -461,7 +461,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.GROUP_OWNER + " TEXT,"
                 + Telephony.SimInfo.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
                 + Telephony.SimInfo.IMSI + " TEXT,"
-                + Telephony.SimInfo.UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1"
+                + Telephony.SimInfo.UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.ALLOWED_NETWORK_TYPES + " BIGINT DEFAULT -1 "
                 + ");";
     }
 
@@ -1433,6 +1434,20 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 43 << 16 | 6;
             }
 
+            if (oldVersion < (44 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.ALLOWED_NETWORK_TYPES
+                            + " BIGINT DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 44 << 16 | 6;
+            }
 
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
