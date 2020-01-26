@@ -3203,7 +3203,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1448
-  carrier_name: "Scancom (Cyprus) Ltd."
+  carrier_name: "epic"
   carrier_attribute {
     mccmnc_tuple: "28010"
   }
@@ -5459,8 +5459,7 @@ carrier_id {
   canonical_id: 1779
   carrier_name: "Cricket Wireless"
   carrier_attribute {
-    mccmnc_tuple: "310016"
-    mccmnc_tuple: "310090"
+    mccmnc_tuple: "310150"
   }
 }
 carrier_id {
@@ -6857,13 +6856,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 1964
-  carrier_name: "Aio"
-  carrier_attribute {
-    mccmnc_tuple: "310150"
-  }
-}
-carrier_id {
   canonical_id: 1965
   carrier_name: "Telkom"
   carrier_attribute {
@@ -7850,7 +7842,9 @@ carrier_id {
   carrier_name: "Y!mobile"
   carrier_attribute {
     mccmnc_tuple: "44020"
+    imsi_prefix_xpattern: "4402086"
     imsi_prefix_xpattern: "4402091"
+    imsi_prefix_xpattern: "4402095"
     gid1: "16ffff"
   }
 }
@@ -8212,6 +8206,14 @@ carrier_id {
   canonical_id: 2135
   carrier_name: "Coriolis"
   carrier_attribute {
+    mccmnc_tuple: "20801"
+    imsi_prefix_xpattern: "208011511"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20809"
+    imsi_prefix_xpattern: "208090036"
+  }
+  carrier_attribute {
     mccmnc_tuple: "20827"
     spn: "Coriolis"
   }
@@ -8360,6 +8362,10 @@ carrier_id {
   carrier_name: "Voiceworks"
   carrier_attribute {
     mccmnc_tuple: "20403"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20403"
+    imsi_prefix_xpattern: "204080950"
   }
 }
 carrier_id {
@@ -10452,6 +10458,51 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2451
+  carrier_name: "Tunetalk"
+  carrier_attribute {
+    mccmnc_tuple: "50219"
+    imsi_prefix_xpattern: "5021955"
+  }
+}
+carrier_id {
+  canonical_id: 2452
+  carrier_name: "WEB CoopVoce"
+  carrier_attribute {
+    mccmnc_tuple: "22253"
+  }
+}
+carrier_id {
+  canonical_id: 2453
+  carrier_name: "Connect"
+  carrier_attribute {
+    mccmnc_tuple: "41515"
+  }
+}
+carrier_id {
+  canonical_id: 2454
+  carrier_name: "Annatel"
+  carrier_attribute {
+    mccmnc_tuple: "42526"
+  }
+}
+carrier_id {
+  canonical_id: 2455
+  carrier_name: "homobile_it"
+  carrier_attribute {
+    mccmnc_tuple: "22210"
+    spn: "ho."
+  }
+}
+carrier_id {
+  canonical_id: 2456
+  carrier_name: "coolpad"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6230"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10651,4 +10702,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 33554453
+version: 33554454
