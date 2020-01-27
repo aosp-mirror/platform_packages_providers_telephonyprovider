@@ -185,6 +185,21 @@ public final class TelephonyDatabaseHelperTest {
         assertTrue(Arrays.asList(upgradedColumns).contains(SubscriptionManager.SUBSCRIPTION_TYPE));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasImsRcsUceEnabledField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasImsRcsUceEnabledField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the SubscriptionManager.SUBSCRIPTION_TYPE field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(Telephony.SimInfo.IMS_RCS_UCE_ENABLED));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
