@@ -43,6 +43,7 @@
                  android:label="@string/app_label"
                  android:icon="@mipmap/ic_launcher_phone"
                  android:usesCleartextTraffic="true"
+                 android:forceQueryable="true"
                  android:defaultToDeviceProtectedStorage="true"
                  android:directBootAware="true">
 
