@@ -2247,9 +2247,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1309
-  carrier_name: "Mobile Telephone Networks"
+  carrier_name: "MTN"
   carrier_attribute {
     mccmnc_tuple: "65510"
+    mccmnc_tuple: "65512"
   }
 }
 carrier_id {
@@ -8363,12 +8364,12 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2149
-  carrier_name: "Voiceworks"
+  carrier_name: "Voiceworks NL"
   carrier_attribute {
     mccmnc_tuple: "20403"
   }
   carrier_attribute {
-    mccmnc_tuple: "20403"
+    mccmnc_tuple: "20408"
     imsi_prefix_xpattern: "204080950"
   }
 }
@@ -10543,6 +10544,31 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2460
+  carrier_name: "Shaw Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "302490"
+    imsi_prefix_xpattern: "302490400"
+    gid1: "53"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302490"
+    imsi_prefix_xpattern: "302490500"
+    gid1: "53"
+  }
+}
+carrier_id {
+  canonical_id: 2461
+  carrier_name: "Voiceworks DE"
+  carrier_attribute {
+    mccmnc_tuple: "26220"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26203"
+    imsi_prefix_xpattern: "26203483"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10742,4 +10768,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 33554457
+version: 33554458
