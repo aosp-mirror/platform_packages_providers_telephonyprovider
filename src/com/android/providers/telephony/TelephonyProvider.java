@@ -71,6 +71,7 @@ import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
 
 import android.annotation.NonNull;
+import android.app.compat.CompatChanges;
 import android.content.ComponentName;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -113,7 +114,6 @@ import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.compat.IPlatformCompat;
 import com.android.internal.util.XmlUtils;
 import android.service.carrier.IApnSourceService;
 
@@ -2888,7 +2888,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkPermission();
+        checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -3907,19 +3907,50 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
-        IPlatformCompat platformCompat = IPlatformCompat.Stub.asInterface(
-                ServiceManager.getService(Context.PLATFORM_COMPAT_SERVICE));
-        if (platformCompat != null) {
-            try {
-                platformCompat.reportChangeByUid(
-                        Telephony.Carriers.APN_READING_PERMISSION_CHANGE_ID,
-                        Binder.getCallingUid());
-            } catch (RemoteException e) {
-                //ignore
-            }
-        }
 
         throw new SecurityException("No permission to access APN settings");
+    }
+
+    /**
+     * Check permission to query the database based on PlatformCompat settings -- if the compat
+     * change is enabled, check WRITE_APN_SETTINGS or carrier privs for all queries. Otherwise,
+     * use the legacy checkQueryPermission method to see if the query should be allowed.
+     */
+    private void checkPermissionCompat(int match, String[] projectionIn) {
+        boolean useNewBehavior = CompatChanges.isChangeEnabled(
+                Telephony.Carriers.APN_READING_PERMISSION_CHANGE_ID,
+                Binder.getCallingUid());
+
+        if (!useNewBehavior) {
+            log("Using old permission behavior for telephony provider compat");
+            checkQueryPermission(match, projectionIn);
+        } else {
+            checkPermission();
+        }
+    }
+
+    private void checkQueryPermission(int match, String[] projectionIn) {
+        if (match != URL_SIMINFO) {
+            if (projectionIn != null) {
+                for (String column : projectionIn) {
+                    if (TYPE.equals(column) ||
+                            MMSC.equals(column) ||
+                            MMSPROXY.equals(column) ||
+                            MMSPORT.equals(column) ||
+                            MVNO_TYPE.equals(column) ||
+                            MVNO_MATCH_DATA.equals(column) ||
+                            APN.equals(column)) {
+                        // noop
+                    } else {
+                        checkPermission();
+                        break;
+                    }
+                }
+            } else {
+                // null returns all columns, so need permission check
+                checkPermission();
+            }
+        }
     }
 
     private DatabaseHelper mOpenHelper;
