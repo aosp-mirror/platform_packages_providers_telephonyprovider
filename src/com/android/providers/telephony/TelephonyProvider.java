@@ -3155,7 +3155,7 @@ public class TelephonyProvider extends ContentProvider
             }
 
             boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
-                    && tm.isCurrentSimOperator(ret.getString(numericIndex),
+                    && tm.matchesCurrentSimOperator(ret.getString(numericIndex),
                             getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
                             ret.getString(mvnoDataIndex));
             boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
@@ -4009,7 +4009,7 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
-                        && telephonyManager.isCurrentSimOperator(simOperator,
+                        && telephonyManager.matchesCurrentSimOperator(simOperator,
                             getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
