@@ -1363,9 +1363,9 @@ public class TelephonyProviderTest extends TestCase {
         otherValues.put(Carriers.MVNO_TYPE, otherMvnoTyp);
         otherValues.put(Carriers.MVNO_MATCH_DATA, otherMvnoMatchData);
 
-        doReturn(true).when(telephonyManager).isCurrentSimOperator(
+        doReturn(true).when(telephonyManager).matchesCurrentSimOperator(
             anyString(), anyInt(), eq(TelephonyProviderTestable.TEST_SPN));
-        doReturn(false).when(telephonyManager).isCurrentSimOperator(
+        doReturn(false).when(telephonyManager).matchesCurrentSimOperator(
             anyString(), anyInt(), eq(otherMvnoMatchData));
 
         // insert APNs
@@ -1506,9 +1506,9 @@ public class TelephonyProviderTest extends TestCase {
 
         TelephonyManager telephonyManager =
             (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
-        doReturn(true).when(telephonyManager).isCurrentSimOperator(
+        doReturn(true).when(telephonyManager).matchesCurrentSimOperator(
             anyString(), anyInt(), eq(mvnoData));
-        doReturn(false).when(telephonyManager).isCurrentSimOperator(
+        doReturn(false).when(telephonyManager).matchesCurrentSimOperator(
             anyString(), anyInt(), eq(""));
 
         // Query DB
