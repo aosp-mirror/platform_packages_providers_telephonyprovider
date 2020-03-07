@@ -6,3 +6,8 @@ android_app {
     certificate: "platform",
     static_libs: ["android-common", "telephonyprovider-protos"],
 }
+
+filegroup {
+    name: "telephonyprovider-assets-carrierlist",
+    srcs: ["assets/carrier_list.*"],
+}
