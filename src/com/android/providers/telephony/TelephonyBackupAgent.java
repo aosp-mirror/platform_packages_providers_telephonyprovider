@@ -320,7 +320,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         final SubscriptionManager subscriptionManager = SubscriptionManager.from(this);
         if (subscriptionManager != null) {
             final List<SubscriptionInfo> subInfo =
-                    subscriptionManager.getActiveAndHiddenSubscriptionInfoList();
+                    subscriptionManager.getCompleteActiveSubscriptionInfoList();
             if (subInfo != null) {
                 for (SubscriptionInfo sub : subInfo) {
                     final String phoneNumber = getNormalizedNumber(sub);
