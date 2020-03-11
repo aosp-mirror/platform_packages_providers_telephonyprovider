@@ -614,7 +614,7 @@ public class CarrierIdProvider extends ContentProvider {
             // Remove absent subId from the currentSubscriptionMap.
             List activeSubscriptions = new ArrayList<>();
             final List<SubscriptionInfo> subscriptionInfoList =
-                sm.getActiveAndHiddenSubscriptionInfoList();
+                sm.getCompleteActiveSubscriptionInfoList();
             if (subscriptionInfoList != null) {
                 for (SubscriptionInfo subInfo : subscriptionInfoList) {
                     activeSubscriptions.add(subInfo.getSubscriptionId());
