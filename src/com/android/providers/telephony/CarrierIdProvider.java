@@ -41,7 +41,7 @@ import android.util.Pair;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.SubscriptionController;
-import com.android.providers.telephony.nano.CarrierIdProto;
+import com.android.internal.telephony.nano.CarrierIdProto;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

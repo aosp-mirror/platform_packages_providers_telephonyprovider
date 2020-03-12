@@ -350,6 +350,16 @@ public class MmsSmsProvider extends ContentProvider {
         final String pduTable = MmsProvider.getPduTable(accessRestricted);
         final String smsTable = SmsProvider.getSmsTable(accessRestricted);
 
+        // If access is restricted, we don't allow subqueries in the query.
+        if (accessRestricted) {
+            try {
+                SqlQueryChecker.checkQueryParametersForSubqueries(projection, selection, sortOrder);
+            } catch (IllegalArgumentException e) {
+                Log.w(LOG_TAG, "Query rejected: " + e.getMessage());
+                return null;
+            }
+        }
+
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = null;
         final int match = URI_MATCHER.match(uri);

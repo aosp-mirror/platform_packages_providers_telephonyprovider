@@ -16,8 +16,6 @@
 
 package com.android.providers.telephony;
 
-import static com.android.internal.telephony.SmsResponse.NO_ERROR_CODE;
-
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
@@ -38,7 +36,6 @@ import android.provider.Contacts;
 import android.provider.Telephony;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Sms;
-import android.provider.Telephony.TextBasedSmsColumns;
 import android.provider.Telephony.Threads;
 import android.telephony.SmsManager;
 import android.telephony.SmsMessage;
@@ -48,10 +45,13 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 
-import java.util.List;
 import java.util.HashMap;
+import java.util.List;
 
 public class SmsProvider extends ContentProvider {
+    /* No response constant from SmsResponse */
+    static final int NO_ERROR_CODE = -1;
+
     private static final Uri NOTIFICATION_URI = Uri.parse("content://sms");
     private static final Uri ICC_URI = Uri.parse("content://sms/icc");
     private static final Uri ICC_SUBID_URI = Uri.parse("content://sms/icc_subId");
@@ -125,6 +125,16 @@ public class SmsProvider extends ContentProvider {
                 getContext(), getCallingPackage(), Binder.getCallingUid());
         final String smsTable = getSmsTable(accessRestricted);
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+
+        // If access is restricted, we don't allow subqueries in the query.
+        if (accessRestricted) {
+            try {
+                SqlQueryChecker.checkQueryParametersForSubqueries(projectionIn, selection, sort);
+            } catch (IllegalArgumentException e) {
+                Log.w(TAG, "Query rejected: " + e.getMessage());
+                return null;
+            }
+        }
 
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
