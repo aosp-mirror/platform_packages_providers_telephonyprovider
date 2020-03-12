@@ -1195,6 +1195,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "27202"
   }
+  carrier_attribute {
+    mccmnc_tuple: "27211"
+    imsi_prefix_xpattern: "272110200677368"
+  }
 }
 carrier_id {
   canonical_id: 793
@@ -1308,7 +1312,6 @@ carrier_id {
   carrier_name: "Airtel Kenya"
   carrier_attribute {
     mccmnc_tuple: "63903"
-    mccmnc_tuple: "63904"
   }
 }
 carrier_id {
@@ -6699,6 +6702,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "0000b0"
+    gid1: "6230"
   }
 }
 carrier_id {
@@ -7144,6 +7148,14 @@ carrier_id {
   carrier_name: "TrueMove H 4G LTE"
   carrier_attribute {
     mccmnc_tuple: "52004"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "52000"
+    gid1: "01"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "52000"
+    gid1: "01FF"
   }
 }
 carrier_id {
@@ -9737,14 +9749,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2336
-  carrier_name: "TrueMove H"
-  carrier_attribute {
-    mccmnc_tuple: "52000"
-    gid1: "01"
-  }
-}
-carrier_id {
   canonical_id: 2337
   carrier_name: "Movil exito"
   carrier_attribute {
@@ -10456,7 +10460,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2450
-  carrier_name: "SunMobile"
+  carrier_name: "SUN Mobile"
   carrier_attribute {
     mccmnc_tuple: "45400"
     gid1: "01030000FFFFFFFF"
@@ -10497,14 +10501,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "22210"
     spn: "ho."
-  }
-}
-carrier_id {
-  canonical_id: 2456
-  carrier_name: "coolpad"
-  carrier_attribute {
-    mccmnc_tuple: "310240"
-    gid1: "6230"
   }
 }
 carrier_id {
@@ -10566,6 +10562,13 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "26203"
     imsi_prefix_xpattern: "26203483"
+  }
+}
+carrier_id {
+  canonical_id: 2463
+  carrier_name: "SevenNet Layers"
+  carrier_attribute {
+    mccmnc_tuple: "41877"
   }
 }
 carrier_id {
@@ -10768,4 +10771,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 33554458
+version: 33554459
