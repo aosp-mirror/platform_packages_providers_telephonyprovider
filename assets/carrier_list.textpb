@@ -4034,7 +4034,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1573
-  carrier_name: "Wind"
+  carrier_name: "WINDTRE"
   carrier_attribute {
     mccmnc_tuple: "22288"
   }
@@ -4048,7 +4048,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1575
-  carrier_name: "3"
+  carrier_name: "WINDTRE"
   carrier_attribute {
     mccmnc_tuple: "22299"
   }
@@ -10572,6 +10572,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2464
+  carrier_name: "Mobi"
+  carrier_attribute {
+    mccmnc_tuple: "313460"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10771,4 +10778,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 33554459
+version: 33554460
