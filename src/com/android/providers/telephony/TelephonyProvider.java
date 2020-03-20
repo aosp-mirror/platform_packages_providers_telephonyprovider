@@ -101,7 +101,7 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
-import android.telephony.ServiceState;
+import android.telephony.Annotation;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
@@ -114,10 +114,6 @@ import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.PhoneConstants;
-import com.android.internal.telephony.dataconnection.ApnSettingUtils;
-import com.android.internal.telephony.uicc.IccRecords;
-import com.android.internal.telephony.uicc.UiccController;
 import com.android.internal.util.XmlUtils;
 import android.service.carrier.IApnSourceService;
 
@@ -147,7 +143,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 43 << 16;
+    private static final int DATABASE_VERSION = 45 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -239,7 +235,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String IS_NOT_OWNED_BY_DPC = OWNED_BY + "!=" + OWNED_BY_DPC;
 
     private static final String ORDER_BY_SUB_ID =
-            SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + " ASC";
+            Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID + " ASC";
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
@@ -255,6 +251,55 @@ public class TelephonyProvider extends ContentProvider
     private Injector mInjector;
 
     private boolean mManagedApnEnforced;
+
+    /**
+     * Available radio technologies for GSM, UMTS and CDMA.
+     * Duplicates the constants from hardware/radio/include/ril.h
+     * This should only be used by agents working with the ril.  Others
+     * should use the equivalent TelephonyManager.NETWORK_TYPE_*
+     */
+    private static final int RIL_RADIO_TECHNOLOGY_UNKNOWN = 0;
+    private static final int RIL_RADIO_TECHNOLOGY_GPRS = 1;
+    private static final int RIL_RADIO_TECHNOLOGY_EDGE = 2;
+    private static final int RIL_RADIO_TECHNOLOGY_UMTS = 3;
+    private static final int RIL_RADIO_TECHNOLOGY_IS95A = 4;
+    private static final int RIL_RADIO_TECHNOLOGY_IS95B = 5;
+    private static final int RIL_RADIO_TECHNOLOGY_1xRTT = 6;
+    private static final int RIL_RADIO_TECHNOLOGY_EVDO_0 = 7;
+    private static final int RIL_RADIO_TECHNOLOGY_EVDO_A = 8;
+    private static final int RIL_RADIO_TECHNOLOGY_HSDPA = 9;
+    private static final int RIL_RADIO_TECHNOLOGY_HSUPA = 10;
+    private static final int RIL_RADIO_TECHNOLOGY_HSPA = 11;
+    private static final int RIL_RADIO_TECHNOLOGY_EVDO_B = 12;
+    private static final int RIL_RADIO_TECHNOLOGY_EHRPD = 13;
+    private static final int RIL_RADIO_TECHNOLOGY_LTE = 14;
+    private static final int RIL_RADIO_TECHNOLOGY_HSPAP = 15;
+
+    /**
+     * GSM radio technology only supports voice. It does not support data.
+     */
+    private static final int RIL_RADIO_TECHNOLOGY_GSM = 16;
+    private static final int RIL_RADIO_TECHNOLOGY_TD_SCDMA = 17;
+
+    /**
+     * IWLAN
+     */
+    private static final int RIL_RADIO_TECHNOLOGY_IWLAN = 18;
+
+    /**
+     * LTE_CA
+     */
+    private static final int RIL_RADIO_TECHNOLOGY_LTE_CA = 19;
+
+    /**
+     * NR(New Radio) 5G.
+     */
+    private static final int  RIL_RADIO_TECHNOLOGY_NR = 20;
+
+    /**
+     * The number of the radio technologies.
+     */
+    private static final int NEXT_RIL_RADIO_TECHNOLOGY = 21;
 
     private static final Map<String, Integer> MVNO_TYPE_STRING_MAP;
 
@@ -357,67 +402,68 @@ public class TelephonyProvider extends ContentProvider
     @VisibleForTesting
     public static String getStringForSimInfoTableCreation(String tableName) {
         return "CREATE TABLE " + tableName + "("
-                + SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID
+                + Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID
                 + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + SubscriptionManager.ICC_ID + " TEXT NOT NULL,"
-                + SubscriptionManager.SIM_SLOT_INDEX
-                + " INTEGER DEFAULT " + SubscriptionManager.SIM_NOT_INSERTED + ","
-                + SubscriptionManager.DISPLAY_NAME + " TEXT,"
-                + SubscriptionManager.CARRIER_NAME + " TEXT,"
-                + SubscriptionManager.NAME_SOURCE
-                + " INTEGER DEFAULT " + SubscriptionManager.NAME_SOURCE_DEFAULT_SOURCE + ","
-                + SubscriptionManager.COLOR + " INTEGER DEFAULT "
-                + SubscriptionManager.COLOR_DEFAULT + ","
-                + SubscriptionManager.NUMBER + " TEXT,"
-                + SubscriptionManager.DISPLAY_NUMBER_FORMAT
-                + " INTEGER NOT NULL DEFAULT " + SubscriptionManager.DISPLAY_NUMBER_DEFAULT + ","
-                + SubscriptionManager.DATA_ROAMING
-                + " INTEGER DEFAULT " + SubscriptionManager.DATA_ROAMING_DEFAULT + ","
-                + SubscriptionManager.MCC + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.MNC + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.MCC_STRING + " TEXT,"
-                + SubscriptionManager.MNC_STRING + " TEXT,"
-                + SubscriptionManager.EHPLMNS + " TEXT,"
-                + SubscriptionManager.HPLMNS + " TEXT,"
-                + SubscriptionManager.SIM_PROVISIONING_STATUS
-                + " INTEGER DEFAULT " + SubscriptionManager.SIM_PROVISIONED + ","
-                + SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.CARD_ID + " TEXT NOT NULL,"
-                + SubscriptionManager.ACCESS_RULES + " BLOB,"
-                + SubscriptionManager.ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB,"
-                + SubscriptionManager.IS_REMOVABLE + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
-                + SubscriptionManager.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.WFC_IMS_MODE + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.GROUP_UUID + " TEXT,"
-                + SubscriptionManager.IS_METERED + " INTEGER DEFAULT 1,"
-                + SubscriptionManager.ISO_COUNTRY_CODE + " TEXT,"
-                + SubscriptionManager.CARRIER_ID + " INTEGER DEFAULT -1,"
-                + SubscriptionManager.PROFILE_CLASS + " INTEGER DEFAULT "
-                + SubscriptionManager.PROFILE_CLASS_DEFAULT + ","
-                + SubscriptionManager.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
-                + SubscriptionManager.SUBSCRIPTION_TYPE_LOCAL_SIM + ","
-                + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0,"
-                + SubscriptionManager.GROUP_OWNER + " TEXT,"
-                + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
-                + SubscriptionManager.IMSI + " TEXT,"
-                + SubscriptionManager.UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1"
+                + Telephony.SimInfo.ICC_ID + " TEXT NOT NULL,"
+                + Telephony.SimInfo.SIM_SLOT_INDEX
+                + " INTEGER DEFAULT " + Telephony.SimInfo.SIM_NOT_INSERTED + ","
+                + Telephony.SimInfo.DISPLAY_NAME + " TEXT,"
+                + Telephony.SimInfo.CARRIER_NAME + " TEXT,"
+                + Telephony.SimInfo.NAME_SOURCE
+                + " INTEGER DEFAULT " + Telephony.SimInfo.NAME_SOURCE_DEFAULT + ","
+                + Telephony.SimInfo.COLOR + " INTEGER DEFAULT "
+                + Telephony.SimInfo.COLOR_DEFAULT + ","
+                + Telephony.SimInfo.NUMBER + " TEXT,"
+                + Telephony.SimInfo.DISPLAY_NUMBER_FORMAT
+                + " INTEGER NOT NULL DEFAULT " + Telephony.SimInfo.DISPLAY_NUMBER_DEFAULT + ","
+                + Telephony.SimInfo.DATA_ROAMING
+                + " INTEGER DEFAULT " + Telephony.SimInfo.DATA_ROAMING_DEFAULT + ","
+                + Telephony.SimInfo.MCC + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.MNC + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.MCC_STRING + " TEXT,"
+                + Telephony.SimInfo.MNC_STRING + " TEXT,"
+                + Telephony.SimInfo.EHPLMNS + " TEXT,"
+                + Telephony.SimInfo.HPLMNS + " TEXT,"
+                + Telephony.SimInfo.SIM_PROVISIONING_STATUS
+                + " INTEGER DEFAULT " + Telephony.SimInfo.SIM_PROVISIONED + ","
+                + Telephony.SimInfo.IS_EMBEDDED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.CARD_ID + " TEXT NOT NULL,"
+                + Telephony.SimInfo.ACCESS_RULES + " BLOB,"
+                + Telephony.SimInfo.ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB,"
+                + Telephony.SimInfo.IS_REMOVABLE + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
+                + Telephony.SimInfo.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.WFC_IMS_MODE + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.GROUP_UUID + " TEXT,"
+                + Telephony.SimInfo.IS_METERED + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.ISO_COUNTRY_CODE + " TEXT,"
+                + Telephony.SimInfo.CARRIER_ID + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.PROFILE_CLASS + " INTEGER DEFAULT "
+                + Telephony.SimInfo.PROFILE_CLASS_DEFAULT + ","
+                + Telephony.SimInfo.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
+                + Telephony.SimInfo.SUBSCRIPTION_TYPE_LOCAL_SIM + ","
+                + Telephony.SimInfo.GROUP_OWNER + " TEXT,"
+                + Telephony.SimInfo.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
+                + Telephony.SimInfo.IMSI + " TEXT,"
+                + Telephony.SimInfo.UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.ALLOWED_NETWORK_TYPES + " BIGINT DEFAULT -1,"
+                + Telephony.SimInfo.IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -855,9 +901,9 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + SubscriptionManager.MCC + " INTEGER DEFAULT 0;");
+                            " ADD COLUMN " + Telephony.SimInfo.MCC + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + SubscriptionManager.MNC + " INTEGER DEFAULT 0;");
+                            " ADD COLUMN " + Telephony.SimInfo.MNC + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -870,7 +916,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            SubscriptionManager.CARRIER_NAME + " TEXT DEFAULT '';");
+                            Telephony.SimInfo.CARRIER_NAME + " TEXT DEFAULT '';");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -953,29 +999,29 @@ public class TelephonyProvider extends ContentProvider
                     // These columns may already be present in which case execSQL will throw an
                     // exception
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_AMBER_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_AMBER_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4;");
+                            + Telephony.SimInfo.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_ALERT_SPEECH + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_ALERT_SPEECH + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1009,8 +1055,8 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            SubscriptionManager.SIM_PROVISIONING_STATUS + " INTEGER DEFAULT " +
-                            SubscriptionManager.SIM_PROVISIONED + ";");
+                            Telephony.SimInfo.SIM_PROVISIONING_STATUS + " INTEGER DEFAULT " +
+                            Telephony.SimInfo.SIM_PROVISIONED + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1028,11 +1074,11 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            SubscriptionManager.IS_EMBEDDED + " INTEGER DEFAULT 0;");
+                            Telephony.SimInfo.IS_EMBEDDED + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            SubscriptionManager.ACCESS_RULES + " BLOB;");
+                            Telephony.SimInfo.ACCESS_RULES + " BLOB;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            SubscriptionManager.IS_REMOVABLE + " INTEGER DEFAULT 0;");
+                            Telephony.SimInfo.IS_REMOVABLE + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1060,18 +1106,18 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.ENHANCED_4G_MODE_ENABLED
+                            + Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED
                             + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.VT_IMS_ENABLED + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.VT_IMS_ENABLED + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.WFC_IMS_ENABLED + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.WFC_IMS_ENABLED + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.WFC_IMS_MODE + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.WFC_IMS_MODE + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
@@ -1115,17 +1161,17 @@ public class TelephonyProvider extends ContentProvider
                 // of the new column SubscriptionManager.CARD_ID, and replace the SIMINFO_TABLE with
                 // the new table.
                 Cursor c = null;
-                String[] proj = {SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID};
+                String[] proj = {Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID};
                 recreateSimInfoDB(c, db, proj);
                 if (VDBG) {
                     c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading " + SIMINFO_TABLE
                             + " total number of rows: " + c.getCount());
                     c.close();
-                    c = db.query(SIMINFO_TABLE, proj, SubscriptionManager.CARD_ID + " IS NOT NULL",
+                    c = db.query(SIMINFO_TABLE, proj, Telephony.SimInfo.CARD_ID + " IS NOT NULL",
                             null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows with "
-                            + SubscriptionManager.CARD_ID + ": " + c.getCount());
+                            + Telephony.SimInfo.CARD_ID + ": " + c.getCount());
                     c.close();
                 }
                 oldVersion = 25 << 16 | 6;
@@ -1151,9 +1197,9 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + SubscriptionManager.MCC_STRING + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.MCC_STRING + " TEXT;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + SubscriptionManager.MNC_STRING + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.MNC_STRING + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1161,8 +1207,8 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 // Migrate the old integer values over to strings
-                String[] proj = {SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID,
-                        SubscriptionManager.MCC, SubscriptionManager.MNC};
+                String[] proj = {Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID,
+                        Telephony.SimInfo.MCC, Telephony.SimInfo.MNC};
                 try (Cursor c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null)) {
                     while (c.moveToNext()) {
                         fillInMccMncStringAtCursor(mContext, db, c);
@@ -1175,7 +1221,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1205,7 +1251,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                        + SubscriptionManager.GROUP_UUID + " TEXT;");
+                        + Telephony.SimInfo.GROUP_UUID + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1219,7 +1265,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.IS_METERED + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.IS_METERED + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1233,7 +1279,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.ISO_COUNTRY_CODE + " TEXT;");
+                            + Telephony.SimInfo.ISO_COUNTRY_CODE + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1247,7 +1293,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.CARRIER_ID + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.CARRIER_ID + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1261,8 +1307,8 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            SubscriptionManager.PROFILE_CLASS + " INTEGER DEFAULT " +
-                            SubscriptionManager.PROFILE_CLASS_DEFAULT + ";");
+                            Telephony.SimInfo.PROFILE_CLASS + " INTEGER DEFAULT " +
+                            Telephony.SimInfo.PROFILE_CLASS_DEFAULT + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1276,8 +1322,8 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                        + SubscriptionManager.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
-                        + SubscriptionManager.SUBSCRIPTION_TYPE_LOCAL_SIM + ";");
+                        + Telephony.SimInfo.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
+                        + Telephony.SimInfo.SUBSCRIPTION_TYPE_LOCAL_SIM + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1303,13 +1349,13 @@ public class TelephonyProvider extends ContentProvider
             }
 
             if (oldVersion < (37 << 16 | 6)) {
-                // Add new columns SubscriptionManager.EHPLMNS and SubscriptionManager.HPLMNS into
+                // Add new columns Telephony.SimInfo.EHPLMNS and Telephony.SimInfo.HPLMNS into
                 // the database.
                 try {
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + SubscriptionManager.EHPLMNS + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.EHPLMNS + " TEXT;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + SubscriptionManager.HPLMNS + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.HPLMNS + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade for ehplmns. " +
@@ -1319,25 +1365,11 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 37 << 16 | 6;
             }
 
-            if (oldVersion < (38 << 16 | 6)) {
-                try {
-                    // Try to update the siminfo table. It might not be there.
-                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.WHITE_LISTED_APN_DATA + " INTEGER DEFAULT 0;");
-                } catch (SQLiteException e) {
-                    if (DBG) {
-                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
-                                "The table will get created in onOpen.");
-                    }
-                }
-                oldVersion = 38 << 16 | 6;
-            }
-
             if (oldVersion < (39 << 16 | 6)) {
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.GROUP_OWNER + " TEXT;");
+                            + Telephony.SimInfo.GROUP_OWNER + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1351,7 +1383,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.DATA_ENABLED_OVERRIDE_RULES + " TEXT;");
+                            + Telephony.SimInfo.DATA_ENABLED_OVERRIDE_RULES + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1365,7 +1397,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.IMSI + " TEXT;");
+                            + Telephony.SimInfo.IMSI + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1379,7 +1411,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                        SubscriptionManager.ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB;");
+                            Telephony.SimInfo.ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1392,7 +1424,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + SubscriptionManager.UICC_APPLICATIONS_ENABLED
+                            + Telephony.SimInfo.UICC_APPLICATIONS_ENABLED
                             + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -1403,6 +1435,35 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 43 << 16 | 6;
             }
 
+            if (oldVersion < (44 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.ALLOWED_NETWORK_TYPES
+                            + " BIGINT DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 44 << 16 | 6;
+            }
+
+            if (oldVersion < (45 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.IMS_RCS_UCE_ENABLED
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 45 << 16 | 6;
+            }
 
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -1467,51 +1528,51 @@ public class TelephonyProvider extends ContentProvider
 
         private void copySimInfoValuesV24(ContentValues cv, Cursor c) {
             // String vals
-            getStringValueFromCursor(cv, c, SubscriptionManager.ICC_ID);
-            getStringValueFromCursor(cv, c, SubscriptionManager.DISPLAY_NAME);
-            getStringValueFromCursor(cv, c, SubscriptionManager.CARRIER_NAME);
-            getStringValueFromCursor(cv, c, SubscriptionManager.NUMBER);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.ICC_ID);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.DISPLAY_NAME);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.CARRIER_NAME);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.NUMBER);
 
             // bool/int vals
-            getIntValueFromCursor(cv, c, SubscriptionManager.SIM_SLOT_INDEX);
-            getIntValueFromCursor(cv, c, SubscriptionManager.NAME_SOURCE);
-            getIntValueFromCursor(cv, c, SubscriptionManager.COLOR);
-            getIntValueFromCursor(cv, c, SubscriptionManager.DISPLAY_NUMBER_FORMAT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.DATA_ROAMING);
-            getIntValueFromCursor(cv, c, SubscriptionManager.MCC);
-            getIntValueFromCursor(cv, c, SubscriptionManager.MNC);
-            getIntValueFromCursor(cv, c, SubscriptionManager.SIM_PROVISIONING_STATUS);
-            getIntValueFromCursor(cv, c, SubscriptionManager.IS_EMBEDDED);
-            getIntValueFromCursor(cv, c, SubscriptionManager.IS_REMOVABLE);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_EXTREME_THREAT_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_SEVERE_THREAT_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_AMBER_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_EMERGENCY_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_SOUND_DURATION);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_REMINDER_INTERVAL);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_VIBRATE);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ALERT_SPEECH);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_ETWS_TEST_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_CHANNEL_50_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_CMAS_TEST_ALERT);
-            getIntValueFromCursor(cv, c, SubscriptionManager.CB_OPT_OUT_DIALOG);
-            getIntValueFromCursor(cv, c, SubscriptionManager.ENHANCED_4G_MODE_ENABLED);
-            getIntValueFromCursor(cv, c, SubscriptionManager.VT_IMS_ENABLED);
-            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_ENABLED);
-            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_MODE);
-            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_ROAMING_MODE);
-            getIntValueFromCursor(cv, c, SubscriptionManager.WFC_IMS_ROAMING_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.SIM_SLOT_INDEX);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.NAME_SOURCE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLOR);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.DISPLAY_NUMBER_FORMAT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.DATA_ROAMING);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.MCC);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.MNC);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.SIM_PROVISIONING_STATUS);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.IS_EMBEDDED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.IS_REMOVABLE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_EXTREME_THREAT_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_SEVERE_THREAT_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_AMBER_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_EMERGENCY_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_SOUND_DURATION);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_REMINDER_INTERVAL);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_VIBRATE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_SPEECH);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ETWS_TEST_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_CHANNEL_50_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_CMAS_TEST_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_OPT_OUT_DIALOG);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.VT_IMS_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_MODE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_ROAMING_MODE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED);
 
             // Blob vals
-            getBlobValueFromCursor(cv, c, SubscriptionManager.ACCESS_RULES);
+            getBlobValueFromCursor(cv, c, Telephony.SimInfo.ACCESS_RULES);
         }
 
         private void getCardIdfromIccid(ContentValues cv, Cursor c) {
-            int columnIndex = c.getColumnIndex(SubscriptionManager.ICC_ID);
+            int columnIndex = c.getColumnIndex(Telephony.SimInfo.ICC_ID);
             if (columnIndex != -1) {
                 String fromCursor = c.getString(columnIndex);
                 if (!TextUtils.isEmpty(fromCursor)) {
-                    cv.put(SubscriptionManager.CARD_ID, fromCursor);
+                    cv.put(Telephony.SimInfo.CARD_ID, fromCursor);
                 }
             }
         }
@@ -1860,13 +1921,11 @@ public class TelephonyProvider extends ContentProvider
                         // Change bearer to a bitmask
                         String bearerStr = c.getString(c.getColumnIndex(BEARER));
                         if (!TextUtils.isEmpty(bearerStr)) {
-                            int bearer_bitmask = ServiceState.getBitmaskForTech(
-                                    Integer.parseInt(bearerStr));
+                            int bearer_bitmask = getBitmaskForTech(Integer.parseInt(bearerStr));
                             cv.put(BEARER_BITMASK, bearer_bitmask);
 
-                            int networkTypeBitmask = ServiceState.getBitmaskForTech(
-                                    ServiceState.rilRadioTechnologyToNetworkType(
-                                            Integer.parseInt(bearerStr)));
+                            int networkTypeBitmask = rilRadioTechnologyToNetworkTypeBitmask(
+                                    Integer.parseInt(bearerStr));
                             cv.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
                         }
 
@@ -1954,8 +2013,7 @@ public class TelephonyProvider extends ContentProvider
                 String fromCursor = c.getString(columnIndex);
                 if (!TextUtils.isEmpty(fromCursor) && fromCursor.matches("\\d+")) {
                     int networkBitmask = Integer.valueOf(fromCursor);
-                    int bearerBitmask = ServiceState.convertNetworkTypeBitmaskToBearerBitmask(
-                            networkBitmask);
+                    int bearerBitmask = convertNetworkTypeBitmaskToBearerBitmask(networkBitmask);
                     cv.put(BEARER_BITMASK, String.valueOf(bearerBitmask));
                 }
                 return;
@@ -1965,8 +2023,7 @@ public class TelephonyProvider extends ContentProvider
                 String fromCursor = c.getString(columnIndex);
                 if (!TextUtils.isEmpty(fromCursor) && fromCursor.matches("\\d+")) {
                     int bearerBitmask = Integer.valueOf(fromCursor);
-                    int networkBitmask = ServiceState.convertBearerBitmaskToNetworkTypeBitmask(
-                            bearerBitmask);
+                    int networkBitmask = convertBearerBitmaskToNetworkTypeBitmask(bearerBitmask);
                     cv.put(NETWORK_TYPE_BITMASK, String.valueOf(networkBitmask));
                 }
             }
@@ -2058,22 +2115,20 @@ public class TelephonyProvider extends ContentProvider
             int networkTypeBitmask = 0;
             String networkTypeList = parser.getAttributeValue(null, "network_type_bitmask");
             if (networkTypeList != null) {
-                networkTypeBitmask = ServiceState.getBitmaskFromString(networkTypeList);
+                networkTypeBitmask = getBitmaskFromString(networkTypeList);
             }
             map.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
 
             int bearerBitmask = 0;
             if (networkTypeList != null) {
-                bearerBitmask =
-                        ServiceState.convertNetworkTypeBitmaskToBearerBitmask(networkTypeBitmask);
+                bearerBitmask = convertNetworkTypeBitmaskToBearerBitmask(networkTypeBitmask);
             } else {
                 String bearerList = parser.getAttributeValue(null, "bearer_bitmask");
                 if (bearerList != null) {
-                    bearerBitmask = ServiceState.getBitmaskFromString(bearerList);
+                    bearerBitmask = getBitmaskFromString(bearerList);
                 }
                 // Update the network type bitmask to keep them sync.
-                networkTypeBitmask = ServiceState.convertBearerBitmaskToNetworkTypeBitmask(
-                        bearerBitmask);
+                networkTypeBitmask = convertBearerBitmaskToNetworkTypeBitmask(bearerBitmask);
                 map.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
             }
             map.put(BEARER_BITMASK, bearerBitmask);
@@ -3082,32 +3137,31 @@ public class TelephonyProvider extends ContentProvider
         int mvnoDataIndex = ret.getColumnIndex(MVNO_MATCH_DATA);
         int carrierIdIndex = ret.getColumnIndex(CARRIER_ID);
 
-        IccRecords iccRecords = UiccController.getInstance().getIccRecords(
-                SubscriptionManager.getPhoneId(subId), UiccController.APP_FAM_3GPP);
-        if (iccRecords == null) {
-            loge("iccRecords is null");
-            return null;
-        }
-
-        //Separate the result into MatrixCursor
+        // Separate the result into MatrixCursor
         while (ret.moveToNext()) {
             List<String> data = new ArrayList<>();
             for (String column : columnNames) {
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
-            if (!TextUtils.isEmpty(ret.getString(numericIndex)) &&
-                    ApnSettingUtils.mvnoMatches(iccRecords,
+            boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
+                    && tm.isCurrentSimOperator(ret.getString(numericIndex),
                             getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                            ret.getString(mvnoDataIndex))) {
+                            ret.getString(mvnoDataIndex));
+            boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
+                    && ret.getString(numericIndex).equals(mccmnc)
+                    && TextUtils.isEmpty(ret.getString(mvnoIndex));
+            boolean isCarrierIdAPN = !TextUtils.isEmpty(ret.getString(carrierIdIndex))
+                    && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))
+                    && carrierId != TelephonyManager.UNKNOWN_CARRIER_ID;
+
+            if (isMVNOAPN) {
                 // 1. The APN that query based on legacy SIM MCC/MCC and MVNO
                 currentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(numericIndex))
-                    && TextUtils.isEmpty(ret.getString(mvnoIndex))) {
+            } else if (isMNOAPN) {
                 // 2. The APN that query based on SIM MCC/MNC
                 parentCursor.addRow(data);
-            } else if (!TextUtils.isEmpty(ret.getString(carrierIdIndex))
-                    && ret.getString(carrierIdIndex).equals(String.valueOf(carrierId))) {
+            } else if (isCarrierIdAPN) {
                 // The APN that query based on carrier Id (not include the MVNO or MNO APN)
                 carrierIdCursor.addRow(data);
             }
@@ -3137,8 +3191,6 @@ public class TelephonyProvider extends ContentProvider
             for (String column : to.getColumnNames()) {
                 int index = to.getColumnIndex(column);
                 switch (to.getType(index)) {
-                    case Cursor.FIELD_TYPE_NULL:
-                        break;
                     case Cursor.FIELD_TYPE_INTEGER:
                         data.add(to.getInt(index));
                         break;
@@ -3149,6 +3201,7 @@ public class TelephonyProvider extends ContentProvider
                         data.add(to.getBlob(index));
                         break;
                     case Cursor.FIELD_TYPE_STRING:
+                    case Cursor.FIELD_TYPE_NULL:
                         data.add(to.getString(index));
                         break;
                 }
@@ -3774,36 +3827,42 @@ public class TelephonyProvider extends ContentProvider
                                     | ContentResolver.NOTIFY_SKIP_NOTIFY_FOR_DESCENDANTS,
                             UserHandle.USER_ALL);
                     // notify observers on specific user settings changes.
-                    if (values.containsKey(SubscriptionManager.WFC_IMS_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager.WFC_ENABLED_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(SubscriptionManager.ENHANCED_4G_MODE_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager
                                                 .ADVANCED_CALLING_ENABLED_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(SubscriptionManager.VT_IMS_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.VT_IMS_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager.VT_ENABLED_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(SubscriptionManager.WFC_IMS_MODE)) {
+                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_MODE)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager.WFC_MODE_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(SubscriptionManager.WFC_IMS_ROAMING_MODE)) {
+                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_ROAMING_MODE)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 SubscriptionManager.WFC_ROAMING_MODE_CONTENT_URI,
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(SubscriptionManager.WFC_IMS_ROAMING_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 SubscriptionManager.WFC_ROAMING_ENABLED_CONTENT_URI,
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(Telephony.SimInfo.IMS_RCS_UCE_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.IMS_RCS_UCE_ENABLED), usingSubId, subId),
+                                null, true, UserHandle.USER_ALL);
                     }
                     break;
                 default:
@@ -3892,10 +3951,6 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private String getWhereClauseForRestoreDefaultApn(SQLiteDatabase db, int subId) {
-        IccRecords iccRecords = getIccRecords(subId);
-        if (iccRecords == null) {
-            return null;
-        }
         TelephonyManager telephonyManager =
             getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         String simOperator = telephonyManager.getSimOperator();
@@ -3909,8 +3964,8 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
-                        && ApnSettingUtils.mvnoMatches(iccRecords,
-                        getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
+                        && telephonyManager.isCurrentSimOperator(simOperator,
+                            getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"
                             + " AND " + MVNO_MATCH_DATA + "='" + mvnoMatchData + "'"
@@ -3928,16 +3983,6 @@ public class TelephonyProvider extends ContentProvider
             }
         }
         return where;
-    }
-
-    @VisibleForTesting
-    IccRecords getIccRecords(int subId) {
-        TelephonyManager telephonyManager =
-            getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
-        int family = telephonyManager.getPhoneType() == PhoneConstants.PHONE_TYPE_GSM ?
-                UiccController.APP_FAM_3GPP : UiccController.APP_FAM_3GPP2;
-        return UiccController.getInstance().getIccRecords(
-                SubscriptionManager.getPhoneId(subId), family);
     }
 
     private synchronized void updateApnDb() {
@@ -3976,10 +4021,10 @@ public class TelephonyProvider extends ContentProvider
         int mcc, mnc;
         String subId;
         try {
-            mcc = c.getInt(c.getColumnIndexOrThrow(SubscriptionManager.MCC));
-            mnc = c.getInt(c.getColumnIndexOrThrow(SubscriptionManager.MNC));
+            mcc = c.getInt(c.getColumnIndexOrThrow(Telephony.SimInfo.MCC));
+            mnc = c.getInt(c.getColumnIndexOrThrow(Telephony.SimInfo.MNC));
             subId = c.getString(c.getColumnIndexOrThrow(
-                    SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID));
+                    Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID));
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Possible database corruption -- some columns not found.");
             return;
@@ -3988,10 +4033,10 @@ public class TelephonyProvider extends ContentProvider
         String mccString = String.format(Locale.getDefault(), "%03d", mcc);
         String mncString = getBestStringMnc(context, mccString, mnc);
         ContentValues cv = new ContentValues(2);
-        cv.put(SubscriptionManager.MCC_STRING, mccString);
-        cv.put(SubscriptionManager.MNC_STRING, mncString);
+        cv.put(Telephony.SimInfo.MCC_STRING, mccString);
+        cv.put(Telephony.SimInfo.MNC_STRING, mncString);
         db.update(SIMINFO_TABLE, cv,
-                SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                 new String[]{subId});
     }
 
@@ -4028,17 +4073,17 @@ public class TelephonyProvider extends ContentProvider
      */
     private static void syncBearerBitmaskAndNetworkTypeBitmask(ContentValues values) {
         if (values.containsKey(NETWORK_TYPE_BITMASK)) {
-            int convertedBitmask = ServiceState.convertNetworkTypeBitmaskToBearerBitmask(
+            int convertedBitmask = convertNetworkTypeBitmaskToBearerBitmask(
                     values.getAsInteger(NETWORK_TYPE_BITMASK));
             if (values.containsKey(BEARER_BITMASK)
                     && convertedBitmask != values.getAsInteger(BEARER_BITMASK)) {
                 loge("Network type bitmask and bearer bitmask are not compatible.");
             }
-            values.put(BEARER_BITMASK, ServiceState.convertNetworkTypeBitmaskToBearerBitmask(
+            values.put(BEARER_BITMASK, convertNetworkTypeBitmaskToBearerBitmask(
                     values.getAsInteger(NETWORK_TYPE_BITMASK)));
         } else {
             if (values.containsKey(BEARER_BITMASK)) {
-                int convertedBitmask = ServiceState.convertBearerBitmaskToNetworkTypeBitmask(
+                int convertedBitmask = convertBearerBitmaskToNetworkTypeBitmask(
                         values.getAsInteger(BEARER_BITMASK));
                 values.put(NETWORK_TYPE_BITMASK, convertedBitmask);
             }
@@ -4062,5 +4107,136 @@ public class TelephonyProvider extends ContentProvider
         String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase();
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
         return  mvnoTypeInt == null ? UNSPECIFIED_INT : mvnoTypeInt;
+    }
+
+    private static int getBitmaskFromString(String bearerList) {
+        String[] bearers = bearerList.split("\\|");
+        int bearerBitmask = 0;
+        for (String bearer : bearers) {
+            int bearerInt = 0;
+            try {
+                bearerInt = Integer.parseInt(bearer.trim());
+            } catch (NumberFormatException nfe) {
+                return 0;
+            }
+
+            if (bearerInt == 0) {
+                return 0;
+            }
+            bearerBitmask |= getBitmaskForTech(bearerInt);
+        }
+        return bearerBitmask;
+    }
+
+    /**
+     * Transform RIL radio technology value to Network
+     * type bitmask{@link android.telephony.TelephonyManager.NetworkTypeBitMask}.
+     *
+     * @param rat The RIL radio technology.
+     * @return The network type
+     * bitmask{@link android.telephony.TelephonyManager.NetworkTypeBitMask}.
+     */
+    private static int rilRadioTechnologyToNetworkTypeBitmask(int rat) {
+        switch (rat) {
+            case RIL_RADIO_TECHNOLOGY_GPRS:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_GPRS;
+            case RIL_RADIO_TECHNOLOGY_EDGE:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_EDGE;
+            case RIL_RADIO_TECHNOLOGY_UMTS:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_UMTS;
+            case RIL_RADIO_TECHNOLOGY_HSDPA:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_HSDPA;
+            case RIL_RADIO_TECHNOLOGY_HSUPA:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_HSUPA;
+            case RIL_RADIO_TECHNOLOGY_HSPA:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_HSPA;
+            case RIL_RADIO_TECHNOLOGY_IS95A:
+            case RIL_RADIO_TECHNOLOGY_IS95B:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_CDMA;
+            case RIL_RADIO_TECHNOLOGY_1xRTT:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_1xRTT;
+            case RIL_RADIO_TECHNOLOGY_EVDO_0:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_EVDO_0;
+            case RIL_RADIO_TECHNOLOGY_EVDO_A:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_EVDO_A;
+            case RIL_RADIO_TECHNOLOGY_EVDO_B:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_EVDO_B;
+            case RIL_RADIO_TECHNOLOGY_EHRPD:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_EHRPD;
+            case RIL_RADIO_TECHNOLOGY_LTE:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_LTE;
+            case RIL_RADIO_TECHNOLOGY_HSPAP:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_HSPAP;
+            case RIL_RADIO_TECHNOLOGY_GSM:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_GSM;
+            case RIL_RADIO_TECHNOLOGY_TD_SCDMA:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_TD_SCDMA;
+            case RIL_RADIO_TECHNOLOGY_IWLAN:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_IWLAN;
+            case RIL_RADIO_TECHNOLOGY_LTE_CA:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_LTE_CA;
+            case RIL_RADIO_TECHNOLOGY_NR:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_NR;
+            default:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_UNKNOWN;
+        }
+    }
+
+    /**
+     * Convert network type bitmask to bearer bitmask.
+     *
+     * @param networkTypeBitmask The network type bitmask value
+     * @return The bearer bitmask value.
+     */
+    private static int convertNetworkTypeBitmaskToBearerBitmask(int networkTypeBitmask) {
+        if (networkTypeBitmask == 0) {
+            return 0;
+        }
+
+        int bearerBitmask = 0;
+        for (int bearerInt = 0; bearerInt < NEXT_RIL_RADIO_TECHNOLOGY; bearerInt++) {
+            if (bitmaskHasTarget(networkTypeBitmask,
+                    rilRadioTechnologyToNetworkTypeBitmask(bearerInt))) {
+                bearerBitmask |= getBitmaskForTech(bearerInt);
+            }
+        }
+        return bearerBitmask;
+    }
+
+    /**
+     * Convert bearer bitmask to network type bitmask.
+     *
+     * @param bearerBitmask The bearer bitmask value.
+     * @return The network type bitmask value.
+     */
+    private static int convertBearerBitmaskToNetworkTypeBitmask(int bearerBitmask) {
+        if (bearerBitmask == 0) {
+            return 0;
+        }
+
+        int networkTypeBitmask = 0;
+        for (int bearerUnitInt = 0; bearerUnitInt < NEXT_RIL_RADIO_TECHNOLOGY; bearerUnitInt++) {
+            int bearerUnitBitmask = getBitmaskForTech(bearerUnitInt);
+            if (bitmaskHasTarget(bearerBitmask, bearerUnitBitmask)) {
+                networkTypeBitmask |= rilRadioTechnologyToNetworkTypeBitmask(bearerUnitInt);
+            }
+        }
+        return networkTypeBitmask;
+    }
+
+    private static boolean bitmaskHasTarget(int bearerBitmask, int targetBitmask) {
+        if (bearerBitmask == 0) {
+            return true;
+        } else if (targetBitmask != 0) {
+            return ((bearerBitmask & targetBitmask) != 0);
+        }
+        return false;
+    }
+
+    private static int getBitmaskForTech(int radioTech) {
+        if (radioTech >= 1) {
+            return (1 << (radioTech - 1));
+        }
+        return 0;
     }
 }

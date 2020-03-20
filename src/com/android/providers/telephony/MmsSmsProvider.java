@@ -42,6 +42,7 @@ import android.provider.Telephony.Threads;
 import android.provider.Telephony.ThreadsColumns;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.Patterns;
 
 import com.google.android.mms.pdu.PduHeaders;
 
@@ -51,6 +52,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * This class provides the ability to query the MMS and SMS databases
@@ -100,6 +103,17 @@ public class MmsSmsProvider extends ContentProvider {
     private static final int URI_FIRST_LOCKED_MESSAGE_ALL          = 16;
     private static final int URI_FIRST_LOCKED_MESSAGE_BY_THREAD_ID = 17;
     private static final int URI_MESSAGE_ID_TO_THREAD              = 18;
+
+    /**
+     * Regex pattern for names and email addresses.
+     * <ul>
+     *     <li><em>mailbox</em> = {@code name-addr}</li>
+     *     <li><em>name-addr</em> = {@code [display-name] angle-addr}</li>
+     *     <li><em>angle-addr</em> = {@code [CFWS] "<" addr-spec ">" [CFWS]}</li>
+     * </ul>
+     */
+    public static final Pattern NAME_ADDR_EMAIL_PATTERN =
+            Pattern.compile("\\s*(\"[^\"]*\"|[^<>\"]+)\\s*<([^<>]+)>\\s*");
 
     /**
      * the name of the table that is used to store the queue of
@@ -336,6 +350,16 @@ public class MmsSmsProvider extends ContentProvider {
         final String pduTable = MmsProvider.getPduTable(accessRestricted);
         final String smsTable = SmsProvider.getSmsTable(accessRestricted);
 
+        // If access is restricted, we don't allow subqueries in the query.
+        if (accessRestricted) {
+            try {
+                SqlQueryChecker.checkQueryParametersForSubqueries(projection, selection, sortOrder);
+            } catch (IllegalArgumentException e) {
+                Log.w(LOG_TAG, "Query rejected: " + e.getMessage());
+                return null;
+            }
+        }
+
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = null;
         final int match = URI_MATCHER.match(uri);
@@ -530,8 +554,8 @@ public class MmsSmsProvider extends ContentProvider {
      * Return the canonical address ID for this address.
      */
     private long getSingleAddressId(String address) {
-        boolean isEmail = Mms.isEmailAddress(address);
-        boolean isPhoneNumber = Mms.isPhoneNumber(address);
+        boolean isEmail = isEmailAddress(address);
+        boolean isPhoneNumber = isPhoneNumber(address);
 
         // We lowercase all email addresses, but not addresses that aren't numbers, because
         // that would incorrectly turn an address such as "My Vodafone" into "my vodafone"
@@ -1413,5 +1437,48 @@ public class MmsSmsProvider extends ContentProvider {
         }
         Log.w(LOG_TAG, "Ignored unsupported " + method + " call");
         return null;
+    }
+
+    /**
+     * Is the specified address an email address?
+     *
+     * @param address the input address to test
+     * @return true if address is an email address; false otherwise.
+     */
+    private static boolean isEmailAddress(String address) {
+        if (TextUtils.isEmpty(address)) {
+            return false;
+        }
+
+        String s = extractAddrSpec(address);
+        Matcher match = Patterns.EMAIL_ADDRESS.matcher(s);
+        return match.matches();
+    }
+
+    /**
+     * Is the specified number a phone number?
+     *
+     * @param number the input number to test
+     * @return true if number is a phone number; false otherwise.
+     */
+    private static boolean isPhoneNumber(String number) {
+        if (TextUtils.isEmpty(number)) {
+            return false;
+        }
+
+        Matcher match = Patterns.PHONE.matcher(number);
+        return match.matches();
+    }
+
+    /**
+     * Helper method to extract email address from address string.
+     */
+    private static String extractAddrSpec(String address) {
+        Matcher match = NAME_ADDR_EMAIL_PATTERN.matcher(address);
+
+        if (match.matches()) {
+            return match.group(2);
+        }
+        return address;
     }
 }
