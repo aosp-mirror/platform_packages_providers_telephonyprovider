@@ -197,7 +197,8 @@ public final class TelephonyDatabaseHelperTest {
         String[] upgradedColumns = cursor.getColumnNames();
         Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
 
-        assertTrue(Arrays.asList(upgradedColumns).contains(Telephony.SimInfo.IMS_RCS_UCE_ENABLED));
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
     }
 
     /**
@@ -258,22 +259,22 @@ public final class TelephonyDatabaseHelperTest {
             Log.d(TAG, "InMemoryTelephonyProviderV5DbHelper onCreate creating the siminfo table");
             db.execSQL(
                     "CREATE TABLE siminfo ("
-                    + Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID
+                    + Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID
                     + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                    + Telephony.SimInfo.ICC_ID + " TEXT NOT NULL,"
-                    + Telephony.SimInfo.SIM_SLOT_INDEX
+                    + Telephony.SimInfo.COLUMN_ICC_ID + " TEXT NOT NULL,"
+                    + Telephony.SimInfo.COLUMN_SIM_SLOT_INDEX
                         + " INTEGER DEFAULT " + Telephony.SimInfo.SIM_NOT_INSERTED + ","
-                    + Telephony.SimInfo.DISPLAY_NAME + " TEXT,"
-                    + Telephony.SimInfo.NAME_SOURCE
-                        + " INTEGER DEFAULT " + Telephony.SimInfo.NAME_SOURCE_DEFAULT + ","
-                    + Telephony.SimInfo.COLOR
+                    + Telephony.SimInfo.COLUMN_DISPLAY_NAME + " TEXT,"
+                    + Telephony.SimInfo.COLUMN_NAME_SOURCE
+                        + " INTEGER DEFAULT " + Telephony.SimInfo.NAME_SOURCE_CARRIER_ID + ","
+                    + Telephony.SimInfo.COLUMN_COLOR
                         + " INTEGER DEFAULT " + Telephony.SimInfo.COLOR_DEFAULT + ","
-                    + Telephony.SimInfo.NUMBER + " TEXT,"
-                    + Telephony.SimInfo.DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL"
+                    + Telephony.SimInfo.COLUMN_NUMBER + " TEXT,"
+                    + Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT + " INTEGER NOT NULL"
                         + " DEFAULT " + Telephony.SimInfo.DISPLAY_NUMBER_DEFAULT + ","
-                    + Telephony.SimInfo.DATA_ROAMING
-                        + " INTEGER DEFAULT " + Telephony.SimInfo.DATA_ROAMING_DEFAULT + ","
-                    + Telephony.SimInfo.CARD_ID + " TEXT NOT NULL"
+                    + Telephony.SimInfo.COLUMN_DATA_ROAMING
+                        + " INTEGER DEFAULT " + Telephony.SimInfo.DATA_ROAMING_DISABLE + ","
+                    + Telephony.SimInfo.COLUMN_CARD_ID + " TEXT NOT NULL"
                     + ");");
         }
 
