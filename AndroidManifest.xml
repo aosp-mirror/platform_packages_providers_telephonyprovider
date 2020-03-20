@@ -31,6 +31,8 @@
 
     <!-- This permission is only used to send the ACTION_EXTERNAL_PROVIDER_CHANGE intent. -->
     <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
+    <!-- Allows accessing the messages on ICC -->
+    <uses-permission android:name="android.permission.ACCESS_MESSAGES_ON_ICC" />
 
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
@@ -48,13 +50,6 @@
                   android:authorities="telephony"
                   android:exported="true"
                   android:singleUser="true"
-                  android:multiprocess="false" />
-
-        <provider android:name="ServiceStateProvider"
-                  android:authorities="service-state"
-                  android:exported="true"
-                  android:singleUser="true"
-                  android:writePermission="android.permission.MODIFY_PHONE_STATE"
                   android:multiprocess="false" />
 
         <!-- This is a singleton provider that is used by all users.
