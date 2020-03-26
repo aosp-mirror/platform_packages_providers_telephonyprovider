@@ -706,8 +706,15 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (subscriptionInfo == null) {
             return null;
         }
-        return PhoneNumberUtils.formatNumberToE164(subscriptionInfo.getNumber(),
-                subscriptionInfo.getCountryIso().toUpperCase(Locale.US));
+        // country iso might not be always available in some corner cases (e.g. mis-configured SIM,
+        // carrier config, or test SIM has incorrect IMSI, etc...). In that case, just return the
+        // unformatted number.
+        if (!TextUtils.isEmpty(subscriptionInfo.getCountryIso())) {
+            return PhoneNumberUtils.formatNumberToE164(subscriptionInfo.getNumber(),
+                    subscriptionInfo.getCountryIso().toUpperCase(Locale.US));
+        } else {
+            return subscriptionInfo.getNumber();
+        }
     }
 
     private void writeSmsToWriter(JsonWriter jsonWriter, Cursor cursor,
