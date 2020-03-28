@@ -308,7 +308,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         Intent intent = new Intent(Sms.Intents.ACTION_SMS_MMS_DB_LOST);
         intent.putExtra(Sms.Intents.EXTRA_IS_CORRUPTED, isCorrupted);
         intent.addFlags(Intent.FLAG_RECEIVER_INCLUDE_BACKGROUND);
-        context.sendBroadcast(intent, android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
+        context.sendBroadcast(intent);
     }
     /**
      * Returns a singleton helper for the combined MMS and SMS database in device encrypted storage.
@@ -534,7 +534,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 // disappeared mysteriously?
                 localLogWtf("onCreate: was already called once earlier");
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, false);
-                sendDbLostIntent(mContext, false);
             } else {
                 setInitialCreateDone();
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
