@@ -235,7 +235,7 @@ public class TelephonyProvider extends ContentProvider
     private static final String IS_NOT_OWNED_BY_DPC = OWNED_BY + "!=" + OWNED_BY_DPC;
 
     private static final String ORDER_BY_SUB_ID =
-            Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID + " ASC";
+            Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + " ASC";
 
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
@@ -402,68 +402,68 @@ public class TelephonyProvider extends ContentProvider
     @VisibleForTesting
     public static String getStringForSimInfoTableCreation(String tableName) {
         return "CREATE TABLE " + tableName + "("
-                + Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID
+                + Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID
                 + " INTEGER PRIMARY KEY AUTOINCREMENT,"
-                + Telephony.SimInfo.ICC_ID + " TEXT NOT NULL,"
-                + Telephony.SimInfo.SIM_SLOT_INDEX
+                + Telephony.SimInfo.COLUMN_ICC_ID + " TEXT NOT NULL,"
+                + Telephony.SimInfo.COLUMN_SIM_SLOT_INDEX
                 + " INTEGER DEFAULT " + Telephony.SimInfo.SIM_NOT_INSERTED + ","
-                + Telephony.SimInfo.DISPLAY_NAME + " TEXT,"
-                + Telephony.SimInfo.CARRIER_NAME + " TEXT,"
-                + Telephony.SimInfo.NAME_SOURCE
-                + " INTEGER DEFAULT " + Telephony.SimInfo.NAME_SOURCE_DEFAULT + ","
-                + Telephony.SimInfo.COLOR + " INTEGER DEFAULT "
+                + Telephony.SimInfo.COLUMN_DISPLAY_NAME + " TEXT,"
+                + Telephony.SimInfo.COLUMN_CARRIER_NAME + " TEXT,"
+                + Telephony.SimInfo.COLUMN_NAME_SOURCE
+                + " INTEGER DEFAULT " + Telephony.SimInfo.NAME_SOURCE_CARRIER_ID + ","
+                + Telephony.SimInfo.COLUMN_COLOR + " INTEGER DEFAULT "
                 + Telephony.SimInfo.COLOR_DEFAULT + ","
-                + Telephony.SimInfo.NUMBER + " TEXT,"
-                + Telephony.SimInfo.DISPLAY_NUMBER_FORMAT
+                + Telephony.SimInfo.COLUMN_NUMBER + " TEXT,"
+                + Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT
                 + " INTEGER NOT NULL DEFAULT " + Telephony.SimInfo.DISPLAY_NUMBER_DEFAULT + ","
-                + Telephony.SimInfo.DATA_ROAMING
-                + " INTEGER DEFAULT " + Telephony.SimInfo.DATA_ROAMING_DEFAULT + ","
-                + Telephony.SimInfo.MCC + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.MNC + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.MCC_STRING + " TEXT,"
-                + Telephony.SimInfo.MNC_STRING + " TEXT,"
-                + Telephony.SimInfo.EHPLMNS + " TEXT,"
-                + Telephony.SimInfo.HPLMNS + " TEXT,"
-                + Telephony.SimInfo.SIM_PROVISIONING_STATUS
+                + Telephony.SimInfo.COLUMN_DATA_ROAMING
+                + " INTEGER DEFAULT " + Telephony.SimInfo.DATA_ROAMING_DISABLE + ","
+                + Telephony.SimInfo.COLUMN_MCC + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_MNC + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_MCC_STRING + " TEXT,"
+                + Telephony.SimInfo.COLUMN_MNC_STRING + " TEXT,"
+                + Telephony.SimInfo.COLUMN_EHPLMNS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_HPLMNS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_SIM_PROVISIONING_STATUS
                 + " INTEGER DEFAULT " + Telephony.SimInfo.SIM_PROVISIONED + ","
-                + Telephony.SimInfo.IS_EMBEDDED + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.CARD_ID + " TEXT NOT NULL,"
-                + Telephony.SimInfo.ACCESS_RULES + " BLOB,"
-                + Telephony.SimInfo.ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB,"
-                + Telephony.SimInfo.IS_REMOVABLE + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
-                + Telephony.SimInfo.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.WFC_IMS_MODE + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.GROUP_UUID + " TEXT,"
-                + Telephony.SimInfo.IS_METERED + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.ISO_COUNTRY_CODE + " TEXT,"
-                + Telephony.SimInfo.CARRIER_ID + " INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.PROFILE_CLASS + " INTEGER DEFAULT "
-                + Telephony.SimInfo.PROFILE_CLASS_DEFAULT + ","
-                + Telephony.SimInfo.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
+                + Telephony.SimInfo.COLUMN_IS_EMBEDDED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_CARD_ID + " TEXT NOT NULL,"
+                + Telephony.SimInfo.COLUMN_ACCESS_RULES + " BLOB,"
+                + Telephony.SimInfo.COLUMN_ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB,"
+                + Telephony.SimInfo.COLUMN_IS_REMOVABLE + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_AMBER_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4,"
+                + Telephony.SimInfo.COLUMN_CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_CB_ALERT_VIBRATE + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_ALERT_SPEECH + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_VT_IMS_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_WFC_IMS_MODE + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_IS_OPPORTUNISTIC + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_GROUP_UUID + " TEXT,"
+                + Telephony.SimInfo.COLUMN_IS_METERED + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE + " TEXT,"
+                + Telephony.SimInfo.COLUMN_CARRIER_ID + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_PROFILE_CLASS + " INTEGER DEFAULT "
+                + Telephony.SimInfo.PROFILE_CLASS_UNSET + ","
+                + Telephony.SimInfo.COLUMN_SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
                 + Telephony.SimInfo.SUBSCRIPTION_TYPE_LOCAL_SIM + ","
-                + Telephony.SimInfo.GROUP_OWNER + " TEXT,"
-                + Telephony.SimInfo.DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
-                + Telephony.SimInfo.IMSI + " TEXT,"
-                + Telephony.SimInfo.UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1,"
-                + Telephony.SimInfo.ALLOWED_NETWORK_TYPES + " BIGINT DEFAULT -1,"
-                + Telephony.SimInfo.IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0"
+                + Telephony.SimInfo.COLUMN_GROUP_OWNER + " TEXT,"
+                + Telephony.SimInfo.COLUMN_DATA_ENABLED_OVERRIDE_RULES + " TEXT,"
+                + Telephony.SimInfo.COLUMN_IMSI + " TEXT,"
+                + Telephony.SimInfo.COLUMN_UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1,"
+                + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES + " BIGINT DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -901,9 +901,9 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + Telephony.SimInfo.MCC + " INTEGER DEFAULT 0;");
+                            " ADD COLUMN " + Telephony.SimInfo.COLUMN_MCC + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + Telephony.SimInfo.MNC + " INTEGER DEFAULT 0;");
+                            " ADD COLUMN " + Telephony.SimInfo.COLUMN_MNC + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -916,7 +916,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.CARRIER_NAME + " TEXT DEFAULT '';");
+                            Telephony.SimInfo.COLUMN_CARRIER_NAME + " TEXT DEFAULT '';");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -999,29 +999,33 @@ public class TelephonyProvider extends ContentProvider
                     // These columns may already be present in which case execSQL will throw an
                     // exception
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_EXTREME_THREAT_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_EXTREME_THREAT_ALERT
+                            + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_SEVERE_THREAT_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_SEVERE_THREAT_ALERT
+                            + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_AMBER_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_AMBER_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_EMERGENCY_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_ALERT_SOUND_DURATION + " INTEGER DEFAULT 4;");
+                            + Telephony.SimInfo.COLUMN_CB_ALERT_SOUND_DURATION
+                            + " INTEGER DEFAULT 4;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_ALERT_REMINDER_INTERVAL + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.COLUMN_CB_ALERT_REMINDER_INTERVAL
+                            + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_ALERT_VIBRATE + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_ALERT_VIBRATE + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_ALERT_SPEECH + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_ALERT_SPEECH + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.COLUMN_CB_ETWS_TEST_ALERT + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_CHANNEL_50_ALERT + " INTEGER DEFAULT 1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.COLUMN_CB_CMAS_TEST_ALERT + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_CB_OPT_OUT_DIALOG + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1055,7 +1059,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.SIM_PROVISIONING_STATUS + " INTEGER DEFAULT " +
+                            Telephony.SimInfo.COLUMN_SIM_PROVISIONING_STATUS + " INTEGER DEFAULT " +
                             Telephony.SimInfo.SIM_PROVISIONED + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -1074,11 +1078,11 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.IS_EMBEDDED + " INTEGER DEFAULT 0;");
+                            Telephony.SimInfo.COLUMN_IS_EMBEDDED + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.ACCESS_RULES + " BLOB;");
+                            Telephony.SimInfo.COLUMN_ACCESS_RULES + " BLOB;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.IS_REMOVABLE + " INTEGER DEFAULT 0;");
+                            Telephony.SimInfo.COLUMN_IS_REMOVABLE + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1106,18 +1110,18 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED
+                            + Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED
                             + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.VT_IMS_ENABLED + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.COLUMN_VT_IMS_ENABLED + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.WFC_IMS_ENABLED + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.WFC_IMS_MODE + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.COLUMN_WFC_IMS_MODE + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE + " INTEGER DEFAULT -1;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_ENABLED + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + CARRIERS_TABLE + " upgrade. " +
@@ -1161,17 +1165,17 @@ public class TelephonyProvider extends ContentProvider
                 // of the new column SubscriptionManager.CARD_ID, and replace the SIMINFO_TABLE with
                 // the new table.
                 Cursor c = null;
-                String[] proj = {Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID};
+                String[] proj = {Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID};
                 recreateSimInfoDB(c, db, proj);
                 if (VDBG) {
                     c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading " + SIMINFO_TABLE
                             + " total number of rows: " + c.getCount());
                     c.close();
-                    c = db.query(SIMINFO_TABLE, proj, Telephony.SimInfo.CARD_ID + " IS NOT NULL",
-                            null, null, null, null);
+                    c = db.query(SIMINFO_TABLE, proj, Telephony.SimInfo.COLUMN_CARD_ID
+                                    + " IS NOT NULL", null, null, null, null);
                     log("dbh.onUpgrade:- after upgrading total number of rows with "
-                            + Telephony.SimInfo.CARD_ID + ": " + c.getCount());
+                            + Telephony.SimInfo.COLUMN_CARD_ID + ": " + c.getCount());
                     c.close();
                 }
                 oldVersion = 25 << 16 | 6;
@@ -1197,9 +1201,9 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + Telephony.SimInfo.MCC_STRING + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.COLUMN_MCC_STRING + " TEXT;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + Telephony.SimInfo.MNC_STRING + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.COLUMN_MNC_STRING + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1207,8 +1211,8 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 // Migrate the old integer values over to strings
-                String[] proj = {Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID,
-                        Telephony.SimInfo.MCC, Telephony.SimInfo.MNC};
+                String[] proj = {Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                        Telephony.SimInfo.COLUMN_MCC, Telephony.SimInfo.COLUMN_MNC};
                 try (Cursor c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null)) {
                     while (c.moveToNext()) {
                         fillInMccMncStringAtCursor(mContext, db, c);
@@ -1221,7 +1225,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.IS_OPPORTUNISTIC + " INTEGER DEFAULT 0;");
+                            + Telephony.SimInfo.COLUMN_IS_OPPORTUNISTIC + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1251,7 +1255,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                        + Telephony.SimInfo.GROUP_UUID + " TEXT;");
+                        + Telephony.SimInfo.COLUMN_GROUP_UUID + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1265,7 +1269,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.IS_METERED + " INTEGER DEFAULT 1;");
+                            + Telephony.SimInfo.COLUMN_IS_METERED + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1279,7 +1283,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.ISO_COUNTRY_CODE + " TEXT;");
+                            + Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1293,7 +1297,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.CARRIER_ID + " INTEGER DEFAULT -1;");
+                            + Telephony.SimInfo.COLUMN_CARRIER_ID + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1307,8 +1311,8 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.PROFILE_CLASS + " INTEGER DEFAULT " +
-                            Telephony.SimInfo.PROFILE_CLASS_DEFAULT + ";");
+                            Telephony.SimInfo.COLUMN_PROFILE_CLASS + " INTEGER DEFAULT " +
+                            Telephony.SimInfo.PROFILE_CLASS_UNSET + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1322,7 +1326,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                        + Telephony.SimInfo.SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
+                        + Telephony.SimInfo.COLUMN_SUBSCRIPTION_TYPE + " INTEGER DEFAULT "
                         + Telephony.SimInfo.SUBSCRIPTION_TYPE_LOCAL_SIM + ";");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -1353,9 +1357,9 @@ public class TelephonyProvider extends ContentProvider
                 // the database.
                 try {
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + Telephony.SimInfo.EHPLMNS + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.COLUMN_EHPLMNS + " TEXT;");
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE +
-                            " ADD COLUMN " + Telephony.SimInfo.HPLMNS + " TEXT;");
+                            " ADD COLUMN " + Telephony.SimInfo.COLUMN_HPLMNS + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade for ehplmns. " +
@@ -1369,7 +1373,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.GROUP_OWNER + " TEXT;");
+                            + Telephony.SimInfo.COLUMN_GROUP_OWNER + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1383,7 +1387,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.DATA_ENABLED_OVERRIDE_RULES + " TEXT;");
+                            + Telephony.SimInfo.COLUMN_DATA_ENABLED_OVERRIDE_RULES + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1397,7 +1401,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.IMSI + " TEXT;");
+                            + Telephony.SimInfo.COLUMN_IMSI + " TEXT;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1411,7 +1415,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN " +
-                            Telephony.SimInfo.ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB;");
+                            Telephony.SimInfo.COLUMN_ACCESS_RULES_FROM_CARRIER_CONFIGS + " BLOB;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
@@ -1424,7 +1428,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.UICC_APPLICATIONS_ENABLED
+                            + Telephony.SimInfo.COLUMN_UICC_APPLICATIONS_ENABLED
                             + " INTEGER DEFAULT 1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -1439,7 +1443,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.ALLOWED_NETWORK_TYPES
+                            + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES
                             + " BIGINT DEFAULT -1;");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -1454,7 +1458,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.IMS_RCS_UCE_ENABLED
+                            + Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED
                             + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -1528,51 +1532,51 @@ public class TelephonyProvider extends ContentProvider
 
         private void copySimInfoValuesV24(ContentValues cv, Cursor c) {
             // String vals
-            getStringValueFromCursor(cv, c, Telephony.SimInfo.ICC_ID);
-            getStringValueFromCursor(cv, c, Telephony.SimInfo.DISPLAY_NAME);
-            getStringValueFromCursor(cv, c, Telephony.SimInfo.CARRIER_NAME);
-            getStringValueFromCursor(cv, c, Telephony.SimInfo.NUMBER);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_ICC_ID);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_DISPLAY_NAME);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CARRIER_NAME);
+            getStringValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_NUMBER);
 
             // bool/int vals
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.SIM_SLOT_INDEX);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.NAME_SOURCE);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLOR);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.DISPLAY_NUMBER_FORMAT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.DATA_ROAMING);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.MCC);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.MNC);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.SIM_PROVISIONING_STATUS);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.IS_EMBEDDED);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.IS_REMOVABLE);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_EXTREME_THREAT_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_SEVERE_THREAT_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_AMBER_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_EMERGENCY_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_SOUND_DURATION);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_REMINDER_INTERVAL);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_VIBRATE);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ALERT_SPEECH);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_ETWS_TEST_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_CHANNEL_50_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_CMAS_TEST_ALERT);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.CB_OPT_OUT_DIALOG);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.VT_IMS_ENABLED);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_ENABLED);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_MODE);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_ROAMING_MODE);
-            getIntValueFromCursor(cv, c, Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_SIM_SLOT_INDEX);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_NAME_SOURCE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_COLOR);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_DATA_ROAMING);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_MCC);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_MNC);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_SIM_PROVISIONING_STATUS);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_IS_EMBEDDED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_IS_REMOVABLE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_EXTREME_THREAT_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_SEVERE_THREAT_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_AMBER_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_EMERGENCY_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_ALERT_SOUND_DURATION);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_ALERT_REMINDER_INTERVAL);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_ALERT_VIBRATE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_ALERT_SPEECH);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_ETWS_TEST_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_CHANNEL_50_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_CMAS_TEST_ALERT);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_CB_OPT_OUT_DIALOG);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_WFC_IMS_MODE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE);
+            getIntValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_ENABLED);
 
             // Blob vals
-            getBlobValueFromCursor(cv, c, Telephony.SimInfo.ACCESS_RULES);
+            getBlobValueFromCursor(cv, c, Telephony.SimInfo.COLUMN_ACCESS_RULES);
         }
 
         private void getCardIdfromIccid(ContentValues cv, Cursor c) {
-            int columnIndex = c.getColumnIndex(Telephony.SimInfo.ICC_ID);
+            int columnIndex = c.getColumnIndex(Telephony.SimInfo.COLUMN_ICC_ID);
             if (columnIndex != -1) {
                 String fromCursor = c.getString(columnIndex);
                 if (!TextUtils.isEmpty(fromCursor)) {
-                    cv.put(Telephony.SimInfo.CARD_ID, fromCursor);
+                    cv.put(Telephony.SimInfo.COLUMN_CARD_ID, fromCursor);
                 }
             }
         }
@@ -3827,41 +3831,41 @@ public class TelephonyProvider extends ContentProvider
                                     | ContentResolver.NOTIFY_SKIP_NOTIFY_FOR_DESCENDANTS,
                             UserHandle.USER_ALL);
                     // notify observers on specific user settings changes.
-                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager.WFC_ENABLED_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(Telephony.SimInfo.ENHANCED_4G_MODE_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager
                                                 .ADVANCED_CALLING_ENABLED_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(Telephony.SimInfo.VT_IMS_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager.VT_ENABLED_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_MODE)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_WFC_IMS_MODE)) {
                         getContext().getContentResolver().notifyChange(
                                 getNotifyContentUri(SubscriptionManager.WFC_MODE_CONTENT_URI,
                                         usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_ROAMING_MODE)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 SubscriptionManager.WFC_ROAMING_MODE_CONTENT_URI,
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(Telephony.SimInfo.WFC_IMS_ROAMING_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_ENABLED)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 SubscriptionManager.WFC_ROAMING_ENABLED_CONTENT_URI,
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
-                    if (values.containsKey(Telephony.SimInfo.IMS_RCS_UCE_ENABLED)) {
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
-                                        Telephony.SimInfo.IMS_RCS_UCE_ENABLED), usingSubId, subId),
+                                        Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED), usingSubId, subId),
                                 null, true, UserHandle.USER_ALL);
                     }
                     break;
@@ -4021,10 +4025,10 @@ public class TelephonyProvider extends ContentProvider
         int mcc, mnc;
         String subId;
         try {
-            mcc = c.getInt(c.getColumnIndexOrThrow(Telephony.SimInfo.MCC));
-            mnc = c.getInt(c.getColumnIndexOrThrow(Telephony.SimInfo.MNC));
+            mcc = c.getInt(c.getColumnIndexOrThrow(Telephony.SimInfo.COLUMN_MCC));
+            mnc = c.getInt(c.getColumnIndexOrThrow(Telephony.SimInfo.COLUMN_MNC));
             subId = c.getString(c.getColumnIndexOrThrow(
-                    Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID));
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
         } catch (IllegalArgumentException e) {
             Log.e(TAG, "Possible database corruption -- some columns not found.");
             return;
@@ -4033,10 +4037,10 @@ public class TelephonyProvider extends ContentProvider
         String mccString = String.format(Locale.getDefault(), "%03d", mcc);
         String mncString = getBestStringMnc(context, mccString, mnc);
         ContentValues cv = new ContentValues(2);
-        cv.put(Telephony.SimInfo.MCC_STRING, mccString);
-        cv.put(Telephony.SimInfo.MNC_STRING, mncString);
+        cv.put(Telephony.SimInfo.COLUMN_MCC_STRING, mccString);
+        cv.put(Telephony.SimInfo.COLUMN_MNC_STRING, mncString);
         db.update(SIMINFO_TABLE, cv,
-                Telephony.SimInfo.UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                 new String[]{subId});
     }
 
