@@ -353,20 +353,42 @@ public class SmsProvider extends ContentProvider {
                 type = Sms.MESSAGE_TYPE_OUTBOX;
                 break;
         }
+
+        String address = (type == Sms.MESSAGE_TYPE_INBOX)
+                ? message.getDisplayOriginatingAddress()
+                : message.getRecipientAddress();
+
+        int index = message.getIndexOnIcc();
+        if (address == null) {
+            // The status byte of an EF_SMS record may not be correct. try to read other address
+            // type again.
+            Log.e(TAG, "convertIccToSms: EF_SMS(" + index + ")=> address=null, type=" + type
+                    + ", status=" + statusOnIcc + "(may not be correct). fallback to other type.");
+            address = (type == Sms.MESSAGE_TYPE_INBOX)
+                    ? message.getRecipientAddress()
+                    : message.getDisplayOriginatingAddress();
+
+            if (address != null) {
+                // Rely on actual PDU(address) to set type again.
+                type = (type == Sms.MESSAGE_TYPE_INBOX)
+                        ? Sms.MESSAGE_TYPE_SENT
+                        : Sms.MESSAGE_TYPE_INBOX;
+                Log.d(TAG, "convertIccToSms: new type=" + type + ", address=xxxxxx");
+            } else {
+                Log.e(TAG, "convertIccToSms: no change");
+            }
+        }
+
         // N.B.: These calls must appear in the same order as the
         // columns appear in ICC_COLUMNS.
         Object[] row = new Object[13];
         row[0] = message.getServiceCenterAddress();
-        row[1] =
-                (type == Sms.MESSAGE_TYPE_INBOX)
-                        ? message.getDisplayOriginatingAddress()
-                        : message.getRecipientAddress();
-
+        row[1] = address;
         row[2] = String.valueOf(message.getMessageClass());
         row[3] = message.getDisplayMessageBody();
         row[4] = message.getTimestampMillis();
         row[5] = statusOnIcc;
-        row[6] = message.getIndexOnIcc();
+        row[6] = index;
         row[7] = message.isStatusReportMessage();
         row[8] = "sms";
         row[9] = type;
