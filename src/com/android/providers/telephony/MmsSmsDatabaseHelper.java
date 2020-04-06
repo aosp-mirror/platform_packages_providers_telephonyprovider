@@ -545,7 +545,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
             }
 
-            mContext.sendBroadcast(intent, android.Manifest.permission.READ_SMS);
+            mContext.sendBroadcast(intent);
         }
         createMmsTables(db);
         createSmsTables(db);

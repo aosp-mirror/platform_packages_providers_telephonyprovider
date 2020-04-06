@@ -806,7 +806,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 658
-  carrier_name: "Orange Dominicana, S.A."
+  carrier_name: "Altice Dominicana"
   carrier_attribute {
     mccmnc_tuple: "37001"
   }
@@ -876,7 +876,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 676
-  carrier_name: "Vodafone"
+  carrier_name: "Vodafone Egypt"
   carrier_attribute {
     mccmnc_tuple: "60202"
     spn: "vodafone"
@@ -1554,7 +1554,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 968
-  carrier_name: "Spark NZ"
+  carrier_name: "Spark"
   carrier_attribute {
     mccmnc_tuple: "53005"
   }
@@ -5236,7 +5236,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1745
-  carrier_name: "Airtel Tanzania"
+  carrier_name: "Airtel"
   carrier_attribute {
     mccmnc_tuple: "64005"
   }
@@ -5621,7 +5621,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1808
-  carrier_name: "Conestoga Wireless Company"
+  carrier_name: "Limitless Mobile"
   carrier_attribute {
     mccmnc_tuple: "310690"
   }
@@ -7794,7 +7794,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2092
-  carrier_name: "Congstar"
+  carrier_name: "congstar"
   carrier_attribute {
     mccmnc_tuple: "26201"
     gid1: "44"
@@ -10292,6 +10292,138 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2433
+  carrier_name: "Assurance Wireless"
+  carrier_attribute {
+    mccmnc_tuple: "311490"
+    gid1: "000006"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "312530"
+    gid1: "000006"
+  }
+}
+carrier_id {
+  canonical_id: 2434
+  carrier_name: "giga_sg"
+  carrier_attribute {
+    mccmnc_tuple: "52505"
+    spn: "giga"
+  }
+}
+carrier_id {
+  canonical_id: 2435
+  carrier_name: "Xplornet"
+  carrier_attribute {
+    mccmnc_tuple: "302130"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302131"
+  }
+}
+carrier_id {
+  canonical_id: 2436
+  carrier_name: "izi"
+  carrier_attribute {
+    mccmnc_tuple: "40101"
+    imsi_prefix_xpattern: "40101568"
+  }
+}
+carrier_id {
+  canonical_id: 2437
+  carrier_name: "Wind Telecom"
+  carrier_attribute {
+    mccmnc_tuple: "37005"
+  }
+}
+carrier_id {
+  canonical_id: 2438
+  carrier_name: "Daily Telecom Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "22210"
+    spn: "Daily Telecom"
+  }
+}
+carrier_id {
+  canonical_id: 2442
+  carrier_name: "Digi Spain"
+  carrier_attribute {
+    mccmnc_tuple: "21422"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "22605"
+    gid1: "44474553"
+  }
+}
+carrier_id {
+  canonical_id: 2443
+  carrier_name: "Digi Italy"
+  carrier_attribute {
+    mccmnc_tuple: "22236"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "22605"
+    gid1: "44474954"
+  }
+}
+carrier_id {
+  canonical_id: 2444
+  carrier_name: "Next Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "25047"
+  }
+}
+carrier_id {
+  canonical_id: 2445
+  carrier_name: "rain"
+  carrier_attribute {
+    mccmnc_tuple: "65538"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "65519"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "65573"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "65574"
+  }
+}
+carrier_id {
+  canonical_id: 2446
+  carrier_name: "Sberbank"
+  carrier_attribute {
+    mccmnc_tuple: "25050"
+  }
+}
+carrier_id {
+  canonical_id: 2447
+  carrier_name: "IDC"
+  carrier_attribute {
+    mccmnc_tuple: "25915"
+    spn: "IDC"
+  }
+}
+carrier_id {
+  canonical_id: 2448
+  carrier_name: "VTB Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "25026"
+    imsi_prefix_xpattern: "2502674"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "25026"
+    imsi_prefix_xpattern: "2502633"
+  }
+}
+carrier_id {
+  canonical_id: 2449
+  carrier_name: "Spectrum CBRS"
+  carrier_attribute {
+    mccmnc_tuple: "314020"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10490,4 +10622,4 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 16777229
+version: 16777232
