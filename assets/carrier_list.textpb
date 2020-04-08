@@ -5589,6 +5589,10 @@ carrier_id {
     mccmnc_tuple: "311480"
     gid1: "BA00040000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "311840"
+    gid1: "C1000000"
+  }
 }
 carrier_id {
   canonical_id: 1803
@@ -5934,6 +5938,10 @@ carrier_id {
   carrier_name: "Bluegrass Cellular LLC"
   carrier_attribute {
     mccmnc_tuple: "311440"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA00010000000000"
   }
 }
 carrier_id {
@@ -9894,8 +9902,13 @@ carrier_id {
   carrier_name: "Telefonica"
   carrier_attribute {
     mccmnc_tuple: "26203"
+    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -9903,8 +9916,13 @@ carrier_id {
   carrier_name: "o2"
   carrier_attribute {
     mccmnc_tuple: "26207"
+    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -10579,6 +10597,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2465
+  carrier_name: "Spectrum Data"
+  carrier_attribute {
+    mccmnc_tuple: "313450"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10778,4 +10803,14 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 33554460
+carrier_id {
+  canonical_id: 10020
+  carrier_name: "CTC Telecom Inc"
+  carrier_attribute {
+    mccmnc_tuple: "20404"
+    iccid_prefix: "898603"
+    iccid_prefix: "898611"
+  }
+  parent_canonical_id: 1854
+}
+version: 33554461
