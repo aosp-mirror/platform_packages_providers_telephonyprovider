@@ -3116,6 +3116,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "46000"
     mccmnc_tuple: "46002"
+    mccmnc_tuple: "46004"
     mccmnc_tuple: "46007"
     mccmnc_tuple: "46008"
   }
@@ -3125,14 +3126,8 @@ carrier_id {
   carrier_name: "China Unicom"
   carrier_attribute {
     mccmnc_tuple: "46001"
+    mccmnc_tuple: "46006"
     mccmnc_tuple: "46009"
-  }
-}
-carrier_id {
-  canonical_id: 1437
-  carrier_name: "China Satellite Global Star Network"
-  carrier_attribute {
-    mccmnc_tuple: "46004"
   }
 }
 carrier_id {
@@ -9007,7 +9002,6 @@ carrier_id {
   carrier_name: "China Telecom"
   carrier_attribute {
     mccmnc_tuple: "46003"
-    mccmnc_tuple: "46005"
     mccmnc_tuple: "46011"
   }
   carrier_attribute {
@@ -10808,9 +10802,11 @@ carrier_id {
   carrier_name: "CTC Telecom Inc"
   carrier_attribute {
     mccmnc_tuple: "20404"
+    mccmnc_tuple: "45403"
+    mccmnc_tuple: "45431"
     iccid_prefix: "898603"
     iccid_prefix: "898611"
   }
   parent_canonical_id: 1854
 }
-version: 33554461
+version: 33554462
