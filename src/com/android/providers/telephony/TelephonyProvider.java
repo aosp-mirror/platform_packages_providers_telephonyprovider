@@ -2008,7 +2008,7 @@ public class TelephonyProvider extends ContentProvider
             int columnIndex = c.getColumnIndex(key);
             if (columnIndex != -1) {
                 String fromCursor = c.getString(columnIndex);
-                if (!TextUtils.isEmpty(fromCursor)) {
+                if (fromCursor != null) {
                     cv.put(key, fromCursor);
                 }
             }
