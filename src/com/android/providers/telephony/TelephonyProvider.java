@@ -129,6 +129,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -2575,6 +2576,7 @@ public class TelephonyProvider extends ContentProvider
     private void restoreApnsWithService(int subId) {
         Context context = getContext();
         Resources r = context.getResources();
+        AtomicBoolean connectionBindingInvalid = new AtomicBoolean(false);
         ServiceConnection connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName className,
@@ -2593,6 +2595,24 @@ public class TelephonyProvider extends ContentProvider
                     mIApnSourceService = null;
                 }
             }
+
+            @Override
+            public void onBindingDied(ComponentName name) {
+                loge("The binding to the apn service connection is dead: " + name);
+                synchronized (mLock) {
+                    connectionBindingInvalid.set(true);
+                    mLock.notifyAll();
+                }
+            }
+
+            @Override
+            public void onNullBinding(ComponentName name) {
+                loge("Null binding: " + name);
+                synchronized (mLock) {
+                    connectionBindingInvalid.set(true);
+                    mLock.notifyAll();
+                }
+            }
         };
 
         Intent intent = new Intent(IApnSourceService.class.getName());
@@ -2603,12 +2623,16 @@ public class TelephonyProvider extends ContentProvider
             if (context.bindService(intent, connection, Context.BIND_IMPORTANT |
                         Context.BIND_AUTO_CREATE)) {
                 synchronized (mLock) {
-                    while (mIApnSourceService == null) {
+                    while (mIApnSourceService == null && !connectionBindingInvalid.get()) {
                         try {
                             mLock.wait();
                         } catch (InterruptedException e) {
                             loge("Error while waiting for service connection: " + e);
                         }
+                    }
+                    if (connectionBindingInvalid.get()) {
+                        loge("The binding is invalid.");
+                        return;
                     }
                     try {
                         ContentValues[] values = mIApnSourceService.getApns(subId);
