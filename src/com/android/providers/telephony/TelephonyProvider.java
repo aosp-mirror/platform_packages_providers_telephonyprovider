@@ -114,6 +114,7 @@ import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.util.XmlUtils;
 import android.service.carrier.IApnSourceService;
 
@@ -2666,6 +2667,12 @@ public class TelephonyProvider extends ContentProvider
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
 
+        try {
+            PhoneFactory.addLocalLog(TAG, 100);
+        } catch (IllegalArgumentException e) {
+            // ignore
+        }
+
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
         if (!TextUtils.isEmpty(newBuildId)) {
@@ -2732,6 +2739,7 @@ public class TelephonyProvider extends ContentProvider
 
     private static void localLog(String logMsg) {
         Log.d(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private synchronized boolean isManagedApnEnforced() {
