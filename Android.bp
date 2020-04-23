@@ -4,6 +4,7 @@ android_app {
     srcs: ["src/**/*.java", "proto/**/*.proto"],
     platform_apis: true,
     certificate: "platform",
+    libs: ["telephony-common"],
     static_libs: ["android-common", "telephonyprovider-protos"],
 }
 
