@@ -48,6 +48,7 @@ import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.PhoneFactory;
 
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
@@ -293,6 +294,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Memory optimization - close idle connections after 30s of inactivity
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         setWriteAheadLoggingEnabled(false);
+        try {
+            PhoneFactory.addLocalLog(TAG, 100);
+        } catch (IllegalArgumentException e) {
+            // ignore
+        }
     }
 
     private static synchronized MmsSmsDatabaseErrorHandler getDbErrorHandler(Context context) {
@@ -551,10 +557,12 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private static void localLog(String logMsg) {
         Log.d(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private static void localLogWtf(String logMsg) {
         Log.wtf(TAG, logMsg);
+        PhoneFactory.localLog(TAG, logMsg);
     }
 
     private boolean isInitialCreateDone() {
