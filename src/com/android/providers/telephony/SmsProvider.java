@@ -16,8 +16,6 @@
 
 package com.android.providers.telephony;
 
-import static com.android.internal.telephony.SmsResponse.NO_ERROR_CODE;
-
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
 import android.content.ContentProvider;
@@ -77,7 +75,7 @@ public class SmsProvider extends ContentProvider {
         // N.B.: These columns must appear in the same order as the
         // calls to add appear in convertIccToSms.
         "service_center_address",       // getServiceCenterAddress
-        "address",                      // getDisplayOriginatingAddress or getRecipientAddress
+        "address",                      // getDisplayOriginatingAddress
         "message_class",                // getMessageClass
         "body",                         // getDisplayMessageBody
         "date",                         // getTimestampMillis
@@ -85,9 +83,9 @@ public class SmsProvider extends ContentProvider {
         "index_on_icc",                 // getIndexOnIcc
         "is_status_report",             // isStatusReportMessage
         "transport_type",               // Always "sms".
-        "type",                         // depend on getStatusOnIcc
+        "type",                         // Always MESSAGE_TYPE_ALL.
         "locked",                       // Always 0 (false).
-        "error_code",                   // Always -1 (NO_ERROR_CODE), previously it was 0 always.
+        "error_code",                   // Always 0
         "_id"
     };
 
@@ -123,6 +121,16 @@ public class SmsProvider extends ContentProvider {
                 getContext(), getCallingPackage(), Binder.getCallingUid());
         final String smsTable = getSmsTable(accessRestricted);
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
+
+        // If access is restricted, we don't allow subqueries in the query.
+        if (accessRestricted) {
+            try {
+                SqlQueryChecker.checkQueryParametersForSubqueries(projectionIn, selection, sort);
+            } catch (IllegalArgumentException e) {
+                Log.w(TAG, "Query rejected: " + e.getMessage());
+                return null;
+            }
+        }
 
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
@@ -294,39 +302,21 @@ public class SmsProvider extends ContentProvider {
     }
 
     private Object[] convertIccToSms(SmsMessage message, int id) {
-        int statusOnIcc = message.getStatusOnIcc();
-        int type = Sms.MESSAGE_TYPE_ALL;
-        switch (statusOnIcc) {
-            case SmsManager.STATUS_ON_ICC_READ:
-            case SmsManager.STATUS_ON_ICC_UNREAD:
-                type = Sms.MESSAGE_TYPE_INBOX;
-                break;
-            case SmsManager.STATUS_ON_ICC_SENT:
-                type = Sms.MESSAGE_TYPE_SENT;
-                break;
-            case SmsManager.STATUS_ON_ICC_UNSENT:
-                type = Sms.MESSAGE_TYPE_OUTBOX;
-                break;
-        }
         // N.B.: These calls must appear in the same order as the
         // columns appear in ICC_COLUMNS.
         Object[] row = new Object[13];
         row[0] = message.getServiceCenterAddress();
-        row[1] =
-                (type == Sms.MESSAGE_TYPE_INBOX)
-                        ? message.getDisplayOriginatingAddress()
-                        : message.getRecipientAddress();
-
+        row[1] = message.getDisplayOriginatingAddress();
         row[2] = String.valueOf(message.getMessageClass());
         row[3] = message.getDisplayMessageBody();
         row[4] = message.getTimestampMillis();
-        row[5] = statusOnIcc;
+        row[5] = Sms.STATUS_NONE;
         row[6] = message.getIndexOnIcc();
         row[7] = message.isStatusReportMessage();
         row[8] = "sms";
-        row[9] = type;
+        row[9] = TextBasedSmsColumns.MESSAGE_TYPE_ALL;
         row[10] = 0;      // locked
-        row[11] = NO_ERROR_CODE;
+        row[11] = 0;      // error_code
         row[12] = id;
         return row;
     }
@@ -652,12 +642,7 @@ public class SmsProvider extends ContentProvider {
             db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
         }
         if (rowID > 0) {
-            Uri uri = null;
-            if (table == TABLE_SMS) {
-                uri = Uri.withAppendedPath(Sms.CONTENT_URI, String.valueOf(rowID));
-            } else {
-                uri = Uri.withAppendedPath(url, String.valueOf(rowID));
-            }
+            Uri uri = Uri.withAppendedPath(url, String.valueOf(rowID));
             if (Log.isLoggable(TAG, Log.VERBOSE)) {
                 Log.d(TAG, "insert " + uri + " succeeded");
             }

@@ -305,7 +305,6 @@ public class MmsSmsProvider extends ContentProvider {
     private SQLiteOpenHelper mOpenHelper;
 
     private boolean mUseStrictPhoneNumberComparation;
-    private int mMinMatch;
 
     private static final String METHOD_IS_RESTORING = "is_restoring";
     private static final String IS_RESTORING_KEY = "restoring";
@@ -317,9 +316,6 @@ public class MmsSmsProvider extends ContentProvider {
         mUseStrictPhoneNumberComparation =
             getContext().getResources().getBoolean(
                     com.android.internal.R.bool.config_use_strict_phone_number_comparation);
-        mMinMatch =
-            getContext().getResources().getInteger(
-                    com.android.internal.R.integer.config_phonenumber_compare_min_match);
         TelephonyBackupAgent.DeferredSmsMmsRestoreService.startIfFilesExist(getContext());
         return true;
     }
@@ -335,6 +331,16 @@ public class MmsSmsProvider extends ContentProvider {
                 getContext(), getCallingPackage(), Binder.getCallingUid());
         final String pduTable = MmsProvider.getPduTable(accessRestricted);
         final String smsTable = SmsProvider.getSmsTable(accessRestricted);
+
+        // If access is restricted, we don't allow subqueries in the query.
+        if (accessRestricted) {
+            try {
+                SqlQueryChecker.checkQueryParametersForSubqueries(projection, selection, sortOrder);
+            } catch (IllegalArgumentException e) {
+                Log.w(LOG_TAG, "Query rejected: " + e.getMessage());
+                return null;
+            }
+        }
 
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = null;
@@ -546,7 +552,7 @@ public class MmsSmsProvider extends ContentProvider {
             selectionArgs = new String[] { refinedAddress };
         } else {
             selection += " OR PHONE_NUMBERS_EQUAL(address, ?, " +
-                        (mUseStrictPhoneNumberComparation ? "1)" : "0, " + mMinMatch + ")");
+                        (mUseStrictPhoneNumberComparation ? 1 : 0) + ")";
             selectionArgs = new String[] { refinedAddress, refinedAddress };
         }
 
@@ -1001,14 +1007,13 @@ public class MmsSmsProvider extends ContentProvider {
      *   FROM pdu, (SELECT msg_id AS address_msg_id
      *              FROM addr
      *              WHERE (address='<phoneNumber>' OR
-     *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0, none/mMinMatch)))
+     *              PHONE_NUMBERS_EQUAL(addr.address, '<phoneNumber>', 1/0)))
      *             AS matching_addresses
      *   WHERE pdu._id = matching_addresses.address_msg_id
      * UNION
      * SELECT ...
      *   FROM sms
-     *   WHERE (address='<phoneNumber>' OR
-     *          PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>', 1/0, none/mMinMatch));
+     *   WHERE (address='<phoneNumber>' OR PHONE_NUMBERS_EQUAL(sms.address, '<phoneNumber>', 1/0));
      */
     private Cursor getMessagesByPhoneNumber(
             String phoneNumber, String[] projection, String selection,
@@ -1023,7 +1028,7 @@ public class MmsSmsProvider extends ContentProvider {
                         selection,
                         "(address=" + escapedPhoneNumber + " OR PHONE_NUMBERS_EQUAL(address, " +
                         escapedPhoneNumber +
-                        (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0, " + mMinMatch + "))"));
+                        (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0))"));
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
 
@@ -1035,7 +1040,7 @@ public class MmsSmsProvider extends ContentProvider {
                 "FROM addr WHERE (address=" + escapedPhoneNumber +
                 " OR PHONE_NUMBERS_EQUAL(addr.address, " +
                 escapedPhoneNumber +
-                (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0, " + mMinMatch + "))) ") +
+                (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0))) ") +
                 "AS matching_addresses");
         smsQueryBuilder.setTables(smsTable);
 

@@ -17,7 +17,6 @@
 package com.android.providers.telephony;
 
 import static android.provider.Telephony.RcsColumns.IS_RCS_TABLE_SCHEMA_CODE_COMPLETE;
-import static com.android.internal.telephony.SmsResponse.NO_ERROR_CODE;
 
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
@@ -546,7 +545,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, true);
             }
 
-            mContext.sendBroadcast(intent, android.Manifest.permission.READ_SMS);
+            mContext.sendBroadcast(intent);
         }
         createMmsTables(db);
         createSmsTables(db);
@@ -1013,7 +1012,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             "service_center TEXT," +
             "locked INTEGER DEFAULT 0," +
             "sub_id INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-            "error_code INTEGER DEFAULT " + NO_ERROR_CODE + ", " +
+            "error_code INTEGER DEFAULT 0," +
             "creator TEXT," +
             "seen INTEGER DEFAULT 0" +
             ");";
@@ -1817,7 +1816,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private void upgradeDatabaseToVersion48(SQLiteDatabase db) {
         // Add 'error_code' column to sms table.
-        db.execSQL("ALTER TABLE sms ADD COLUMN error_code INTEGER DEFAULT " + NO_ERROR_CODE);
+        db.execSQL("ALTER TABLE sms ADD COLUMN error_code INTEGER DEFAULT 0");
     }
 
     private void upgradeDatabaseToVersion51(SQLiteDatabase db) {
