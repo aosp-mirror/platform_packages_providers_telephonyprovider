@@ -1195,6 +1195,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "27202"
   }
+  carrier_attribute {
+    mccmnc_tuple: "27211"
+    imsi_prefix_xpattern: "272110200677368"
+  }
 }
 carrier_id {
   canonical_id: 793
@@ -1300,6 +1304,9 @@ carrier_id {
   carrier_name: "Safaricom"
   carrier_attribute {
     mccmnc_tuple: "63902"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "63902"
     spn: "Safaricom"
   }
 }
@@ -1308,7 +1315,6 @@ carrier_id {
   carrier_name: "Airtel Kenya"
   carrier_attribute {
     mccmnc_tuple: "63903"
-    mccmnc_tuple: "63904"
   }
 }
 carrier_id {
@@ -3113,6 +3119,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "46000"
     mccmnc_tuple: "46002"
+    mccmnc_tuple: "46004"
     mccmnc_tuple: "46007"
     mccmnc_tuple: "46008"
   }
@@ -3122,14 +3129,8 @@ carrier_id {
   carrier_name: "China Unicom"
   carrier_attribute {
     mccmnc_tuple: "46001"
+    mccmnc_tuple: "46006"
     mccmnc_tuple: "46009"
-  }
-}
-carrier_id {
-  canonical_id: 1437
-  carrier_name: "China Satellite Global Star Network"
-  carrier_attribute {
-    mccmnc_tuple: "46004"
   }
 }
 carrier_id {
@@ -4031,7 +4032,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1573
-  carrier_name: "Wind"
+  carrier_name: "WINDTRE"
   carrier_attribute {
     mccmnc_tuple: "22288"
   }
@@ -4045,7 +4046,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1575
-  carrier_name: "3"
+  carrier_name: "WINDTRE"
   carrier_attribute {
     mccmnc_tuple: "22299"
   }
@@ -5586,6 +5587,10 @@ carrier_id {
     mccmnc_tuple: "311480"
     gid1: "BA00040000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "311840"
+    gid1: "C1000000"
+  }
 }
 carrier_id {
   canonical_id: 1803
@@ -5931,6 +5936,10 @@ carrier_id {
   carrier_name: "Bluegrass Cellular LLC"
   carrier_attribute {
     mccmnc_tuple: "311440"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA00010000000000"
   }
 }
 carrier_id {
@@ -6699,6 +6708,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "0000b0"
+    gid1: "6230"
   }
 }
 carrier_id {
@@ -7144,6 +7154,14 @@ carrier_id {
   carrier_name: "TrueMove H 4G LTE"
   carrier_attribute {
     mccmnc_tuple: "52004"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "52000"
+    gid1: "01"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "52000"
+    gid1: "01FF"
   }
 }
 carrier_id {
@@ -8244,7 +8262,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    imsi_prefix_xpattern: "24007561"
+    imsi_prefix_xpattern: "240075610"
   }
 }
 carrier_id {
@@ -8987,7 +9005,6 @@ carrier_id {
   carrier_name: "China Telecom"
   carrier_attribute {
     mccmnc_tuple: "46003"
-    mccmnc_tuple: "46005"
     mccmnc_tuple: "46011"
   }
   carrier_attribute {
@@ -9737,14 +9754,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2336
-  carrier_name: "TrueMove H"
-  carrier_attribute {
-    mccmnc_tuple: "52000"
-    gid1: "01"
-  }
-}
-carrier_id {
   canonical_id: 2337
   carrier_name: "Movil exito"
   carrier_attribute {
@@ -9890,8 +9899,13 @@ carrier_id {
   carrier_name: "Telefonica"
   carrier_attribute {
     mccmnc_tuple: "26203"
+    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -9899,8 +9913,13 @@ carrier_id {
   carrier_name: "o2"
   carrier_attribute {
     mccmnc_tuple: "26207"
+    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
+    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -9957,13 +9976,6 @@ carrier_id {
   carrier_name: "Orange"
   carrier_attribute {
     mccmnc_tuple: "21403"
-  }
-}
-carrier_id {
-  canonical_id: 2376
-  carrier_name: "safaricom"
-  carrier_attribute {
-    mccmnc_tuple: "63902"
   }
 }
 carrier_id {
@@ -10456,7 +10468,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2450
-  carrier_name: "SunMobile"
+  carrier_name: "SUN Mobile"
   carrier_attribute {
     mccmnc_tuple: "45400"
     gid1: "01030000FFFFFFFF"
@@ -10500,14 +10512,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2456
-  carrier_name: "coolpad"
-  carrier_attribute {
-    mccmnc_tuple: "310240"
-    gid1: "6230"
-  }
-}
-carrier_id {
   canonical_id: 2457
   carrier_name: "Nordic Telecom"
   carrier_attribute {
@@ -10542,6 +10546,13 @@ carrier_id {
     gid1: "6F"
     gid1: "6E"
   }
+  carrier_attribute {
+    mccmnc_tuple: "24007"
+    imsi_prefix_xpattern: "240075614"
+    spn: "GigSky"
+    gid1: "6F"
+    gid1: "6E"
+  }
 }
 carrier_id {
   canonical_id: 2460
@@ -10566,6 +10577,27 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "26203"
     imsi_prefix_xpattern: "26203483"
+  }
+}
+carrier_id {
+  canonical_id: 2463
+  carrier_name: "SevenNet Layers"
+  carrier_attribute {
+    mccmnc_tuple: "41877"
+  }
+}
+carrier_id {
+  canonical_id: 2464
+  carrier_name: "Mobi"
+  carrier_attribute {
+    mccmnc_tuple: "313460"
+  }
+}
+carrier_id {
+  canonical_id: 2465
+  carrier_name: "Spectrum Data"
+  carrier_attribute {
+    mccmnc_tuple: "313450"
   }
 }
 carrier_id {
@@ -10768,4 +10800,16 @@ carrier_id {
   }
   parent_canonical_id: 1989
 }
-version: 33554458
+carrier_id {
+  canonical_id: 10020
+  carrier_name: "CTC Telecom Inc"
+  carrier_attribute {
+    mccmnc_tuple: "20404"
+    mccmnc_tuple: "45403"
+    mccmnc_tuple: "45431"
+    iccid_prefix: "898603"
+    iccid_prefix: "898611"
+  }
+  parent_canonical_id: 1854
+}
+version: 33554463
