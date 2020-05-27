@@ -4697,9 +4697,7 @@ carrier_id {
   canonical_id: 1670
   carrier_name: "MEO"
   carrier_attribute {
-    mccmnc_tuple: "26802"
     mccmnc_tuple: "26806"
-    mccmnc_tuple: "26880"
   }
 }
 carrier_id {
@@ -10478,7 +10476,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2451
-  carrier_name: "Tune Talk"
+  carrier_name: "Tunetalk"
   carrier_attribute {
     mccmnc_tuple: "50219"
     imsi_prefix_xpattern: "5021955"
@@ -10814,4 +10812,4 @@ carrier_id {
   }
   parent_canonical_id: 1854
 }
-version: 50331649
+version: 33554463
