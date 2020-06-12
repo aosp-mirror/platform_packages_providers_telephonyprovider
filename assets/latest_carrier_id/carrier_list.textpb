@@ -4699,6 +4699,12 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "26806"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26802"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26880"
+  }
 }
 carrier_id {
   canonical_id: 1671
@@ -7370,6 +7376,14 @@ carrier_id {
     mccmnc_tuple: "311480"
     gid1: "BA01270000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "DDFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "DEFF"
+  }
 }
 carrier_id {
   canonical_id: 2023
@@ -7377,6 +7391,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "310260"
+    gid1: "2AC9"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
     gid1: "2AC9"
   }
 }
@@ -7387,12 +7405,20 @@ carrier_id {
     mccmnc_tuple: "310410"
     gid1: "49FF"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "49FF"
+  }
 }
 carrier_id {
   canonical_id: 2025
   carrier_name: "Telrite/Pure Talk"
   carrier_attribute {
     mccmnc_tuple: "310410"
+    gid1: "62FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
     gid1: "62FF"
   }
 }
@@ -7404,6 +7430,10 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "4201"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "4201"
+  }
 }
 carrier_id {
   canonical_id: 2027
@@ -7412,12 +7442,20 @@ carrier_id {
     mccmnc_tuple: "310410"
     gid1: "44FF"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "44FF"
+  }
 }
 carrier_id {
   canonical_id: 2028
   carrier_name: "Ztar"
   carrier_attribute {
     mccmnc_tuple: "310410"
+    gid1: "4102"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
     gid1: "4102"
   }
 }
@@ -7447,6 +7485,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "4B4F"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "69FF"
   }
 }
 carrier_id {
@@ -10476,7 +10518,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2451
-  carrier_name: "Tunetalk"
+  carrier_name: "Tune Talk"
   carrier_attribute {
     mccmnc_tuple: "50219"
     imsi_prefix_xpattern: "5021955"
@@ -10601,9 +10643,17 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2467
+  carrier_name: "Emergency Services Network"
+  carrier_attribute {
+    mccmnc_tuple: "23471"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
+    mccmnc_tuple: "310280"
     mccmnc_tuple: "310410"
     gid1: "DDFF"
     gid1: "DEFF"
@@ -10812,4 +10862,16 @@ carrier_id {
   }
   parent_canonical_id: 1854
 }
-version: 33554463
+carrier_id {
+  canonical_id: 10021
+  carrier_name: "AT&T 5G"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    mccmnc_tuple: "310410"
+    mccmnc_tuple: "310950"
+    mccmnc_tuple: "311180"
+    gid1: "53FF"
+  }
+  parent_canonical_id: 1187
+}
+version: 33554464
