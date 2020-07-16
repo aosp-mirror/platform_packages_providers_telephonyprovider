@@ -904,31 +904,62 @@ public class SmsProvider extends ContentProvider {
                 count = db.delete("sr_pending", where, whereArgs);
                 break;
 
+            case SMS_ALL_ICC:
+            case SMS_ALL_ICC_SUBID:
+                {
+                    int subId;
+                    int deletedCnt;
+                    if (match == SMS_ALL_ICC) {
+                        subId = SmsManager.getDefaultSmsSubscriptionId();
+                    } else {
+                        try {
+                            subId = Integer.parseInt(url.getPathSegments().get(1));
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Wrong path segements, uri= " + url);
+                        }
+                    }
+                    deletedCnt = deleteAllMessagesFromIcc(subId);
+                    // Notify changes even failure case since there might be some changes should be
+                    // known.
+                    getContext()
+                            .getContentResolver()
+                            .notifyChange(
+                                    match == SMS_ALL_ICC ? ICC_URI : ICC_SUBID_URI,
+                                    null,
+                                    true,
+                                    UserHandle.USER_ALL);
+                    return deletedCnt;
+                }
+
             case SMS_ICC:
             case SMS_ICC_SUBID:
-                int subId;
-                int messageIndex;
-                boolean success;
-                try {
-                    if (match == SMS_ICC) {
-                        subId = SmsManager.getDefaultSmsSubscriptionId();
-                        messageIndex = Integer.parseInt(url.getPathSegments().get(1));
-                    } else {
-                        subId = Integer.parseInt(url.getPathSegments().get(1));
-                        messageIndex = Integer.parseInt(url.getPathSegments().get(2));
+                {
+                    int subId;
+                    int messageIndex;
+                    boolean success;
+                    try {
+                        if (match == SMS_ICC) {
+                            subId = SmsManager.getDefaultSmsSubscriptionId();
+                            messageIndex = Integer.parseInt(url.getPathSegments().get(1));
+                        } else {
+                            subId = Integer.parseInt(url.getPathSegments().get(1));
+                            messageIndex = Integer.parseInt(url.getPathSegments().get(2));
+                        }
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Wrong path segements, uri= " + url);
                     }
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Wrong path segements, uri= " + url);
+                    success = deleteMessageFromIcc(subId, messageIndex);
+                    // Notify changes even failure case since there might be some changes should be
+                    // known.
+                    getContext()
+                            .getContentResolver()
+                            .notifyChange(
+                                    match == SMS_ICC ? ICC_URI : ICC_SUBID_URI,
+                                    null,
+                                    true,
+                                    UserHandle.USER_ALL);
+                    return success ? 1 : 0; // return deleted count
                 }
-                success = deleteMessageFromIcc(subId, messageIndex);
-                // Notify changes even failure case since there might be some changes should be
-                // known.
-                getContext().getContentResolver().notifyChange(
-                        match == SMS_ICC ? ICC_URI : ICC_SUBID_URI,
-                        null,
-                        true,
-                        UserHandle.USER_ALL);
-                return success ? 1 : 0; // return deleted count
 
             default:
                 throw new IllegalArgumentException("Unknown URL");
@@ -957,6 +988,37 @@ public class SmsProvider extends ContentProvider {
         long token = Binder.clearCallingIdentity();
         try {
             return smsManager.deleteMessageFromIcc(messageIndex);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
+
+    /**
+     * Deletes all the messages from the ICC for a subscription ID.
+     *
+     * @param subId the subscription ID.
+     * @return return deleted messaegs count.
+     */
+    private int deleteAllMessagesFromIcc(int subId) {
+        if (!SubscriptionManager.isValidSubscriptionId(subId)) {
+            throw new IllegalArgumentException("Invalid Subscription ID " + subId);
+        }
+        SmsManager smsManager = SmsManager.getSmsManagerForSubscriptionId(subId);
+
+        // Use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call.
+        long token = Binder.clearCallingIdentity();
+        try {
+            int deletedCnt = 0;
+            int maxIndex = smsManager.getSmsCapacityOnIcc();
+            for (int messageIndex = 1; messageIndex <= maxIndex; messageIndex++) {
+                if (smsManager.deleteMessageFromIcc(messageIndex)) {
+                    deletedCnt++;
+                } else {
+                    Log.e(TAG, "Fail to delete SMS at index " + messageIndex
+                            + " for subId " + subId);
+                }
+            }
+            return deletedCnt;
         } finally {
             Binder.restoreCallingIdentity(token);
         }
