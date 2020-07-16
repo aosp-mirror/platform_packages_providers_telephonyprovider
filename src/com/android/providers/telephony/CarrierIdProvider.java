@@ -83,6 +83,9 @@ public class CarrierIdProvider extends ContentProvider {
     private static final int VERSION_BITMASK = 0x00FFFFFF;
     private static final String OTA_UPDATED_PB_PATH = "misc/carrierid/" + ASSETS_PB_FILE;
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
+    // For testing purposes only.
+    private static final String OVERRIDE_PB_PATH =
+            "/data/user_de/0/com.android.providers.telephony/files/carrier_list_test.pb";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -527,9 +530,14 @@ public class CarrierIdProvider extends ContentProvider {
         CarrierIdProto.CarrierList assets = null;
         CarrierIdProto.CarrierList ota = null;
         InputStream is = null;
+        File testFile = new File(OVERRIDE_PB_PATH);
 
         try {
-            is = getContext().getAssets().open(ASSETS_PB_FILE);
+            if (Build.IS_DEBUGGABLE && testFile.exists()) {
+                is = new FileInputStream(testFile);
+            } else {
+                is = getContext().getAssets().open(ASSETS_PB_FILE);
+            }
             assets = CarrierIdProto.CarrierList.parseFrom(readInputStreamToByteArray(is));
         } catch (IOException ex) {
             Log.e(TAG, "read carrier list from assets pb failure: " + ex);
