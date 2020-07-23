@@ -166,6 +166,9 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_FILTERED = 18;
     private static final int URL_FILTERED_ID = 19;
     private static final int URL_ENFORCE_MANAGED = 20;
+    // URL_PREFERAPNSET and URL_PREFERAPNSET_USING_SUBID return all APNs for the current
+    // carrier which have an apn_set_id equal to the preferred APN
+    // (if no preferred APN, or preferred APN has no set id, the query will return null)
     private static final int URL_PREFERAPNSET = 21;
     private static final int URL_PREFERAPNSET_USING_SUBID = 22;
     private static final int URL_SIM_APN_LIST = 23;
@@ -2975,10 +2978,13 @@ public class TelephonyProvider extends ContentProvider
             // intentional fall through from above case
             case URL_PREFERAPNSET: {
                 final int set = getPreferredApnSetId(subId);
-                if (set != NO_APN_SET_ID) {
-                    constraints.add(APN_SET_ID + "=" + set);
+                if (set == NO_APN_SET_ID) {
+                    return null;
                 }
-                break;
+                constraints.add(APN_SET_ID + "=" + set);
+                qb.appendWhere(TextUtils.join(" AND ", constraints));
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             case URL_DPC: {

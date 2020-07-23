@@ -1338,20 +1338,35 @@ public class TelephonyProviderTest extends TestCase {
         values3.put(Carriers.NUMERIC, TEST_OPERATOR);
         values3.put(Carriers.APN_SET_ID, 1);
 
+        // values4 has a matching setId but it belongs to a different carrier
+        ContentValues values4 = new ContentValues();
+        final String apn4 = "fourthApnName";
+        final String name4 = "name4";
+        values4.put(Carriers.APN, apn4);
+        values4.put(Carriers.NAME, name4);
+        values4.put(Carriers.NUMERIC, "999888");
+        values4.put(Carriers.APN_SET_ID, 1);
+
         // insert APNs
         // we explicitly include subid, as SubscriptionManager.getDefaultSubscriptionId() returns -1
         Log.d(TAG, "testPreferApnSetUrl: inserting contentValues=" + values1 + ", " + values2
-                + ", " + values3);
+                + ", " + values3 + ", " + values4);
         mContentResolver.insert(CONTENT_URI_WITH_SUBID, values1);
         mContentResolver.insert(CONTENT_URI_WITH_SUBID, values2);
+        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values4);
         Uri uri = mContentResolver.insert(CONTENT_URI_WITH_SUBID, values3);
 
-        // before there's a preferred APN set, assert that all APNs are returned
+        // verify all APNs were correctly inserted
         final String[] testProjection = { Carriers.NAME };
         Cursor cursor = mContentResolver.query(
+                Carriers.CONTENT_URI, testProjection, null, null, null);
+        assertEquals(4, cursor.getCount());
+
+        // preferapnset/subId returns null when there is no preferred APN
+        cursor = mContentResolver.query(
                 Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
                 testProjection, null, null, null);
-        assertEquals(3, cursor.getCount());
+        assertNull(cursor);
 
         // set the APN from values3 (apn_set_id = 1) to the preferred APN
         final String preferredApnIdString = uri.getLastPathSegment();
@@ -1366,6 +1381,7 @@ public class TelephonyProviderTest extends TestCase {
         cursor = mContentResolver.query(
                 Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
                 testProjection, null, null, null);
+        // values4 which was inserted with a different carrier is not included in the results
         assertEquals(2, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(name2, cursor.getString(0));
