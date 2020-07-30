@@ -2930,6 +2930,7 @@ public class TelephonyProvider extends ContentProvider
         checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
+                // The behaves exactly same as URL_SIM_APN_LIST_ID.
                 subIdString = url.getLastPathSegment();
                 try {
                     subId = Integer.parseInt(subIdString);
@@ -2938,13 +2939,13 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                TelephonyManager telephonyManager = getContext()
-                    .getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
-                constraints.add(NUMERIC + " = '" + telephonyManager.getSimOperator() + "'");
+                qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
+
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
-            // intentional fall through from above case
             case URL_TELEPHONY: {
                 constraints.add(IS_NOT_OWNED_BY_DPC);
                 break;
@@ -3203,10 +3204,19 @@ public class TelephonyProvider extends ContentProvider
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
+            boolean isCurrentSimOperator;
+            final long identity = Binder.clearCallingIdentity();
+            try {
+                isCurrentSimOperator = tm.matchesCurrentSimOperator(
+                        ret.getString(numericIndex),
+                        getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                        ret.getString(mvnoDataIndex));
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+
             boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
-                    && tm.matchesCurrentSimOperator(ret.getString(numericIndex),
-                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                            ret.getString(mvnoDataIndex));
+                    && isCurrentSimOperator;
             boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
                     && ret.getString(numericIndex).equals(mccmnc)
                     && TextUtils.isEmpty(ret.getString(mvnoIndex));
