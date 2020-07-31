@@ -774,7 +774,7 @@ public class TelephonyProvider extends ContentProvider
                 confparser.setInput(confreader);
                 XmlUtils.beginDocument(confparser, "apns");
 
-                // Sanity check. Force internal version and confidential versions to agree
+                // Correctness check. Force internal version and confidential versions to agree
                 int confversion = Integer.parseInt(confparser.getAttributeValue(null, "version"));
                 if (publicversion != confversion) {
                     log("initDatabase: throwing exception due to version mismatch");
