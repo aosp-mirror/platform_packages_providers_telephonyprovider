@@ -1122,9 +1122,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (DEBUG) {
             Log.d(TAG, "Add mms:\n" + mms);
         }
-        final long dummyId = System.currentTimeMillis(); // Dummy ID of the msg.
+        final long placeholderId = System.currentTimeMillis(); // Placeholder ID of the msg.
         final Uri partUri = Telephony.Mms.CONTENT_URI.buildUpon()
-                .appendPath(String.valueOf(dummyId)).appendPath("part").build();
+                .appendPath(String.valueOf(placeholderId)).appendPath("part").build();
 
         final String srcName = String.format(Locale.US, "text.%06d.txt", 0);
         { // Insert SMIL part.
@@ -1132,7 +1132,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             final String smil = TextUtils.isEmpty(mms.smil) ?
                     String.format(sSmilTextOnly, smilBody) : mms.smil;
             final ContentValues values = new ContentValues(7);
-            values.put(Telephony.Mms.Part.MSG_ID, dummyId);
+            values.put(Telephony.Mms.Part.MSG_ID, placeholderId);
             values.put(Telephony.Mms.Part.SEQ, -1);
             values.put(Telephony.Mms.Part.CONTENT_TYPE, ContentType.APP_SMIL);
             values.put(Telephony.Mms.Part.NAME, "smil.xml");
@@ -1149,7 +1149,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
         { // Insert body part.
             final ContentValues values = new ContentValues(8);
-            values.put(Telephony.Mms.Part.MSG_ID, dummyId);
+            values.put(Telephony.Mms.Part.MSG_ID, placeholderId);
             values.put(Telephony.Mms.Part.SEQ, 0);
             values.put(Telephony.Mms.Part.CONTENT_TYPE, ContentType.TEXT_PLAIN);
             values.put(Telephony.Mms.Part.NAME, srcName);
@@ -1173,7 +1173,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             // Insert the attachment parts.
             for (ContentValues mmsAttachment : mms.attachments) {
                 final ContentValues values = new ContentValues(6);
-                values.put(Telephony.Mms.Part.MSG_ID, dummyId);
+                values.put(Telephony.Mms.Part.MSG_ID, placeholderId);
                 values.put(Telephony.Mms.Part.SEQ, 0);
                 values.put(Telephony.Mms.Part.CONTENT_TYPE,
                         mmsAttachment.getAsString(MMS_MIME_TYPE));
