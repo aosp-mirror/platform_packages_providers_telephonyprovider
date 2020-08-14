@@ -928,6 +928,10 @@ carrier_id {
     mccmnc_tuple: "20601"
     gid1: "28"
   }
+  carrier_attribute {
+    mccmnc_tuple: "20620"
+    gid1: "2800000000000000"
+  }
 }
 carrier_id {
   canonical_id: 718
@@ -6193,6 +6197,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "46605"
   }
+  carrier_attribute {
+    mccmnc_tuple: "46697"
+    imsi_prefix_xpattern: "4669750"
+  }
 }
 carrier_id {
   canonical_id: 1883
@@ -10674,6 +10682,256 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2473
+  carrier_name: "MEGACABLE"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "Mega4.5 G"
+  }
+}
+carrier_id {
+  canonical_id: 2474
+  carrier_name: "NETWEY"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "NETWEY"
+  }
+}
+carrier_id {
+  canonical_id: 2475
+  carrier_name: "RETEMEX"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "RETEMEX"
+  }
+}
+carrier_id {
+  canonical_id: 2476
+  carrier_name: "WALMART"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "BAIT"
+  }
+}
+carrier_id {
+  canonical_id: 2477
+  carrier_name: "IUSACOMM"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "IUSATEL"
+  }
+}
+carrier_id {
+  canonical_id: 2478
+  carrier_name: "CFE"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "CFE TEIPT"
+  }
+}
+carrier_id {
+  canonical_id: 2479
+  carrier_name: "INTEN"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "INTEN"
+  }
+}
+carrier_id {
+  canonical_id: 2480
+  carrier_name: "DIVERACY"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "NEMI"
+  }
+}
+carrier_id {
+  canonical_id: 2481
+  carrier_name: "DIRI"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "DIRI"
+  }
+}
+carrier_id {
+  canonical_id: 2482
+  carrier_name: "TOPOS"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "TURBORED"
+  }
+}
+carrier_id {
+  canonical_id: 2483
+  carrier_name: "GURUWEB"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "Gurucomm"
+  }
+}
+carrier_id {
+  canonical_id: 2484
+  carrier_name: "UBIX"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "Ubix"
+  }
+}
+carrier_id {
+  canonical_id: 2485
+  carrier_name: "ROCKETEL"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "PagaPhone"
+  }
+}
+carrier_id {
+  canonical_id: 2486
+  carrier_name: "Redpotencia"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "Redpotencia"
+  }
+}
+carrier_id {
+  canonical_id: 2487
+  carrier_name: "ADDINTELI"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "CHAMO-MOVIL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "BYPLUS"
+  }
+}
+carrier_id {
+  canonical_id: 2488
+  carrier_name: "IZZI"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "izzi"
+  }
+}
+carrier_id {
+  canonical_id: 2489
+  carrier_name: "ADM"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "MISTRAL"
+  }
+}
+carrier_id {
+  canonical_id: 2490
+  carrier_name: "ADS"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "MEXFON"
+  }
+}
+carrier_id {
+  canonical_id: 2491
+  carrier_name: "YONDER"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "YO"
+  }
+}
+carrier_id {
+  canonical_id: 2492
+  carrier_name: "Arlonet"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "Arlonet"
+  }
+}
+carrier_id {
+  canonical_id: 2493
+  carrier_name: "TRIDEX"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "VALOR"
+  }
+}
+carrier_id {
+  canonical_id: 2494
+  carrier_name: "WiMO"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "WiMO"
+  }
+}
+carrier_id {
+  canonical_id: 2495
+  carrier_name: "OUI"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "OUI"
+  }
+}
+carrier_id {
+  canonical_id: 2496
+  carrier_name: "FREEDOMPOP"
+  carrier_attribute {
+    mccmnc_tuple: "334140"
+    spn: "FreedomPop"
+  }
+}
+carrier_id {
+  canonical_id: 2497
+  carrier_name: "Vodafone GDSP"
+  carrier_attribute {
+    mccmnc_tuple: "90128"
+  }
+}
+carrier_id {
+  canonical_id: 2498
+  carrier_name: "Altice USA"
+  carrier_attribute {
+    mccmnc_tuple: "313390"
+  }
+}
+carrier_id {
+  canonical_id: 2499
+  carrier_name: "Belong"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Belong"
+  }
+}
+carrier_id {
+  canonical_id: 2500
+  carrier_name: "Telechoice"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "TeleChoice"
+  }
+}
+carrier_id {
+  canonical_id: 2501
+  carrier_name: "Woolworths"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Woolworths"
+  }
+}
+carrier_id {
+  canonical_id: 2502
+  carrier_name: "NuMobile"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "NuMobile"
+  }
+}
+carrier_id {
+  canonical_id: 2503
+  carrier_name: "Boost"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "BOOST"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10898,4 +11156,23 @@ carrier_id {
   }
   parent_canonical_id: 1187
 }
-version: 33554466
+carrier_id {
+  canonical_id: 10022
+  carrier_name: "Consumer Cellular ATT"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    mccmnc_tuple: "310280"
+    gid1: "2AC9"
+  }
+  parent_canonical_id: 2023
+}
+carrier_id {
+  canonical_id: 10023
+  carrier_name: "Consumer Cellular TMO"
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "2AC9"
+  }
+  parent_canonical_id: 2023
+}
+version: 33554468
