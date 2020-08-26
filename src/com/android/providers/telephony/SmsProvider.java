@@ -84,7 +84,7 @@ public class SmsProvider extends ContentProvider {
         "body",                         // getDisplayMessageBody
         "date",                         // getTimestampMillis
         "status",                       // getStatusOnIcc
-        "index_on_icc",                 // getIndexOnIcc
+        "index_on_icc",                 // getIndexOnIcc (1-based index)
         "is_status_report",             // isStatusReportMessage
         "transport_type",               // Always "sms".
         "type",                         // depend on getStatusOnIcc
@@ -402,7 +402,7 @@ public class SmsProvider extends ContentProvider {
      * Gets single message from the ICC for a subscription ID.
      *
      * @param subId the subscription ID.
-     * @param messageIndex the message index of the messaage in the ICC.
+     * @param messageIndex the message index of the messaage in the ICC (1-based index).
      * @return a cursor containing just one message from the ICC for the subscription ID.
      */
     private Cursor getSingleMessageFromIcc(int subId, int messageIndex) {
@@ -415,19 +415,24 @@ public class SmsProvider extends ContentProvider {
         // Use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call.
         long token = Binder.clearCallingIdentity();
         try {
+            // getMessagesFromIcc() returns a zero-based list of valid messages in the ICC.
             messages = smsManager.getMessagesFromIcc();
         } finally {
             Binder.restoreCallingIdentity(token);
         }
 
-        final SmsMessage message = messages.get(messageIndex);
-        if (message == null) {
-            throw new IllegalArgumentException(
-                    "No message in index " + messageIndex + " for subId " + subId);
+        final int count = messages.size();
+        for (int i = 0; i < count; i++) {
+            SmsMessage message = messages.get(i);
+            if (message != null && message.getIndexOnIcc() == messageIndex) {
+                MatrixCursor cursor = new MatrixCursor(ICC_COLUMNS, 1);
+                cursor.addRow(convertIccToSms(message, 0));
+                return cursor;
+            }
         }
-        MatrixCursor cursor = new MatrixCursor(ICC_COLUMNS, 1);
-        cursor.addRow(convertIccToSms(message, 0));
-        return cursor;
+
+        throw new IllegalArgumentException(
+                "No message in index " + messageIndex + " for subId " + subId);
     }
 
     /**
@@ -446,6 +451,7 @@ public class SmsProvider extends ContentProvider {
         // Use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call
         long token = Binder.clearCallingIdentity();
         try {
+            // getMessagesFromIcc() returns a zero-based list of valid messages in the ICC.
             messages = smsManager.getMessagesFromIcc();
         } finally {
             Binder.restoreCallingIdentity(token);
@@ -904,31 +910,62 @@ public class SmsProvider extends ContentProvider {
                 count = db.delete("sr_pending", where, whereArgs);
                 break;
 
+            case SMS_ALL_ICC:
+            case SMS_ALL_ICC_SUBID:
+                {
+                    int subId;
+                    int deletedCnt;
+                    if (match == SMS_ALL_ICC) {
+                        subId = SmsManager.getDefaultSmsSubscriptionId();
+                    } else {
+                        try {
+                            subId = Integer.parseInt(url.getPathSegments().get(1));
+                        } catch (NumberFormatException e) {
+                            throw new IllegalArgumentException("Wrong path segements, uri= " + url);
+                        }
+                    }
+                    deletedCnt = deleteAllMessagesFromIcc(subId);
+                    // Notify changes even failure case since there might be some changes should be
+                    // known.
+                    getContext()
+                            .getContentResolver()
+                            .notifyChange(
+                                    match == SMS_ALL_ICC ? ICC_URI : ICC_SUBID_URI,
+                                    null,
+                                    true,
+                                    UserHandle.USER_ALL);
+                    return deletedCnt;
+                }
+
             case SMS_ICC:
             case SMS_ICC_SUBID:
-                int subId;
-                int messageIndex;
-                boolean success;
-                try {
-                    if (match == SMS_ICC) {
-                        subId = SmsManager.getDefaultSmsSubscriptionId();
-                        messageIndex = Integer.parseInt(url.getPathSegments().get(1));
-                    } else {
-                        subId = Integer.parseInt(url.getPathSegments().get(1));
-                        messageIndex = Integer.parseInt(url.getPathSegments().get(2));
+                {
+                    int subId;
+                    int messageIndex;
+                    boolean success;
+                    try {
+                        if (match == SMS_ICC) {
+                            subId = SmsManager.getDefaultSmsSubscriptionId();
+                            messageIndex = Integer.parseInt(url.getPathSegments().get(1));
+                        } else {
+                            subId = Integer.parseInt(url.getPathSegments().get(1));
+                            messageIndex = Integer.parseInt(url.getPathSegments().get(2));
+                        }
+                    } catch (NumberFormatException e) {
+                        throw new IllegalArgumentException("Wrong path segements, uri= " + url);
                     }
-                } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("Wrong path segements, uri= " + url);
+                    success = deleteMessageFromIcc(subId, messageIndex);
+                    // Notify changes even failure case since there might be some changes should be
+                    // known.
+                    getContext()
+                            .getContentResolver()
+                            .notifyChange(
+                                    match == SMS_ICC ? ICC_URI : ICC_SUBID_URI,
+                                    null,
+                                    true,
+                                    UserHandle.USER_ALL);
+                    return success ? 1 : 0; // return deleted count
                 }
-                success = deleteMessageFromIcc(subId, messageIndex);
-                // Notify changes even failure case since there might be some changes should be
-                // known.
-                getContext().getContentResolver().notifyChange(
-                        match == SMS_ICC ? ICC_URI : ICC_SUBID_URI,
-                        null,
-                        true,
-                        UserHandle.USER_ALL);
-                return success ? 1 : 0; // return deleted count
 
             default:
                 throw new IllegalArgumentException("Unknown URL");
@@ -944,7 +981,7 @@ public class SmsProvider extends ContentProvider {
      * Deletes the message at index from the ICC for a subscription ID.
      *
      * @param subId the subscription ID.
-     * @param messageIndex the message index of the message in the ICC.
+     * @param messageIndex the message index of the message in the ICC (1-based index).
      * @return true for succeess. Otherwise false.
      */
     private boolean deleteMessageFromIcc(int subId, int messageIndex) {
@@ -957,6 +994,38 @@ public class SmsProvider extends ContentProvider {
         long token = Binder.clearCallingIdentity();
         try {
             return smsManager.deleteMessageFromIcc(messageIndex);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+    }
+
+    /**
+     * Deletes all the messages from the ICC for a subscription ID.
+     *
+     * @param subId the subscription ID.
+     * @return return deleted messaegs count.
+     */
+    private int deleteAllMessagesFromIcc(int subId) {
+        if (!SubscriptionManager.isValidSubscriptionId(subId)) {
+            throw new IllegalArgumentException("Invalid Subscription ID " + subId);
+        }
+        SmsManager smsManager = SmsManager.getSmsManagerForSubscriptionId(subId);
+
+        // Use phone app permissions to avoid UID mismatch in AppOpsManager.noteOp() call.
+        long token = Binder.clearCallingIdentity();
+        try {
+            int deletedCnt = 0;
+            int maxIndex = smsManager.getSmsCapacityOnIcc();
+            // messageIndex is 1-based index of the message in the ICC.
+            for (int messageIndex = 1; messageIndex <= maxIndex; messageIndex++) {
+                if (smsManager.deleteMessageFromIcc(messageIndex)) {
+                    deletedCnt++;
+                } else {
+                    Log.e(TAG, "Fail to delete SMS at index " + messageIndex
+                            + " for subId " + subId);
+                }
+            }
+            return deletedCnt;
         } finally {
             Binder.restoreCallingIdentity(token);
         }
