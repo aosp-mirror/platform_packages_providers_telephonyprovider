@@ -631,12 +631,16 @@ public class TelephonyBackupAgent extends BackupAgent {
         ContentValues[] values = new ContentValues[bulkInsertSize];
         while (jsonReader.hasNext()) {
             ContentValues cv = readSmsValuesFromReader(jsonReader);
-            if (doesSmsExist(cv)) {
-                continue;
-            }
-            values[(msgCount++) % bulkInsertSize] = cv;
-            if (msgCount % bulkInsertSize == 0) {
-                mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
+            try {
+                if (mSmsProviderQuery.doesSmsExist(cv)) {
+                    continue;
+                }
+                values[(msgCount++) % bulkInsertSize] = cv;
+                if (msgCount % bulkInsertSize == 0) {
+                    mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "putSmsMessagesToProvider", e);
             }
         }
         if (msgCount % bulkInsertSize > 0) {
@@ -655,16 +659,20 @@ public class TelephonyBackupAgent extends BackupAgent {
             if (DEBUG) {
                 Log.d(TAG, "putMmsMessagesToProvider " + mms);
             }
-            if (doesMmsExist(mms)) {
-                if (DEBUG) {
-                    Log.e(TAG, String.format("Mms: %s already exists", mms.toString()));
-                } else {
-                    Log.w(TAG, "Mms: Found duplicate MMS");
+            try {
+                if (doesMmsExist(mms)) {
+                    if (DEBUG) {
+                        Log.e(TAG, String.format("Mms: %s already exists", mms.toString()));
+                    } else {
+                        Log.w(TAG, "Mms: Found duplicate MMS");
+                    }
+                    continue;
                 }
-                continue;
+                total++;
+                addMmsMessage(mms);
+            } catch (Exception e) {
+                Log.e(TAG, "putMmsMessagesToProvider", e);
             }
-            total++;
-            addMmsMessage(mms);
         }
         Log.d(TAG, "putMmsMessagesToProvider handled " + total + " new messages.");
     }
@@ -673,15 +681,30 @@ public class TelephonyBackupAgent extends BackupAgent {
     static final String[] PROJECTION_ID = {BaseColumns._ID};
     private static final int ID_IDX = 0;
 
-    private boolean doesSmsExist(ContentValues smsValues) {
-        final String where = String.format(Locale.US, "%s = %d and %s = %s",
-                Telephony.Sms.DATE, smsValues.getAsLong(Telephony.Sms.DATE),
-                Telephony.Sms.BODY,
-                DatabaseUtils.sqlEscapeString(smsValues.getAsString(Telephony.Sms.BODY)));
-        try (Cursor cursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, PROJECTION_ID, where,
-                null, null)) {
-            return cursor != null && cursor.getCount() > 0;
+    /**
+     * Interface to allow mocking method for testing.
+     */
+    public interface SmsProviderQuery {
+        boolean doesSmsExist(ContentValues smsValues);
+    }
+
+    private SmsProviderQuery mSmsProviderQuery = new SmsProviderQuery() {
+        @Override
+        public boolean doesSmsExist(ContentValues smsValues) {
+            final String where = String.format(Locale.US, "%s = %d and %s = %s",
+                    Telephony.Sms.DATE, smsValues.getAsLong(Telephony.Sms.DATE),
+                    Telephony.Sms.BODY,
+                    DatabaseUtils.sqlEscapeString(smsValues.getAsString(Telephony.Sms.BODY)));
+            try (Cursor cursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, PROJECTION_ID,
+                    where, null, null)) {
+                return cursor != null && cursor.getCount() > 0;
+            }
         }
+    };
+
+    @VisibleForTesting
+    public void setSmsProviderQuery(SmsProviderQuery smsProviderQuery) {
+        mSmsProviderQuery = smsProviderQuery;
     }
 
     private boolean doesMmsExist(Mms mms) {
