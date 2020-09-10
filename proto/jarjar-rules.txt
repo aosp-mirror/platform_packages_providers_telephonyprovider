@@ -1,0 +1,1 @@
+rule com.google.protobuf.nano.** com.android.providers.telephony.protobuf.nano.@1

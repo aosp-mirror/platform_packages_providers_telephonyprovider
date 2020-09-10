@@ -31,7 +31,6 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
-import android.os.FileUtils;
 import android.os.ParcelFileDescriptor;
 import android.os.UserHandle;
 import android.provider.BaseColumns;
@@ -44,6 +43,8 @@ import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms;
 import android.provider.Telephony.Threads;
+import android.system.ErrnoException;
+import android.system.Os;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -518,9 +519,13 @@ public class MmsProvider extends ContentProvider {
                         // Give everyone rw permission until we encrypt the file
                         // (in PduPersister.persistData). Once the file is encrypted, the
                         // permissions will be set to 0644.
-                        int result = FileUtils.setPermissions(path, 0666, -1, -1);
-                        if (LOCAL_LOGV) {
-                            Log.d(TAG, "MmsProvider.insert setPermissions result: " + result);
+                        try {
+                            Os.chmod(path, 0666);
+                            if (LOCAL_LOGV) {
+                                Log.d(TAG, "MmsProvider.insert chmod is successful");
+                            }
+                        } catch (ErrnoException e) {
+                            Log.e(TAG, "Exception in chmod: " + e);
                         }
                     } catch (IOException e) {
                         Log.e(TAG, "createNewFile", e);
@@ -816,10 +821,13 @@ public class MmsProvider extends ContentProvider {
                 String path = getContext().getDir(PARTS_DIR_NAME, 0).getPath() + '/' +
                         uri.getPathSegments().get(1);
                 // Reset the file permission back to read for everyone but me.
-                int result = FileUtils.setPermissions(path, 0644, -1, -1);
-                if (LOCAL_LOGV) {
-                    Log.d(TAG, "MmsProvider.update setPermissions result: " + result +
-                            " for path: " + path);
+                try {
+                    Os.chmod(path, 0644);
+                    if (LOCAL_LOGV) {
+                        Log.d(TAG, "MmsProvider.update chmod is successful for path: " + path);
+                    }
+                } catch (ErrnoException e) {
+                    Log.e(TAG, "Exception in chmod: " + e);
                 }
                 return 0;
 
