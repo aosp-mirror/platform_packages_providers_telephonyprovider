@@ -639,7 +639,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 if (msgCount % bulkInsertSize == 0) {
                     mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
                 }
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 Log.e(TAG, "putSmsMessagesToProvider", e);
             }
         }
@@ -702,9 +702,17 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
     };
 
+    /**
+     * Sets a temporary {@code SmsProviderQuery} for testing; note that this method
+     * is not thread safe.
+     *
+     * @return the previous {@code SmsProviderQuery}
+     */
     @VisibleForTesting
-    public void setSmsProviderQuery(SmsProviderQuery smsProviderQuery) {
+    public SmsProviderQuery getAndSetSmsProviderQuery(SmsProviderQuery smsProviderQuery) {
+        SmsProviderQuery result = mSmsProviderQuery;
         mSmsProviderQuery = smsProviderQuery;
+        return result;
     }
 
     private boolean doesMmsExist(Mms mms) {
