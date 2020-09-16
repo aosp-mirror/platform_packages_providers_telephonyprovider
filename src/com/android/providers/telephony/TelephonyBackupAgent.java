@@ -639,7 +639,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 if (msgCount % bulkInsertSize == 0) {
                     mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
                 }
-            } catch (Exception e) {
+            } catch (RuntimeException e) {
                 Log.e(TAG, "putSmsMessagesToProvider", e);
             }
         }
