@@ -635,12 +635,16 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                         return false;
                     }
         };
-        mTelephonyBackupAgent.setSmsProviderQuery(smsProviderQuery);
-
-        mTelephonyBackupAgent.putSmsMessagesToProvider(jsonReader);
-        // the "- 1" is due to exception thrown for one of the messages
-        assertEquals(mSmsRows.length - 1, smsProvider.getRowsAdded());
-        assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
+        TelephonyBackupAgent.SmsProviderQuery previousQuery =
+                mTelephonyBackupAgent.getAndSetSmsProviderQuery(smsProviderQuery);
+        try {
+            mTelephonyBackupAgent.putSmsMessagesToProvider(jsonReader);
+            // the "- 1" is due to exception thrown for one of the messages
+            assertEquals(mSmsRows.length - 1, smsProvider.getRowsAdded());
+            assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
+        } finally {
+            mTelephonyBackupAgent.getAndSetSmsProviderQuery(previousQuery);
+        }
     }
 
     /**
