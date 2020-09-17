@@ -691,12 +691,16 @@ public class TelephonyBackupAgent extends BackupAgent {
     private SmsProviderQuery mSmsProviderQuery = new SmsProviderQuery() {
         @Override
         public boolean doesSmsExist(ContentValues smsValues) {
-            final String where = String.format(Locale.US, "%s = %d and %s = %s",
+            // The SMS body might contain '\0' characters (U+0000) such as in the case of
+            // http://b/160801497 . SQLite does not allow '\0' in String literals, but as of SQLite
+            // version 3.32.2 2020-06-04, it does allow them as selectionArgs; therefore, we're
+            // using the latter approach here.
+            final String selection = String.format(Locale.US, "%s=%d AND %s=?",
                     Telephony.Sms.DATE, smsValues.getAsLong(Telephony.Sms.DATE),
-                    Telephony.Sms.BODY,
-                    DatabaseUtils.sqlEscapeString(smsValues.getAsString(Telephony.Sms.BODY)));
+                    Telephony.Sms.BODY);
+            String[] selectionArgs = new String[] { smsValues.getAsString(Telephony.Sms.BODY)};
             try (Cursor cursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, PROJECTION_ID,
-                    where, null, null)) {
+                    selection, selectionArgs, null)) {
                 return cursor != null && cursor.getCount() > 0;
             }
         }
