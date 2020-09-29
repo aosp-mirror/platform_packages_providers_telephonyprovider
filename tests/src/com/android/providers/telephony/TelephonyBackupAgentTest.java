@@ -616,6 +616,35 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     }
 
     /**
+     * Test that crashing for one sms does not block restore of other messages.
+     * @throws Exception
+     */
+    public void testRestoreSms_WithException() throws Exception {
+        mTelephonyBackupAgent.initUnknownSender();
+        JsonReader jsonReader = new JsonReader(new StringReader(addRandomDataToJson(mAllSmsJson)));
+        FakeSmsProvider smsProvider = new FakeSmsProvider(mSmsRows, false);
+        mMockContentResolver.addProvider("sms", smsProvider);
+        TelephonyBackupAgent.SmsProviderQuery smsProviderQuery =
+                new TelephonyBackupAgent.SmsProviderQuery() {
+                    int mIteration = 0;
+                    @Override
+                    public boolean doesSmsExist(ContentValues smsValues) {
+                        if (mIteration == 0) {
+                            mIteration++;
+                            throw new RuntimeException("fake crash for first message");
+                        }
+                        return false;
+                    }
+        };
+        mTelephonyBackupAgent.setSmsProviderQuery(smsProviderQuery);
+
+        mTelephonyBackupAgent.putSmsMessagesToProvider(jsonReader);
+        // the "- 1" is due to exception thrown for one of the messages
+        assertEquals(mSmsRows.length - 1, smsProvider.getRowsAdded());
+        assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
+    }
+
+    /**
      * Test restore mms with the empty json array "[]".
      * @throws Exception
      */
@@ -751,9 +780,15 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private class FakeSmsProvider extends MockContentProvider {
         private int nextRow = 0;
         private ContentValues[] mSms;
+        private boolean mCheckInsertedValues = true;
 
         public FakeSmsProvider(ContentValues[] sms) {
             this.mSms = sms;
+        }
+
+        public FakeSmsProvider(ContentValues[] sms, boolean checkInsertedValues) {
+            this.mSms = sms;
+            mCheckInsertedValues = checkInsertedValues;
         }
 
         @Override
@@ -771,7 +806,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 modifiedValues.put(Telephony.Sms.ADDRESS, TelephonyBackupAgent.UNKNOWN_SENDER);
             }
 
-            assertEquals(modifiedValues, values);
+            if (mCheckInsertedValues) assertEquals(modifiedValues, values);
             return null;
         }
 
