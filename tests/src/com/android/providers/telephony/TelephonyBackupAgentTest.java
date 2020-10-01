@@ -16,7 +16,10 @@
 
 package com.android.providers.telephony;
 
+import static org.junit.Assert.assertArrayEquals;
+
 import android.annotation.TargetApi;
+import android.app.backup.BackupDataOutput;
 import android.app.backup.FullBackupDataOutput;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -26,6 +29,7 @@ import android.content.ContextWrapper;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
+import android.os.ParcelFileDescriptor;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.test.AndroidTestCase;
@@ -37,8 +41,9 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.JsonReader;
 import android.util.JsonWriter;
-import android.util.Log;
 import android.util.SparseArray;
+
+import libcore.io.IoUtils;
 
 import com.google.android.mms.pdu.CharacterSets;
 
@@ -46,16 +51,21 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Tests for testing backup/restore of SMS and text MMS messages.
@@ -684,6 +694,44 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         assertEquals(backupSizeAfterSecondQuotaHit, fullBackupDataOutput.getSize());
     }
 
+    /**
+     * Test backups are consistent between runs. This ensures that when no data
+     * has changed between backup runs we don't generate a diff which needs to
+     * be sent to the server.
+     * @throws Exception
+     */
+    public void testBackup_WithoutChanges_DoesNotChangeOutput() throws Exception {
+        mSmsTable.addAll(Arrays.asList(mSmsRows));
+        mMmsTable.addAll(Arrays.asList(mMmsRows));
+
+        byte[] firstBackup = getBackup("1");
+        // Ensure there is some time between backup runs. This is the way to identify
+        // time dependent backup contents.
+        Thread.sleep(TimeUnit.MILLISECONDS.convert(1, TimeUnit.SECONDS));
+        byte[] secondBackup = getBackup("2");
+
+        // Make sure something has been backed up.
+        assertFalse(firstBackup == null || firstBackup.length == 0);
+
+        // Make sure the two backups are the same.
+        assertArrayEquals(firstBackup, secondBackup);
+    }
+
+    private byte[] getBackup(String runId) throws IOException {
+        File cacheDir = getContext().getCacheDir();
+        File backupOutput = File.createTempFile("backup", runId, cacheDir);
+        ParcelFileDescriptor outputFd =
+                ParcelFileDescriptor.open(backupOutput, ParcelFileDescriptor.MODE_WRITE_ONLY);
+        try {
+            FullBackupDataOutput fullBackupDataOutput = new FullBackupDataOutput(outputFd);
+            mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
+            return IoUtils.readFileAsByteArray(backupOutput.getAbsolutePath());
+        } finally {
+            outputFd.close();
+            backupOutput.delete();
+        }
+    }
+
     // Adding random keys to JSON to test handling it by the BackupAgent on restore.
     private String addRandomDataToJson(String jsonString) throws JSONException {
         JSONArray jsonArray = new JSONArray(jsonString);
@@ -751,7 +799,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private class FakeMmsProvider extends MockContentProvider {
         private int nextRow = 0;
         private List<ContentValues> mValues;
-        private long mDummyMsgId = -1;
+        private long mPlaceholderMsgId = -1;
         private long mMsgId = -1;
         private String mFilename;
 
@@ -761,7 +809,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
         @Override
         public Uri insert(Uri uri, ContentValues values) {
-            Uri retUri = Uri.parse("dummy_uri");
+            Uri retUri = Uri.parse("test_uri");
             ContentValues modifiedValues = new ContentValues(mValues.get(nextRow++));
             if (values.containsKey("read")) {
                 assertEquals("read: ", modifiedValues.get("read"), values.get("read"));
@@ -771,8 +819,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             }
             if (APP_SMIL.equals(values.get(Telephony.Mms.Part.CONTENT_TYPE))) {
                 // Smil part.
-                assertEquals(-1, mDummyMsgId);
-                mDummyMsgId = values.getAsLong(Telephony.Mms.Part.MSG_ID);
+                assertEquals(-1, mPlaceholderMsgId);
+                mPlaceholderMsgId = values.getAsLong(Telephony.Mms.Part.MSG_ID);
             }
             if (IMAGE_JPG.equals(values.get(Telephony.Mms.Part.CONTENT_TYPE))) {
                 // Image attachment part.
@@ -790,7 +838,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             if (values.get(Telephony.Mms.Part.SEQ) != null) {
                 // Part of mms.
                 final Uri expectedUri = Telephony.Mms.CONTENT_URI.buildUpon()
-                        .appendPath(String.valueOf(mDummyMsgId))
+                        .appendPath(String.valueOf(mPlaceholderMsgId))
                         .appendPath("part")
                         .build();
                 assertEquals(expectedUri, uri);
@@ -803,7 +851,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             }
 
             if (values.get(Telephony.Mms.Part.MSG_ID) != null) {
-                modifiedValues.put(Telephony.Mms.Part.MSG_ID, mDummyMsgId);
+                modifiedValues.put(Telephony.Mms.Part.MSG_ID, mPlaceholderMsgId);
             }
             if (values.containsKey("read")) {
                 assertEquals("read: ", modifiedValues.get("read"), values.get("read"));
@@ -841,7 +889,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 assertEquals(expectedUri, uri);
                 assertNotSame(-1, mMsgId);
                 modifiedValues.put(Telephony.Mms.Addr.MSG_ID, mMsgId);
-                mDummyMsgId = -1;
+                mPlaceholderMsgId = -1;
             }
             if (values.containsKey("read")) {
                 assertEquals("read: ", modifiedValues.get("read"), values.get("read"));
@@ -860,7 +908,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         @Override
         public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
             final Uri expectedUri = Telephony.Mms.CONTENT_URI.buildUpon()
-                    .appendPath(String.valueOf(mDummyMsgId))
+                    .appendPath(String.valueOf(mPlaceholderMsgId))
                     .appendPath("part")
                     .build();
             assertEquals(expectedUri, uri);
