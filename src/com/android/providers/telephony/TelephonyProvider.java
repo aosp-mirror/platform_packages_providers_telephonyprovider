@@ -71,6 +71,7 @@ import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
 
 import android.annotation.NonNull;
+import android.app.compat.CompatChanges;
 import android.content.ComponentName;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -94,15 +95,14 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Environment;
-import android.os.FileUtils;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
 import android.telephony.Annotation;
-import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
@@ -123,18 +123,21 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.zip.CheckedInputStream;
 import java.util.zip.CRC32;
 
 public class TelephonyProvider extends ContentProvider
@@ -166,6 +169,9 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_FILTERED = 18;
     private static final int URL_FILTERED_ID = 19;
     private static final int URL_ENFORCE_MANAGED = 20;
+    // URL_PREFERAPNSET and URL_PREFERAPNSET_USING_SUBID return all APNs for the current
+    // carrier which have an apn_set_id equal to the preferred APN
+    // (if no preferred APN, or preferred APN has no set id, the query will return null)
     private static final int URL_PREFERAPNSET = 21;
     private static final int URL_PREFERAPNSET_USING_SUBID = 22;
     private static final int URL_SIM_APN_LIST = 23;
@@ -646,10 +652,18 @@ public class TelephonyProvider extends ContentProvider
         }
 
         private long getChecksum(File file) {
-            long checksum = -1;
-            try {
-                checksum = FileUtils.checksumCrc32(file);
-                if (DBG) log("Checksum for " + file.getAbsolutePath() + " is " + checksum);
+            CRC32 checkSummer = new CRC32();
+            long checkSum = -1;
+            try (CheckedInputStream cis =
+                new CheckedInputStream(new FileInputStream(file), checkSummer)){
+                byte[] buf = new byte[128];
+                if(cis != null) {
+                    while(cis.read(buf) >= 0) {
+                        // Just read for checksum to get calculated.
+                    }
+                }
+                checkSum = checkSummer.getValue();
+                if (DBG) log("Checksum for " + file.getAbsolutePath() + " is " + checkSum);
             } catch (FileNotFoundException e) {
                 loge("FileNotFoundException for " + file.getAbsolutePath() + ":" + e);
             } catch (IOException e) {
@@ -661,14 +675,14 @@ public class TelephonyProvider extends ContentProvider
             try (InputStream inputStream = mContext.getResources().
                         openRawResource(com.android.internal.R.xml.apns)) {
                 byte[] array = toByteArray(inputStream);
-                CRC32 c = new CRC32();
-                c.update(array);
-                checksum += c.getValue();
-                if (DBG) log("Checksum after adding resource is " + checksum);
+                checkSummer.reset();
+                checkSummer.update(array);
+                checkSum += checkSummer.getValue();
+                if (DBG) log("Checksum after adding resource is " + checkSummer.getValue());
             } catch (IOException | Resources.NotFoundException e) {
                 loge("Exception when calculating checksum for internal apn resources: " + e);
             }
-            return checksum;
+            return checkSum;
         }
 
         private byte[] toByteArray(InputStream input) throws IOException {
@@ -760,7 +774,7 @@ public class TelephonyProvider extends ContentProvider
                 confparser.setInput(confreader);
                 XmlUtils.beginDocument(confparser, "apns");
 
-                // Sanity check. Force internal version and confidential versions to agree
+                // Correctness check. Force internal version and confidential versions to agree
                 int confversion = Integer.parseInt(confparser.getAttributeValue(null, "version"));
                 if (publicversion != confversion) {
                     log("initDatabase: throwing exception due to version mismatch");
@@ -2566,6 +2580,7 @@ public class TelephonyProvider extends ContentProvider
     private void restoreApnsWithService(int subId) {
         Context context = getContext();
         Resources r = context.getResources();
+        AtomicBoolean connectionBindingInvalid = new AtomicBoolean(false);
         ServiceConnection connection = new ServiceConnection() {
             @Override
             public void onServiceConnected(ComponentName className,
@@ -2584,6 +2599,24 @@ public class TelephonyProvider extends ContentProvider
                     mIApnSourceService = null;
                 }
             }
+
+            @Override
+            public void onBindingDied(ComponentName name) {
+                loge("The binding to the apn service connection is dead: " + name);
+                synchronized (mLock) {
+                    connectionBindingInvalid.set(true);
+                    mLock.notifyAll();
+                }
+            }
+
+            @Override
+            public void onNullBinding(ComponentName name) {
+                loge("Null binding: " + name);
+                synchronized (mLock) {
+                    connectionBindingInvalid.set(true);
+                    mLock.notifyAll();
+                }
+            }
         };
 
         Intent intent = new Intent(IApnSourceService.class.getName());
@@ -2594,12 +2627,16 @@ public class TelephonyProvider extends ContentProvider
             if (context.bindService(intent, connection, Context.BIND_IMPORTANT |
                         Context.BIND_AUTO_CREATE)) {
                 synchronized (mLock) {
-                    while (mIApnSourceService == null) {
+                    while (mIApnSourceService == null && !connectionBindingInvalid.get()) {
                         try {
                             mLock.wait();
                         } catch (InterruptedException e) {
                             loge("Error while waiting for service connection: " + e);
                         }
+                    }
+                    if (connectionBindingInvalid.get()) {
+                        loge("The binding is invalid.");
+                        return;
                     }
                     try {
                         ContentValues[] values = mIApnSourceService.getApns(subId);
@@ -2890,7 +2927,7 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkPermission();
+        checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 subIdString = url.getLastPathSegment();
@@ -2975,10 +3012,13 @@ public class TelephonyProvider extends ContentProvider
             // intentional fall through from above case
             case URL_PREFERAPNSET: {
                 final int set = getPreferredApnSetId(subId);
-                if (set != NO_APN_SET_ID) {
-                    constraints.add(APN_SET_ID + "=" + set);
+                if (set == NO_APN_SET_ID) {
+                    return null;
                 }
-                break;
+                constraints.add(APN_SET_ID + "=" + set);
+                qb.appendWhere(TextUtils.join(" AND ", constraints));
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             case URL_DPC: {
@@ -3164,7 +3204,7 @@ public class TelephonyProvider extends ContentProvider
             }
 
             boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
-                    && tm.isCurrentSimOperator(ret.getString(numericIndex),
+                    && tm.matchesCurrentSimOperator(ret.getString(numericIndex),
                             getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
                             ret.getString(mvnoDataIndex));
             boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
@@ -3915,16 +3955,51 @@ public class TelephonyProvider extends ContentProvider
                 return;
             }
         }
-        throw new SecurityException("No permission to write APN settings");
+
+
+        throw new SecurityException("No permission to access APN settings");
     }
 
-    private void checkPhonePrivilegePermission() {
-        int status = getContext().checkCallingOrSelfPermission(
-                "android.permission.READ_PRIVILEGED_PHONE_STATE");
-        if (status == PackageManager.PERMISSION_GRANTED) {
-            return;
+    /**
+     * Check permission to query the database based on PlatformCompat settings -- if the compat
+     * change is enabled, check WRITE_APN_SETTINGS or carrier privs for all queries. Otherwise,
+     * use the legacy checkQueryPermission method to see if the query should be allowed.
+     */
+    private void checkPermissionCompat(int match, String[] projectionIn) {
+        boolean useNewBehavior = CompatChanges.isChangeEnabled(
+                Telephony.Carriers.APN_READING_PERMISSION_CHANGE_ID,
+                Binder.getCallingUid());
+
+        if (!useNewBehavior) {
+            log("Using old permission behavior for telephony provider compat");
+            checkQueryPermission(match, projectionIn);
+        } else {
+            checkPermission();
         }
-        throw new SecurityException("No phone privilege permission");
+    }
+
+    private void checkQueryPermission(int match, String[] projectionIn) {
+        if (match != URL_SIMINFO) {
+            if (projectionIn != null) {
+                for (String column : projectionIn) {
+                    if (TYPE.equals(column) ||
+                            MMSC.equals(column) ||
+                            MMSPROXY.equals(column) ||
+                            MMSPORT.equals(column) ||
+                            MVNO_TYPE.equals(column) ||
+                            MVNO_MATCH_DATA.equals(column) ||
+                            APN.equals(column)) {
+                        // noop
+                    } else {
+                        checkPermission();
+                        break;
+                    }
+                }
+            } else {
+                // null returns all columns, so need permission check
+                checkPermission();
+            }
+        }
     }
 
     private DatabaseHelper mOpenHelper;
@@ -3983,7 +4058,7 @@ public class TelephonyProvider extends ContentProvider
                 String mvnoType = cursor.getString(0 /* MVNO_TYPE index */);
                 String mvnoMatchData = cursor.getString(1 /* MVNO_MATCH_DATA index */);
                 if (!TextUtils.isEmpty(mvnoType) && !TextUtils.isEmpty(mvnoMatchData)
-                        && telephonyManager.isCurrentSimOperator(simOperator,
+                        && telephonyManager.matchesCurrentSimOperator(simOperator,
                             getMvnoTypeIntFromString(mvnoType), mvnoMatchData)) {
                     where = NUMERIC + "='" + simOperator + "'"
                             + " AND " + MVNO_TYPE + "='" + mvnoType + "'"

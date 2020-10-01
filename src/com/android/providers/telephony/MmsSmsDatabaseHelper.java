@@ -46,7 +46,6 @@ import android.provider.Telephony.Sms.Intents;
 import android.provider.Telephony.Threads;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
-import android.util.Slog;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneFactory;
@@ -267,7 +266,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     /**
      * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
-     * print a Slog.wtf so database corruption can be caught earlier.
+     * print a Log.wtf so database corruption can be caught earlier.
      */
     private static class MmsSmsDatabaseErrorHandler implements DatabaseErrorHandler {
         private DefaultDatabaseErrorHandler mDefaultDatabaseErrorHandler
@@ -562,7 +561,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private static void localLogWtf(String logMsg) {
-        Slog.wtf(TAG, logMsg);
+        Log.wtf(TAG, logMsg);
         PhoneFactory.localLog(TAG, logMsg);
     }
 
