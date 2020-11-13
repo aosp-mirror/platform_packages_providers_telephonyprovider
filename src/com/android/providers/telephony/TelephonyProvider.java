@@ -128,6 +128,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.Integer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -752,7 +753,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     XmlUtils.beginDocument(parser, "apns");
                     publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
-                    loadApns(db, parser);
+                    loadApns(db, parser, true);
                 } catch (Exception e) {
                     loge("Got exception while loading APN database." + e);
                 } finally {
@@ -782,7 +783,7 @@ public class TelephonyProvider extends ContentProvider
                             + confFile.getAbsolutePath());
                 }
 
-                loadApns(db, confparser);
+                loadApns(db, confparser, false);
             } catch (FileNotFoundException e) {
                 // It's ok if the file isn't found. It means there isn't a confidential file
                 // Log.e(TAG, "File not found: '" + confFile.getAbsolutePath() + "'");
@@ -1669,7 +1670,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     XmlUtils.nextElement(parser);
                     while (parser.getEventType() != XmlPullParser.END_DOCUMENT) {
-                        ContentValues row = getRow(parser);
+                        ContentValues row = getRow(parser, false);
                         if (row == null) {
                             throw new XmlPullParserException("Expected 'apn' tag", parser, null);
                         }
@@ -2076,9 +2077,10 @@ public class TelephonyProvider extends ContentProvider
          * Gets the next row of apn values.
          *
          * @param parser the parser
+         * @param isOverlay If the xml file comes from an overlay MCC/MNC are treated as integers
          * @return the row or null if it's not an apn
          */
-        private ContentValues getRow(XmlPullParser parser) {
+        private ContentValues getRow(XmlPullParser parser, boolean isOverlay) {
             if (!"apn".equals(parser.getName())) {
                 return null;
             }
@@ -2087,11 +2089,21 @@ public class TelephonyProvider extends ContentProvider
 
             String mcc = parser.getAttributeValue(null, "mcc");
             String mnc = parser.getAttributeValue(null, "mnc");
-            String numeric = mcc + mnc;
+            String mccString = mcc;
+            String mncString = mnc;
+            // Since an mnc can have both two and three digits and it is hard to verify
+            // all OEM's Global APN lists we only do this for overlays.
+            if (isOverlay) {
+                mccString = String.format("%03d", Integer.parseInt(mcc));
+                // Looks up a two digit mnc in the carrier id DB
+                // if not found a three digit mnc value is chosen
+                mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
+            }
 
+            String numeric = mccString + mncString;
             map.put(NUMERIC, numeric);
-            map.put(MCC, mcc);
-            map.put(MNC, mnc);
+            map.put(MCC, mccString);
+            map.put(MNC, mncString);
             map.put(NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
@@ -2160,7 +2172,6 @@ public class TelephonyProvider extends ContentProvider
                     map.put(MVNO_MATCH_DATA, mvno_match_data);
                 }
             }
-
             return map;
         }
 
@@ -2193,15 +2204,15 @@ public class TelephonyProvider extends ContentProvider
          *
          * @param db the sqlite database to write to
          * @param parser the xml parser
-         *
+         * @param isOverlay, if we are parsing an xml in an overlay
          */
-        private void loadApns(SQLiteDatabase db, XmlPullParser parser) {
+        private void loadApns(SQLiteDatabase db, XmlPullParser parser, boolean isOverlay) {
             if (parser != null) {
                 try {
                     db.beginTransaction();
                     XmlUtils.nextElement(parser);
                     while (parser.getEventType() != XmlPullParser.END_DOCUMENT) {
-                        ContentValues row = getRow(parser);
+                        ContentValues row = getRow(parser, isOverlay);
                         if (row == null) {
                             throw new XmlPullParserException("Expected 'apn' tag", parser, null);
                         }
