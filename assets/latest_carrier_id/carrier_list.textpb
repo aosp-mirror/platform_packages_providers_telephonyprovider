@@ -650,7 +650,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 568
-  carrier_name: "A1"
+  carrier_name: "A1 BY"
   carrier_attribute {
     mccmnc_tuple: "25701"
   }
@@ -11177,4 +11177,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 50331653
+version: 50331654
