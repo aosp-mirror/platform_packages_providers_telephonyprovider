@@ -3474,6 +3474,7 @@ public class TelephonyProvider extends ContentProvider
                 if (initialValues != null) {
                     if(initialValues.containsKey(COLUMN_APN_ID)) {
                         setPreferredApnId(initialValues.getAsLong(COLUMN_APN_ID), subId, true);
+                        notify = true;
                     }
                 }
                 break;
