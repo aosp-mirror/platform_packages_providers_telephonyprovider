@@ -61,7 +61,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 4
-  carrier_name: "T-Mobile/tele.ring"
+  carrier_name: "Magenta Telekom"
   carrier_attribute {
     mccmnc_tuple: "23203"
     gid1: "01"
@@ -650,7 +650,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 568
-  carrier_name: "Velcom"
+  carrier_name: "A1 BY"
   carrier_attribute {
     mccmnc_tuple: "25701"
   }
@@ -773,7 +773,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 626
-  carrier_name: "Avantel"
+  carrier_name: "WOM"
   carrier_attribute {
     mccmnc_tuple: "732130"
   }
@@ -1052,6 +1052,7 @@ carrier_id {
   carrier_name: "COSMOTE"
   carrier_attribute {
     mccmnc_tuple: "20201"
+    gid1: "FFFF"
     gid1: "FF"
   }
 }
@@ -1254,7 +1255,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 802
-  carrier_name: "Idea"
+  carrier_name: "Vi"
   carrier_attribute {
     mccmnc_tuple: "40404"
     mccmnc_tuple: "40407"
@@ -2425,13 +2426,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 1335
-  carrier_name: "Compañía de Radiocomunicaciones Moviles S.A."
-  carrier_attribute {
-    mccmnc_tuple: "722010"
-  }
-}
-carrier_id {
   canonical_id: 1336
   carrier_name: "Nextel Argentina srl"
   carrier_attribute {
@@ -2797,7 +2791,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1390
-  carrier_name: "CTBC Celular"
+  carrier_name: "Algar Telecom"
   carrier_attribute {
     mccmnc_tuple: "72432"
     mccmnc_tuple: "72433"
@@ -5583,14 +5577,15 @@ carrier_id {
   carrier_name: "cellcom"
   carrier_attribute {
     mccmnc_tuple: "310600"
+    gid1: "BA00040000000000"
   }
   carrier_attribute {
     mccmnc_tuple: "311480"
     gid1: "BA00040000000000"
   }
   carrier_attribute {
-    mccmnc_tuple: "311840"
-    gid1: "C1000000"
+    mccmnc_tuple: "311850"
+    gid1: "BA00040000000000"
   }
 }
 carrier_id {
@@ -6183,8 +6178,9 @@ carrier_id {
     mccmnc_tuple: "46605"
   }
   carrier_attribute {
-    mccmnc_tuple: "46697"
-    imsi_prefix_xpattern: "4669750"
+    mccmnc_tuple: "46601"
+    imsi_prefix_xpattern: "4660116090"
+    imsi_prefix_xpattern: "4660116091"
   }
 }
 carrier_id {
@@ -6847,7 +6843,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1963
-  carrier_name: "Vodafone"
+  carrier_name: "Vi"
   carrier_attribute {
     mccmnc_tuple: "40401"
     mccmnc_tuple: "40405"
@@ -9098,11 +9094,15 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2249
-  carrier_name: "Quam_WEB"
+  carrier_name: "Tuenti"
   carrier_attribute {
     mccmnc_tuple: "72201"
-    spn: "QUAM"
-    spn: "CELULAR"
+    gid1: "02"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "722010"
+    spn: "Tuenti"
+    gid1: "01"
   }
 }
 carrier_id {
@@ -9826,6 +9826,8 @@ carrier_id {
   carrier_name: "YemenMobile"
   carrier_attribute {
     mccmnc_tuple: "42103"
+    mccmnc_tuple: "42111"
+    mccmnc_tuple: "42122"
   }
 }
 carrier_id {
@@ -9986,7 +9988,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2378
-  carrier_name: "Vodafone"
+  carrier_name: "Vi"
   carrier_attribute {
     mccmnc_tuple: "40401"
     mccmnc_tuple: "40405"
@@ -10539,6 +10541,10 @@ carrier_id {
     mccmnc_tuple: "312870"
   }
   carrier_attribute {
+    mccmnc_tuple: "22201"
+    spn: "GigSky"
+  }
+  carrier_attribute {
     mccmnc_tuple: "310380"
     imsi_prefix_xpattern: "3103805"
     spn: "GigSky"
@@ -10631,7 +10637,6 @@ carrier_id {
   carrier_name: "ALTAN - Internal Use"
   carrier_attribute {
     mccmnc_tuple: "334140"
-    spn: "ALTAN"
   }
 }
 carrier_id {
@@ -10914,6 +10919,21 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2504
+  carrier_name: "Liberty Cablevision of Puerto Rico"
+  carrier_attribute {
+    mccmnc_tuple: "313790"
+  }
+}
+carrier_id {
+  canonical_id: 2505
+  carrier_name: "OptimERA Wireless"
+  carrier_attribute {
+    mccmnc_tuple: "313380"
+    spn: "OptimERA"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11157,4 +11177,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 50331651
+version: 50331654
