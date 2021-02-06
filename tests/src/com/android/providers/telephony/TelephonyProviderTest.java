@@ -34,6 +34,9 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Environment;
+import android.os.Bundle;
+import android.os.PersistableBundle;
 import android.os.Process;
 import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
@@ -53,6 +56,9 @@ import junit.framework.TestCase;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -111,6 +117,112 @@ public class TelephonyProviderTest extends TestCase {
     private static final Uri URI_FILTERED = Uri.parse("content://telephony/carriers/filtered");
     private static final Uri URI_ENFORCE_MANAGED= Uri.parse("content://telephony/carriers/enforce_managed");
     private static final String ENFORCED_KEY = "enforced";
+
+
+    private static final int MATCHING_SUB_ID = 987654321;
+    private static final String MATCHING_ICCID = "MATCHING_ICCID";
+    private static final String MATCHING_PHONE_NUMBER = "MATCHING_PHONE_NUMBER";
+    private static final int MATCHING_CARRIER_ID = 123456789;
+
+    // Represents an entry in the SimInfoDb
+    private static final ContentValues TEST_SIM_INFO_VALUES = new ContentValues();
+    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE = 999999;
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE
+            = "ARBITRARY_TEST_STRING_VALUE";
+
+    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID
+            = new ContentValues();
+    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1 = 111111;
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1
+            = "ARBITRARY_TEST_STRING_VALUE_1";
+
+    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID
+            = new ContentValues();
+    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2 = 222222;
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2
+            = "ARBITRARY_TEST_STRING_VALUE_2";
+
+    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID
+            = new ContentValues();
+    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3 = 333333;
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3
+            = "ARBITRARY_TEST_STRING_VALUE_3";
+
+    static {
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                MATCHING_SUB_ID);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_ICC_ID, MATCHING_ICCID);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_NUMBER, MATCHING_PHONE_NUMBER);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_CARD_ID,
+                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_CARRIER_ID, MATCHING_CARRIER_ID);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+            ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
+        TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
+
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_ICC_ID, MATCHING_ICCID);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_NUMBER, ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_CARD_ID, ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_CARRIER_ID, ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_VT_IMS_ENABLED, ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1);
+
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_ICC_ID, ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_NUMBER, MATCHING_PHONE_NUMBER);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_CARD_ID, ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_CARRIER_ID, MATCHING_CARRIER_ID);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_VT_IMS_ENABLED, ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2);
+
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(
+                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(Telephony.SimInfo.COLUMN_ICC_ID,
+                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(Telephony.SimInfo.COLUMN_NUMBER,
+                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(Telephony.SimInfo.COLUMN_CARD_ID,
+                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(Telephony.SimInfo.COLUMN_CARRIER_ID,
+                MATCHING_CARRIER_ID);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(
+                Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(
+                Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
+    }
 
     /**
      * This is used to give the TelephonyProviderTest a mocked context which takes a
@@ -221,6 +333,20 @@ public class TelephonyProviderTest extends TestCase {
                 return PackageManager.PERMISSION_DENIED;
             }
         }
+
+        @Override
+        public void enforceCallingOrSelfPermission(String permission, String message) {
+            if (permission == android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE
+                    || permission == android.Manifest.permission.MODIFY_PHONE_STATE) {
+                return;
+            }
+            throw new SecurityException("Unavailable permission requested");
+        }
+
+        @Override
+        public File getFilesDir() {
+            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        }
     }
 
     @Override
@@ -241,6 +367,13 @@ public class TelephonyProviderTest extends TestCase {
     protected void tearDown() throws Exception {
         super.tearDown();
         mTelephonyProviderTestable.closeDatabase();
+
+        // Remove the internal file created by SIM-specific settings restore
+        File file = new File(mContext.getFilesDir(),
+                mTelephonyProviderTestable.BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
+        if (file.exists()) {
+            file.delete();
+        }
     }
 
     /**
@@ -621,6 +754,162 @@ public class TelephonyProviderTest extends TestCase {
         cursor = mContentResolver.query(SimInfo.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
         assertEquals(0, cursor.getCount());
+    }
+
+    @Test
+    public void testFullRestoreOnMatchingIccId() {
+        byte[] simSpecificSettingsData = getBackupData(
+                new ContentValues[]{
+                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID,
+                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID,
+                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
+        createInternalBackupFile(simSpecificSettingsData);
+        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES);
+
+        mContext.getContentResolver().call(
+            SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
+            SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
+            MATCHING_ICCID, null);
+
+        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+            null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+
+        // Make sure SubId didn't get overridden.
+        assertEquals(
+            (int)TEST_SIM_INFO_VALUES.getAsInteger(
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
+            getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
+        // Ensure all other values got updated.
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
+
+        assertRestoredSubIdIsRemembered();
+    }
+
+    @Test
+    public void testFullRestoreOnMatchingNumberAndCid() {
+        byte[] simSpecificSettingsData = getBackupData(
+                new ContentValues[]{
+                    BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID,
+                    BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
+        createInternalBackupFile(simSpecificSettingsData);
+        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES);
+
+        mContext.getContentResolver().call(
+            SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
+            SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
+            MATCHING_ICCID, null);
+
+        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+            null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+
+        // Make sure SubId didn't get overridden.
+        assertEquals(
+            (int) TEST_SIM_INFO_VALUES.getAsInteger(
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
+            getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
+        // Ensure all other values got updated.
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
+
+        assertRestoredSubIdIsRemembered();
+    }
+
+    @Test
+    public void testFullRestoreOnMatchingCidOnly() {
+        byte[] simSpecificSettingsData = getBackupData(
+            new ContentValues[]{
+                BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
+        createInternalBackupFile(simSpecificSettingsData);
+        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES);
+
+        mContext.getContentResolver().call(
+            SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
+            SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
+            MATCHING_ICCID, null);
+
+        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+            null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+
+        // Make sure SubId didn't get overridden.
+        assertEquals(
+            (int) TEST_SIM_INFO_VALUES.getAsInteger(
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
+            getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
+        // Ensure sensitive settings did not get updated.
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
+        // Ensure all other values got updated.
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
+                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
+
+        assertRestoredSubIdIsRemembered();
+    }
+
+    private void assertRestoredSubIdIsRemembered() {
+        PersistableBundle bundle = getPersistableBundleFromInternalStorageFile();
+        int[] previouslyRestoredSubIds =
+                bundle.getIntArray(TelephonyProvider.KEY_PREVIOUSLY_RESTORED_SUB_IDS);
+        assertNotNull(previouslyRestoredSubIds);
+        assertEquals(MATCHING_SUB_ID, previouslyRestoredSubIds[0]);
+    }
+
+    private PersistableBundle getPersistableBundleFromInternalStorageFile() {
+        File file = new File(Environment.getExternalStoragePublicDirectory(
+                Environment.DIRECTORY_DOWNLOADS),
+                TelephonyProvider.BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
+        try (FileInputStream fis = new FileInputStream(file)) {
+            return PersistableBundle.readFromStream(fis);
+        } catch (IOException e) {
+        }
+
+        return null;
+    }
+
+    private byte[] getBackupData(ContentValues[] contentValues) {
+        setUpMockContext(true);
+
+        int rowsAdded = mContentResolver.bulkInsert(SubscriptionManager.CONTENT_URI, contentValues);
+        assertEquals(rowsAdded, contentValues.length);
+
+        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+            null, null, null, null);
+        assertEquals(cursor.getCount(), contentValues.length);
+
+        Bundle bundle =  mContext.getContentResolver().call(
+            SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
+            SubscriptionManager.GET_SIM_SPECIFIC_SETTINGS_METHOD_NAME, null, null);
+        byte[] data = bundle.getByteArray(SubscriptionManager.KEY_SIM_SPECIFIC_SETTINGS_DATA);
+
+        int rowsDeleted = mContentResolver.delete(SubscriptionManager.CONTENT_URI, null, null);
+        assertEquals(rowsDeleted, contentValues.length);
+
+        return data;
+    }
+
+    private void createInternalBackupFile(byte[] data) {
+        mTelephonyProviderTestable.writeSimSettingsToInternalStorage(data);
+    }
+
+    private int getIntValueFromCursor(Cursor cursor, String columnName) {
+        int columnIndex = cursor.getColumnIndex(columnName);
+        return cursor.getInt(columnIndex);
     }
 
     private int parseIdFromInsertedUri(Uri uri) throws NumberFormatException {
