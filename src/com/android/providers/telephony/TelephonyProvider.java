@@ -69,21 +69,17 @@ import static android.provider.Telephony.Carriers.USER_EDITED;
 import static android.provider.Telephony.Carriers.USER_VISIBLE;
 import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.RequiresPermission;
 import android.app.compat.CompatChanges;
 import android.content.ComponentName;
 import android.content.ContentProvider;
-import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.OperationApplicationException;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
@@ -129,7 +125,6 @@ import android.service.carrier.IApnSourceService;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -139,11 +134,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Integer;
-import java.lang.NoSuchFieldException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -161,7 +154,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 48 << 16;
+    private static final int DATABASE_VERSION = 49 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -399,6 +392,8 @@ public class TelephonyProvider extends ContentProvider
                 Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_VT_IMS_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -520,7 +515,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB,"
-                + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT"
+                + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -1598,6 +1594,20 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 48 << 16 | 6;
+            }
+
+            if (oldVersion < (49 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add d2d status sharing column. ");
+                    }
+                }
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3372,7 +3382,7 @@ public class TelephonyProvider extends ContentProvider
 
         private ContentValues convertBackedUpDataToContentValues(
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
-            if (DATABASE_VERSION != 48 << 16) {
+            if (DATABASE_VERSION != 49 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3424,6 +3434,10 @@ public class TelephonyProvider extends ContentProvider
             contentValues.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
                     backedUpSimInfoEntry.getInt(
                             Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+                            DEFAULT_INT_COLUMN_VALUE));
+            contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
                             DEFAULT_INT_COLUMN_VALUE));
 
             return polishContentValues(contentValues);
