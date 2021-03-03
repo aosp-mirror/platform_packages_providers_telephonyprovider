@@ -217,6 +217,22 @@ public final class TelephonyDatabaseHelperTest {
                 Telephony.SimInfo.COLUMN_RCS_CONFIG));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasVoImsOptInStatusField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasImsRcsUceEnabledField");
+        // (5 << 16) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, 4 << 16, TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the SubscriptionManager.VOIMS_OPT_IN_STATUS field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
