@@ -328,6 +328,7 @@ carrier_id {
     spn: ""
     spn: "Vodafone"
     spn: "Vodafone.de"
+    spn: "vodafone.de"
   }
 }
 carrier_id {
@@ -1302,6 +1303,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44010"
     gid1: "00FFFF"
+    gid1: "01FFFF"
   }
   carrier_attribute {
     mccmnc_tuple: "44010"
@@ -4115,7 +4117,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1589
-  carrier_name: "TSC Kazak Telecom"
+  carrier_name: "Kcell/activ"
   carrier_attribute {
     mccmnc_tuple: "40102"
   }
@@ -5587,6 +5589,10 @@ carrier_id {
     mccmnc_tuple: "311850"
     gid1: "BA00040000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "311840"
+    gid1: "C1"
+  }
 }
 carrier_id {
   canonical_id: 1803
@@ -6901,7 +6907,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1969
-  carrier_name: "Asia Cell"
+  carrier_name: "Asiacell"
   carrier_attribute {
     mccmnc_tuple: "41805"
   }
@@ -7043,8 +7049,9 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1986
-  carrier_name: "Tele2"
+  carrier_name: "Tele2/Altel"
   carrier_attribute {
+    mccmnc_tuple: "40107"
     mccmnc_tuple: "40177"
   }
 }
@@ -8498,13 +8505,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "36302"
     mccmnc_tuple: "363020"
-  }
-}
-carrier_id {
-  canonical_id: 2164
-  carrier_name: "ALTEL"
-  carrier_attribute {
-    mccmnc_tuple: "40107"
   }
 }
 carrier_id {
@@ -10091,6 +10091,7 @@ carrier_id {
   carrier_name: "Telekom"
   carrier_attribute {
     mccmnc_tuple: "26201"
+    mccmnc_tuple: "26206"
   }
 }
 carrier_id {
@@ -10571,12 +10572,12 @@ carrier_id {
   carrier_name: "Shaw Mobile"
   carrier_attribute {
     mccmnc_tuple: "302490"
-    imsi_prefix_xpattern: "302490400"
+    imsi_prefix_xpattern: "3024904"
     gid1: "53"
   }
   carrier_attribute {
     mccmnc_tuple: "302490"
-    imsi_prefix_xpattern: "302490500"
+    imsi_prefix_xpattern: "3024905"
     gid1: "53"
   }
 }
@@ -10934,6 +10935,36 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2506
+  carrier_name: "Alestra Servicios Moviles"
+  carrier_attribute {
+    mccmnc_tuple: "334130"
+  }
+}
+carrier_id {
+  canonical_id: 2507
+  carrier_name: "UPC"
+  carrier_attribute {
+    mccmnc_tuple: "22853"
+    gid1: "75636831FFFFFFFFFF"
+  }
+}
+carrier_id {
+  canonical_id: 2508
+  carrier_name: "Virgin Media Ireland"
+  carrier_attribute {
+    mccmnc_tuple: "27215"
+    gid1: "75696531FFFFFFFFFF"
+  }
+}
+carrier_id {
+  canonical_id: 2509
+  carrier_name: "Evolve"
+  carrier_attribute {
+    mccmnc_tuple: "310990"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11177,4 +11208,13 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 50331654
+carrier_id {
+  canonical_id: 10024
+  carrier_name: "Cellcom Core"
+  carrier_attribute {
+    mccmnc_tuple: "311840"
+    gid1: "C1"
+  }
+  parent_canonical_id: 1802
+}
+version: 50331656
