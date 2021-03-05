@@ -98,11 +98,9 @@ import android.os.Environment;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
-import android.telephony.Annotation;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.data.ApnSetting;
@@ -148,7 +146,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 47 << 16;
+    private static final int DATABASE_VERSION = 48 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -473,7 +471,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES + " BIGINT DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB"
+                + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB,"
+                + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT"
                 + ");";
     }
 
@@ -1517,6 +1516,36 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 47 << 16 | 6;
             }
 
+            if (oldVersion < (48 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS
+                            + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                try {
+                    // Migrate the old Long values over to String
+                    String[] proj = {Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                            Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES};
+                    try (Cursor c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null)) {
+                        while (c.moveToNext()) {
+                            fillInAllowedNetworkTypesStringAtCursor(db, c);
+                        }
+                    }
+
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("can't migrate value from COLUMN_ALLOWED_NETWORK_TYPES to "
+                                + "COLUMN_ALLOWED_NETWORK_TYPES_ALL_REASON");
+                    }
+                }
+                oldVersion = 48 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -4382,5 +4411,37 @@ public class TelephonyProvider extends ContentProvider
             return (1 << (radioTech - 1));
         }
         return 0;
+    }
+
+    /**
+     * Migrate the old Long values{@link Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES} over to
+     * String{@link Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_ALL_REASON}
+     *
+     * @param db The sqlite database to write to
+     * @param c The {@link Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES} values in the sim info
+     *         table.
+     */
+    public static void fillInAllowedNetworkTypesStringAtCursor(SQLiteDatabase db, Cursor c) {
+        long allowedNetworkTypesReasonCarrier;
+        String subId;
+        try {
+            allowedNetworkTypesReasonCarrier = c.getLong(
+                    c.getColumnIndexOrThrow(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES));
+            subId = c.getString(c.getColumnIndexOrThrow(
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Possible database corruption -- some columns not found.");
+            return;
+        }
+
+        if (allowedNetworkTypesReasonCarrier != -1) {
+            ContentValues cv = new ContentValues(1);
+
+            cv.put(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                    "carrier=" + allowedNetworkTypesReasonCarrier);
+            db.update(SIMINFO_TABLE, cv,
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                    new String[]{subId});
+        }
     }
 }
