@@ -162,6 +162,8 @@ public class TelephonyProviderTest extends TestCase {
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
         TEST_SIM_INFO_VALUES.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
+        TEST_SIM_INFO_VALUES.put(SimInfo.COLUMN_D2D_STATUS_SHARING,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
 
         BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
@@ -182,6 +184,9 @@ public class TelephonyProviderTest extends TestCase {
         BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
                 Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID.put(
+                SimInfo.COLUMN_D2D_STATUS_SHARING,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE);
 
         BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
@@ -202,6 +207,9 @@ public class TelephonyProviderTest extends TestCase {
         BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
                 Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID.put(
+                SimInfo.COLUMN_D2D_STATUS_SHARING,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2);
 
         BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(
                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
@@ -221,6 +229,9 @@ public class TelephonyProviderTest extends TestCase {
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
         BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(
                 Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
+        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID.put(
+                SimInfo.COLUMN_D2D_STATUS_SHARING,
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3);
     }
 
