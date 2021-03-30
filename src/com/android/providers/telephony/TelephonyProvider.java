@@ -154,7 +154,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 50 << 16;
+    private static final int DATABASE_VERSION = 51 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -259,6 +259,7 @@ public class TelephonyProvider extends ContentProvider
     private static final Map<String, Integer> SIM_INFO_COLUMNS_TO_BACKUP = new HashMap();
     private static final String KEY_SIMINFO_DB_ROW_PREFIX = "KEY_SIMINFO_DB_ROW_";
     private static final int DEFAULT_INT_COLUMN_VALUE = -111;
+    private static final String DEFAULT_STRING_COLUMN_VALUE = "DEFAULT_STRING_COLUMN_VALUE";
     private static final String SIM_INSERTED_RESTORE_URI_SUFFIX = "sim_inserted_restore";
     @VisibleForTesting
     static final String KEY_BACKUP_DATA_FORMAT_VERSION = "KEY_BACKUP_DATA_FORMAT_VERSION";
@@ -394,6 +395,16 @@ public class TelephonyProvider extends ContentProvider
                 Telephony.SimInfo.COLUMN_VT_IMS_ENABLED, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_WFC_IMS_MODE, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                Cursor.FIELD_TYPE_STRING);
+
     }
 
     @VisibleForTesting
@@ -517,7 +528,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB,"
                 + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT,"
                 + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT"
                 + ");";
     }
 
@@ -1625,6 +1637,21 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 50 << 16 | 6;
+            }
+
+            if (oldVersion < (51 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALERT TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS
+                            + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add d2d status sharing contacts. ");
+                    }
+                }
+                oldVersion = 51 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3179,7 +3206,8 @@ public class TelephonyProvider extends ContentProvider
                         Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
                         Telephony.SimInfo.COLUMN_ICC_ID,
                         Telephony.SimInfo.COLUMN_NUMBER,
-                        Telephony.SimInfo.COLUMN_CARRIER_ID},
+                        Telephony.SimInfo.COLUMN_CARRIER_ID,
+                        Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE},
                 selection,
                 selectionArgs,
                 ORDER_BY_SUB_ID)) {
@@ -3197,6 +3225,10 @@ public class TelephonyProvider extends ContentProvider
         List<Integer> newlyRestoredSubIds = new ArrayList<>();
         int backupDataFormatVersion = backedUpDataBundle
                 .getInt(KEY_BACKUP_DATA_FORMAT_VERSION, -1);
+
+        Resources r = getContext().getResources();
+        List<String> wfcEntitlementRequiredCountries = Arrays.asList(r.getStringArray(
+                    R.array.wfc_entitlement_required_countries));
 
         while (cursor != null && cursor.moveToNext()) {
             // Get all the possible matching criteria.
@@ -3218,6 +3250,11 @@ public class TelephonyProvider extends ContentProvider
             int carrierIdColumnIndex = cursor.getColumnIndex(Telephony.SimInfo.COLUMN_CARRIER_ID);
             int currCarrierIdFromDb = cursor.getInt(carrierIdColumnIndex);
 
+            int isoCountryCodeColumnIndex= cursor.getColumnIndex(
+                    Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE);
+            String isoCountryCodeFromDb = cursor.getString(isoCountryCodeColumnIndex);
+
+
             // Find the best match from backed up data.
             SimRestoreMatch bestRestoreMatch = null;
             for (int rowNum = 0; true; rowNum++) {
@@ -3228,7 +3265,8 @@ public class TelephonyProvider extends ContentProvider
                 }
 
                 SimRestoreMatch currSimRestoreMatch = new SimRestoreMatch(
-                        currIccIdFromDb, currCarrierIdFromDb, currPhoneNumberFromDb, currRow,
+                        currIccIdFromDb, currCarrierIdFromDb, currPhoneNumberFromDb,
+                        isoCountryCodeFromDb, wfcEntitlementRequiredCountries, currRow,
                         backupDataFormatVersion);
 
                 if (currSimRestoreMatch == null) {
@@ -3315,8 +3353,9 @@ public class TelephonyProvider extends ContentProvider
         private static final int CARRIER_ID_MATCH = 3;
 
         public SimRestoreMatch(String iccIdFromDb, int carrierIdFromDb,
-                String phoneNumberFromDb, PersistableBundle backedUpSimInfoEntry,
-                int backupDataFormatVersion) {
+                String phoneNumberFromDb, String isoCountryCodeFromDb,
+                List<String> wfcEntitlementRequiredCountries,
+                PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
             subId = backedUpSimInfoEntry.getInt(
                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
                 DEFAULT_INT_COLUMN_VALUE);
@@ -3344,7 +3383,8 @@ public class TelephonyProvider extends ContentProvider
             }
 
             contentValues = convertBackedUpDataToContentValues(
-                    backedUpSimInfoEntry, backupDataFormatVersion);
+                    backedUpSimInfoEntry, backupDataFormatVersion, isoCountryCodeFromDb,
+                    wfcEntitlementRequiredCountries);
             matchScore = calculateMatchScore();
             matchingCriteria = calculateMatchingCriteria();
         }
@@ -3398,8 +3438,10 @@ public class TelephonyProvider extends ContentProvider
         }
 
         private ContentValues convertBackedUpDataToContentValues(
-                PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
-            if (DATABASE_VERSION != 50 << 16) {
+                PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
+                String isoCountryCodeFromDb,
+                List<String> wfcEntitlementRequiredCountries) {
+            if (DATABASE_VERSION != 51 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3435,11 +3477,24 @@ public class TelephonyProvider extends ContentProvider
              *     contentValues.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
              *               backedUpSimInfoEntry.getString(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
              *               ""));
+             *     ...
              *   }
              *
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 51 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                        backedUpSimInfoEntry.getString(
+                                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                                DEFAULT_STRING_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 50 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             contentValues.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
                     backedUpSimInfoEntry.getInt(
                             Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
@@ -3452,15 +3507,48 @@ public class TelephonyProvider extends ContentProvider
                     backedUpSimInfoEntry.getInt(
                             Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
                             DEFAULT_INT_COLUMN_VALUE));
-            contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+            if (isoCountryCodeFromDb != null
+                    && !wfcEntitlementRequiredCountries
+                            .contains(isoCountryCodeFromDb.toLowerCase())) {
+                // Don't restore COLUMN_WFC_IMS_ENABLED if the sim is from one of the countries that
+                // requires WFC entitlement.
+                contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_MODE,
                     backedUpSimInfoEntry.getInt(
-                            Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                            Telephony.SimInfo.COLUMN_WFC_IMS_MODE,
+                            DEFAULT_INT_COLUMN_VALUE));
+            contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE,
                             DEFAULT_INT_COLUMN_VALUE));
 
             return polishContentValues(contentValues);
         }
 
         private ContentValues polishContentValues(ContentValues contentValues) {
+            /* Remove any values that weren't found in the backup file. These were set to defaults
+            in #convertBackedUpDataToContentValues(). */
+            for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
+                String columnName = column.getKey();
+
+                if (!contentValues.containsKey(columnName)) {
+                    continue;
+                }
+
+                int columnType = column.getValue();
+                if (columnType == Cursor.FIELD_TYPE_INTEGER
+                        && DEFAULT_INT_COLUMN_VALUE == contentValues.getAsInteger(columnName)) {
+                    contentValues.remove(columnName);
+                } else if (columnType == Cursor.FIELD_TYPE_STRING && contentValues
+                        .getAsString(columnName).equals(DEFAULT_STRING_COLUMN_VALUE)) {
+                    contentValues.remove(columnName);
+                }
+            }
+
             if (matches.contains(ICCID_MATCH)) {
                 return contentValues;
             } else if (matches.contains(CARRIER_ID_MATCH)) {
