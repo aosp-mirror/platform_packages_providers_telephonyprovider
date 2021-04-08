@@ -526,6 +526,15 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     @Override
     public void onCreate(SQLiteDatabase db) {
         localLog("onCreate: Creating all SMS-MMS tables.");
+
+        createMmsTables(db);
+        createSmsTables(db);
+        createCommonTables(db);
+        createCommonTriggers(db);
+        createMmsTriggers(db);
+        createWordsTables(db);
+        createIndices(db);
+
         // if FBE is not supported, or if this onCreate is for CE partition database
         if (!StorageManager.isFileEncryptedNativeOrEmulated()
                 || (mContext != null && mContext.isCredentialProtectedStorage())) {
@@ -546,13 +555,6 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             mContext.sendBroadcast(intent);
         }
-        createMmsTables(db);
-        createSmsTables(db);
-        createCommonTables(db);
-        createCommonTriggers(db);
-        createMmsTriggers(db);
-        createWordsTables(db);
-        createIndices(db);
     }
 
     private static void localLog(String logMsg) {
