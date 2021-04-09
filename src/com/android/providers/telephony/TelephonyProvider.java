@@ -2855,10 +2855,10 @@ public class TelephonyProvider extends ContentProvider
 
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
+        SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
+                Context.MODE_PRIVATE);
         if (!TextUtils.isEmpty(newBuildId)) {
             // Check if build id has changed
-            SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
-                    Context.MODE_PRIVATE);
             String oldBuildId = sp.getString(RO_BUILD_ID, "");
             if (!newBuildId.equals(oldBuildId)) {
                 localLog("onCreate: build id changed from " + oldBuildId + " to " + newBuildId);
@@ -2866,7 +2866,6 @@ public class TelephonyProvider extends ContentProvider
             } else {
                 if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
             }
-            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
         } else {
             if (VDBG) log("onCreate: newBuildId is empty");
         }
@@ -2881,9 +2880,15 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) addAllApnSharedPrefToLocalLog();
         }
 
-        SharedPreferences sp = getContext().getSharedPreferences(ENFORCED_FILE,
+        // Write build id to SharedPreferences after APNs have been updated above by updateApnDb()
+        if (!TextUtils.isEmpty(newBuildId)) {
+            if (isNewBuild) log("onCreate: updating build id to " + newBuildId);
+            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
+        }
+
+        SharedPreferences spEnforcedFile = getContext().getSharedPreferences(ENFORCED_FILE,
                 Context.MODE_PRIVATE);
-        mManagedApnEnforced = sp.getBoolean(ENFORCED_KEY, false);
+        mManagedApnEnforced = spEnforcedFile.getBoolean(ENFORCED_KEY, false);
 
         if (VDBG) log("onCreate:- ret true");
 
