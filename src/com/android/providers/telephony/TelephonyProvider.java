@@ -3214,10 +3214,11 @@ public class TelephonyProvider extends ContentProvider
                 selection,
                 selectionArgs,
                 ORDER_BY_SUB_ID)) {
-            findAndRestoreAllMatches(bundle, cursor, restoreCase);
+            findAndRestoreAllMatches(bundle.deepCopy(), cursor, restoreCase);
         }
     }
 
+    // backedUpDataBundle must to be mutable
     private void findAndRestoreAllMatches(PersistableBundle backedUpDataBundle, Cursor cursor,
             int restoreCase) {
         int[] previouslyRestoredSubIdsArray =
