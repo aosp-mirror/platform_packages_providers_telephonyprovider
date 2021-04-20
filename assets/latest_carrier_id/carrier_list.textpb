@@ -3057,6 +3057,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "73001"
     mccmnc_tuple: "73010"
+    mccmnc_tuple: "73026"
   }
 }
 carrier_id {
@@ -5591,7 +5592,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "311840"
-    gid1: "C1"
+    gid1: "c1000000"
   }
 }
 carrier_id {
@@ -6435,7 +6436,10 @@ carrier_id {
   canonical_id: 1915
   carrier_name: "AT&T MX"
   carrier_attribute {
+    mccmnc_tuple: "334040"
     mccmnc_tuple: "334050"
+    mccmnc_tuple: "334070"
+    mccmnc_tuple: "334080"
   }
 }
 carrier_id {
@@ -9439,11 +9443,7 @@ carrier_id {
   carrier_name: "Halebop"
   carrier_attribute {
     mccmnc_tuple: "24001"
-    imsi_prefix_xpattern: "240017"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "24005"
-    spn: "Halebop"
+    spn: "halebop"
   }
 }
 carrier_id {
@@ -10965,6 +10965,20 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2510
+  carrier_name: "Melita"
+  carrier_attribute {
+    mccmnc_tuple: "27877"
+  }
+}
+carrier_id {
+  canonical_id: 2511
+  carrier_name: "Kena"
+  carrier_attribute {
+    mccmnc_tuple: "22207"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -10981,6 +10995,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "DDFF"
+    gid1: "DEFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
     gid1: "DEFF"
   }
   parent_canonical_id: 2022
@@ -11213,8 +11231,8 @@ carrier_id {
   carrier_name: "Cellcom Core"
   carrier_attribute {
     mccmnc_tuple: "311840"
-    gid1: "C1"
+    gid1: "c1000000"
   }
   parent_canonical_id: 1802
 }
-version: 50331656
+version: 50331657
