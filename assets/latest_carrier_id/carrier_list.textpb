@@ -17,7 +17,6 @@ carrier_id {
     mccmnc_tuple: "310310"
     mccmnc_tuple: "310490"
     mccmnc_tuple: "310530"
-    mccmnc_tuple: "310590"
     mccmnc_tuple: "310640"
     mccmnc_tuple: "310660"
     mccmnc_tuple: "310800"
@@ -777,6 +776,7 @@ carrier_id {
   carrier_name: "WOM"
   carrier_attribute {
     mccmnc_tuple: "732130"
+    mccmnc_tuple: "732360"
   }
 }
 carrier_id {
@@ -5868,6 +5868,7 @@ carrier_id {
     mccmnc_tuple: "311487"
     mccmnc_tuple: "311488"
     mccmnc_tuple: "311489"
+    mccmnc_tuple: "310590"
   }
 }
 carrier_id {
@@ -6682,7 +6683,6 @@ carrier_id {
     mccmnc_tuple: "310800"
     mccmnc_tuple: "310660"
     mccmnc_tuple: "310640"
-    mccmnc_tuple: "310590"
     mccmnc_tuple: "310530"
     mccmnc_tuple: "310490"
     mccmnc_tuple: "310310"
@@ -10357,6 +10357,10 @@ carrier_id {
     mccmnc_tuple: "312530"
     gid1: "000006"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "1A53"
+  }
 }
 carrier_id {
   canonical_id: 2434
@@ -10979,6 +10983,18 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2512
+  carrier_name: "Goodspeed"
+  carrier_attribute {
+    mccmnc_tuple: "24042"
+    gid1: "C5"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23203"
+    gid1: "C5"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11235,4 +11251,22 @@ carrier_id {
   }
   parent_canonical_id: 1802
 }
-version: 50331657
+carrier_id {
+  canonical_id: 10025
+  carrier_name: "Rogers 5G"
+  carrier_attribute {
+    mccmnc_tuple: "302720"
+    gid1: "A4"
+  }
+  parent_canonical_id: 1403
+}
+carrier_id {
+  canonical_id: 10026
+  carrier_name: "DOCOMO ahamo"
+  carrier_attribute {
+    mccmnc_tuple: "44010"
+    gid1: "01FFFF"
+  }
+  parent_canonical_id: 850
+}
+version: 50331658
