@@ -249,6 +249,23 @@ public final class TelephonyDatabaseHelperTest {
                 Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasD2DSharingContactsField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasD2DSharingContactsField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the
+        // Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
