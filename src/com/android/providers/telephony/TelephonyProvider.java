@@ -230,7 +230,6 @@ public class TelephonyProvider extends ContentProvider
 
     private static final String DEFAULT_PROTOCOL = "IP";
     private static final String DEFAULT_ROAMING_PROTOCOL = "IP";
-    private static final String DEFAULT_CONTACTS = "";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -267,6 +266,7 @@ public class TelephonyProvider extends ContentProvider
     private static final Map<String, Integer> SIM_INFO_COLUMNS_TO_BACKUP = new HashMap();
     private static final String KEY_SIMINFO_DB_ROW_PREFIX = "KEY_SIMINFO_DB_ROW_";
     private static final int DEFAULT_INT_COLUMN_VALUE = -111;
+    private static final String DEFAULT_STRING_COLUMN_VALUE = "DEFAULT_STRING_COLUMN_VALUE";
     private static final String SIM_INSERTED_RESTORE_URI_SUFFIX = "sim_inserted_restore";
     @VisibleForTesting
     static final String KEY_BACKUP_DATA_FORMAT_VERSION = "KEY_BACKUP_DATA_FORMAT_VERSION";
@@ -3490,6 +3490,18 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 51 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                        backedUpSimInfoEntry.getString(
+                                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                                DEFAULT_STRING_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 50 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             contentValues.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
                     backedUpSimInfoEntry.getInt(
                             Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
@@ -3501,10 +3513,6 @@ public class TelephonyProvider extends ContentProvider
             contentValues.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
                     backedUpSimInfoEntry.getInt(
                             Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
-                            DEFAULT_INT_COLUMN_VALUE));
-            contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
-                    backedUpSimInfoEntry.getInt(
-                            Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
                             DEFAULT_INT_COLUMN_VALUE));
             if (isoCountryCodeFromDb != null
                     && !wfcEntitlementRequiredCountries
@@ -3524,15 +3532,30 @@ public class TelephonyProvider extends ContentProvider
                     backedUpSimInfoEntry.getInt(
                             Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE,
                             DEFAULT_INT_COLUMN_VALUE));
-            contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
-                    backedUpSimInfoEntry.getString(
-                            Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
-                            DEFAULT_CONTACTS));
 
             return polishContentValues(contentValues);
         }
 
         private ContentValues polishContentValues(ContentValues contentValues) {
+            /* Remove any values that weren't found in the backup file. These were set to defaults
+            in #convertBackedUpDataToContentValues(). */
+            for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
+                String columnName = column.getKey();
+
+                if (!contentValues.containsKey(columnName)) {
+                    continue;
+                }
+
+                int columnType = column.getValue();
+                if (columnType == Cursor.FIELD_TYPE_INTEGER
+                        && DEFAULT_INT_COLUMN_VALUE == contentValues.getAsInteger(columnName)) {
+                    contentValues.remove(columnName);
+                } else if (columnType == Cursor.FIELD_TYPE_STRING && contentValues
+                        .getAsString(columnName).equals(DEFAULT_STRING_COLUMN_VALUE)) {
+                    contentValues.remove(columnName);
+                }
+            }
+
             if (matches.contains(ICCID_MATCH)) {
                 return contentValues;
             } else if (matches.contains(CARRIER_ID_MATCH)) {
