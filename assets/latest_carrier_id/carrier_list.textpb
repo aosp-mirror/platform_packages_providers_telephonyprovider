@@ -17,7 +17,6 @@ carrier_id {
     mccmnc_tuple: "310310"
     mccmnc_tuple: "310490"
     mccmnc_tuple: "310530"
-    mccmnc_tuple: "310590"
     mccmnc_tuple: "310640"
     mccmnc_tuple: "310660"
     mccmnc_tuple: "310800"
@@ -777,6 +776,7 @@ carrier_id {
   carrier_name: "WOM"
   carrier_attribute {
     mccmnc_tuple: "732130"
+    mccmnc_tuple: "732360"
   }
 }
 carrier_id {
@@ -5868,6 +5868,7 @@ carrier_id {
     mccmnc_tuple: "311487"
     mccmnc_tuple: "311488"
     mccmnc_tuple: "311489"
+    mccmnc_tuple: "310590"
   }
 }
 carrier_id {
@@ -6682,7 +6683,6 @@ carrier_id {
     mccmnc_tuple: "310800"
     mccmnc_tuple: "310660"
     mccmnc_tuple: "310640"
-    mccmnc_tuple: "310590"
     mccmnc_tuple: "310530"
     mccmnc_tuple: "310490"
     mccmnc_tuple: "310310"
@@ -8330,25 +8330,21 @@ carrier_id {
   canonical_id: 2143
   carrier_name: "Truphone"
   carrier_attribute {
+    mccmnc_tuple: "20404"
+    mccmnc_tuple: "20408"
     mccmnc_tuple: "20433"
+    mccmnc_tuple: "20809"
+    mccmnc_tuple: "20812"
     mccmnc_tuple: "21427"
     mccmnc_tuple: "23425"
     mccmnc_tuple: "26033"
     mccmnc_tuple: "26242"
-    mccmnc_tuple: "31030"
+    mccmnc_tuple: "310300"
+    mccmnc_tuple: "310690"
+    mccmnc_tuple: "45400"
+    mccmnc_tuple: "45408"
     mccmnc_tuple: "50538"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "20404"
-    imsi_prefix_xpattern: "204043914"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "23450"
-    imsi_prefix_xpattern: "234500008"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "50502"
-    imsi_prefix_xpattern: "50502100"
+    gid1: "547275554b3030656e"
   }
 }
 carrier_id {
@@ -10357,6 +10353,10 @@ carrier_id {
     mccmnc_tuple: "312530"
     gid1: "000006"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "1A53"
+  }
 }
 carrier_id {
   canonical_id: 2434
@@ -10399,9 +10399,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2439
-  carrier_name: "3 Digital"
+  carrier_name: "VERY"
   carrier_attribute {
     mccmnc_tuple: "22288"
+    mccmnc_tuple: "22299"
     gid1: "0000000099"
   }
 }
@@ -10979,6 +10980,18 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2512
+  carrier_name: "Goodspeed"
+  carrier_attribute {
+    mccmnc_tuple: "24042"
+    gid1: "C5"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23203"
+    gid1: "C5"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11235,4 +11248,22 @@ carrier_id {
   }
   parent_canonical_id: 1802
 }
-version: 50331657
+carrier_id {
+  canonical_id: 10025
+  carrier_name: "Rogers 5G"
+  carrier_attribute {
+    mccmnc_tuple: "302720"
+    gid1: "A4"
+  }
+  parent_canonical_id: 1403
+}
+carrier_id {
+  canonical_id: 10026
+  carrier_name: "DOCOMO ahamo"
+  carrier_attribute {
+    mccmnc_tuple: "44010"
+    gid1: "01FFFF"
+  }
+  parent_canonical_id: 850
+}
+version: 50331659
