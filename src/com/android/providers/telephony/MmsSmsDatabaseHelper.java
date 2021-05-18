@@ -295,7 +295,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         setWriteAheadLoggingEnabled(false);
         try {
-            PhoneFactory.addLocalLog(TAG, 100);
+            PhoneFactory.addLocalLog(TAG, 64);
         } catch (IllegalArgumentException e) {
             // ignore
         }

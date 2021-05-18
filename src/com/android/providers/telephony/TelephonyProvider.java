@@ -2848,7 +2848,7 @@ public class TelephonyProvider extends ContentProvider
         mOpenHelper = new DatabaseHelper(getContext());
 
         try {
-            PhoneFactory.addLocalLog(TAG, 100);
+            PhoneFactory.addLocalLog(TAG, 64);
         } catch (IllegalArgumentException e) {
             // ignore
         }
