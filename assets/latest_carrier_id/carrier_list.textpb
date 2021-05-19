@@ -10992,6 +10992,38 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2513
+  carrier_name: "EURO INFORMATION TELECOM"
+  carrier_attribute {
+    mccmnc_tuple: "20601"
+    gid1: "4E524A31"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20801"
+    gid1: "4E524A31"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20826"
+    gid1: "4E524A31"
+  }
+}
+carrier_id {
+  canonical_id: 2514
+  carrier_name: "povo"
+  carrier_attribute {
+    mccmnc_tuple: "44051"
+    gid1: "26"
+  }
+}
+carrier_id {
+  canonical_id: 2515
+  carrier_name: "J:COM MOBILE"
+  carrier_attribute {
+    mccmnc_tuple: "44051"
+    gid1: "22"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11266,4 +11298,13 @@ carrier_id {
   }
   parent_canonical_id: 850
 }
-version: 50331659
+carrier_id {
+  canonical_id: 10027
+  carrier_name: "Softbank linemo"
+  carrier_attribute {
+    mccmnc_tuple: "44020"
+    gid1: "48FFFF"
+  }
+  parent_canonical_id: 1894
+}
+version: 50331660
