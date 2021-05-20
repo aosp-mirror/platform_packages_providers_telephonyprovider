@@ -3339,6 +3339,9 @@ carrier_id {
     mccmnc_tuple: "73001"
     mccmnc_tuple: "73010"
   }
+  carrier_attribute {
+    mccmnc_tuple: "73026"
+  }
 }
 carrier_id {
   canonical_id: 1428
@@ -6880,6 +6883,15 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "334050"
   }
+  carrier_attribute {
+    mccmnc_tuple: "334040"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "334070"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "334080"
+  }
 }
 carrier_id {
   canonical_id: 1916
@@ -7593,7 +7605,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1986
-  carrier_name: "Tele2"
+  carrier_name: "Tele2/Altel"
   carrier_attribute {
     mccmnc_tuple: "40177"
   }
@@ -10594,6 +10606,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "26201"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+  }
 }
 carrier_id {
   canonical_id: 2396
@@ -11400,6 +11415,27 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2509
+  carrier_name: "Evolve"
+  carrier_attribute {
+    mccmnc_tuple: "310990"
+  }
+}
+carrier_id {
+  canonical_id: 2510
+  carrier_name: "Melita"
+  carrier_attribute {
+    mccmnc_tuple: "27877"
+  }
+}
+carrier_id {
+  canonical_id: 2511
+  carrier_name: "Kena"
+  carrier_attribute {
+    mccmnc_tuple: "22207"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11642,4 +11678,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 11
+version: 12

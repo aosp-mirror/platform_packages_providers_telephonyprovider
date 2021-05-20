@@ -14,4 +14,11 @@
          If this value is empty or unparsable, we will apply APNs from the APN
          conf xml file.  -->
     <string name="apn_source_service" translatable="false"></string>
+
+    <!-- Countries, in iso country code format, where wfc entitlement is
+         required-->
+    <string-array name="wfc_entitlement_required_countries">
+        <item>us</item>
+        <item>ca</item>
+    </string-array>
 </resources>
