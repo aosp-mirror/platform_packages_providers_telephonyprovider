@@ -15,9 +15,10 @@
          conf xml file.  -->
     <string name="apn_source_service" translatable="false"></string>
 
-    <!-- Countries, in iso country code format, where wfc entitlement is
-         required-->
-    <string-array name="wfc_entitlement_required_countries">
+    <!-- Countries, in iso country code format, where WFC entitlement or
+         other user action is required before user can turn on WFC setting,
+         hence WFC setting should not be restored automatically. -->
+    <string-array name="wfc_restore_blocked_countries" translatable="false">
         <item>us</item>
         <item>ca</item>
     </string-array>
