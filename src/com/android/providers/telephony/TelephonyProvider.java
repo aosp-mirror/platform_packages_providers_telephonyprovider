@@ -111,6 +111,7 @@ import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
+import android.util.AtomicFile;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
@@ -3194,10 +3195,17 @@ public class TelephonyProvider extends ContentProvider
 
     @VisibleForTesting
     boolean writeSimSettingsToInternalStorage(byte[] data) {
-        File file = new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
-        try (FileOutputStream fos = new FileOutputStream(file)) {
+        AtomicFile atomicFile = new AtomicFile(
+                new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE));
+        FileOutputStream fos = null;
+        try {
+            fos = atomicFile.startWrite();
             fos.write(data);
+            atomicFile.finishWrite(fos);
         } catch (IOException e) {
+            if (fos != null) {
+                atomicFile.failWrite(fos);
+            }
             loge("Not able to create internal file with per-sim configs. Failed with error "
                     + e);
             return false;
@@ -3224,8 +3232,9 @@ public class TelephonyProvider extends ContentProvider
             return;
         }
 
+        AtomicFile atomicFile = new AtomicFile(file);
         PersistableBundle bundle = null;
-        try (FileInputStream fis = new FileInputStream(file)) {
+        try (FileInputStream fis = atomicFile.openRead()) {
             bundle = PersistableBundle.readFromStream(fis);
         } catch (IOException e) {
             loge("Failed to convert backed up per-sim configs to bundle. Stopping restore. "
