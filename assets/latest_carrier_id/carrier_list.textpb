@@ -2773,6 +2773,7 @@ carrier_id {
     mccmnc_tuple: "72402"
     mccmnc_tuple: "72403"
     mccmnc_tuple: "72404"
+    mccmnc_tuple: "72454"
   }
 }
 carrier_id {
@@ -7242,14 +7243,18 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2005
-  carrier_name: "NRJ Mobile"
+  carrier_name: "EURO INFORMATION TELECOM"
   carrier_attribute {
-    mccmnc_tuple: "20826"
+    mccmnc_tuple: "20601"
+    gid1: "4E524A31"
   }
   carrier_attribute {
     mccmnc_tuple: "20801"
-    mccmnc_tuple: "20810"
-    gid1: "4E"
+    gid1: "4E524A31"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20826"
+    gid1: "4E524A31"
   }
 }
 carrier_id {
@@ -8849,13 +8854,6 @@ carrier_id {
   carrier_name: "switch"
   carrier_attribute {
     mccmnc_tuple: "64902"
-  }
-}
-carrier_id {
-  canonical_id: 2215
-  carrier_name: "Porto Seguro TeleComumicacoes"
-  carrier_attribute {
-    mccmnc_tuple: "72454"
   }
 }
 carrier_id {
@@ -10992,22 +10990,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2513
-  carrier_name: "EURO INFORMATION TELECOM"
-  carrier_attribute {
-    mccmnc_tuple: "20601"
-    gid1: "4E524A31"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "20801"
-    gid1: "4E524A31"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "20826"
-    gid1: "4E524A31"
-  }
-}
-carrier_id {
   canonical_id: 2514
   carrier_name: "povo"
   carrier_attribute {
@@ -11021,6 +11003,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44051"
     gid1: "22"
+  }
+}
+carrier_id {
+  canonical_id: 2516
+  carrier_name: "HMD Connect Pro"
+  carrier_attribute {
+    mccmnc_tuple: "22201"
+    spn: "hmd connect"
   }
 }
 carrier_id {
@@ -11307,4 +11297,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331660
+version: 50331661
