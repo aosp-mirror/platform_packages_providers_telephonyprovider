@@ -54,16 +54,16 @@ public class CarrierProviderTest extends TestCase {
     private MockContentResolver mContentResolver;
     private CarrierProviderTestable mCarrierProviderTestable;
 
-    public static final int dummy_type = 1;
-    public static final String dummy_mnc = "MNC001";
-    public static final String dummy_mnc2 = "MNC002";
-    public static final String dummy_mcc = "MCC005";
-    public static final String dummy_key1 = "PUBKEY1";
-    public static final String dummy_key2 = "PUBKEY2";
-    public static final String dummy_mvno_type = "100";
-    public static final String dummy_mvno_match_data = "101";
-    public static final String  dummy_key_identifier_data = "key_identifier1";
-    public static final long  dummy_key_expiration = 1496795015L;
+    public static final int test_type = 1;
+    public static final String test_mnc = "MNC001";
+    public static final String test_mnc2 = "MNC002";
+    public static final String test_mcc = "MCC005";
+    public static final String test_key1 = "PUBKEY1";
+    public static final String test_key2 = "PUBKEY2";
+    public static final String test_mvno_type = "100";
+    public static final String test_mvno_match_data = "101";
+    public static final String  test_key_identifier_data = "key_identifier1";
+    public static final long  test_key_expiration = 1496795015L;
 
 
     /**
@@ -144,14 +144,14 @@ public class CarrierProviderTest extends TestCase {
     public void testInsertCertificates() {
         int count = -1;
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
-        contentValues.put(CarrierDatabaseHelper.MCC, dummy_mcc);
-        contentValues.put(CarrierDatabaseHelper.MNC, dummy_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
-        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, dummy_key_identifier_data);
-        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key1.getBytes());
-        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, dummy_key_expiration);
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
+        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
+        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, test_key_expiration);
 
         try {
             mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
@@ -180,14 +180,14 @@ public class CarrierProviderTest extends TestCase {
     public void testUpdateCertificates() {
         String key = null;
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
-        contentValues.put(CarrierDatabaseHelper.MCC, dummy_mcc);
-        contentValues.put(CarrierDatabaseHelper.MNC, dummy_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
-        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, dummy_key_identifier_data);
-        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key1.getBytes());
-        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, dummy_key_expiration);
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
+        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
+        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, test_key_expiration);
 
         try {
             mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
@@ -197,10 +197,10 @@ public class CarrierProviderTest extends TestCase {
 
         try {
             ContentValues updatedValues = new ContentValues();
-            updatedValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key2);
+            updatedValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key2);
             mContentResolver.update(CarrierProvider.CONTENT_URI, updatedValues,
-                    "mcc=? and mnc=? and key_type=?", new String[] { dummy_mcc, dummy_mnc,
-                            String.valueOf(dummy_type) });
+                    "mcc=? and mnc=? and key_type=?", new String[] { test_mcc, test_mnc,
+                            String.valueOf(test_type) });
         } catch (Exception e) {
             Log.d(TAG, "Error updating values:" + e);
         }
@@ -209,13 +209,13 @@ public class CarrierProviderTest extends TestCase {
             String[] columns ={CarrierDatabaseHelper.PUBLIC_KEY};
             Cursor findEntry = mContentResolver.query(CarrierProvider.CONTENT_URI, columns,
                     "mcc=? and mnc=? and key_type=?",
-                    new String[] { dummy_mcc, dummy_mnc, String.valueOf(dummy_type) }, null);
+                    new String[] { test_mcc, test_mnc, String.valueOf(test_type) }, null);
             findEntry.moveToFirst();
             key = findEntry.getString(0);
         } catch (Exception e) {
             Log.d(TAG, "Query failed:" + e);
         }
-        assertEquals(key, dummy_key2);
+        assertEquals(key, test_key2);
     }
 
     /**
@@ -226,22 +226,22 @@ public class CarrierProviderTest extends TestCase {
     public void testMultipleCertificates() {
         int count = -1;
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
-        contentValues.put(CarrierDatabaseHelper.MCC, dummy_mcc);
-        contentValues.put(CarrierDatabaseHelper.MNC, dummy_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
-        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, dummy_key_identifier_data);
-        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key1.getBytes());
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
+        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
 
         ContentValues contentValuesNew = new ContentValues();
-        contentValuesNew.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
-        contentValuesNew.put(CarrierDatabaseHelper.MCC, dummy_mcc);
-        contentValuesNew.put(CarrierDatabaseHelper.MNC, dummy_mnc2);
-        contentValuesNew.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
-        contentValuesNew.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
-        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, dummy_key_identifier_data);
-        contentValuesNew.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key2.getBytes());
+        contentValuesNew.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValuesNew.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValuesNew.put(CarrierDatabaseHelper.MNC, test_mnc2);
+        contentValuesNew.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
+        contentValuesNew.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValuesNew.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key2.getBytes());
 
         try {
             mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
@@ -270,12 +270,12 @@ public class CarrierProviderTest extends TestCase {
     @Test(expected = SQLException.class)
     public void testDuplicateFailure() {
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
-        contentValues.put(CarrierDatabaseHelper.MCC, dummy_mcc);
-        contentValues.put(CarrierDatabaseHelper.MNC, dummy_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
-        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key1.getBytes());
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
+        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
 
         try {
             mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
@@ -297,14 +297,14 @@ public class CarrierProviderTest extends TestCase {
     public void testDelete() {
         int numRowsDeleted = -1;
         ContentValues contentValues = new ContentValues();
-        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, dummy_type);
-        contentValues.put(CarrierDatabaseHelper.MCC, dummy_mcc);
-        contentValues.put(CarrierDatabaseHelper.MNC, dummy_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, dummy_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, dummy_mvno_match_data);
-        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, dummy_key_identifier_data);
-        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, dummy_key1.getBytes());
-        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, dummy_key_expiration);
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
+        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
+        contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, test_key_expiration);
 
         try {
             mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
@@ -314,7 +314,7 @@ public class CarrierProviderTest extends TestCase {
 
         try {
             String whereClause = "mcc=? and mnc=?";
-            String[] whereArgs = new String[] { dummy_mcc, dummy_mnc };
+            String[] whereArgs = new String[] { test_mcc, test_mnc };
             numRowsDeleted = mContentResolver.delete(CarrierProvider.CONTENT_URI, whereClause, whereArgs);
         } catch (Exception e) {
             Log.d(TAG, "Error updating values:" + e);
