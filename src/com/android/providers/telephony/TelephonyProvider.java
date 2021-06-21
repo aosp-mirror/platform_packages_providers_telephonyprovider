@@ -71,6 +71,7 @@ import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
 
 import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.app.compat.CompatChanges;
 import android.content.ComponentName;
 import android.content.ContentProvider;
@@ -94,20 +95,23 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.IBinder;
+import android.os.PersistableBundle;
 import android.os.Process;
 import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
-import android.telephony.Annotation;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
+import android.telephony.TelephonyProtoEnums;
 import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+import android.util.ArraySet;
+import android.util.AtomicFile;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
@@ -115,6 +119,7 @@ import android.util.Xml;
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneFactory;
+import com.android.internal.telephony.TelephonyStatsLog;
 import com.android.internal.util.XmlUtils;
 import android.service.carrier.IApnSourceService;
 
@@ -125,9 +130,11 @@ import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.lang.Integer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -137,6 +144,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.CRC32;
 
@@ -147,7 +155,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 45 << 16;
+    private static final int DATABASE_VERSION = 51 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -169,6 +177,9 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_FILTERED = 18;
     private static final int URL_FILTERED_ID = 19;
     private static final int URL_ENFORCE_MANAGED = 20;
+    // URL_PREFERAPNSET and URL_PREFERAPNSET_USING_SUBID return all APNs for the current
+    // carrier which have an apn_set_id equal to the preferred APN
+    // (if no preferred APN, or preferred APN has no set id, the query will return null)
     private static final int URL_PREFERAPNSET = 21;
     private static final int URL_PREFERAPNSET_USING_SUBID = 22;
     private static final int URL_SIM_APN_LIST = 23;
@@ -176,6 +187,8 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_FILTERED_USING_SUBID = 25;
     private static final int URL_SIM_APN_LIST_FILTERED = 26;
     private static final int URL_SIM_APN_LIST_FILTERED_ID = 27;
+    private static final int URL_SIMINFO_SUW_RESTORE = 28;
+    private static final int URL_SIMINFO_SIM_INSERTED_RESTORE = 29;
 
     /**
      * Default value for mtu if it's not set. Moved from PhoneConstants.
@@ -241,6 +254,19 @@ public class TelephonyProvider extends ContentProvider
     private static final String ORDER_BY_SUB_ID =
             Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + " ASC";
 
+    @VisibleForTesting
+    static final String BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE = "sim_specific_settings_file";
+    // Holds names and value types of SimInfoDb columns to backup.
+    private static final Map<String, Integer> SIM_INFO_COLUMNS_TO_BACKUP = new HashMap();
+    private static final String KEY_SIMINFO_DB_ROW_PREFIX = "KEY_SIMINFO_DB_ROW_";
+    private static final int DEFAULT_INT_COLUMN_VALUE = -111;
+    private static final String DEFAULT_STRING_COLUMN_VALUE = "DEFAULT_STRING_COLUMN_VALUE";
+    private static final String SIM_INSERTED_RESTORE_URI_SUFFIX = "sim_inserted_restore";
+    @VisibleForTesting
+    static final String KEY_BACKUP_DATA_FORMAT_VERSION = "KEY_BACKUP_DATA_FORMAT_VERSION";
+    @VisibleForTesting
+    static final String KEY_PREVIOUSLY_RESTORED_SUB_IDS = "KEY_PREVIOUSLY_RESTORED_SUB_IDS";
+
     private static final int INVALID_APN_ID = -1;
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
     private static final Set<String> CARRIERS_BOOLEAN_FIELDS = new HashSet<String>();
@@ -255,6 +281,40 @@ public class TelephonyProvider extends ContentProvider
     private Injector mInjector;
 
     private boolean mManagedApnEnforced;
+
+    /**
+     * Mobile country codes where there is a high likelyhood that the MNC has 3 digits
+     * and need one more prefix zero to set correct mobile network code value.
+     *
+     * Please note! The best solution is to add the MCCMNC combo to carrier id
+     * carrier_list, this is just a best effort.
+     */
+    private static final String[] COUNTRY_MCC_WITH_THREE_DIGIT_MNC = {
+            "302" // Canada
+           ,"310" // Guam, USA
+           ,"311" // USA
+           ,"312" // USA
+           ,"313" // USA
+           ,"316" // USA
+           ,"334" // Mexico
+           ,"338" // Bermuda, Jamaica
+           ,"342" // Barbados
+           ,"344" // Antigua and Barbuda
+           ,"346" // Cayman Islands
+           ,"348" // British Virgin Islands
+           ,"356" // Saint Kitts and Nevis
+           ,"358" // Saint Lucia
+           ,"360" // Saint Vincent and the Grenadines
+           ,"365" // Anguilla
+           ,"366" // Dominica
+           ,"376" // Turks and Caicos Islands
+           ,"405" // India
+           ,"708" // Honduras
+           ,"722" // Argentina
+           ,"732" // Colombia
+           ,"738" // Guyana
+           ,"750" // Falkland Islands
+            };
 
     /**
      * Available radio technologies for GSM, UMTS and CDMA.
@@ -349,6 +409,37 @@ public class TelephonyProvider extends ContentProvider
         MVNO_TYPE_STRING_MAP.put("imsi", ApnSetting.MVNO_TYPE_IMSI);
         MVNO_TYPE_STRING_MAP.put("gid", ApnSetting.MVNO_TYPE_GID);
         MVNO_TYPE_STRING_MAP.put("iccid", ApnSetting.MVNO_TYPE_ICCID);
+
+        // To B&R a new config, simply add the column name and its appropriate value type to
+        // SIM_INFO_COLUMNS_TO_BACKUP. To no longer B&R a column, simply remove it from
+        // SIM_INFO_COLUMNS_TO_BACKUP. For both cases, add appropriate versioning logic in
+        // convertBackedUpDataToContentValues(ContentValues contenValues)
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_ICC_ID, Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_NUMBER, Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+            Telephony.SimInfo.COLUMN_CARRIER_ID, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+            Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_VT_IMS_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_WFC_IMS_MODE, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                Cursor.FIELD_TYPE_STRING);
+
     }
 
     @VisibleForTesting
@@ -467,7 +558,13 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_IMSI + " TEXT,"
                 + Telephony.SimInfo.COLUMN_UICC_APPLICATIONS_ENABLED + " INTEGER DEFAULT 1,"
                 + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES + " BIGINT DEFAULT -1,"
-                + Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0"
+                + Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB,"
+                + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT"
                 + ");";
     }
 
@@ -482,6 +579,11 @@ public class TelephonyProvider extends ContentProvider
 
         s_urlMatcher.addURI("telephony", "siminfo", URL_SIMINFO);
         s_urlMatcher.addURI("telephony", "siminfo/#", URL_SIMINFO_USING_SUBID);
+        s_urlMatcher.addURI("telephony", "siminfo/backup_and_restore/suw_restore",
+                URL_SIMINFO_SUW_RESTORE);
+        s_urlMatcher.addURI("telephony", "siminfo/backup_and_restore/" +
+                SIM_INSERTED_RESTORE_URI_SUFFIX,
+                URL_SIMINFO_SIM_INSERTED_RESTORE);
 
         s_urlMatcher.addURI("telephony", "carriers/subId/*", URL_TELEPHONY_USING_SUBID);
         s_urlMatcher.addURI("telephony", "carriers/current/subId/*", URL_CURRENT_USING_SUBID);
@@ -749,7 +851,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     XmlUtils.beginDocument(parser, "apns");
                     publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
-                    loadApns(db, parser);
+                    loadApns(db, parser, true);
                 } catch (Exception e) {
                     loge("Got exception while loading APN database." + e);
                 } finally {
@@ -771,7 +873,7 @@ public class TelephonyProvider extends ContentProvider
                 confparser.setInput(confreader);
                 XmlUtils.beginDocument(confparser, "apns");
 
-                // Sanity check. Force internal version and confidential versions to agree
+                // Correctness check. Force internal version and confidential versions to agree
                 int confversion = Integer.parseInt(confparser.getAttributeValue(null, "version"));
                 if (publicversion != confversion) {
                     log("initDatabase: throwing exception due to version mismatch");
@@ -779,7 +881,7 @@ public class TelephonyProvider extends ContentProvider
                             + confFile.getAbsolutePath());
                 }
 
-                loadApns(db, confparser);
+                loadApns(db, confparser, false);
             } catch (FileNotFoundException e) {
                 // It's ok if the file isn't found. It means there isn't a confidential file
                 // Log.e(TAG, "File not found: '" + confFile.getAbsolutePath() + "'");
@@ -1481,6 +1583,111 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 45 << 16 | 6;
             }
 
+            if (oldVersion < (46 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 46 << 16 | 6;
+            }
+
+            if (oldVersion < (47 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_RCS_CONFIG
+                            + " BLOB;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 47 << 16 | 6;
+            }
+
+            if (oldVersion < (48 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS
+                            + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                try {
+                    // Migrate the old Long values over to String
+                    String[] proj = {Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                            Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES};
+                    try (Cursor c = db.query(SIMINFO_TABLE, proj, null, null, null, null, null)) {
+                        while (c.moveToNext()) {
+                            fillInAllowedNetworkTypesStringAtCursor(db, c);
+                        }
+                    }
+
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("can't migrate value from COLUMN_ALLOWED_NETWORK_TYPES to "
+                                + "COLUMN_ALLOWED_NETWORK_TYPES_ALL_REASON");
+                    }
+                }
+                oldVersion = 48 << 16 | 6;
+            }
+
+            if (oldVersion < (49 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. "
+                                + "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 49 << 16 | 6;
+            }
+
+            if (oldVersion < (50 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add d2d status sharing column. ");
+                    }
+                }
+                oldVersion = 50 << 16 | 6;
+            }
+
+            if (oldVersion < (51 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALERT TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS
+                            + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add d2d status sharing contacts. ");
+                    }
+                }
+                oldVersion = 51 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -1666,7 +1873,7 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     XmlUtils.nextElement(parser);
                     while (parser.getEventType() != XmlPullParser.END_DOCUMENT) {
-                        ContentValues row = getRow(parser);
+                        ContentValues row = getRow(parser, false);
                         if (row == null) {
                             throw new XmlPullParserException("Expected 'apn' tag", parser, null);
                         }
@@ -2010,7 +2217,7 @@ public class TelephonyProvider extends ContentProvider
             int columnIndex = c.getColumnIndex(key);
             if (columnIndex != -1) {
                 String fromCursor = c.getString(columnIndex);
-                if (!TextUtils.isEmpty(fromCursor)) {
+                if (fromCursor != null) {
                     cv.put(key, fromCursor);
                 }
             }
@@ -2073,9 +2280,10 @@ public class TelephonyProvider extends ContentProvider
          * Gets the next row of apn values.
          *
          * @param parser the parser
+         * @param isOverlay If the xml file comes from an overlay MCC/MNC are treated as integers
          * @return the row or null if it's not an apn
          */
-        private ContentValues getRow(XmlPullParser parser) {
+        private ContentValues getRow(XmlPullParser parser, boolean isOverlay) {
             if (!"apn".equals(parser.getName())) {
                 return null;
             }
@@ -2084,11 +2292,21 @@ public class TelephonyProvider extends ContentProvider
 
             String mcc = parser.getAttributeValue(null, "mcc");
             String mnc = parser.getAttributeValue(null, "mnc");
-            String numeric = mcc + mnc;
+            String mccString = mcc;
+            String mncString = mnc;
+            // Since an mnc can have both two and three digits and it is hard to verify
+            // all OEM's Global APN lists we only do this for overlays.
+            if (isOverlay) {
+                mccString = String.format("%03d", Integer.parseInt(mcc));
+                // Looks up a two digit mnc in the carrier id DB
+                // if not found a three digit mnc value is chosen
+                mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
+            }
 
+            String numeric = mccString + mncString;
             map.put(NUMERIC, numeric);
-            map.put(MCC, mcc);
-            map.put(MNC, mnc);
+            map.put(MCC, mccString);
+            map.put(MNC, mncString);
             map.put(NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
@@ -2157,7 +2375,6 @@ public class TelephonyProvider extends ContentProvider
                     map.put(MVNO_MATCH_DATA, mvno_match_data);
                 }
             }
-
             return map;
         }
 
@@ -2190,15 +2407,15 @@ public class TelephonyProvider extends ContentProvider
          *
          * @param db the sqlite database to write to
          * @param parser the xml parser
-         *
+         * @param isOverlay, if we are parsing an xml in an overlay
          */
-        private void loadApns(SQLiteDatabase db, XmlPullParser parser) {
+        private void loadApns(SQLiteDatabase db, XmlPullParser parser, boolean isOverlay) {
             if (parser != null) {
                 try {
                     db.beginTransaction();
                     XmlUtils.nextElement(parser);
                     while (parser.getEventType() != XmlPullParser.END_DOCUMENT) {
-                        ContentValues row = getRow(parser);
+                        ContentValues row = getRow(parser, isOverlay);
                         if (row == null) {
                             throw new XmlPullParserException("Expected 'apn' tag", parser, null);
                         }
@@ -2621,8 +2838,10 @@ public class TelephonyProvider extends ContentProvider
                 r.getString(R.string.apn_source_service)));
         log("binding to service to restore apns, intent=" + intent);
         try {
-            if (context.bindService(intent, connection, Context.BIND_IMPORTANT |
-                        Context.BIND_AUTO_CREATE)) {
+            if (context.bindService(intent,
+                    Context.BIND_IMPORTANT | Context.BIND_AUTO_CREATE,
+                    runnable -> new Thread(runnable).start(),
+                    connection)) {
                 synchronized (mLock) {
                     while (mIApnSourceService == null && !connectionBindingInvalid.get()) {
                         try {
@@ -2675,10 +2894,10 @@ public class TelephonyProvider extends ContentProvider
 
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
+        SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
+                Context.MODE_PRIVATE);
         if (!TextUtils.isEmpty(newBuildId)) {
             // Check if build id has changed
-            SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
-                    Context.MODE_PRIVATE);
             String oldBuildId = sp.getString(RO_BUILD_ID, "");
             if (!newBuildId.equals(oldBuildId)) {
                 localLog("onCreate: build id changed from " + oldBuildId + " to " + newBuildId);
@@ -2686,7 +2905,6 @@ public class TelephonyProvider extends ContentProvider
             } else {
                 if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
             }
-            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
         } else {
             if (VDBG) log("onCreate: newBuildId is empty");
         }
@@ -2701,9 +2919,15 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) addAllApnSharedPrefToLocalLog();
         }
 
-        SharedPreferences sp = getContext().getSharedPreferences(ENFORCED_FILE,
+        // Write build id to SharedPreferences after APNs have been updated above by updateApnDb()
+        if (!TextUtils.isEmpty(newBuildId)) {
+            if (isNewBuild) log("onCreate: updating build id to " + newBuildId);
+            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
+        }
+
+        SharedPreferences spEnforcedFile = getContext().getSharedPreferences(ENFORCED_FILE,
                 Context.MODE_PRIVATE);
-        mManagedApnEnforced = sp.getBoolean(ENFORCED_KEY, false);
+        mManagedApnEnforced = spEnforcedFile.getBoolean(ENFORCED_KEY, false);
 
         if (VDBG) log("onCreate:- ret true");
 
@@ -2911,6 +3135,533 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
+    public synchronized Bundle call(String method, @Nullable String args, @Nullable Bundle bundle) {
+        if (SubscriptionManager.GET_SIM_SPECIFIC_SETTINGS_METHOD_NAME.equals(method)) {
+            getContext().enforceCallingOrSelfPermission(
+                    android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE, TAG);
+            final long identity = Binder.clearCallingIdentity();
+            try {
+                return retrieveSimSpecificSettings();
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        } else if (SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME.equals(method)) {
+            getContext().enforceCallingOrSelfPermission(
+                    android.Manifest.permission.MODIFY_PHONE_STATE, TAG);
+            final long identity = Binder.clearCallingIdentity();
+            try {
+                restoreSimSpecificSettings(bundle, args);
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+        } else {
+            loge("method is not recognized");
+        }
+
+        return null;
+    }
+
+    /**
+     * See {@link SubscriptionController#GET_SIM_SPECIFIC_SETTINGS_METHOD_NAME} for details
+     */
+    private Bundle retrieveSimSpecificSettings() {
+        Bundle resultBundle = new Bundle();
+        resultBundle.putByteArray(SubscriptionManager.KEY_SIM_SPECIFIC_SETTINGS_DATA,
+                getSimSpecificDataToBackUp());
+
+        return resultBundle;
+    }
+
+    /**
+     * Attempts to restore the backed up sim-specific configs to device. End result is SimInfoDB is
+     * modified to match any backed up configs for the appropriate inserted sims.
+     *
+     * @param bundle containing the data to be restored. If {@code null}, then backed up
+     * data should already be in internal storage and will be retrieved from there.
+     * @param iccId of the SIM that a restore is being attempted for. If {@code null}, then try to
+     * restore for all simInfo entries in SimInfoDB
+     */
+    private void restoreSimSpecificSettings(@Nullable Bundle bundle, @Nullable String iccId) {
+        int restoreCase = TelephonyProtoEnums.SIM_RESTORE_CASE_UNDEFINED_USE_CASE;
+        if (bundle != null) {
+            restoreCase = TelephonyProtoEnums.SIM_RESTORE_CASE_SUW;
+            if (!writeSimSettingsToInternalStorage(
+                    bundle.getByteArray(SubscriptionManager.KEY_SIM_SPECIFIC_SETTINGS_DATA))) {
+                return;
+            }
+        } else if (iccId != null){
+            restoreCase = TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED;
+        }
+        mergeBackedUpDataToSimInfoDb(restoreCase, iccId);
+    }
+
+    @VisibleForTesting
+    boolean writeSimSettingsToInternalStorage(byte[] data) {
+        AtomicFile atomicFile = new AtomicFile(
+                new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE));
+        FileOutputStream fos = null;
+        try {
+            fos = atomicFile.startWrite();
+            fos.write(data);
+            atomicFile.finishWrite(fos);
+        } catch (IOException e) {
+            if (fos != null) {
+                atomicFile.failWrite(fos);
+            }
+            loge("Not able to create internal file with per-sim configs. Failed with error "
+                    + e);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Attempt to match any SimInfoDB entries to what is in the internal backup data file and
+     * update DB entry with the adequate backed up data.
+     *
+     * @param restoreCase one of the SimSpecificSettingsRestoreMatchingCriteria values defined in
+     * frameworks/proto_logging/stats/enums/telephony/enums.proto
+     * @param iccId of the SIM that a restore is being attempted for. If {@code null}, then try to
+     * restore for all simInfo entries in SimInfoDB
+     */
+    private void mergeBackedUpDataToSimInfoDb(int restoreCase, @Nullable String iccId) {
+        // Get data stored in internal file
+        File file = new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
+        if (!file.exists()) {
+            loge("internal sim-specific settings backup data file does not exist. "
+                + "Aborting restore");
+            return;
+        }
+
+        AtomicFile atomicFile = new AtomicFile(file);
+        PersistableBundle bundle = null;
+        try (FileInputStream fis = atomicFile.openRead()) {
+            bundle = PersistableBundle.readFromStream(fis);
+        } catch (IOException e) {
+            loge("Failed to convert backed up per-sim configs to bundle. Stopping restore. "
+                + "Failed with error " + e);
+            return;
+        }
+
+        String selection = null;
+        String[] selectionArgs = null;
+        if (iccId != null) {
+            selection = Telephony.SimInfo.COLUMN_ICC_ID + "=?";
+            selectionArgs = new String[]{iccId};
+        }
+        try (Cursor cursor = query(
+                SubscriptionManager.CONTENT_URI,
+                new String[]{
+                        Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                        Telephony.SimInfo.COLUMN_ICC_ID,
+                        Telephony.SimInfo.COLUMN_NUMBER,
+                        Telephony.SimInfo.COLUMN_CARRIER_ID,
+                        Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE},
+                selection,
+                selectionArgs,
+                ORDER_BY_SUB_ID)) {
+            findAndRestoreAllMatches(bundle.deepCopy(), cursor, restoreCase);
+        }
+    }
+
+    // backedUpDataBundle must to be mutable
+    private void findAndRestoreAllMatches(PersistableBundle backedUpDataBundle, Cursor cursor,
+            int restoreCase) {
+        int[] previouslyRestoredSubIdsArray =
+                backedUpDataBundle.getIntArray(KEY_PREVIOUSLY_RESTORED_SUB_IDS);
+        List<Integer> previouslyRestoredSubIdsList = previouslyRestoredSubIdsArray != null
+                ? Arrays.stream(previouslyRestoredSubIdsArray).boxed().collect(Collectors.toList())
+                : new ArrayList<>();
+        List<Integer> newlyRestoredSubIds = new ArrayList<>();
+        int backupDataFormatVersion = backedUpDataBundle
+                .getInt(KEY_BACKUP_DATA_FORMAT_VERSION, -1);
+
+        Resources r = getContext().getResources();
+        List<String> wfcRestoreBlockedCountries = Arrays.asList(r.getStringArray(
+                    R.array.wfc_restore_blocked_countries));
+
+        while (cursor != null && cursor.moveToNext()) {
+            // Get all the possible matching criteria.
+            int subIdColumnIndex = cursor.getColumnIndex(
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID);
+            int currSubIdFromDb = cursor.getInt(subIdColumnIndex);
+
+            if (previouslyRestoredSubIdsList.contains(currSubIdFromDb)) {
+                // Abort restore for any sims that were previously restored.
+                continue;
+            }
+
+            int iccIdColumnIndex = cursor.getColumnIndex(Telephony.SimInfo.COLUMN_ICC_ID);
+            String currIccIdFromDb = cursor.getString(iccIdColumnIndex);
+
+            int phoneNumberColumnIndex = cursor.getColumnIndex(Telephony.SimInfo.COLUMN_NUMBER);
+            String currPhoneNumberFromDb = cursor.getString(phoneNumberColumnIndex);
+
+            int carrierIdColumnIndex = cursor.getColumnIndex(Telephony.SimInfo.COLUMN_CARRIER_ID);
+            int currCarrierIdFromDb = cursor.getInt(carrierIdColumnIndex);
+
+            int isoCountryCodeColumnIndex= cursor.getColumnIndex(
+                    Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE);
+            String isoCountryCodeFromDb = cursor.getString(isoCountryCodeColumnIndex);
+
+
+            // Find the best match from backed up data.
+            SimRestoreMatch bestRestoreMatch = null;
+            for (int rowNum = 0; true; rowNum++) {
+                PersistableBundle currRow = backedUpDataBundle.getPersistableBundle(
+                        KEY_SIMINFO_DB_ROW_PREFIX + rowNum);
+                if (currRow == null) {
+                    break;
+                }
+
+                SimRestoreMatch currSimRestoreMatch = new SimRestoreMatch(
+                        currIccIdFromDb, currCarrierIdFromDb, currPhoneNumberFromDb,
+                        isoCountryCodeFromDb, wfcRestoreBlockedCountries, currRow,
+                        backupDataFormatVersion);
+
+                if (currSimRestoreMatch == null) {
+                    continue;
+                }
+
+                /*
+                 * The three following match cases are ordered by descending priority:
+                 *   - Match by iccId: If iccId of backup data matches iccId of any inserted sims,
+                 *       we confidently restore all configs.
+                 *   - Match phone number and carrierId: If both of these values match, we
+                 *       confidently restore all configs.
+                 *   - Match only carrierId: If only carrierId of backup data matches an inserted
+                 *       sim, we only restore non-sensitive configs.
+                 *
+                 * Having a matchScore value for each match allows us to control these priorities.
+                 */
+                if (bestRestoreMatch == null || (currSimRestoreMatch.getMatchScore()
+                        >= bestRestoreMatch.getMatchScore()
+                        && currSimRestoreMatch.getContentValues() != null)) {
+                    bestRestoreMatch = currSimRestoreMatch;
+                }
+            }
+
+            if (bestRestoreMatch != null) {
+                if (bestRestoreMatch.getMatchScore() != 0) {
+                    if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SUW) {
+                        update(SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI,
+                                bestRestoreMatch.getContentValues(),
+                                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                                new String[]{Integer.toString(currSubIdFromDb)});
+                    } else if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED) {
+                        Uri simInsertedRestoreUri = Uri.withAppendedPath(
+                                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
+                                SIM_INSERTED_RESTORE_URI_SUFFIX);
+                        update(simInsertedRestoreUri,
+                                bestRestoreMatch.getContentValues(),
+                                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                                new String[]{Integer.toString(currSubIdFromDb)});
+                    }
+                    log("Restore of inserterd SIM's sim-specific settings has been successfully "
+                            + "completed.");
+                    TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
+                            TelephonyProtoEnums.SIM_RESTORE_RESULT_SUCCESS,
+                            restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
+                    newlyRestoredSubIds.add(currSubIdFromDb);
+                } else {
+                    TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
+                            TelephonyProtoEnums.SIM_RESTORE_RESULT_NONE_MATCH,
+                            restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
+                }
+            } else {
+                log("No matching SIM in backup data. SIM-specific settings not restored.");
+                TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
+                        TelephonyProtoEnums.SIM_RESTORE_RESULT_ZERO_SIM_IN_BACKUP,
+                        restoreCase, TelephonyProtoEnums.SIM_RESTORE_MATCHING_CRITERIA_NONE);
+            }
+        }
+
+        // Update the internal file with subIds that we just restored.
+        previouslyRestoredSubIdsList.addAll(newlyRestoredSubIds);
+        backedUpDataBundle.putIntArray(
+                KEY_PREVIOUSLY_RESTORED_SUB_IDS,
+                previouslyRestoredSubIdsList.stream().mapToInt(i -> i).toArray());
+        try (ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            backedUpDataBundle.writeToStream(outputStream);
+            writeSimSettingsToInternalStorage(outputStream.toByteArray());
+        } catch (IOException e) {
+            loge("Not able to convert SimInfoDB to byte array. Not storing which subIds were "
+                    + "restored");
+        }
+    }
+
+    private static class SimRestoreMatch {
+
+        private Set<Integer> matches = new ArraySet<>();
+        private int subId;
+        private ContentValues contentValues;
+        private int matchingCriteria;
+        private int matchScore;
+
+        private static final int ICCID_MATCH = 1;
+        private static final int PHONE_NUMBER_MATCH = 2;
+        private static final int CARRIER_ID_MATCH = 3;
+
+        public SimRestoreMatch(String iccIdFromDb, int carrierIdFromDb,
+                String phoneNumberFromDb, String isoCountryCodeFromDb,
+                List<String> wfcRestoreBlockedCountries,
+                PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
+            subId = backedUpSimInfoEntry.getInt(
+                Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
+                DEFAULT_INT_COLUMN_VALUE);
+            String iccIdFromBackup = backedUpSimInfoEntry.getString(Telephony.SimInfo.COLUMN_ICC_ID,
+                  "");
+            String phoneNumberFromBackup = backedUpSimInfoEntry.getString(
+                  Telephony.SimInfo.COLUMN_NUMBER, "");
+            int carrierIdFromBackup = backedUpSimInfoEntry.getInt(
+                  Telephony.SimInfo.COLUMN_CARRIER_ID,
+                  TelephonyManager.UNKNOWN_CARRIER_ID);
+
+
+            // find all matching fields
+            if (iccIdFromDb != null && iccIdFromDb.equals(iccIdFromBackup)
+                    && !iccIdFromBackup.isEmpty()) {
+                matches.add(ICCID_MATCH);
+            }
+            if (carrierIdFromDb == carrierIdFromBackup
+                    && carrierIdFromBackup != TelephonyManager.UNKNOWN_CARRIER_ID) {
+                matches.add(CARRIER_ID_MATCH);
+            }
+            if (phoneNumberFromDb != null && phoneNumberFromDb.equals(phoneNumberFromBackup)
+                    && !phoneNumberFromBackup.isEmpty()) {
+                matches.add(PHONE_NUMBER_MATCH);
+            }
+
+            contentValues = convertBackedUpDataToContentValues(
+                    backedUpSimInfoEntry, backupDataFormatVersion, isoCountryCodeFromDb,
+                    wfcRestoreBlockedCountries);
+            matchScore = calculateMatchScore();
+            matchingCriteria = calculateMatchingCriteria();
+        }
+
+        public int getSubId() {
+            return subId;
+        }
+
+        public ContentValues getContentValues() {
+            return contentValues;
+        }
+
+        public int getMatchScore() {
+            return matchScore;
+        }
+
+        private int calculateMatchScore() {
+            int score = 0;
+
+            if (matches.contains(ICCID_MATCH)) {
+                score += 100;
+            }
+            if (matches.contains(CARRIER_ID_MATCH)) {
+                if (matches.contains(PHONE_NUMBER_MATCH)) {
+                    score += 10;
+                } else {
+                    score += 1;
+                }
+            }
+
+            return score;
+        }
+
+        public int getMatchingCriteriaForLogging() {
+            return matchingCriteria;
+        }
+
+        private int calculateMatchingCriteria() {
+            if (matches.contains(ICCID_MATCH)) {
+                return TelephonyProtoEnums.SIM_RESTORE_MATCHING_CRITERIA_ICCID;
+            }
+            if (matches.contains(CARRIER_ID_MATCH)) {
+                if (matches.contains(PHONE_NUMBER_MATCH)) {
+                    return TelephonyProtoEnums
+                        .SIM_RESTORE_MATCHING_CRITERIA_CARRIER_ID_AND_PHONE_NUMBER;
+                } else {
+                    return TelephonyProtoEnums.SIM_RESTORE_MATCHING_CRITERIA_CARRIER_ID_ONLY;
+                }
+            }
+            return TelephonyProtoEnums.SIM_RESTORE_MATCHING_CRITERIA_NONE;
+        }
+
+        private ContentValues convertBackedUpDataToContentValues(
+                PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
+                String isoCountryCodeFromDb,
+                List<String> wfcRestoreBlockedCountries) {
+            if (DATABASE_VERSION != 51 << 16) {
+                throw new AssertionError("The database schema has been updated which might make "
+                    + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
+                    + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
+                    + "been migrated or deleted, 2) add the new column name into one of those "
+                    + "maps, 3) add migration code in this method as necessary, and 4) update the "
+                    + "version check in this if statement.");
+            }
+            ContentValues contentValues = new ContentValues();
+            // Don't restore anything if restoring from a newer version of the current database.
+            if (backupDataFormatVersion > DATABASE_VERSION) {
+                return null;
+            }
+
+            /* Any migration logic should be placed under this comment block.
+             * ex:
+             *   if (backupDataFormatVersion >= 48 << 19) {
+             *     contentValues.put(NEW_COLUMN_NAME_2,
+             *         backedUpSimInfoEntry.getInt( OLD_COLUMN_NAME, DEFAULT_INT_COLUMN_VALUE));
+             *     ...
+             *   } else if (backupDataFormatVersion >= 48 << 17) {
+             *     contentValues.put(NEW_COLUMN_NAME_1,
+             *         backedUpSimInfoEntry.getInt(OLD_COLUMN_NAME, DEFAULT_INT_COLUMN_VALUE));
+             *     ...
+             *   } else {
+             *     // The values from the first format of backup ever available.
+             *     contentValues.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+             *         backedUpSimInfoEntry.getInt(
+             *             Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+             *             DEFAULT_INT_COLUMN_VALUE));
+             *     contentValues.put(Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+             *         backedUpSimInfoEntry.getString(
+             *              Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED, ""));
+             *     contentValues.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+             *               backedUpSimInfoEntry.getString(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+             *               ""));
+             *     ...
+             *   }
+             *
+             * Also make sure to add necessary removal of sensitive settings in
+             * polishContentValues(ContentValues contentValues).
+             */
+            if (backupDataFormatVersion >= 51 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                        backedUpSimInfoEntry.getString(
+                                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                                DEFAULT_STRING_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 50 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            contentValues.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED,
+                            DEFAULT_INT_COLUMN_VALUE));
+            contentValues.put(Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED,
+                            DEFAULT_INT_COLUMN_VALUE));
+            contentValues.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
+                            DEFAULT_INT_COLUMN_VALUE));
+            if (isoCountryCodeFromDb != null
+                    && !wfcRestoreBlockedCountries
+                            .contains(isoCountryCodeFromDb.toLowerCase())) {
+                // Don't restore COLUMN_WFC_IMS_ENABLED if the sim is from one of the countries that
+                // requires WFC entitlement.
+                contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_MODE,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_WFC_IMS_MODE,
+                            DEFAULT_INT_COLUMN_VALUE));
+            contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE,
+                    backedUpSimInfoEntry.getInt(
+                            Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE,
+                            DEFAULT_INT_COLUMN_VALUE));
+
+            return polishContentValues(contentValues);
+        }
+
+        private ContentValues polishContentValues(ContentValues contentValues) {
+            /* Remove any values that weren't found in the backup file. These were set to defaults
+            in #convertBackedUpDataToContentValues(). */
+            for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
+                String columnName = column.getKey();
+
+                if (!contentValues.containsKey(columnName)) {
+                    continue;
+                }
+
+                int columnType = column.getValue();
+                if (columnType == Cursor.FIELD_TYPE_INTEGER
+                        && DEFAULT_INT_COLUMN_VALUE == contentValues.getAsInteger(columnName)) {
+                    contentValues.remove(columnName);
+                } else if (columnType == Cursor.FIELD_TYPE_STRING && contentValues
+                        .getAsString(columnName).equals(DEFAULT_STRING_COLUMN_VALUE)) {
+                    contentValues.remove(columnName);
+                }
+            }
+
+            if (matches.contains(ICCID_MATCH)) {
+                return contentValues;
+            } else if (matches.contains(CARRIER_ID_MATCH)) {
+                if (!matches.contains(PHONE_NUMBER_MATCH)) {
+                    // Low confidence match should not restore sensitive configs.
+                    if (contentValues.containsKey(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED)) {
+                        contentValues.remove(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED);
+                    }
+                }
+                return contentValues;
+            }
+            return null;
+        }
+
+    }
+
+    /**
+     * Retrieves data from all columns in SimInfoDB of backup/restore interest.
+     *
+     * @return data of interest from SimInfoDB as a byte array.
+     */
+    private byte[] getSimSpecificDataToBackUp() {
+        String[] projection = SIM_INFO_COLUMNS_TO_BACKUP.keySet()
+                .toArray(new String[SIM_INFO_COLUMNS_TO_BACKUP.size()]);
+
+        try (Cursor cursor = query(SubscriptionManager.CONTENT_URI, projection, null, null, null);
+                ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            PersistableBundle topLevelBundle = new PersistableBundle();
+            topLevelBundle.putInt(KEY_BACKUP_DATA_FORMAT_VERSION, DATABASE_VERSION);
+            for (int rowNum = 0; cursor != null && cursor.moveToNext(); rowNum++) {
+                PersistableBundle rowBundle = convertSimInfoDbEntryToPersistableBundle(cursor);
+                topLevelBundle.putPersistableBundle(KEY_SIMINFO_DB_ROW_PREFIX + rowNum, rowBundle);
+            }
+            topLevelBundle.writeToStream(outputStream);
+            return outputStream.toByteArray();
+        } catch (IOException e) {
+            loge("Not able to convert SimInfoDB to byte array. Returning empty byte array");
+            return new byte[0];
+        }
+    }
+
+    private static PersistableBundle convertSimInfoDbEntryToPersistableBundle(Cursor cursor) {
+        PersistableBundle bundle = new PersistableBundle();
+        for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
+            String columnName = column.getKey();
+            int columnType = column.getValue();
+            int columnIndex = cursor.getColumnIndex(columnName);
+            if (columnType == Cursor.FIELD_TYPE_INTEGER) {
+                bundle.putInt(columnName, cursor.getInt(columnIndex));
+            } else if (columnType == Cursor.FIELD_TYPE_STRING) {
+                bundle.putString(columnName, cursor.getString(columnIndex));
+            } else {
+                throw new AssertionError("SimInfoDB column to be backed up is not recognized. Make "
+                    + "sure to properly add the desired colum name and value type to "
+                    + "SIM_INFO_COLUMNS_TO_BACKUP.");
+            }
+        }
+
+        return bundle;
+    }
+
+    @Override
     public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
@@ -2927,6 +3678,7 @@ public class TelephonyProvider extends ContentProvider
         checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
+                // The behaves exactly same as URL_SIM_APN_LIST_ID.
                 subIdString = url.getLastPathSegment();
                 try {
                     subId = Integer.parseInt(subIdString);
@@ -2935,13 +3687,13 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                TelephonyManager telephonyManager = getContext()
-                    .getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
-                constraints.add(NUMERIC + " = '" + telephonyManager.getSimOperator() + "'");
+                qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
+
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
-            // intentional fall through from above case
             case URL_TELEPHONY: {
                 constraints.add(IS_NOT_OWNED_BY_DPC);
                 break;
@@ -3009,10 +3761,13 @@ public class TelephonyProvider extends ContentProvider
             // intentional fall through from above case
             case URL_PREFERAPNSET: {
                 final int set = getPreferredApnSetId(subId);
-                if (set != NO_APN_SET_ID) {
-                    constraints.add(APN_SET_ID + "=" + set);
+                if (set == NO_APN_SET_ID) {
+                    return null;
                 }
-                break;
+                constraints.add(APN_SET_ID + "=" + set);
+                qb.appendWhere(TextUtils.join(" AND ", constraints));
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
             }
 
             case URL_DPC: {
@@ -3147,7 +3902,14 @@ public class TelephonyProvider extends ContentProvider
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
             String selection, String[] selectionArgs, String sort, int subId) {
         Cursor ret;
-        final TelephonyManager tm = ((TelephonyManager) getContext()
+        Context context = getContext();
+        SubscriptionManager subscriptionManager = (SubscriptionManager) context
+                .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+        if (!subscriptionManager.isActiveSubscriptionId(subId)) {
+            return null;
+        }
+
+        final TelephonyManager tm = ((TelephonyManager) context
                 .getSystemService(Context.TELEPHONY_SERVICE))
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
@@ -3190,10 +3952,19 @@ public class TelephonyProvider extends ContentProvider
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
+            boolean isCurrentSimOperator;
+            final long identity = Binder.clearCallingIdentity();
+            try {
+                isCurrentSimOperator = tm.matchesCurrentSimOperator(
+                        ret.getString(numericIndex),
+                        getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                        ret.getString(mvnoDataIndex));
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+
             boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
-                    && tm.matchesCurrentSimOperator(ret.getString(numericIndex),
-                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                            ret.getString(mvnoDataIndex));
+                    && isCurrentSimOperator;
             boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
                     && ret.getString(numericIndex).equals(mccmnc)
                     && TextUtils.isEmpty(ret.getString(mvnoIndex));
@@ -3461,6 +4232,7 @@ public class TelephonyProvider extends ContentProvider
                 if (initialValues != null) {
                     if(initialValues.containsKey(COLUMN_APN_ID)) {
                         setPreferredApnId(initialValues.getAsLong(COLUMN_APN_ID), subId, true);
+                        notify = true;
                     }
                 }
                 break;
@@ -3852,6 +4624,15 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
+            case URL_SIMINFO_SUW_RESTORE:
+                count = db.update(SIMINFO_TABLE, values, where, whereArgs);
+                uriType = URL_SIMINFO_SUW_RESTORE;
+                break;
+
+            case URL_SIMINFO_SIM_INSERTED_RESTORE:
+                count = db.update(SIMINFO_TABLE, values, where, whereArgs);
+                break;
+
             default: {
                 throw new UnsupportedOperationException("Cannot update that URL: " + url);
             }
@@ -3860,6 +4641,12 @@ public class TelephonyProvider extends ContentProvider
         if (count > 0) {
             boolean usingSubId = false;
             switch (uriType) {
+                case URL_SIMINFO_SIM_INSERTED_RESTORE:
+                    break;
+                case URL_SIMINFO_SUW_RESTORE:
+                    getContext().getContentResolver().notifyChange(
+                            SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI, null);
+                    // intentional fall through from above case
                 case URL_SIMINFO_USING_SUBID:
                     usingSubId = true;
                     // intentional fall through from above case
@@ -3910,6 +4697,18 @@ public class TelephonyProvider extends ContentProvider
                                         Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED), usingSubId, subId),
                                 null, true, UserHandle.USER_ALL);
                     }
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
                     break;
                 default:
                     getContext().getContentResolver().notifyChange(
@@ -3936,13 +4735,17 @@ public class TelephonyProvider extends ContentProvider
 
         TelephonyManager telephonyManager =
                 (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        for (String pkg : packages) {
-            if (telephonyManager.checkCarrierPrivilegesForPackageAnyPhone(pkg) ==
+        final long token = Binder.clearCallingIdentity();
+        try {
+            for (String pkg : packages) {
+                if (telephonyManager.checkCarrierPrivilegesForPackageAnyPhone(pkg) ==
                     TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS) {
-                return;
+                    return;
+                }
             }
+        } finally {
+            Binder.restoreCallingIdentity(token);
         }
-
 
         throw new SecurityException("No permission to access APN settings");
     }
@@ -4131,18 +4934,32 @@ public class TelephonyProvider extends ContentProvider
         }
         String twoDigitMnc = String.format(Locale.getDefault(), "%02d", mnc);
         String threeDigitMnc = "0" + twoDigitMnc;
+        boolean threeDigitNetworkCode =
+                Arrays.asList(COUNTRY_MCC_WITH_THREE_DIGIT_MNC).contains(mcc);
+        int twoDigitResult = countMccMncInCarrierList(context, mcc + twoDigitMnc);
+        int threeDigitResult = countMccMncInCarrierList(context, mcc + threeDigitMnc);
 
-        try (
-                Cursor twoDigitMncCursor = context.getContentResolver().query(
-                        Telephony.CarrierId.All.CONTENT_URI,
-                        /* projection */ null,
-                        /* selection */ Telephony.CarrierId.All.MCCMNC + "=?",
-                        /* selectionArgs */ new String[]{mcc + twoDigitMnc}, null)
-        ) {
-            if (twoDigitMncCursor.getCount() > 0) {
-                return twoDigitMnc;
-            }
+        if ((threeDigitResult > twoDigitResult) ||
+                (threeDigitNetworkCode && (twoDigitResult == threeDigitResult))) {
             return threeDigitMnc;
+        } else {
+            return twoDigitMnc;
+        }
+    }
+
+    /**
+     * Check carrier_list how many mcc mnc combo matches there are
+     */
+    private static int countMccMncInCarrierList(Context ctx, String mccMncCombo) {
+        try (
+            Cursor mccMncCursor = ctx.getContentResolver().query(
+                    Telephony.CarrierId.All.CONTENT_URI,
+                    /* projection */ null,
+                    /* selection */ Telephony.CarrierId.All.MCCMNC + "=?",
+                    /* selectionArgs */ new String[]{mccMncCombo}, null);
+        )
+        {
+            return mccMncCursor.getCount();
         }
     }
 
@@ -4319,5 +5136,37 @@ public class TelephonyProvider extends ContentProvider
             return (1 << (radioTech - 1));
         }
         return 0;
+    }
+
+    /**
+     * Migrate the old Long values{@link Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES} over to
+     * String{@link Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_ALL_REASON}
+     *
+     * @param db The sqlite database to write to
+     * @param c The {@link Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES} values in the sim info
+     *         table.
+     */
+    public static void fillInAllowedNetworkTypesStringAtCursor(SQLiteDatabase db, Cursor c) {
+        long allowedNetworkTypesReasonCarrier;
+        String subId;
+        try {
+            allowedNetworkTypesReasonCarrier = c.getLong(
+                    c.getColumnIndexOrThrow(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES));
+            subId = c.getString(c.getColumnIndexOrThrow(
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
+        } catch (IllegalArgumentException e) {
+            Log.e(TAG, "Possible database corruption -- some columns not found.");
+            return;
+        }
+
+        if (allowedNetworkTypesReasonCarrier != -1) {
+            ContentValues cv = new ContentValues(1);
+
+            cv.put(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                    "carrier=" + allowedNetworkTypesReasonCarrier);
+            db.update(SIMINFO_TABLE, cv,
+                    Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
+                    new String[]{subId});
+        }
     }
 }
