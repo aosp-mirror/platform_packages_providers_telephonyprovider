@@ -3269,8 +3269,8 @@ public class TelephonyProvider extends ContentProvider
                 .getInt(KEY_BACKUP_DATA_FORMAT_VERSION, -1);
 
         Resources r = getContext().getResources();
-        List<String> wfcEntitlementRequiredCountries = Arrays.asList(r.getStringArray(
-                    R.array.wfc_entitlement_required_countries));
+        List<String> wfcRestoreBlockedCountries = Arrays.asList(r.getStringArray(
+                    R.array.wfc_restore_blocked_countries));
 
         while (cursor != null && cursor.moveToNext()) {
             // Get all the possible matching criteria.
@@ -3308,7 +3308,7 @@ public class TelephonyProvider extends ContentProvider
 
                 SimRestoreMatch currSimRestoreMatch = new SimRestoreMatch(
                         currIccIdFromDb, currCarrierIdFromDb, currPhoneNumberFromDb,
-                        isoCountryCodeFromDb, wfcEntitlementRequiredCountries, currRow,
+                        isoCountryCodeFromDb, wfcRestoreBlockedCountries, currRow,
                         backupDataFormatVersion);
 
                 if (currSimRestoreMatch == null) {
@@ -3396,7 +3396,7 @@ public class TelephonyProvider extends ContentProvider
 
         public SimRestoreMatch(String iccIdFromDb, int carrierIdFromDb,
                 String phoneNumberFromDb, String isoCountryCodeFromDb,
-                List<String> wfcEntitlementRequiredCountries,
+                List<String> wfcRestoreBlockedCountries,
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
             subId = backedUpSimInfoEntry.getInt(
                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
@@ -3426,7 +3426,7 @@ public class TelephonyProvider extends ContentProvider
 
             contentValues = convertBackedUpDataToContentValues(
                     backedUpSimInfoEntry, backupDataFormatVersion, isoCountryCodeFromDb,
-                    wfcEntitlementRequiredCountries);
+                    wfcRestoreBlockedCountries);
             matchScore = calculateMatchScore();
             matchingCriteria = calculateMatchingCriteria();
         }
@@ -3482,7 +3482,7 @@ public class TelephonyProvider extends ContentProvider
         private ContentValues convertBackedUpDataToContentValues(
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
-                List<String> wfcEntitlementRequiredCountries) {
+                List<String> wfcRestoreBlockedCountries) {
             if (DATABASE_VERSION != 51 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
@@ -3550,7 +3550,7 @@ public class TelephonyProvider extends ContentProvider
                             Telephony.SimInfo.COLUMN_VT_IMS_ENABLED,
                             DEFAULT_INT_COLUMN_VALUE));
             if (isoCountryCodeFromDb != null
-                    && !wfcEntitlementRequiredCountries
+                    && !wfcRestoreBlockedCountries
                             .contains(isoCountryCodeFromDb.toLowerCase())) {
                 // Don't restore COLUMN_WFC_IMS_ENABLED if the sim is from one of the countries that
                 // requires WFC entitlement.
