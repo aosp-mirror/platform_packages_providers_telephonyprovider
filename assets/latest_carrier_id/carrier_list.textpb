@@ -65,6 +65,8 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "23203"
     gid1: "01"
+    gid1: "31"
+    gid1: "32"
   }
   carrier_attribute {
     mccmnc_tuple: "23207"
@@ -109,6 +111,7 @@ carrier_id {
     gid1: "17"
     gid1: "21"
     gid1: "22"
+    gid1: "23"
     gid1: "24"
     gid1: "26"
   }
@@ -116,6 +119,7 @@ carrier_id {
     mccmnc_tuple: "26002"
     spn: "T-Mobile.pl"
     spn: "T-Mobile.pl Q"
+    spn: "heyah"
   }
 }
 carrier_id {
@@ -1044,6 +1048,7 @@ carrier_id {
   carrier_name: "COSMOTE"
   carrier_attribute {
     mccmnc_tuple: "20201"
+    gid1: "FF"
   }
 }
 carrier_id {
@@ -4516,6 +4521,11 @@ carrier_id {
   carrier_name: "Tele2"
   carrier_attribute {
     mccmnc_tuple: "20402"
+    gid1: "4E4C"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20402"
+    spn: "Tele2 NL"
   }
 }
 carrier_id {
@@ -7848,6 +7858,7 @@ carrier_id {
     gid1: ""
     gid1: "07"
     gid1: "FF"
+    gid1: "30"
   }
 }
 carrier_id {
@@ -7860,18 +7871,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20416"
     spn: "Ben NL"
-  }
-}
-carrier_id {
-  canonical_id: 2096
-  carrier_name: "Heyah"
-  carrier_attribute {
-    mccmnc_tuple: "26002"
-    gid1: "23"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "26002"
-    spn: "heyah"
   }
 }
 carrier_id {
@@ -10622,6 +10621,19 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2468
+  carrier_name: "Tele2"
+  carrier_attribute {
+    mccmnc_tuple: "20416"
+    gid1: "8F"
+    gid1: "4E4C"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20416"
+    spn: "Tele2 NL"
+  }
+}
+carrier_id {
   canonical_id: 2469
   carrier_name: "ALTAN - Internal Use"
   carrier_attribute {
@@ -10886,4 +10898,4 @@ carrier_id {
   }
   parent_canonical_id: 1187
 }
-version: 33554465
+version: 33554466
