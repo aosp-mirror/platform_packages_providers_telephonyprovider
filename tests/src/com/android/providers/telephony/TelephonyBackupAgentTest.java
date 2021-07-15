@@ -41,7 +41,6 @@ import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.JsonReader;
 import android.util.JsonWriter;
-import android.util.Log;
 import android.util.SparseArray;
 
 import libcore.io.IoUtils;
@@ -616,6 +615,39 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     }
 
     /**
+     * Test that crashing for one sms does not block restore of other messages.
+     * @throws Exception
+     */
+    public void testRestoreSms_WithException() throws Exception {
+        mTelephonyBackupAgent.initUnknownSender();
+        JsonReader jsonReader = new JsonReader(new StringReader(addRandomDataToJson(mAllSmsJson)));
+        FakeSmsProvider smsProvider = new FakeSmsProvider(mSmsRows, false);
+        mMockContentResolver.addProvider("sms", smsProvider);
+        TelephonyBackupAgent.SmsProviderQuery smsProviderQuery =
+                new TelephonyBackupAgent.SmsProviderQuery() {
+                    int mIteration = 0;
+                    @Override
+                    public boolean doesSmsExist(ContentValues smsValues) {
+                        if (mIteration == 0) {
+                            mIteration++;
+                            throw new RuntimeException("fake crash for first message");
+                        }
+                        return false;
+                    }
+        };
+        TelephonyBackupAgent.SmsProviderQuery previousQuery =
+                mTelephonyBackupAgent.getAndSetSmsProviderQuery(smsProviderQuery);
+        try {
+            mTelephonyBackupAgent.putSmsMessagesToProvider(jsonReader);
+            // the "- 1" is due to exception thrown for one of the messages
+            assertEquals(mSmsRows.length - 1, smsProvider.getRowsAdded());
+            assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
+        } finally {
+            mTelephonyBackupAgent.getAndSetSmsProviderQuery(previousQuery);
+        }
+    }
+
+    /**
      * Test restore mms with the empty json array "[]".
      * @throws Exception
      */
@@ -751,9 +783,15 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private class FakeSmsProvider extends MockContentProvider {
         private int nextRow = 0;
         private ContentValues[] mSms;
+        private boolean mCheckInsertedValues = true;
 
         public FakeSmsProvider(ContentValues[] sms) {
             this.mSms = sms;
+        }
+
+        public FakeSmsProvider(ContentValues[] sms, boolean checkInsertedValues) {
+            this.mSms = sms;
+            mCheckInsertedValues = checkInsertedValues;
         }
 
         @Override
@@ -771,7 +809,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 modifiedValues.put(Telephony.Sms.ADDRESS, TelephonyBackupAgent.UNKNOWN_SENDER);
             }
 
-            assertEquals(modifiedValues, values);
+            if (mCheckInsertedValues) assertEquals(modifiedValues, values);
             return null;
         }
 
@@ -800,7 +838,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private class FakeMmsProvider extends MockContentProvider {
         private int nextRow = 0;
         private List<ContentValues> mValues;
-        private long mDummyMsgId = -1;
+        private long mPlaceholderMsgId = -1;
         private long mMsgId = -1;
         private String mFilename;
 
@@ -810,7 +848,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
         @Override
         public Uri insert(Uri uri, ContentValues values) {
-            Uri retUri = Uri.parse("dummy_uri");
+            Uri retUri = Uri.parse("test_uri");
             ContentValues modifiedValues = new ContentValues(mValues.get(nextRow++));
             if (values.containsKey("read")) {
                 assertEquals("read: ", modifiedValues.get("read"), values.get("read"));
@@ -820,8 +858,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             }
             if (APP_SMIL.equals(values.get(Telephony.Mms.Part.CONTENT_TYPE))) {
                 // Smil part.
-                assertEquals(-1, mDummyMsgId);
-                mDummyMsgId = values.getAsLong(Telephony.Mms.Part.MSG_ID);
+                assertEquals(-1, mPlaceholderMsgId);
+                mPlaceholderMsgId = values.getAsLong(Telephony.Mms.Part.MSG_ID);
             }
             if (IMAGE_JPG.equals(values.get(Telephony.Mms.Part.CONTENT_TYPE))) {
                 // Image attachment part.
@@ -839,7 +877,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             if (values.get(Telephony.Mms.Part.SEQ) != null) {
                 // Part of mms.
                 final Uri expectedUri = Telephony.Mms.CONTENT_URI.buildUpon()
-                        .appendPath(String.valueOf(mDummyMsgId))
+                        .appendPath(String.valueOf(mPlaceholderMsgId))
                         .appendPath("part")
                         .build();
                 assertEquals(expectedUri, uri);
@@ -852,7 +890,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             }
 
             if (values.get(Telephony.Mms.Part.MSG_ID) != null) {
-                modifiedValues.put(Telephony.Mms.Part.MSG_ID, mDummyMsgId);
+                modifiedValues.put(Telephony.Mms.Part.MSG_ID, mPlaceholderMsgId);
             }
             if (values.containsKey("read")) {
                 assertEquals("read: ", modifiedValues.get("read"), values.get("read"));
@@ -890,7 +928,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 assertEquals(expectedUri, uri);
                 assertNotSame(-1, mMsgId);
                 modifiedValues.put(Telephony.Mms.Addr.MSG_ID, mMsgId);
-                mDummyMsgId = -1;
+                mPlaceholderMsgId = -1;
             }
             if (values.containsKey("read")) {
                 assertEquals("read: ", modifiedValues.get("read"), values.get("read"));
@@ -909,7 +947,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         @Override
         public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
             final Uri expectedUri = Telephony.Mms.CONTENT_URI.buildUpon()
-                    .appendPath(String.valueOf(mDummyMsgId))
+                    .appendPath(String.valueOf(mPlaceholderMsgId))
                     .appendPath("part")
                     .build();
             assertEquals(expectedUri, uri);
