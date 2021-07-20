@@ -45,7 +45,6 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
-import android.test.mock.MockResources;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
@@ -54,10 +53,13 @@ import androidx.test.InstrumentationRegistry;
 
 import junit.framework.TestCase;
 
+import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.MockitoAnnotations;
 import org.mockito.Mock;
 import static org.mockito.Mockito.when;
+
+import com.android.internal.telephony.PhoneFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -1647,6 +1649,7 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(1, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(otherName, cursor.getString(0));
+        PhoneFactory.addLocalLog("TelephonyProvider", 1);
     }
 
     /**
