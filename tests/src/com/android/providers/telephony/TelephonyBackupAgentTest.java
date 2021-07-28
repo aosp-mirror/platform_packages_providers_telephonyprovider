@@ -43,6 +43,8 @@ import android.util.JsonReader;
 import android.util.JsonWriter;
 import android.util.SparseArray;
 
+import com.android.internal.telephony.PhoneFactory;
+
 import libcore.io.IoUtils;
 
 import com.google.android.mms.pdu.CharacterSets;
@@ -620,6 +622,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
      */
     public void testRestoreSms_WithException() throws Exception {
         mTelephonyBackupAgent.initUnknownSender();
+        PhoneFactory.addLocalLog("DeferredSmsMmsRestoreService", 1);
         JsonReader jsonReader = new JsonReader(new StringReader(addRandomDataToJson(mAllSmsJson)));
         FakeSmsProvider smsProvider = new FakeSmsProvider(mSmsRows, false);
         mMockContentResolver.addProvider("sms", smsProvider);

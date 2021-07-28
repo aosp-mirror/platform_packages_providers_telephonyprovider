@@ -23,7 +23,7 @@ android_test {
         "android.test.base",
         "android.test.mock",
     ],
-    srcs: ["src/**/*.java"],
+    srcs: ["src/**/*.java", ":telephonyprovider-shared-srcs"],
     platform_apis: true,
     test_suites: ["device-tests"],
     certificate: "platform",
