@@ -83,6 +83,9 @@ public class CarrierIdProvider extends ContentProvider {
     private static final int VERSION_BITMASK = 0x00FFFFFF;
     private static final String OTA_UPDATED_PB_PATH = "misc/carrierid/" + ASSETS_PB_FILE;
     private static final String PREF_FILE = CarrierIdProvider.class.getSimpleName();
+    // For testing purposes only.
+    private static final String OVERRIDE_PB_PATH =
+            "/data/user_de/0/com.android.providers.telephony/files/carrier_list_test.pb";
 
     private static final UriMatcher s_urlMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -186,14 +189,17 @@ public class CarrierIdProvider extends ContentProvider {
                 + CarrierId.All.MCCMNC + ");";
     }
 
+    static {
+        s_urlMatcher.addURI(AUTHORITY, "all", URL_ALL);
+        s_urlMatcher.addURI(AUTHORITY, "all/update_db", URL_ALL_UPDATE_FROM_PB);
+        s_urlMatcher.addURI(AUTHORITY, "all/get_version", URL_ALL_GET_VERSION);
+    }
+
     @Override
     public boolean onCreate() {
         Log.d(TAG, "onCreate");
         mDbHelper = new CarrierIdDatabaseHelper(getContext());
         mDbHelper.getReadableDatabase();
-        s_urlMatcher.addURI(AUTHORITY, "all", URL_ALL);
-        s_urlMatcher.addURI(AUTHORITY, "all/update_db", URL_ALL_UPDATE_FROM_PB);
-        s_urlMatcher.addURI(AUTHORITY, "all/get_version", URL_ALL_GET_VERSION);
         updateDatabaseFromPb(mDbHelper.getWritableDatabase());
         return true;
     }
@@ -527,9 +533,14 @@ public class CarrierIdProvider extends ContentProvider {
         CarrierIdProto.CarrierList assets = null;
         CarrierIdProto.CarrierList ota = null;
         InputStream is = null;
+        File testFile = new File(OVERRIDE_PB_PATH);
 
         try {
-            is = getContext().getAssets().open(ASSETS_PB_FILE);
+            if (Build.IS_DEBUGGABLE && testFile.exists()) {
+                is = new FileInputStream(testFile);
+            } else {
+                is = getContext().getAssets().open(ASSETS_PB_FILE);
+            }
             assets = CarrierIdProto.CarrierList.parseFrom(readInputStreamToByteArray(is));
         } catch (IOException ex) {
             Log.e(TAG, "read carrier list from assets pb failure: " + ex);

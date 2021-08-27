@@ -1,3 +1,22 @@
+package {
+    default_applicable_licenses: [
+        "packages_providers_TelephonyProvider_license",
+    ],
+}
+
+// Added automatically by a large-scale-change
+// See: http://go/android-license-faq
+license {
+    name: "packages_providers_TelephonyProvider_license",
+    visibility: [":__subpackages__"],
+    license_kinds: [
+        "SPDX-license-identifier-Apache-2.0",
+    ],
+    license_text: [
+        "NOTICE",
+    ],
+}
+
 android_app {
     name: "TelephonyProvider",
     privileged: true,
@@ -12,4 +31,12 @@ android_app {
 filegroup {
     name: "telephonyprovider-assets-carrierlist",
     srcs: ["assets/latest_carrier_id/carrier_list.*"],
+}
+
+// used to share src with unit test app
+filegroup {
+    name: "telephonyprovider-shared-srcs",
+    srcs: [
+        "src/**/*.java",
+    ],
 }
