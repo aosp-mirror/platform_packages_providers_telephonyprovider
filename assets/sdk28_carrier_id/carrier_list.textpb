@@ -10526,6 +10526,10 @@ carrier_id {
     mccmnc_tuple: "21432"
     spn: "Tuenti"
   }
+  carrier_attribute {
+    mccmnc_tuple: "21405"
+    spn: "Tuenti"
+  }
 }
 carrier_id {
   canonical_id: 2358
@@ -11128,6 +11132,10 @@ carrier_id {
     spn: "GigSky"
     gid1: "6E"
   }
+  carrier_attribute {
+    mccmnc_tuple: "22201"
+    spn: "GigSky"
+  }
 }
 carrier_id {
   canonical_id: 2460
@@ -11531,6 +11539,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2516
+  carrier_name: "HMD Connect Pro"
+  carrier_attribute {
+    mccmnc_tuple: "22201"
+    spn: "hmd connect"
+  }
+}
+carrier_id {
   canonical_id: 2517
   carrier_name: "Dish"
   carrier_attribute {
@@ -11547,7 +11563,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2519
-  carrier_name: "Boost Mobile - MVNO"
+  carrier_name: "Boost Mobile - MVNO1"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6432"
@@ -11571,7 +11587,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2522
-  carrier_name: "Republic - MVNO"
+  carrier_name: "Republic - MVNO1"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6436"
@@ -11579,10 +11595,42 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2523
-  carrier_name: "Ting - MVNO"
+  carrier_name: "Ting - MVNO1"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6430"
+  }
+}
+carrier_id {
+  canonical_id: 2524
+  carrier_name: "Erate"
+  carrier_attribute {
+    mccmnc_tuple: "24215"
+    gid1: "0e"
+  }
+}
+carrier_id {
+  canonical_id: 2525
+  carrier_name: "Boost Mobile - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3432"
+  }
+}
+carrier_id {
+  canonical_id: 2526
+  carrier_name: "Ting - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3430"
+  }
+}
+carrier_id {
+  canonical_id: 2527
+  carrier_name: "Republic - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3436"
   }
 }
 carrier_id {
@@ -11828,4 +11876,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 13
+version: 14
