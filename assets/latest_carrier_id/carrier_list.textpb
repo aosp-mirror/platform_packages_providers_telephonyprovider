@@ -243,6 +243,7 @@ carrier_id {
     imsi_prefix_xpattern: "204049"
     spn: ""
     spn: "vodafone NL"
+    spn: "Vodafone"
   }
 }
 carrier_id {
@@ -9884,7 +9885,7 @@ carrier_id {
   canonical_id: 2357
   carrier_name: "Tuenti"
   carrier_attribute {
-    mccmnc_tuple: "21432"
+    mccmnc_tuple: "21405"
     spn: "Tuenti"
   }
 }
@@ -9907,13 +9908,8 @@ carrier_id {
   carrier_name: "Telefonica"
   carrier_attribute {
     mccmnc_tuple: "26203"
-    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -9921,13 +9917,8 @@ carrier_id {
   carrier_name: "o2"
   carrier_attribute {
     mccmnc_tuple: "26207"
-    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -11027,6 +11018,7 @@ carrier_id {
   carrier_name: "Dish"
   carrier_attribute {
     mccmnc_tuple: "313340"
+    gid1: "6530"
   }
 }
 carrier_id {
@@ -11039,7 +11031,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2519
-  carrier_name: "Boost Mobile - MVNO"
+  carrier_name: "Boost Mobile - MVNO1"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6432"
@@ -11063,7 +11055,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2522
-  carrier_name: "Republic - MVNO"
+  carrier_name: "Republic - MVNO1"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6436"
@@ -11071,10 +11063,50 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2523
-  carrier_name: "Ting - MVNO"
+  carrier_name: "Ting - MVNO1"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6430"
+  }
+}
+carrier_id {
+  canonical_id: 2524
+  carrier_name: "Erate"
+  carrier_attribute {
+    mccmnc_tuple: "24215"
+    gid1: "0e"
+  }
+}
+carrier_id {
+  canonical_id: 2525
+  carrier_name: "Boost Mobile - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3432"
+  }
+}
+carrier_id {
+  canonical_id: 2526
+  carrier_name: "Ting - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3430"
+  }
+}
+carrier_id {
+  canonical_id: 2527
+  carrier_name: "Republic - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3436"
+  }
+}
+carrier_id {
+  canonical_id: 2528
+  carrier_name: "Project Genesis - MNO"
+  carrier_attribute {
+    mccmnc_tuple: "313340"
+    gid1: "6538"
   }
 }
 carrier_id {
@@ -11361,4 +11393,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 67108866
+version: 67108867
