@@ -4232,12 +4232,12 @@ public class TelephonyProvider extends ContentProvider
         Uri result = null;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
-        checkPermission();
+        int match = s_urlMatcher.match(url);
+        checkPermission(match);
         syncBearerBitmaskAndNetworkTypeBitmask(initialValues);
 
         boolean notify = false;
         SQLiteDatabase db = getWritableDatabase();
-        int match = s_urlMatcher.match(url);
         switch (match)
         {
             case URL_TELEPHONY_USING_SUBID:
@@ -4385,10 +4385,10 @@ public class TelephonyProvider extends ContentProvider
         ContentValues cv = new ContentValues();
         cv.put(EDITED_STATUS, USER_DELETED);
 
-        checkPermission();
+        int match = s_urlMatcher.match(url);
+        checkPermission(match);
 
         SQLiteDatabase db = getWritableDatabase();
-        int match = s_urlMatcher.match(url);
         switch (match)
         {
             case URL_DELETE:
@@ -4547,11 +4547,11 @@ public class TelephonyProvider extends ContentProvider
         int uriType = URL_UNKNOWN;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
-        checkPermission();
+        int match = s_urlMatcher.match(url);
+        checkPermission(match);
         syncBearerBitmaskAndNetworkTypeBitmask(values);
 
         SQLiteDatabase db = getWritableDatabase();
-        int match = s_urlMatcher.match(url);
         switch (match)
         {
             case URL_TELEPHONY_USING_SUBID:
@@ -4839,7 +4839,28 @@ public class TelephonyProvider extends ContentProvider
         return (usingSubId) ? Uri.withAppendedPath(uri, "" + subId) : uri;
     }
 
-    private void checkPermission() {
+    /**
+     * Checks permission to query or insert/update/delete the database. The permissions required
+     * for APN DB and SIMINFO DB are different:
+     * <ul>
+     * <li>APN DB requires WRITE_APN_SETTINGS or carrier privileges
+     * <li>SIMINFO DB requires phone UID; it's for phone internal usage only
+     * </ul>
+     */
+    private void checkPermission(int match) {
+        switch (match) {
+            case URL_SIMINFO:
+            case URL_SIMINFO_USING_SUBID:
+            case URL_SIMINFO_SUW_RESTORE:
+            case URL_SIMINFO_SIM_INSERTED_RESTORE:
+                checkPermissionForSimInfoTable();
+                break;
+            default:
+                checkPermissionForApnTable();
+        }
+    }
+
+    private void checkPermissionForApnTable() {
         int status = getContext().checkCallingOrSelfPermission(
                 "android.permission.WRITE_APN_SETTINGS");
         if (status == PackageManager.PERMISSION_GRANTED) {
@@ -4880,12 +4901,14 @@ public class TelephonyProvider extends ContentProvider
             log("Using old permission behavior for telephony provider compat");
             checkQueryPermission(match, projectionIn);
         } else {
-            checkPermission();
+            checkPermission(match);
         }
     }
 
     private void checkQueryPermission(int match, String[] projectionIn) {
-        if (match != URL_SIMINFO) {
+        if (match == URL_SIMINFO) {
+            checkPermissionForSimInfoTable();
+        } else {
             if (projectionIn != null) {
                 for (String column : projectionIn) {
                     if (TYPE.equals(column) ||
@@ -4897,15 +4920,25 @@ public class TelephonyProvider extends ContentProvider
                             APN.equals(column)) {
                         // noop
                     } else {
-                        checkPermission();
+                        checkPermissionForApnTable();
                         break;
                     }
                 }
             } else {
                 // null returns all columns, so need permission check
-                checkPermission();
+                checkPermissionForApnTable();
             }
         }
+    }
+
+    private void checkPermissionForSimInfoTable() {
+        ensureCallingFromSystemOrPhoneUid("Access SIMINFO table from not phone/system UID");
+        if (getContext().checkCallingOrSelfPermission(
+                    "android.permission.ACCESS_TELEPHONY_SIMINFO_DB")
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No permission to access SIMINFO table");
     }
 
     private DatabaseHelper mOpenHelper;
