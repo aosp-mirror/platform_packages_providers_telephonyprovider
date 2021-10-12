@@ -11039,7 +11039,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2519
-  carrier_name: "Boost Mobile - MVNO1"
+  carrier_name: "Boost Mobile - MVNO"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6432"
@@ -11063,7 +11063,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2522
-  carrier_name: "Republic - MVNO1"
+  carrier_name: "Republic - MVNO"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6436"
@@ -11071,42 +11071,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2523
-  carrier_name: "Ting - MVNO1"
+  carrier_name: "Ting - MVNO"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6430"
-  }
-}
-carrier_id {
-  canonical_id: 2524
-  carrier_name: "Erate"
-  carrier_attribute {
-    mccmnc_tuple: "24215"
-    gid1: "0e"
-  }
-}
-carrier_id {
-  canonical_id: 2525
-  carrier_name: "Boost Mobile - MVNO2"
-  carrier_attribute {
-    mccmnc_tuple: "310410"
-    gid1: "3432"
-  }
-}
-carrier_id {
-  canonical_id: 2526
-  carrier_name: "Ting - MVNO2"
-  carrier_attribute {
-    mccmnc_tuple: "310410"
-    gid1: "3430"
-  }
-}
-carrier_id {
-  canonical_id: 2527
-  carrier_name: "Republic - MVNO2"
-  carrier_attribute {
-    mccmnc_tuple: "310410"
-    gid1: "3436"
   }
 }
 carrier_id {
@@ -11393,4 +11361,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331664
+version: 50331662

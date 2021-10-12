@@ -32,3 +32,11 @@ filegroup {
     name: "telephonyprovider-assets-carrierlist",
     srcs: ["assets/latest_carrier_id/carrier_list.*"],
 }
+
+// used to share src with unit test app
+filegroup {
+    name: "telephonyprovider-shared-srcs",
+    srcs: [
+        "src/**/*.java",
+    ],
+}
