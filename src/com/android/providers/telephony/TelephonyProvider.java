@@ -69,21 +69,17 @@ import static android.provider.Telephony.Carriers.USER_EDITED;
 import static android.provider.Telephony.Carriers.USER_VISIBLE;
 import static android.provider.Telephony.Carriers.WAIT_TIME_RETRY;
 import static android.provider.Telephony.Carriers._ID;
-import static java.nio.charset.StandardCharsets.UTF_8;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
-import android.annotation.RequiresPermission;
 import android.app.compat.CompatChanges;
 import android.content.ComponentName;
 import android.content.ContentProvider;
-import android.content.ContentProviderOperation;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
-import android.content.OperationApplicationException;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.UriMatcher;
@@ -115,6 +111,7 @@ import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
+import android.util.AtomicFile;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
@@ -129,7 +126,6 @@ import android.service.carrier.IApnSourceService;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
@@ -139,11 +135,9 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.Integer;
-import java.lang.NoSuchFieldException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -568,8 +562,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB,"
                 + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT,"
-                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT"
                 + ");";
     }
@@ -1654,12 +1648,12 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING
+                            + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS
                             + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
-                        log("onUpgrade failed to updated " + SIMINFO_TABLE
-                                + " to add d2d status sharing column. ");
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. "
+                                + "The table will get created in onOpen.");
                     }
                 }
                 oldVersion = 49 << 16 | 6;
@@ -1669,12 +1663,12 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS
+                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING
                             + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
-                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
-                                "The table will get created in onOpen.");
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add d2d status sharing column. ");
                     }
                 }
                 oldVersion = 50 << 16 | 6;
@@ -2844,8 +2838,10 @@ public class TelephonyProvider extends ContentProvider
                 r.getString(R.string.apn_source_service)));
         log("binding to service to restore apns, intent=" + intent);
         try {
-            if (context.bindService(intent, connection, Context.BIND_IMPORTANT |
-                        Context.BIND_AUTO_CREATE)) {
+            if (context.bindService(intent,
+                    Context.BIND_IMPORTANT | Context.BIND_AUTO_CREATE,
+                    runnable -> new Thread(runnable).start(),
+                    connection)) {
                 synchronized (mLock) {
                     while (mIApnSourceService == null && !connectionBindingInvalid.get()) {
                         try {
@@ -2898,10 +2894,10 @@ public class TelephonyProvider extends ContentProvider
 
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
+        SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
+                Context.MODE_PRIVATE);
         if (!TextUtils.isEmpty(newBuildId)) {
             // Check if build id has changed
-            SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
-                    Context.MODE_PRIVATE);
             String oldBuildId = sp.getString(RO_BUILD_ID, "");
             if (!newBuildId.equals(oldBuildId)) {
                 localLog("onCreate: build id changed from " + oldBuildId + " to " + newBuildId);
@@ -2909,7 +2905,6 @@ public class TelephonyProvider extends ContentProvider
             } else {
                 if (VDBG) log("onCreate: build id did not change: " + oldBuildId);
             }
-            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
         } else {
             if (VDBG) log("onCreate: newBuildId is empty");
         }
@@ -2924,9 +2919,15 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) addAllApnSharedPrefToLocalLog();
         }
 
-        SharedPreferences sp = getContext().getSharedPreferences(ENFORCED_FILE,
+        // Write build id to SharedPreferences after APNs have been updated above by updateApnDb()
+        if (!TextUtils.isEmpty(newBuildId)) {
+            if (isNewBuild) log("onCreate: updating build id to " + newBuildId);
+            sp.edit().putString(RO_BUILD_ID, newBuildId).apply();
+        }
+
+        SharedPreferences spEnforcedFile = getContext().getSharedPreferences(ENFORCED_FILE,
                 Context.MODE_PRIVATE);
-        mManagedApnEnforced = sp.getBoolean(ENFORCED_KEY, false);
+        mManagedApnEnforced = spEnforcedFile.getBoolean(ENFORCED_KEY, false);
 
         if (VDBG) log("onCreate:- ret true");
 
@@ -3196,10 +3197,17 @@ public class TelephonyProvider extends ContentProvider
 
     @VisibleForTesting
     boolean writeSimSettingsToInternalStorage(byte[] data) {
-        File file = new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
-        try (FileOutputStream fos = new FileOutputStream(file)) {
+        AtomicFile atomicFile = new AtomicFile(
+                new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE));
+        FileOutputStream fos = null;
+        try {
+            fos = atomicFile.startWrite();
             fos.write(data);
+            atomicFile.finishWrite(fos);
         } catch (IOException e) {
+            if (fos != null) {
+                atomicFile.failWrite(fos);
+            }
             loge("Not able to create internal file with per-sim configs. Failed with error "
                     + e);
             return false;
@@ -3226,8 +3234,9 @@ public class TelephonyProvider extends ContentProvider
             return;
         }
 
+        AtomicFile atomicFile = new AtomicFile(file);
         PersistableBundle bundle = null;
-        try (FileInputStream fis = new FileInputStream(file)) {
+        try (FileInputStream fis = atomicFile.openRead()) {
             bundle = PersistableBundle.readFromStream(fis);
         } catch (IOException e) {
             loge("Failed to convert backed up per-sim configs to bundle. Stopping restore. "
@@ -3669,6 +3678,7 @@ public class TelephonyProvider extends ContentProvider
         checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
+                // The behaves exactly same as URL_SIM_APN_LIST_ID.
                 subIdString = url.getLastPathSegment();
                 try {
                     subId = Integer.parseInt(subIdString);
@@ -3677,13 +3687,13 @@ public class TelephonyProvider extends ContentProvider
                     return null;
                 }
                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                TelephonyManager telephonyManager = getContext()
-                    .getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
-                constraints.add(NUMERIC + " = '" + telephonyManager.getSimOperator() + "'");
+                qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
+                return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
+                        sort, subId);
+
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
-            // intentional fall through from above case
             case URL_TELEPHONY: {
                 constraints.add(IS_NOT_OWNED_BY_DPC);
                 break;
@@ -3881,6 +3891,31 @@ public class TelephonyProvider extends ContentProvider
     }
 
     /**
+     * This method syncs PREF_FILE_FULL_APN with the db based on the current preferred apn ids.
+     */
+    private void updatePreferredApns() {
+        SharedPreferences spApn = getContext().getSharedPreferences(PREF_FILE_APN,
+                Context.MODE_PRIVATE);
+
+        Map<String, ?> allPrefApnId = spApn.getAll();
+        for (String key : allPrefApnId.keySet()) {
+            if (key.startsWith(COLUMN_APN_ID)) {
+                int subId;
+                try {
+                    subId = Integer.parseInt(key.substring(COLUMN_APN_ID.length()));
+                } catch (NumberFormatException e) {
+                    loge("updatePreferredApns: NumberFormatException for key=" + key);
+                    continue;
+                }
+                long preferredApnId = getPreferredApnId(subId, false);
+                if (preferredApnId != INVALID_APN_ID) {
+                    setPreferredApn(preferredApnId, subId);
+                }
+            }
+        }
+    }
+
+    /**
      * To find the current sim APN. Query APN based on {MCC, MNC, MVNO} and {Carrier_ID}.
      *
      * There has three steps:
@@ -3942,10 +3977,19 @@ public class TelephonyProvider extends ContentProvider
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
+            boolean isCurrentSimOperator;
+            final long identity = Binder.clearCallingIdentity();
+            try {
+                isCurrentSimOperator = tm.matchesCurrentSimOperator(
+                        ret.getString(numericIndex),
+                        getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                        ret.getString(mvnoDataIndex));
+            } finally {
+                Binder.restoreCallingIdentity(identity);
+            }
+
             boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
-                    && tm.matchesCurrentSimOperator(ret.getString(numericIndex),
-                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                            ret.getString(mvnoDataIndex));
+                    && isCurrentSimOperator;
             boolean isMNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
                     && ret.getString(numericIndex).equals(mccmnc)
                     && TextUtils.isEmpty(ret.getString(mvnoIndex));
@@ -4619,6 +4663,19 @@ public class TelephonyProvider extends ContentProvider
             }
         }
 
+        // if APNs (CARRIERS_TABLE) have been updated, some of them may be preferred APN for
+        // different subs. So update the APN field values saved in SharedPref for all subIds.
+        switch (match) {
+            case URL_TELEPHONY_USING_SUBID:
+            case URL_TELEPHONY:
+            case URL_CURRENT_USING_SUBID:
+            case URL_CURRENT:
+            case URL_ID:
+            case URL_DPC_ID:
+                updatePreferredApns();
+                break;
+        }
+
         if (count > 0) {
             boolean usingSubId = false;
             switch (uriType) {
@@ -4716,13 +4773,17 @@ public class TelephonyProvider extends ContentProvider
 
         TelephonyManager telephonyManager =
                 (TelephonyManager) getContext().getSystemService(Context.TELEPHONY_SERVICE);
-        for (String pkg : packages) {
-            if (telephonyManager.checkCarrierPrivilegesForPackageAnyPhone(pkg) ==
+        final long token = Binder.clearCallingIdentity();
+        try {
+            for (String pkg : packages) {
+                if (telephonyManager.checkCarrierPrivilegesForPackageAnyPhone(pkg) ==
                     TelephonyManager.CARRIER_PRIVILEGE_STATUS_HAS_ACCESS) {
-                return;
+                    return;
+                }
             }
+        } finally {
+            Binder.restoreCallingIdentity(token);
         }
-
 
         throw new SecurityException("No permission to access APN settings");
     }
