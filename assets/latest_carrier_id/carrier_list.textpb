@@ -3778,7 +3778,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1529
-  carrier_name: "Tele2"
+  carrier_name: "Telemach"
   carrier_attribute {
     mccmnc_tuple: "21902"
   }
@@ -6961,7 +6961,6 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "21403"
-    mccmnc_tuple: "21407"
     spn: "JAZZTEL"
     spn: "Jazztel"
   }
@@ -9391,15 +9390,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2281
-  carrier_name: "T-2"
-  carrier_attribute {
-    mccmnc_tuple: "21407"
-    imsi_prefix_xpattern: "2140759577"
-    imsi_prefix_xpattern: "2140796692"
-  }
-}
-carrier_id {
   canonical_id: 2282
   carrier_name: "Noverca"
   carrier_attribute {
@@ -11110,6 +11100,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2529
+  carrier_name: "DOCOMO MVNO"
+  carrier_attribute {
+    mccmnc_tuple: "44010"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11393,4 +11390,16 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 67108867
+carrier_id {
+  canonical_id: 10028
+  carrier_name: "AT&T 5G SA"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    mccmnc_tuple: "310410"
+    mccmnc_tuple: "310950"
+    mccmnc_tuple: "311180"
+    gid1: "52FF"
+  }
+  parent_canonical_id: 1187
+}
+version: 67108868
