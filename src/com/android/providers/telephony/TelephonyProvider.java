@@ -3939,7 +3939,7 @@ public class TelephonyProvider extends ContentProvider
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
         String mccmnc = tm.getSimOperator();
-        int carrierId = tm.getSimCarrierId();
+        int carrierId = tm.getSimSpecificCarrierId();
 
         qb.appendWhereStandalone(IS_NOT_USER_DELETED + " and " +
                 IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and " +
