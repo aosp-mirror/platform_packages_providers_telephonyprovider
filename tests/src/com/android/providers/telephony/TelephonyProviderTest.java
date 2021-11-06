@@ -257,7 +257,7 @@ public class TelephonyProviderTest extends TestCase {
                     .isActiveSubscriptionId(anyInt());
             doReturn(mTelephonyManager).when(mTelephonyManager).createForSubscriptionId(anyInt());
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator();
-            doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimCarrierId();
+            doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimSpecificCarrierId();
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
