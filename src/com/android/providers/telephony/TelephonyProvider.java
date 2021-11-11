@@ -3939,7 +3939,7 @@ public class TelephonyProvider extends ContentProvider
                 .createForSubscriptionId(subId);
         SQLiteDatabase db = getReadableDatabase();
         String mccmnc = tm.getSimOperator();
-        int carrierId = tm.getSimCarrierId();
+        int carrierId = tm.getSimSpecificCarrierId();
 
         qb.appendWhereStandalone(IS_NOT_USER_DELETED + " and " +
                 IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and " +
@@ -3964,6 +3964,7 @@ public class TelephonyProvider extends ContentProvider
         MatrixCursor currentCursor = new MatrixCursor(columnNames);
         MatrixCursor parentCursor = new MatrixCursor(columnNames);
         MatrixCursor carrierIdCursor = new MatrixCursor(columnNames);
+        MatrixCursor carrierIdNonMatchingMNOCursor = new MatrixCursor(columnNames);
 
         int numericIndex = ret.getColumnIndex(NUMERIC);
         int mvnoIndex = ret.getColumnIndex(MVNO_TYPE);
@@ -4005,7 +4006,11 @@ public class TelephonyProvider extends ContentProvider
                 parentCursor.addRow(data);
             } else if (isCarrierIdAPN) {
                 // The APN that query based on carrier Id (not include the MVNO or MNO APN)
-                carrierIdCursor.addRow(data);
+                if (TextUtils.isEmpty(ret.getString(numericIndex))) {
+                    carrierIdCursor.addRow(data);
+                } else {
+                    carrierIdNonMatchingMNOCursor.addRow(data);
+                }
             }
         }
         ret.close();
@@ -4018,8 +4023,11 @@ public class TelephonyProvider extends ContentProvider
             if (DBG) log("match MNO APN: " + parentCursor.getCount());
             result = parentCursor;
         } else {
-            if (DBG) log("can't find the MVNO and MNO APN");
-            result = new MatrixCursor(columnNames);
+            if (DBG) {
+                log("No MVNO, MNO and no MCC/MNC match, but we have match/matches with the " +
+                        "same carrier id, count: " + carrierIdNonMatchingMNOCursor.getCount());
+            }
+            result = carrierIdNonMatchingMNOCursor;
         }
 
         if (DBG) log("match carrier id APN: " + carrierIdCursor.getCount());
