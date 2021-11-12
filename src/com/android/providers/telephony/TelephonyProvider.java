@@ -3891,6 +3891,31 @@ public class TelephonyProvider extends ContentProvider
     }
 
     /**
+     * This method syncs PREF_FILE_FULL_APN with the db based on the current preferred apn ids.
+     */
+    private void updatePreferredApns() {
+        SharedPreferences spApn = getContext().getSharedPreferences(PREF_FILE_APN,
+                Context.MODE_PRIVATE);
+
+        Map<String, ?> allPrefApnId = spApn.getAll();
+        for (String key : allPrefApnId.keySet()) {
+            if (key.startsWith(COLUMN_APN_ID)) {
+                int subId;
+                try {
+                    subId = Integer.parseInt(key.substring(COLUMN_APN_ID.length()));
+                } catch (NumberFormatException e) {
+                    loge("updatePreferredApns: NumberFormatException for key=" + key);
+                    continue;
+                }
+                long preferredApnId = getPreferredApnId(subId, false);
+                if (preferredApnId != INVALID_APN_ID) {
+                    setPreferredApn(preferredApnId, subId);
+                }
+            }
+        }
+    }
+
+    /**
      * To find the current sim APN. Query APN based on {MCC, MNC, MVNO} and {Carrier_ID}.
      *
      * There has three steps:
@@ -4636,6 +4661,19 @@ public class TelephonyProvider extends ContentProvider
             default: {
                 throw new UnsupportedOperationException("Cannot update that URL: " + url);
             }
+        }
+
+        // if APNs (CARRIERS_TABLE) have been updated, some of them may be preferred APN for
+        // different subs. So update the APN field values saved in SharedPref for all subIds.
+        switch (match) {
+            case URL_TELEPHONY_USING_SUBID:
+            case URL_TELEPHONY:
+            case URL_CURRENT_USING_SUBID:
+            case URL_CURRENT:
+            case URL_ID:
+            case URL_DPC_ID:
+                updatePreferredApns();
+                break;
         }
 
         if (count > 0) {
