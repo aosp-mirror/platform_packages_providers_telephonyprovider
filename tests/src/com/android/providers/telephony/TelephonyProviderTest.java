@@ -214,6 +214,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
                 arbitraryStringVal);
+        contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, arbitraryIntVal);
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
@@ -791,7 +792,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -832,7 +836,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -873,7 +880,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -915,7 +925,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
