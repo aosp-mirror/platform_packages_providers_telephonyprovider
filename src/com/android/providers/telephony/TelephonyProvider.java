@@ -155,7 +155,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 51 << 16;
+    private static final int DATABASE_VERSION = 52 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -439,7 +439,8 @@ public class TelephonyProvider extends ContentProvider
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
                 Cursor.FIELD_TYPE_STRING);
-
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -564,7 +565,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT,"
                 + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT"
+                + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED + " INTEGER DEFAULT -1"
                 + ");";
     }
 
@@ -1687,6 +1689,21 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 51 << 16 | 6;
+            }
+
+            if (oldVersion < (52 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED
+                            + " INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 52 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3492,7 +3509,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 51 << 16) {
+            if (DATABASE_VERSION != 52 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3534,6 +3551,12 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 52 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 51 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
                         backedUpSimInfoEntry.getString(
@@ -4753,6 +4776,12 @@ public class TelephonyProvider extends ContentProvider
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
                                         Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED),
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
                     break;
