@@ -2355,7 +2355,7 @@ public class TelephonyProvider extends ContentProvider
                 mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
             }
 
-            String numeric = mccString + mncString;
+            String numeric = (mccString == null | mncString == null) ? null : mccString + mncString;
             map.put(NUMERIC, numeric);
             map.put(MCC, mccString);
             map.put(MNC, mncString);
@@ -4036,15 +4036,17 @@ public class TelephonyProvider extends ContentProvider
                 data.add(ret.getString(ret.getColumnIndex(column)));
             }
 
-            boolean isCurrentSimOperator;
-            final long identity = Binder.clearCallingIdentity();
-            try {
-                isCurrentSimOperator = tm.matchesCurrentSimOperator(
-                        ret.getString(numericIndex),
-                        getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
-                        ret.getString(mvnoDataIndex));
-            } finally {
-                Binder.restoreCallingIdentity(identity);
+            boolean isCurrentSimOperator = false;
+            if (!TextUtils.isEmpty(ret.getString(numericIndex))) {
+                final long identity = Binder.clearCallingIdentity();
+                try {
+                    isCurrentSimOperator = tm.matchesCurrentSimOperator(
+                            ret.getString(numericIndex),
+                            getMvnoTypeIntFromString(ret.getString(mvnoIndex)),
+                            ret.getString(mvnoDataIndex));
+                } finally {
+                    Binder.restoreCallingIdentity(identity);
+                }
             }
 
             boolean isMVNOAPN = !TextUtils.isEmpty(ret.getString(numericIndex))
