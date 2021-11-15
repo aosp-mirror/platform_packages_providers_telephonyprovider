@@ -3343,10 +3343,11 @@ public class TelephonyProvider extends ContentProvider
             }
 
             if (bestRestoreMatch != null) {
-                if (bestRestoreMatch.getMatchScore() != 0) {
+                ContentValues newContentValues = bestRestoreMatch.getContentValues();
+                if (bestRestoreMatch.getMatchScore() != 0 && newContentValues != null) {
                     if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SUW) {
                         update(SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI,
-                                bestRestoreMatch.getContentValues(),
+                                newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                                 new String[]{Integer.toString(currSubIdFromDb)});
                     } else if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED) {
@@ -3354,7 +3355,7 @@ public class TelephonyProvider extends ContentProvider
                                 SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
                                 SIM_INSERTED_RESTORE_URI_SUFFIX);
                         update(simInsertedRestoreUri,
-                                bestRestoreMatch.getContentValues(),
+                                newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                                 new String[]{Integer.toString(currSubIdFromDb)});
                     }
@@ -3365,6 +3366,9 @@ public class TelephonyProvider extends ContentProvider
                             restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
                     newlyRestoredSubIds.add(currSubIdFromDb);
                 } else {
+                    /* If this block was reached because ContentValues was null, that means the
+                    database schema was newer during backup than during restore. We consider this
+                    a no-match to avoid updating columns that don't exist */
                     TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
                             TelephonyProtoEnums.SIM_RESTORE_RESULT_NONE_MATCH,
                             restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
