@@ -96,6 +96,7 @@ public class TelephonyProviderTest extends TestCase {
 
     private static final String TEST_SUBID = "1";
     private static final String TEST_OPERATOR = "123456";
+    private static final String TEST_OPERATOR_SECOND_MCCMNC = "567890";
     private static final String TEST_MCC = "123";
     private static final String TEST_MNC = "456";
     private static final String TEST_SPN = TelephonyProviderTestable.TEST_SPN;
@@ -213,6 +214,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
                 arbitraryStringVal);
+        contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, arbitraryIntVal);
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
@@ -257,7 +259,7 @@ public class TelephonyProviderTest extends TestCase {
                     .isActiveSubscriptionId(anyInt());
             doReturn(mTelephonyManager).when(mTelephonyManager).createForSubscriptionId(anyInt());
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator();
-            doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimCarrierId();
+            doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimSpecificCarrierId();
 
             // Add authority="telephony" to given telephonyProvider
             ProviderInfo providerInfo = new ProviderInfo();
@@ -790,7 +792,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -831,7 +836,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -872,7 +880,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -914,7 +925,10 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
+        assertEquals(
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(
+                        cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -2095,5 +2109,120 @@ public class TelephonyProviderTest extends TestCase {
                 testProjection, null, null, null);
 
         assertNull(cursor);
+    }
+
+    @Test
+    @SmallTest
+    public void testSIMAPNLIST_MatchTheCarrierIDANDdifferentMNOAPN() {
+        setUpMockContext(true);
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final int carrierId = TEST_CARRIERID;
+
+        // Add an APN that have carrier id and matching MNO
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierId);
+        contentValues.put(Carriers.NUMERIC, TEST_OPERATOR);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Add MNO APN that have same carrier id, but different MNO
+        contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierId);
+        contentValues.put(Carriers.NUMERIC, TEST_OPERATOR_SECOND_MCCMNC);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Query DB
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+                Carriers.NUMERIC,
+            };
+
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST, testProjection, null, null, null);
+
+        // The query based on SIM_APN_LIST will return the APN which matches both carrier id and MNO
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(TEST_OPERATOR, cursor.getString(cursor.getColumnIndex(Carriers.NUMERIC)));
+    }
+
+    @Test
+    @SmallTest
+    public void testSIMAPNLIST_MatchTheCarrierIDMissingMNO() {
+        setUpMockContext(true);
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final int carrierId = TEST_CARRIERID;
+
+        // Add an APN that have matching carrier id and no mno
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierId);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Add MNO APN that have non matching carrier id and no mno
+        contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, 99999);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Query DB
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+            };
+
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST, testProjection, null, null, null);
+
+        // The query based on SIM_APN_LIST will return the APN which matches carrier id
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(TEST_CARRIERID, cursor.getInt(cursor.getColumnIndex(Carriers.CARRIER_ID)));
+    }
+
+    @Test
+    @SmallTest
+    public void testSIMAPNLIST_MatchTheCarrierIDNOTMatchingMNO() {
+        setUpMockContext(true);
+
+        final String apnName = "apnName";
+        final String carrierName = "name";
+        final int carrierId = TEST_CARRIERID;
+
+        // Add an APN that have matching carrier id and not matching mno
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.APN, apnName);
+        contentValues.put(Carriers.NAME, carrierName);
+        contentValues.put(Carriers.CARRIER_ID, carrierId);
+        contentValues.put(Carriers.NUMERIC, TEST_OPERATOR_SECOND_MCCMNC);
+        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
+
+        // Query DB
+        final String[] testProjection =
+            {
+                Carriers.APN,
+                Carriers.NAME,
+                Carriers.CARRIER_ID,
+            };
+
+        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST, testProjection, null, null, null);
+
+        // The query based on SIM_APN_LIST will return the APN which matches carrier id,
+        // even though the mno does not match
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        assertEquals(TEST_CARRIERID, cursor.getInt(cursor.getColumnIndex(Carriers.CARRIER_ID)));
     }
 }
