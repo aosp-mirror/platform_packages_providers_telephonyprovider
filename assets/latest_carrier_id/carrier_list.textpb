@@ -11116,6 +11116,20 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2532
+  carrier_name: "Xfinity MSO"
+  carrier_attribute {
+    mccmnc_tuple: "314200"
+  }
+}
+carrier_id {
+  canonical_id: 2533
+  carrier_name: "ASTCA"
+  carrier_attribute {
+    mccmnc_tuple: "311780"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11436,4 +11450,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108869
+version: 67108870
