@@ -67,6 +67,10 @@ carrier_id {
     spn: "Business"
     spn: "Privat"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "T-Campus"
+  }
 }
 carrier_id {
   canonical_id: 4
@@ -193,6 +197,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "29401"
     gid1: "FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "29401"
+    spn: "Telekom MK"
   }
 }
 carrier_id {
@@ -2668,7 +2676,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1328
-  carrier_name: "Telekom Albania"
+  carrier_name: "One Telecommunications"
   carrier_attribute {
     mccmnc_tuple: "27601"
     gid1: "01"
@@ -4113,7 +4121,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1529
-  carrier_name: "Tele2"
+  carrier_name: "Telemach"
   carrier_attribute {
     mccmnc_tuple: "21902"
   }
@@ -6393,6 +6401,10 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "312160"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA00130000000000"
   }
 }
 carrier_id {
@@ -11634,6 +11646,30 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2531
+  carrier_name: "TANGO"
+  carrier_attribute {
+    mccmnc_tuple: "23453"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "313770"
+  }
+}
+carrier_id {
+  canonical_id: 2532
+  carrier_name: "Xfinity MSO"
+  carrier_attribute {
+    mccmnc_tuple: "314200"
+  }
+}
+carrier_id {
+  canonical_id: 2533
+  carrier_name: "ASTCA"
+  carrier_attribute {
+    mccmnc_tuple: "311780"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11876,4 +11912,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 14
+version: 15
