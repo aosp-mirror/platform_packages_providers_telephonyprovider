@@ -303,6 +303,25 @@ public final class TelephonyDatabaseHelperTest {
                 Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasLingeringNetworkTypeAlwaysOnMtuFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasLingeringNetworkTypeAlwaysOnMtuFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // The upgraded db must have the fields Telephony.Carrier.LINGERING_NETWORK_TYPE,
+        // Telephony.Carrier.ALWAYS_ON, Telephony.Carrier.MTU_V4, and Telephony.Carrier.MTU_V6
+        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "carriers columns: " + Arrays.toString(columns));
+
+        assertTrue(Arrays.asList(columns).contains(Carriers.LINGERING_NETWORK_TYPE_BITMASK));
+        assertTrue(Arrays.asList(columns).contains(Carriers.ALWAYS_ON));
+        assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V4));
+        assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V6));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
