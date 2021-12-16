@@ -121,6 +121,19 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
+    public void databaseHelperOnUpgrade_hasPortIndexField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasPortIndexField");
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the PORT_INDEX field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "port index columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(SubscriptionManager.PORT_INDEX));
+    }
+
+    @Test
     public void databaseHelperOnUpgrade_hasSkip464XlatField() {
         Log.d(TAG, "databaseHelperOnUpgrade_hasSkip464XlatField");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
