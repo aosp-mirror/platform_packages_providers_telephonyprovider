@@ -3681,7 +3681,7 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
-            if (backupDataFormatVersion >= 56 << 16) {
+            if (backupDataFormatVersion >= 57 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING,
                         backedUpSimInfoEntry.getInt(
                                 Telephony.SimInfo.COLUMN_USAGE_SETTING,
