@@ -335,6 +335,22 @@ public final class TelephonyDatabaseHelperTest {
         assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V6));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasUsageSettingField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasUsageSettingField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the Telephony.SimInfo.USAGE_SETTING field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_USAGE_SETTING));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
