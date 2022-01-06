@@ -17,6 +17,7 @@
 
 package com.android.providers.telephony;
 
+import static android.provider.Telephony.Carriers.ALWAYS_ON;
 import static android.provider.Telephony.Carriers.APN;
 import static android.provider.Telephony.Carriers.APN_SET_ID;
 import static android.provider.Telephony.Carriers.AUTH_TYPE;
@@ -31,8 +32,8 @@ import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED_STATUS;
+import static android.provider.Telephony.Carriers.LINGERING_NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
-import static android.provider.Telephony.Carriers.TIME_LIMIT_FOR_MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
 import static android.provider.Telephony.Carriers.MMSC;
 import static android.provider.Telephony.Carriers.MMSPORT;
@@ -40,6 +41,8 @@ import static android.provider.Telephony.Carriers.MMSPROXY;
 import static android.provider.Telephony.Carriers.MNC;
 import static android.provider.Telephony.Carriers.MODEM_PERSIST;
 import static android.provider.Telephony.Carriers.MTU;
+import static android.provider.Telephony.Carriers.MTU_V4;
+import static android.provider.Telephony.Carriers.MTU_V6;
 import static android.provider.Telephony.Carriers.MVNO_MATCH_DATA;
 import static android.provider.Telephony.Carriers.MVNO_TYPE;
 import static android.provider.Telephony.Carriers.NAME;
@@ -59,6 +62,7 @@ import static android.provider.Telephony.Carriers.SERVER;
 import static android.provider.Telephony.Carriers.SKIP_464XLAT;
 import static android.provider.Telephony.Carriers.SKIP_464XLAT_DEFAULT;
 import static android.provider.Telephony.Carriers.SUBSCRIPTION_ID;
+import static android.provider.Telephony.Carriers.TIME_LIMIT_FOR_MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.TYPE;
 import static android.provider.Telephony.Carriers.UNEDITED;
 import static android.provider.Telephony.Carriers.USER;
@@ -155,7 +159,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 52 << 16;
+    private static final int DATABASE_VERSION = 55 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -191,7 +195,7 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_SIMINFO_SIM_INSERTED_RESTORE = 29;
 
     /**
-     * Default value for mtu if it's not set. Moved from PhoneConstants.
+     * Default value for mtu_v4 and mtu_v6 if it's not set. Moved from PhoneConstants.
      */
     private static final int UNSPECIFIED_INT = -1;
 
@@ -370,8 +374,8 @@ public class TelephonyProvider extends ContentProvider
     static {
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
-        // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible, network_type_bitmask,
-        // skip_464xlat
+        // wait_time, max_conns_time, mtu, mtu_v4, mtu_v6, bearer_bitmask, user_visible,
+        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
@@ -470,6 +474,7 @@ public class TelephonyProvider extends ContentProvider
                 BEARER + " INTEGER DEFAULT 0," +
                 BEARER_BITMASK + " INTEGER DEFAULT 0," +
                 NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0," +
+                LINGERING_NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0," +
                 MVNO_TYPE + " TEXT DEFAULT ''," +
                 MVNO_MATCH_DATA + " TEXT DEFAULT ''," +
                 SUBSCRIPTION_ID + " INTEGER DEFAULT " +
@@ -480,18 +485,21 @@ public class TelephonyProvider extends ContentProvider
                 WAIT_TIME_RETRY + " INTEGER DEFAULT 0," +
                 TIME_LIMIT_FOR_MAX_CONNECTIONS + " INTEGER DEFAULT 0," +
                 MTU + " INTEGER DEFAULT 0," +
+                MTU_V4 + " INTEGER DEFAULT " + UNSPECIFIED_INT + "," +
+                MTU_V6 + " INTEGER DEFAULT " + UNSPECIFIED_INT + "," +
                 EDITED_STATUS + " INTEGER DEFAULT " + UNEDITED + "," +
                 USER_VISIBLE + " BOOLEAN DEFAULT 1," +
                 USER_EDITABLE + " BOOLEAN DEFAULT 1," +
                 OWNED_BY + " INTEGER DEFAULT " + OWNED_BY_OTHERS + "," +
                 APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
                 SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
+                ALWAYS_ON + " INTEGER DEFAULT 0," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
                 // user, server, password, authtype, type, sub_id, modem_cognitive, max_conns,
-                // wait_time, max_conns_time, mtu, bearer_bitmask, user_visible,
-                // network_type_bitmask, skip_464xlat.
+                // wait_time, max_conns_time, mtu, mtu_v4, mtu_v6, bearer_bitmask, user_visible,
+                // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on.
                 "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
     }
 
@@ -566,7 +574,9 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT,"
-                + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED + " INTEGER DEFAULT -1"
+                + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER + " TEXT,"
+                + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS + " TEXT"
                 + ");";
     }
 
@@ -1694,7 +1704,7 @@ public class TelephonyProvider extends ContentProvider
             if (oldVersion < (52 << 16 | 6)) {
                 try {
                     // Try to update the siminfo table. It might not be there.
-                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                    db.execSQL("ALERT TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED
                             + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
@@ -1705,6 +1715,65 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 52 << 16 | 6;
             }
+
+            if (oldVersion < (53 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. Fix typo error in version 51.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS
+                            + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add d2d status sharing contacts. ");
+                    }
+                }
+                oldVersion = 53 << 16 | 6;
+            }
+
+            if (oldVersion < (54 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER
+                            + " TEXT;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS
+                            + " TEXT;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add phone numbers. ");
+                    }
+                }
+                oldVersion = 54 << 16 | 6;
+            }
+
+            if (oldVersion < (55 << 16 | 6)) {
+                try {
+                    // Try to add new fields LINGERING_NETWORK_TYPE_BITMASK, ALWAYS_ON,
+                    // MTU_V4, and MTU_V6
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + LINGERING_NETWORK_TYPE_BITMASK + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + ALWAYS_ON + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + MTU_V4 + " INTEGER DEFAULT " + UNSPECIFIED_INT + ";");
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + MTU_V6 + " INTEGER DEFAULT " + UNSPECIFIED_INT + ";");
+                    // Populate MTU_V4 with MTU values, using default value -1 instead of 0
+                    db.execSQL("UPDATE " + CARRIERS_TABLE + " SET " + MTU_V4 + " = "
+                            + MTU + " WHERE " + MTU + " != 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add lingering network type bitmask, always on flag,"
+                                + " and MTU v4 and v6 values.");
+                    }
+                }
+                oldVersion = 55 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -1950,8 +2019,10 @@ public class TelephonyProvider extends ContentProvider
                     queryValOrNull(MAX_CONNECTIONS) +
                     queryValOrNull(WAIT_TIME_RETRY) +
                     queryValOrNull(TIME_LIMIT_FOR_MAX_CONNECTIONS) +
-                    queryValOrNull(MTU);
-            String[] whereArgs = new String[29];
+                    queryValOrNull(MTU) +
+                    queryValOrNull(MTU_V4) +
+                    queryValOrNull(MTU_V6);
+            String[] whereArgs = new String[31];
             int i = 0;
             whereArgs[i++] = values.getAsString(NUMERIC);
             whereArgs[i++] = values.getAsString(MCC);
@@ -2021,6 +2092,10 @@ public class TelephonyProvider extends ContentProvider
                     values.getAsString(TIME_LIMIT_FOR_MAX_CONNECTIONS) : "0";
             whereArgs[i++] = values.containsKey(MTU) ?
                     values.getAsString(MTU) : "0";
+            whereArgs[i++] = values.containsKey(MTU_V4) ?
+                    values.getAsString(MTU_V4) : String.valueOf(UNSPECIFIED_INT);
+            whereArgs[i++] = values.containsKey(MTU_V6) ?
+                    values.getAsString(MTU_V6) : String.valueOf(UNSPECIFIED_INT);
 
             if (VDBG) {
                 log("deleteRow: where: " + where);
@@ -2135,7 +2210,10 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, WAIT_TIME_RETRY);
             getIntValueFromCursor(cv, c, TIME_LIMIT_FOR_MAX_CONNECTIONS);
             getIntValueFromCursor(cv, c, MTU);
+            getIntValueFromCursor(cv, c, MTU_V4);
+            getIntValueFromCursor(cv, c, MTU_V6);
             getIntValueFromCursor(cv, c, NETWORK_TYPE_BITMASK);
+            getIntValueFromCursor(cv, c, LINGERING_NETWORK_TYPE_BITMASK);
             getIntValueFromCursor(cv, c, BEARER_BITMASK);
             getIntValueFromCursor(cv, c, EDITED_STATUS);
             getIntValueFromCursor(cv, c, USER_VISIBLE);
@@ -2143,6 +2221,7 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, OWNED_BY);
             getIntValueFromCursor(cv, c, APN_SET_ID);
             getIntValueFromCursor(cv, c, SKIP_464XLAT);
+            getIntValueFromCursor(cv, c, ALWAYS_ON);
         }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
@@ -2154,9 +2233,9 @@ public class TelephonyProvider extends ContentProvider
                     while (c.moveToNext()) {
                         ContentValues cv = new ContentValues();
                         String val;
-                        // Using V17 copy function for V15 upgrade. This should be fine since it handles
-                        // columns that may not exist properly (getStringValueFromCursor() and
-                        // getIntValueFromCursor() handle column index -1)
+                        // Using V17 copy function for V15 upgrade. This should be fine since it
+                        // handles columns that may not exist properly (getStringValueFromCursor()
+                        // and getIntValueFromCursor() handle column index -1)
                         copyApnValuesV17(cv, c);
                         // Change bearer to a bitmask
                         String bearerStr = c.getString(c.getColumnIndex(BEARER));
@@ -2354,6 +2433,8 @@ public class TelephonyProvider extends ContentProvider
             addIntAttribute(parser, "wait_time", map, WAIT_TIME_RETRY);
             addIntAttribute(parser, "max_conns_time", map, TIME_LIMIT_FOR_MAX_CONNECTIONS);
             addIntAttribute(parser, "mtu", map, MTU);
+            addIntAttribute(parser, "mtu_v4", map, MTU_V4);
+            addIntAttribute(parser, "mtu_v6", map, MTU_V6);
             addIntAttribute(parser, "apn_set_id", map, APN_SET_ID);
             addIntAttribute(parser, "carrier_id", map, CARRIER_ID);
             addIntAttribute(parser, "skip_464xlat", map, SKIP_464XLAT);
@@ -2362,6 +2443,7 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "modem_cognitive", map, MODEM_PERSIST);
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
+            addBoolAttribute(parser, "always_on", map, ALWAYS_ON);
 
             int networkTypeBitmask = 0;
             String networkTypeList = parser.getAttributeValue(null, "network_type_bitmask");
@@ -2369,6 +2451,14 @@ public class TelephonyProvider extends ContentProvider
                 networkTypeBitmask = getBitmaskFromString(networkTypeList);
             }
             map.put(NETWORK_TYPE_BITMASK, networkTypeBitmask);
+
+            int lingeringNetworkTypeBitmask = 0;
+            String lingeringNetworkTypeList =
+                    parser.getAttributeValue(null, "lingering_network_type_bitmask");
+            if (lingeringNetworkTypeList != null) {
+                lingeringNetworkTypeBitmask = getBitmaskFromString(lingeringNetworkTypeList);
+            }
+            map.put(LINGERING_NETWORK_TYPE_BITMASK, lingeringNetworkTypeBitmask);
 
             int bearerBitmask = 0;
             if (networkTypeList != null) {
@@ -3509,7 +3599,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 52 << 16) {
+            if (DATABASE_VERSION != 55 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -5081,7 +5171,7 @@ public class TelephonyProvider extends ContentProvider
     private static int getMvnoTypeIntFromString(String mvnoType) {
         String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase();
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
-        return  mvnoTypeInt == null ? UNSPECIFIED_INT : mvnoTypeInt;
+        return  mvnoTypeInt == null ? 0 : mvnoTypeInt;
     }
 
     private static int getBitmaskFromString(String bearerList) {
