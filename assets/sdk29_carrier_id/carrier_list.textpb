@@ -6679,6 +6679,10 @@ carrier_id {
     mccmnc_tuple: "21403"
     imsi_prefix_xpattern: "2140359"
   }
+  carrier_attribute {
+    mccmnc_tuple: "21404"
+    imsi_prefix_xpattern: "2140423"
+  }
 }
 carrier_id {
   canonical_id: 1910
@@ -8734,6 +8738,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "311480"
     gid1: "bae1000000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "bae2000000000000"
   }
 }
 carrier_id {
@@ -11740,4 +11748,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 16777239
+version: 16777240
