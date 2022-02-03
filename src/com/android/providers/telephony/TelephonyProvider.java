@@ -3267,8 +3267,10 @@ public class TelephonyProvider extends ContentProvider
     }
 
     boolean isCallingFromSystemOrPhoneUid() {
-        return mInjector.binderGetCallingUid() == Process.SYSTEM_UID ||
-                mInjector.binderGetCallingUid() == Process.PHONE_UID;
+        int callingUid = mInjector.binderGetCallingUid();
+        return callingUid == Process.SYSTEM_UID || callingUid == Process.PHONE_UID
+                // Allow ROOT for testing. ROOT can access underlying DB files anyways.
+                || callingUid == Process.ROOT_UID;
     }
 
     void ensureCallingFromSystemOrPhoneUid(String message) {
