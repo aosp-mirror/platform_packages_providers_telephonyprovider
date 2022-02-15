@@ -215,6 +215,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
                 arbitraryStringVal);
         contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, arbitraryIntVal);
+        contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING, arbitraryIntVal);
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
@@ -704,12 +705,14 @@ public class TelephonyProviderTest extends TestCase {
         final String insertIccId = "exampleIccId";
         final String insertCardId = "exampleCardId";
         final int insertProfileClass = SubscriptionManager.PROFILE_CLASS_DEFAULT;
+        final int insertPortIndex = 1;
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
         contentValues.put(SubscriptionManager.ICC_ID, insertIccId);
         contentValues.put(SubscriptionManager.CARD_ID, insertCardId);
         contentValues.put(SubscriptionManager.PROFILE_CLASS, insertProfileClass);
+        contentValues.put(SubscriptionManager.PORT_INDEX, insertPortIndex);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
@@ -721,6 +724,7 @@ public class TelephonyProviderTest extends TestCase {
             SubscriptionManager.CARRIER_NAME,
             SubscriptionManager.CARD_ID,
             SubscriptionManager.PROFILE_CLASS,
+            SubscriptionManager.PORT_INDEX,
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -737,10 +741,11 @@ public class TelephonyProviderTest extends TestCase {
         final String resultCarrierName = cursor.getString(1);
         final String resultCardId = cursor.getString(2);
         final int resultProfileClass = cursor.getInt(3);
+        final int resultPortIndex = cursor.getInt(4);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
-        assertEquals(insertProfileClass, resultProfileClass);
+        assertEquals(insertPortIndex, resultPortIndex);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";

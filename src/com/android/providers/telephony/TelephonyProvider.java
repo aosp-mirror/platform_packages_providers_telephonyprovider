@@ -159,7 +159,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 55 << 16;
+    private static final int DATABASE_VERSION = 57 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -445,6 +445,9 @@ public class TelephonyProvider extends ContentProvider
                 Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_USAGE_SETTING,
+                Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -576,7 +579,10 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT,"
                 + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED + " INTEGER DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER + " TEXT,"
-                + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS + " TEXT"
+                + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_PORT_INDEX + "  INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_USAGE_SETTING + " INTEGER DEFAULT "
+                + SubscriptionManager.USAGE_SETTING_UNKNOWN
                 + ");";
     }
 
@@ -1771,6 +1777,37 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 55 << 16 | 6;
+            }
+
+            if (oldVersion < (56 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_PORT_INDEX
+                            + " INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 56 << 16 | 6;
+            }
+
+            if (oldVersion < (57 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_USAGE_SETTING
+                            + " INTEGER DEFAULT " + SubscriptionManager.USAGE_SETTING_UNKNOWN
+                            + ";");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add preferred usage setting");
+                    }
+                }
+                oldVersion = 57 << 16 | 6;
             }
 
             if (DBG) {
@@ -3230,8 +3267,10 @@ public class TelephonyProvider extends ContentProvider
     }
 
     boolean isCallingFromSystemOrPhoneUid() {
-        return mInjector.binderGetCallingUid() == Process.SYSTEM_UID ||
-                mInjector.binderGetCallingUid() == Process.PHONE_UID;
+        int callingUid = mInjector.binderGetCallingUid();
+        return callingUid == Process.SYSTEM_UID || callingUid == Process.PHONE_UID
+                // Allow ROOT for testing. ROOT can access underlying DB files anyways.
+                || callingUid == Process.ROOT_UID;
     }
 
     void ensureCallingFromSystemOrPhoneUid(String message) {
@@ -3602,7 +3641,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 55 << 16) {
+            if (DATABASE_VERSION != 57 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3644,6 +3683,12 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 57 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_USAGE_SETTING,
+                                SubscriptionManager.USAGE_SETTING_UNKNOWN));
+            }
             if (backupDataFormatVersion >= 52 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED,
                         backedUpSimInfoEntry.getInt(
@@ -4877,6 +4922,12 @@ public class TelephonyProvider extends ContentProvider
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
                                         Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_USAGE_SETTING)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_USAGE_SETTING),
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
                     break;
