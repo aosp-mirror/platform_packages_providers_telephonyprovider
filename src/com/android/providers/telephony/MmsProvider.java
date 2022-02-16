@@ -98,13 +98,8 @@ public class MmsProvider extends ContentProvider {
         // or received messages, without wap pushes.
         final boolean accessRestricted = ProviderUtil.isAccessRestricted(
                 getContext(), getCallingPackage(), Binder.getCallingUid());
-
-        // If access is restricted, we don't allow subqueries in the query.
-        if (accessRestricted) {
-            SqlQueryChecker.checkQueryParametersForSubqueries(projection, selection, sortOrder);
-        }
-
         final String pduTable = getPduTable(accessRestricted);
+
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
 
         // Generate the body of the query.
