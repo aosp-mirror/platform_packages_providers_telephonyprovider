@@ -121,19 +121,6 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
-    public void databaseHelperOnUpgrade_hasPortIndexField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasPortIndexField");
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // the upgraded db must have the PORT_INDEX field
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "port index columns: " + Arrays.toString(upgradedColumns));
-        assertTrue(Arrays.asList(upgradedColumns).contains(SubscriptionManager.PORT_INDEX));
-    }
-
-    @Test
     public void databaseHelperOnUpgrade_hasSkip464XlatField() {
         Log.d(TAG, "databaseHelperOnUpgrade_hasSkip464XlatField");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
@@ -231,22 +218,6 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
-    public void databaseHelperOnUpgrade_hasD2DStatusSharingField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasD2DStatusSharingField");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // the upgraded db must have the Telephony.SimInfo.COLUMN_D2D_SHARING_STATUS field
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
-
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING));
-    }
-
-    @Test
     public void databaseHelperOnUpgrade_hasVoImsOptInStatusField() {
         Log.d(TAG, "databaseHelperOnUpgrade_hasImsRcsUceEnabledField");
         // (5 << 16) is the first upgrade trigger in onUpgrade
@@ -260,6 +231,22 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasD2DStatusSharingField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasD2DStatusSharingField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the Telephony.SimInfo.COLUMN_D2D_SHARING_STATUS field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING));
     }
 
     @Test
@@ -277,78 +264,6 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS));
-    }
-
-    @Test
-    public void databaseHelperOnUpgrade_hasNrAdvancedCallingEnabledField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasNrAdvancedCallingEnabledField");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // the upgraded db must have the
-        // Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED field
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
-
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
-    }
-
-    @Test
-    public void databaseHelperOnUpgrade_hasPhoneNumberSourceCarrierAndImsField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasPhoneNumberSourceCarrierAndImsField");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // the upgraded db must have the
-        // Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER field and
-        // Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS field
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
-
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER));
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS));
-    }
-
-    @Test
-    public void databaseHelperOnUpgrade_hasLingeringNetworkTypeAlwaysOnMtuFields() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasLingeringNetworkTypeAlwaysOnMtuFields");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // The upgraded db must have the fields Telephony.Carrier.LINGERING_NETWORK_TYPE,
-        // Telephony.Carrier.ALWAYS_ON, Telephony.Carrier.MTU_V4, and Telephony.Carrier.MTU_V6
-        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
-        String[] columns = cursor.getColumnNames();
-        Log.d(TAG, "carriers columns: " + Arrays.toString(columns));
-
-        assertTrue(Arrays.asList(columns).contains(Carriers.LINGERING_NETWORK_TYPE_BITMASK));
-        assertTrue(Arrays.asList(columns).contains(Carriers.ALWAYS_ON));
-        assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V4));
-        assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V6));
-    }
-
-    @Test
-    public void databaseHelperOnUpgrade_hasUsageSettingField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasUsageSettingField");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // the upgraded db must have the Telephony.SimInfo.USAGE_SETTING field
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
-
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_USAGE_SETTING));
     }
 
     /**
