@@ -295,7 +295,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         setIdleConnectionTimeout(IDLE_CONNECTION_TIMEOUT_MS);
         setWriteAheadLoggingEnabled(false);
         try {
-            PhoneFactory.addLocalLog(TAG, 64);
+            PhoneFactory.addLocalLog(TAG, 100);
         } catch (IllegalArgumentException e) {
             // ignore
         }
@@ -1657,7 +1657,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
-            return;
+            // fall through
         }
 
         Log.e(TAG, "Destroying all old data.");
