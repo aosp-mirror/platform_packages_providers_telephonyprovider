@@ -2428,7 +2428,7 @@ public class TelephonyProvider extends ContentProvider
             String mncString = mnc;
             // Since an mnc can have both two and three digits and it is hard to verify
             // all OEM's Global APN lists we only do this for overlays.
-            if (isOverlay) {
+            if (isOverlay && mcc !=null && mnc != null) {
                 mccString = String.format("%03d", Integer.parseInt(mcc));
                 // Looks up a two digit mnc in the carrier id DB
                 // if not found a three digit mnc value is chosen
