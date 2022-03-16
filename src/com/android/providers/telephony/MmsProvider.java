@@ -100,6 +100,7 @@ public class MmsProvider extends ContentProvider {
                 getContext(), getCallingPackage(), Binder.getCallingUid());
 
         // If access is restricted, we don't allow subqueries in the query.
+        Log.v(TAG, "accessRestricted=" + accessRestricted);
         if (accessRestricted) {
             SqlQueryChecker.checkQueryParametersForSubqueries(projection, selection, sortOrder);
         }

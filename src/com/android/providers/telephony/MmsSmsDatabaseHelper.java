@@ -31,6 +31,7 @@ import android.database.DefaultDatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.FileUtils;
 import android.os.storage.StorageManager;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
@@ -532,6 +533,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         return rows;
     }
 
+    private void clearMmsParts() {
+        try {
+            String partsDirPath = mContext.getDir(MmsProvider.PARTS_DIR_NAME, 0)
+                    .getCanonicalPath();
+            localLog("clearMmsParts: removing all attachments from: " + partsDirPath);
+            File partsDir = new File(partsDirPath);
+            if (!FileUtils.deleteContents(partsDir)) {
+                localLogWtf("clearMmsParts: couldn't delete all attachments");
+            }
+        }
+        catch (IOException e){
+            Log.e(TAG, "clearMmsParts: failed " + e, e);
+        }
+    }
+
     @Override
     public void onCreate(SQLiteDatabase db) {
         localLog("onCreate: Creating all SMS-MMS tables.");
@@ -543,6 +559,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createMmsTriggers(db);
         createWordsTables(db);
         createIndices(db);
+
+        clearMmsParts();    // leave no dangling MMS attachments when rebuilding the DB
 
         // if FBE is not supported, or if this onCreate is for CE partition database
         if (!StorageManager.isFileEncrypted()
