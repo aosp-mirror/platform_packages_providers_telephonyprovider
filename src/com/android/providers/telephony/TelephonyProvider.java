@@ -2392,17 +2392,19 @@ public class TelephonyProvider extends ContentProvider
             String mncString = mnc;
             // Since an mnc can have both two and three digits and it is hard to verify
             // all OEM's Global APN lists we only do this for overlays.
-            if (isOverlay) {
+            if (isOverlay && mcc !=null && mnc != null) {
                 mccString = String.format("%03d", Integer.parseInt(mcc));
                 // Looks up a two digit mnc in the carrier id DB
                 // if not found a three digit mnc value is chosen
                 mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
             }
-
-            String numeric = (mccString == null | mncString == null) ? null : mccString + mncString;
+            // Make sure to set default values for numeric, mcc and mnc. This is the empty string.
+            // If default is not set here, a duplicate of each carrier id APN will be created next
+            // time the apn list is read. This happens at OTA or at restore.
+            String numeric = (mccString == null | mncString == null) ? "" : mccString + mncString;
             map.put(NUMERIC, numeric);
-            map.put(MCC, mccString);
-            map.put(MNC, mncString);
+            map.put(MCC, mccString != null ? mccString : "");
+            map.put(MNC, mncString != null ? mncString : "");
             map.put(NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
@@ -3450,10 +3452,11 @@ public class TelephonyProvider extends ContentProvider
             }
 
             if (bestRestoreMatch != null) {
-                if (bestRestoreMatch.getMatchScore() != 0) {
+                ContentValues newContentValues = bestRestoreMatch.getContentValues();
+                if (bestRestoreMatch.getMatchScore() != 0 && newContentValues != null) {
                     if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SUW) {
                         update(SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI,
-                                bestRestoreMatch.getContentValues(),
+                                newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                                 new String[]{Integer.toString(currSubIdFromDb)});
                     } else if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED) {
@@ -3461,7 +3464,7 @@ public class TelephonyProvider extends ContentProvider
                                 SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
                                 SIM_INSERTED_RESTORE_URI_SUFFIX);
                         update(simInsertedRestoreUri,
-                                bestRestoreMatch.getContentValues(),
+                                newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                                 new String[]{Integer.toString(currSubIdFromDb)});
                     }
@@ -3472,6 +3475,9 @@ public class TelephonyProvider extends ContentProvider
                             restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
                     newlyRestoredSubIds.add(currSubIdFromDb);
                 } else {
+                    /* If this block was reached because ContentValues was null, that means the
+                    database schema was newer during backup than during restore. We consider this
+                    a no-match to avoid updating columns that don't exist */
                     TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
                             TelephonyProtoEnums.SIM_RESTORE_RESULT_NONE_MATCH,
                             restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
@@ -5005,6 +5011,7 @@ public class TelephonyProvider extends ContentProvider
         TelephonyManager telephonyManager =
             getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         String simOperator = telephonyManager.getSimOperator();
+        int simCarrierId = telephonyManager.getSimSpecificCarrierId();
         Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
                 NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
         String where = null;
@@ -5032,6 +5039,12 @@ public class TelephonyProvider extends ContentProvider
                         + " AND (" + MVNO_TYPE + "='' OR " + MVNO_MATCH_DATA + "='')"
                         + " AND " + IS_NOT_OWNED_BY_DPC;
             }
+            // Add carrier id APNs
+            if (TelephonyManager.UNKNOWN_CARRIER_ID < simCarrierId) {
+                where = where.concat(" OR " + CARRIER_ID + " = '" + simCarrierId + "'" + " AND "
+                        + IS_NOT_OWNED_BY_DPC);
+            }
+
         }
         return where;
     }
