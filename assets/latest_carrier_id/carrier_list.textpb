@@ -8404,6 +8404,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "44051"
+    mccmnc_tuple: "44054"
     gid1: "24"
   }
 }
@@ -11000,6 +11001,7 @@ carrier_id {
   carrier_name: "J:COM MOBILE"
   carrier_attribute {
     mccmnc_tuple: "44051"
+    mccmnc_tuple: "44054"
     gid1: "22"
   }
 }
