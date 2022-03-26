@@ -9032,6 +9032,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2148
+  carrier_name: "BIGLOBE"
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "24"
+  }
+}
+carrier_id {
   canonical_id: 2149
   carrier_name: "Voiceworks NL"
   carrier_attribute {
@@ -11624,6 +11632,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "44054"
     gid1: "26"
+  }
+}
+carrier_id {
+  canonical_id: 2515
+  carrier_name: "J:COM MOBILE"
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "22"
   }
 }
 carrier_id {
