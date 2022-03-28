@@ -4624,7 +4624,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1614
-  carrier_name: "CTM GSM"
+  carrier_name: "CTM"
   carrier_attribute {
     mccmnc_tuple: "45501"
     mccmnc_tuple: "45504"
@@ -6247,6 +6247,10 @@ carrier_id {
   carrier_name: "northwestcell"
   carrier_attribute {
     mccmnc_tuple: "311420"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA00150000000000"
   }
 }
 carrier_id {
@@ -8341,6 +8345,10 @@ carrier_id {
     mccmnc_tuple: "44051"
     gid1: "20"
   }
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "20"
+  }
 }
 carrier_id {
   canonical_id: 2111
@@ -8776,6 +8784,10 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "44051"
+    gid1: "24"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "44054"
     gid1: "24"
   }
 }
@@ -11422,6 +11434,18 @@ carrier_id {
     mccmnc_tuple: "44051"
     gid1: "26"
   }
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "26"
+  }
+}
+carrier_id {
+  canonical_id: 2515
+  carrier_name: "J:COM MOBILE"
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "22"
+  }
 }
 carrier_id {
   canonical_id: 2516
@@ -11836,4 +11860,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554475
+version: 33554476
