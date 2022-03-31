@@ -2434,11 +2434,13 @@ public class TelephonyProvider extends ContentProvider
                 // if not found a three digit mnc value is chosen
                 mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
             }
-
-            String numeric = (mccString == null | mncString == null) ? null : mccString + mncString;
+            // Make sure to set default values for numeric, mcc and mnc. This is the empty string.
+            // If default is not set here, a duplicate of each carrier id APN will be created next
+            // time the apn list is read. This happens at OTA or at restore.
+            String numeric = (mccString == null | mncString == null) ? "" : mccString + mncString;
             map.put(NUMERIC, numeric);
-            map.put(MCC, mccString);
-            map.put(MNC, mncString);
+            map.put(MCC, mccString != null ? mccString : "");
+            map.put(MNC, mncString != null ? mncString : "");
             map.put(NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
@@ -5092,6 +5094,7 @@ public class TelephonyProvider extends ContentProvider
         TelephonyManager telephonyManager =
             getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         String simOperator = telephonyManager.getSimOperator();
+        int simCarrierId = telephonyManager.getSimSpecificCarrierId();
         Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
                 NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
         String where = null;
@@ -5119,6 +5122,12 @@ public class TelephonyProvider extends ContentProvider
                         + " AND (" + MVNO_TYPE + "='' OR " + MVNO_MATCH_DATA + "='')"
                         + " AND " + IS_NOT_OWNED_BY_DPC;
             }
+            // Add carrier id APNs
+            if (TelephonyManager.UNKNOWN_CARRIER_ID < simCarrierId) {
+                where = where.concat(" OR " + CARRIER_ID + " = '" + simCarrierId + "'" + " AND "
+                        + IS_NOT_OWNED_BY_DPC);
+            }
+
         }
         return where;
     }
