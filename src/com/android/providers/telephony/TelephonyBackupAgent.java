@@ -36,7 +36,6 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
-import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.telephony.PhoneNumberUtils;
@@ -51,7 +50,6 @@ import android.util.Log;
 import android.util.SparseArray;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.PhoneFactory;
 
 import com.google.android.mms.ContentType;
 import com.google.android.mms.pdu.CharacterSets;
@@ -116,15 +114,6 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final boolean DEBUG = false;
     private static volatile boolean sIsRestoring;
 
-    // SharedPreferences keys
-    private static final String NUM_SMS_RESTORED = "num_sms_restored";
-    private static final String NUM_SMS_EXCEPTIONS = "num_sms_exceptions";
-    private static final String NUM_SMS_FILES_STORED = "num_sms_files_restored";
-    private static final String NUM_SMS_FILES_WITH_EXCEPTIONS = "num_sms_files_with_exceptions";
-    private static final String NUM_MMS_RESTORED = "num_mms_restored";
-    private static final String NUM_MMS_EXCEPTIONS = "num_mms_exceptions";
-    private static final String NUM_MMS_FILES_STORED = "num_mms_files_restored";
-    private static final String NUM_MMS_FILES_WITH_EXCEPTIONS = "num_mms_files_with_exceptions";
 
     // Copied from packages/apps/Messaging/src/com/android/messaging/sms/MmsUtils.java.
     private static final int DEFAULT_DURATION = 5000; //ms
@@ -327,7 +316,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     @Override
     public void onCreate() {
         super.onCreate();
-        Log.d(TAG, "onCreate");
+
         final SubscriptionManager subscriptionManager = SubscriptionManager.from(this);
         if (subscriptionManager != null) {
             final List<SubscriptionInfo> subInfo =
@@ -516,28 +505,6 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     public static class DeferredSmsMmsRestoreService extends IntentService {
         private static final String TAG = "DeferredSmsMmsRestoreService";
-        private static boolean sSharedPrefsAddedToLocalLogs = false;
-
-        public static void addAllSharedPrefToLocalLog(Context context) {
-            if (sSharedPrefsAddedToLocalLogs) return;
-            localLog("addAllSharedPrefToLocalLog");
-            SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(context);
-            Map<String, ?> allPref = sp.getAll();
-            if (allPref.keySet() == null || allPref.keySet().size() == 0) return;
-            for (String key : allPref.keySet()) {
-                try {
-                    localLog(key + ":" + allPref.get(key).toString());
-                } catch (Exception e) {
-                    localLog("Skipping over key " + key + " due to exception " + e);
-                }
-            }
-            sSharedPrefsAddedToLocalLogs = true;
-        }
-
-        public static void localLog(String logMsg) {
-            Log.d(TAG, logMsg);
-            PhoneFactory.localLog(TAG, logMsg);
-        }
 
         private final Comparator<File> mFileComparator = new Comparator<File>() {
             @Override
@@ -548,7 +515,6 @@ public class TelephonyBackupAgent extends BackupAgent {
 
         public DeferredSmsMmsRestoreService() {
             super(TAG);
-            Log.d(TAG, "DeferredSmsMmsRestoreService");
             setIntentRedelivery(true);
         }
 
@@ -557,7 +523,6 @@ public class TelephonyBackupAgent extends BackupAgent {
 
         @Override
         protected void onHandleIntent(Intent intent) {
-            Log.d(TAG, "onHandleIntent");
             try {
                 mWakeLock.acquire();
                 sIsRestoring = true;
@@ -580,7 +545,6 @@ public class TelephonyBackupAgent extends BackupAgent {
                     } catch (Exception e) {
                         // Either IOException or RuntimeException.
                         Log.e(TAG, "onHandleIntent", e);
-                        localLog("onHandleIntent: Exception " + e);
                     } finally {
                         file.delete();
                     }
@@ -588,12 +552,11 @@ public class TelephonyBackupAgent extends BackupAgent {
                 if (didRestore) {
                   // Tell the default sms app to do a full sync now that the messages have been
                   // restored.
-                  localLog("onHandleIntent: done - notifying default sms app");
+                  Log.d(TAG, "onHandleIntent done - notifying default sms app");
                   ProviderUtil.notifyIfNotDefaultSmsApp(null /*uri*/, null /*calling package*/,
                       this);
                 }
            } finally {
-                addAllSharedPrefToLocalLog(this);
                 sIsRestoring = false;
                 mWakeLock.release();
             }
@@ -602,12 +565,6 @@ public class TelephonyBackupAgent extends BackupAgent {
         @Override
         public void onCreate() {
             super.onCreate();
-            Log.d(TAG, "onCreate");
-            try {
-                PhoneFactory.addLocalLog(TAG, 32);
-            } catch (IllegalArgumentException e) {
-                // ignore
-            }
             mTelephonyBackupAgent = new TelephonyBackupAgent();
             mTelephonyBackupAgent.attach(this);
             mTelephonyBackupAgent.onCreate();
@@ -626,15 +583,8 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
 
         static void startIfFilesExist(Context context) {
-            try {
-                PhoneFactory.addLocalLog(TAG, 32);
-            } catch (IllegalArgumentException e) {
-                // ignore
-            }
             File[] files = getFilesToRestore(context);
             if (files == null || files.length == 0) {
-                Log.d(TAG, "startIfFilesExist: no files to restore");
-                addAllSharedPrefToLocalLog(context);
                 return;
             }
             context.startService(new Intent(context, DeferredSmsMmsRestoreService.class));
@@ -668,7 +618,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 Log.d(TAG, "Restoring text MMS");
                 putMmsMessagesToProvider(jsonReader);
             } else {
-                DeferredSmsMmsRestoreService.localLog("Unknown file to restore:" + fileName);
+                Log.e(TAG, "Unknown file to restore:" + fileName);
             }
         }
     }
@@ -677,23 +627,16 @@ public class TelephonyBackupAgent extends BackupAgent {
     void putSmsMessagesToProvider(JsonReader jsonReader) throws IOException {
         jsonReader.beginArray();
         int msgCount = 0;
-        int numExceptions = 0;
         final int bulkInsertSize = mMaxMsgPerFile;
         ContentValues[] values = new ContentValues[bulkInsertSize];
         while (jsonReader.hasNext()) {
             ContentValues cv = readSmsValuesFromReader(jsonReader);
-            try {
-                if (mSmsProviderQuery.doesSmsExist(cv)) {
-                    continue;
-                }
-                values[(msgCount++) % bulkInsertSize] = cv;
-                if (msgCount % bulkInsertSize == 0) {
-                    mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
-                }
-            } catch (RuntimeException e) {
-                Log.e(TAG, "putSmsMessagesToProvider", e);
-                DeferredSmsMmsRestoreService.localLog("putSmsMessagesToProvider: Exception " + e);
-                numExceptions++;
+            if (doesSmsExist(cv)) {
+                continue;
+            }
+            values[(msgCount++) % bulkInsertSize] = cv;
+            if (msgCount % bulkInsertSize == 0) {
+                mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
             }
         }
         if (msgCount % bulkInsertSize > 0) {
@@ -701,103 +644,44 @@ public class TelephonyBackupAgent extends BackupAgent {
                     Arrays.copyOf(values, msgCount % bulkInsertSize));
         }
         jsonReader.endArray();
-        incremenentSharedPref(true, msgCount, numExceptions);
-    }
-
-    void incremenentSharedPref(boolean sms, int msgCount, int numExceptions) {
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        SharedPreferences.Editor editor = sp.edit();
-        if (sms) {
-            editor.putInt(NUM_SMS_RESTORED, sp.getInt(NUM_SMS_RESTORED, 0) + msgCount);
-            editor.putInt(NUM_SMS_EXCEPTIONS, sp.getInt(NUM_SMS_EXCEPTIONS, 0) + numExceptions);
-            editor.putInt(NUM_SMS_FILES_STORED, sp.getInt(NUM_SMS_FILES_STORED, 0) + 1);
-            if (numExceptions > 0) {
-                editor.putInt(NUM_SMS_FILES_WITH_EXCEPTIONS,
-                        sp.getInt(NUM_SMS_FILES_WITH_EXCEPTIONS, 0) + 1);
-            }
-        } else {
-            editor.putInt(NUM_MMS_RESTORED, sp.getInt(NUM_MMS_RESTORED, 0) + msgCount);
-            editor.putInt(NUM_MMS_EXCEPTIONS, sp.getInt(NUM_MMS_EXCEPTIONS, 0) + numExceptions);
-            editor.putInt(NUM_MMS_FILES_STORED, sp.getInt(NUM_MMS_FILES_STORED, 0) + 1);
-            if (numExceptions > 0) {
-                editor.putInt(NUM_MMS_FILES_WITH_EXCEPTIONS,
-                        sp.getInt(NUM_MMS_FILES_WITH_EXCEPTIONS, 0) + 1);
-            }
-        }
-        editor.commit();
     }
 
     @VisibleForTesting
     void putMmsMessagesToProvider(JsonReader jsonReader) throws IOException {
         jsonReader.beginArray();
         int total = 0;
-        int numExceptions = 0;
         while (jsonReader.hasNext()) {
             final Mms mms = readMmsFromReader(jsonReader);
             if (DEBUG) {
                 Log.d(TAG, "putMmsMessagesToProvider " + mms);
             }
-            try {
-                if (doesMmsExist(mms)) {
-                    if (DEBUG) {
-                        Log.e(TAG, String.format("Mms: %s already exists", mms.toString()));
-                    } else {
-                        Log.w(TAG, "Mms: Found duplicate MMS");
-                    }
-                    continue;
+            if (doesMmsExist(mms)) {
+                if (DEBUG) {
+                    Log.e(TAG, String.format("Mms: %s already exists", mms.toString()));
+                } else {
+                    Log.w(TAG, "Mms: Found duplicate MMS");
                 }
-                total++;
-                addMmsMessage(mms);
-            } catch (Exception e) {
-                Log.e(TAG, "putMmsMessagesToProvider", e);
-                numExceptions++;
-                DeferredSmsMmsRestoreService.localLog("putMmsMessagesToProvider: Exception " + e);
+                continue;
             }
+            total++;
+            addMmsMessage(mms);
         }
         Log.d(TAG, "putMmsMessagesToProvider handled " + total + " new messages.");
-        incremenentSharedPref(false, total, numExceptions);
     }
 
     @VisibleForTesting
     static final String[] PROJECTION_ID = {BaseColumns._ID};
     private static final int ID_IDX = 0;
 
-    /**
-     * Interface to allow mocking method for testing.
-     */
-    public interface SmsProviderQuery {
-        boolean doesSmsExist(ContentValues smsValues);
-    }
-
-    private SmsProviderQuery mSmsProviderQuery = new SmsProviderQuery() {
-        @Override
-        public boolean doesSmsExist(ContentValues smsValues) {
-            // The SMS body might contain '\0' characters (U+0000) such as in the case of
-            // http://b/160801497 . SQLite does not allow '\0' in String literals, but as of SQLite
-            // version 3.32.2 2020-06-04, it does allow them as selectionArgs; therefore, we're
-            // using the latter approach here.
-            final String selection = String.format(Locale.US, "%s=%d AND %s=?",
-                    Telephony.Sms.DATE, smsValues.getAsLong(Telephony.Sms.DATE),
-                    Telephony.Sms.BODY);
-            String[] selectionArgs = new String[] { smsValues.getAsString(Telephony.Sms.BODY)};
-            try (Cursor cursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, PROJECTION_ID,
-                    selection, selectionArgs, null)) {
-                return cursor != null && cursor.getCount() > 0;
-            }
+    private boolean doesSmsExist(ContentValues smsValues) {
+        final String where = String.format(Locale.US, "%s = %d and %s = %s",
+                Telephony.Sms.DATE, smsValues.getAsLong(Telephony.Sms.DATE),
+                Telephony.Sms.BODY,
+                DatabaseUtils.sqlEscapeString(smsValues.getAsString(Telephony.Sms.BODY)));
+        try (Cursor cursor = mContentResolver.query(Telephony.Sms.CONTENT_URI, PROJECTION_ID, where,
+                null, null)) {
+            return cursor != null && cursor.getCount() > 0;
         }
-    };
-
-    /**
-     * Sets a temporary {@code SmsProviderQuery} for testing; note that this method
-     * is not thread safe.
-     *
-     * @return the previous {@code SmsProviderQuery}
-     */
-    @VisibleForTesting
-    public SmsProviderQuery getAndSetSmsProviderQuery(SmsProviderQuery smsProviderQuery) {
-        SmsProviderQuery result = mSmsProviderQuery;
-        mSmsProviderQuery = smsProviderQuery;
-        return result;
     }
 
     private boolean doesMmsExist(Mms mms) {
@@ -1263,9 +1147,9 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (DEBUG) {
             Log.d(TAG, "Add mms:\n" + mms);
         }
-        final long placeholderId = System.currentTimeMillis(); // Placeholder ID of the msg.
+        final long dummyId = System.currentTimeMillis(); // Dummy ID of the msg.
         final Uri partUri = Telephony.Mms.CONTENT_URI.buildUpon()
-                .appendPath(String.valueOf(placeholderId)).appendPath("part").build();
+                .appendPath(String.valueOf(dummyId)).appendPath("part").build();
 
         final String srcName = String.format(Locale.US, "text.%06d.txt", 0);
         { // Insert SMIL part.
@@ -1273,7 +1157,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             final String smil = TextUtils.isEmpty(mms.smil) ?
                     String.format(sSmilTextOnly, smilBody) : mms.smil;
             final ContentValues values = new ContentValues(7);
-            values.put(Telephony.Mms.Part.MSG_ID, placeholderId);
+            values.put(Telephony.Mms.Part.MSG_ID, dummyId);
             values.put(Telephony.Mms.Part.SEQ, -1);
             values.put(Telephony.Mms.Part.CONTENT_TYPE, ContentType.APP_SMIL);
             values.put(Telephony.Mms.Part.NAME, "smil.xml");
@@ -1288,7 +1172,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
         { // Insert body part.
             final ContentValues values = new ContentValues(8);
-            values.put(Telephony.Mms.Part.MSG_ID, placeholderId);
+            values.put(Telephony.Mms.Part.MSG_ID, dummyId);
             values.put(Telephony.Mms.Part.SEQ, 0);
             values.put(Telephony.Mms.Part.CONTENT_TYPE, ContentType.TEXT_PLAIN);
             values.put(Telephony.Mms.Part.NAME, srcName);
@@ -1310,7 +1194,7 @@ public class TelephonyBackupAgent extends BackupAgent {
             // Insert the attachment parts.
             for (ContentValues mmsAttachment : mms.attachments) {
                 final ContentValues values = new ContentValues(6);
-                values.put(Telephony.Mms.Part.MSG_ID, placeholderId);
+                values.put(Telephony.Mms.Part.MSG_ID, dummyId);
                 values.put(Telephony.Mms.Part.SEQ, 0);
                 values.put(Telephony.Mms.Part.CONTENT_TYPE,
                         mmsAttachment.getAsString(MMS_MIME_TYPE));

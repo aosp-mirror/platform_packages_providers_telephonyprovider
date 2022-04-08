@@ -34,9 +34,6 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
-import android.os.Bundle;
-import android.os.PersistableBundle;
 import android.os.Process;
 import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
@@ -53,17 +50,12 @@ import androidx.test.InstrumentationRegistry;
 
 import junit.framework.TestCase;
 
-import org.junit.Ignore;
 import org.junit.Test;
-import org.mockito.MockitoAnnotations;
+import org.mockito.ArgumentMatchers;
 import org.mockito.Mock;
-import static org.mockito.Mockito.when;
+import org.mockito.MockitoAnnotations;
 
-import com.android.internal.telephony.PhoneFactory;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.IntStream;
@@ -86,8 +78,6 @@ public class TelephonyProviderTest extends TestCase {
     private MockContextWithProvider mContext;
     private MockContentResolver mContentResolver;
     private TelephonyProviderTestable mTelephonyProviderTestable;
-    @Mock
-    private Resources mockContextResources;
 
     private int notifyChangeCount;
     private int notifyChangeRestoreCount;
@@ -125,101 +115,6 @@ public class TelephonyProviderTest extends TestCase {
     private static final Uri URI_ENFORCE_MANAGED= Uri.parse("content://telephony/carriers/enforce_managed");
     private static final String ENFORCED_KEY = "enforced";
 
-
-    private static final String MATCHING_ICCID = "MATCHING_ICCID";
-    private static final String MATCHING_PHONE_NUMBER = "MATCHING_PHONE_NUMBER";
-    private static final int MATCHING_CARRIER_ID = 123456789;
-
-    // Represents an entry in the SimInfoDb
-    private static final ContentValues TEST_SIM_INFO_VALUES_US;
-    private static final ContentValues TEST_SIM_INFO_VALUES_FR;
-    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE = 999999;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE
-            = "ARBITRARY_TEST_STRING_VALUE";
-
-    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID;
-    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1 = 111111;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1
-            = "ARBITRARY_TEST_STRING_VALUE_1";
-
-    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID;
-    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2 = 222222;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2
-            = "ARBITRARY_TEST_STRING_VALUE_2";
-
-    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID;
-    private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3 = 333333;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3
-            = "ARBITRARY_TEST_STRING_VALUE_3";
-
-    static {
-        TEST_SIM_INFO_VALUES_US = populateContentValues(
-                MATCHING_ICCID,
-                MATCHING_PHONE_NUMBER,
-                MATCHING_CARRIER_ID,
-                "us",
-                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE);
-
-        TEST_SIM_INFO_VALUES_FR = populateContentValues(
-                MATCHING_ICCID,
-                MATCHING_PHONE_NUMBER,
-                MATCHING_CARRIER_ID,
-                "fr",
-                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE);
-
-        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID = populateContentValues(
-                MATCHING_ICCID,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
-                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                null,
-                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1);
-
-        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID = populateContentValues(
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2,
-                MATCHING_PHONE_NUMBER,
-                MATCHING_CARRIER_ID,
-                null,
-                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2);
-
-        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID = populateContentValues(
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3,
-                MATCHING_CARRIER_ID,
-                null,
-                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
-                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3);
-    }
-
-    private static ContentValues populateContentValues(
-            String iccId, String phoneNumber, int carrierId, String isoCountryCode,
-            int arbitraryIntVal, String arbitraryStringVal) {
-            ContentValues contentValues = new ContentValues();
-
-        contentValues.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_ICC_ID, iccId);
-        contentValues.put(Telephony.SimInfo.COLUMN_NUMBER, phoneNumber);
-        contentValues.put(Telephony.SimInfo.COLUMN_CARD_ID, arbitraryStringVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_CARRIER_ID, carrierId);
-        contentValues.put(Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_VT_IMS_ENABLED, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_MODE, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, arbitraryIntVal);
-        contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
-                arbitraryStringVal);
-        if (isoCountryCode != null) {
-            contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
-        }
-
-        return contentValues;
-    }
-
     /**
      * This is used to give the TelephonyProviderTest a mocked context which takes a
      * TelephonyProvider and attaches it to the ContentResolver with telephony authority.
@@ -228,14 +123,12 @@ public class TelephonyProviderTest extends TestCase {
     private class MockContextWithProvider extends MockContext {
         private final MockContentResolver mResolver;
         private TelephonyManager mTelephonyManager = mock(TelephonyManager.class);
-        private SubscriptionManager mSubscriptionManager = mock(SubscriptionManager.class);
 
         private final List<String> GRANTED_PERMISSIONS = Arrays.asList(
                 Manifest.permission.MODIFY_PHONE_STATE, Manifest.permission.WRITE_APN_SETTINGS,
                 Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
 
-        public MockContextWithProvider(TelephonyProvider telephonyProvider,
-                Boolean isActiveSubscription) {
+        public MockContextWithProvider(TelephonyProvider telephonyProvider) {
             mResolver = new MockContentResolver() {
                 @Override
                 public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork,
@@ -253,8 +146,7 @@ public class TelephonyProviderTest extends TestCase {
 
             // return test subId 0 for all operators
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator(anyInt());
-            doReturn(isActiveSubscription).when(mSubscriptionManager)
-                    .isActiveSubscriptionId(anyInt());
+
             doReturn(mTelephonyManager).when(mTelephonyManager).createForSubscriptionId(anyInt());
             doReturn(TEST_OPERATOR).when(mTelephonyManager).getSimOperator();
             doReturn(TEST_CARRIERID).when(mTelephonyManager).getSimCarrierId();
@@ -279,9 +171,6 @@ public class TelephonyProviderTest extends TestCase {
             if (name.equals(Context.TELEPHONY_SERVICE)) {
                 Log.d(TAG, "getSystemService: returning mock TM");
                 return mTelephonyManager;
-            } else if (name.equals(Context.TELEPHONY_SUBSCRIPTION_SERVICE)){
-                Log.d(TAG, "getSystemService: returning mock SubscriptionManager");
-                return mSubscriptionManager;
             } else {
                 Log.d(TAG, "getSystemService: returning null");
                 return null;
@@ -292,8 +181,6 @@ public class TelephonyProviderTest extends TestCase {
         public String getSystemServiceName(Class<?> serviceClass) {
             if (serviceClass.equals(TelephonyManager.class)) {
               return Context.TELEPHONY_SERVICE;
-            } else if (serviceClass.equals(SubscriptionManager.class)) {
-                return Context.TELEPHONY_SUBSCRIPTION_SERVICE;
             } else {
                 Log.d(TAG, "getSystemServiceName: returning null");
                 return null;
@@ -302,7 +189,8 @@ public class TelephonyProviderTest extends TestCase {
 
         @Override
         public Resources getResources() {
-            return mockContextResources;
+            Log.d(TAG, "getResources: returning null");
+            return null;
         }
 
         @Override
@@ -328,20 +216,6 @@ public class TelephonyProviderTest extends TestCase {
                 return PackageManager.PERMISSION_DENIED;
             }
         }
-
-        @Override
-        public void enforceCallingOrSelfPermission(String permission, String message) {
-            if (permission == android.Manifest.permission.READ_PRIVILEGED_PHONE_STATE
-                    || permission == android.Manifest.permission.MODIFY_PHONE_STATE) {
-                return;
-            }
-            throw new SecurityException("Unavailable permission requested");
-        }
-
-        @Override
-        public File getFilesDir() {
-            return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
-        }
     }
 
     @Override
@@ -349,27 +223,16 @@ public class TelephonyProviderTest extends TestCase {
         super.setUp();
         MockitoAnnotations.initMocks(this);
         mTelephonyProviderTestable = new TelephonyProviderTestable();
-        when(mockContextResources.getStringArray(anyInt())).thenReturn(new String[]{"ca", "us"});
+        mContext = new MockContextWithProvider(mTelephonyProviderTestable);
+        mContentResolver = (MockContentResolver) mContext.getContentResolver();
         notifyChangeCount = 0;
         notifyChangeRestoreCount = 0;
-    }
-
-    private void setUpMockContext(boolean isActiveSubId) {
-        mContext = new MockContextWithProvider(mTelephonyProviderTestable, isActiveSubId);
-        mContentResolver = mContext.getContentResolver();
     }
 
     @Override
     protected void tearDown() throws Exception {
         super.tearDown();
         mTelephonyProviderTestable.closeDatabase();
-
-        // Remove the internal file created by SIM-specific settings restore
-        File file = new File(mContext.getFilesDir(),
-                mTelephonyProviderTestable.BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
-        if (file.exists()) {
-            file.delete();
-        }
     }
 
     /**
@@ -379,8 +242,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testBulkInsertCarriers() {
-        setUpMockContext(true);
-
         // insert 2 test contentValues
         ContentValues contentValues = new ContentValues();
         final String insertApn = "exampleApnName";
@@ -452,8 +313,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testMccMncMigration() {
-        setUpMockContext(true);
-
         CarrierIdProviderTestable carrierIdProvider = new CarrierIdProviderTestable();
         carrierIdProvider.initializeForTesting(mContext);
         mContentResolver.addProvider(Telephony.CarrierId.All.CONTENT_URI.getAuthority(),
@@ -513,8 +372,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testUpdateConflictingCarriers() {
-        setUpMockContext(true);
-
         // insert 2 test contentValues
         ContentValues contentValues = new ContentValues();
         final String insertApn = "exampleApnName";
@@ -572,8 +429,6 @@ public class TelephonyProviderTest extends TestCase {
     }
 
     private void doSimpleTestForUri(Uri uri) {
-        setUpMockContext(true);
-
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
         final String insertApn = "exampleApnName";
@@ -624,8 +479,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testOwnedBy() {
-        setUpMockContext(true);
-
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
         final String insertApn = "exampleApnName";
@@ -689,8 +542,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testSimTable() {
-        setUpMockContext(true);
-
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
         final int insertSubId = 11;
@@ -752,222 +603,6 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(0, cursor.getCount());
     }
 
-    @Test
-    public void testFullRestoreOnMatchingIccId() {
-        byte[] simSpecificSettingsData = getBackupData(
-                new ContentValues[]{
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID,
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID,
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
-        createInternalBackupFile(simSpecificSettingsData);
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES_US);
-
-        mContext.getContentResolver().call(
-                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
-                SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
-                MATCHING_ICCID, null);
-
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
-                null, null, null, null);
-        assertEquals(1, cursor.getCount());
-        cursor.moveToFirst();
-
-        // Make sure SubId didn't get overridden.
-        assertEquals(
-                (int)TEST_SIM_INFO_VALUES_US.getAsInteger(
-                        Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
-        // Ensure all other values got updated.
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
-        assertRestoredSubIdIsRemembered();
-    }
-
-    @Test
-    public void testFullRestoreOnMatchingNumberAndCid() {
-        byte[] simSpecificSettingsData = getBackupData(
-                new ContentValues[]{
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID,
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
-        createInternalBackupFile(simSpecificSettingsData);
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES_US);
-
-        mContext.getContentResolver().call(
-                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
-                SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
-                MATCHING_ICCID, null);
-
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
-                null, null, null, null);
-        assertEquals(1, cursor.getCount());
-        cursor.moveToFirst();
-
-        // Make sure SubId didn't get overridden.
-        assertEquals(
-                (int) TEST_SIM_INFO_VALUES_US.getAsInteger(
-                        Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
-        // Ensure all other values got updated.
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
-        assertRestoredSubIdIsRemembered();
-    }
-
-    @Test
-    public void testFullRestoreOnMatchingCidOnly() {
-        byte[] simSpecificSettingsData = getBackupData(
-                new ContentValues[]{
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
-        createInternalBackupFile(simSpecificSettingsData);
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES_US);
-
-        mContext.getContentResolver().call(
-                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
-                SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
-                MATCHING_ICCID, null);
-
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
-                null, null, null, null);
-        assertEquals(1, cursor.getCount());
-        cursor.moveToFirst();
-
-        // Make sure SubId didn't get overridden.
-        assertEquals(
-                (int) TEST_SIM_INFO_VALUES_US.getAsInteger(
-                        Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
-        // Ensure sensitive settings did not get updated.
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
-        // Ensure all other values got updated.
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
-        assertRestoredSubIdIsRemembered();
-    }
-
-    @Test
-    public void testFullRestoreOnMatchingIccIdWithFranceISO() {
-        byte[] simSpecificSettingsData = getBackupData(
-                new ContentValues[]{
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID,
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID,
-                        BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID});
-        createInternalBackupFile(simSpecificSettingsData);
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES_FR);
-
-        mContext.getContentResolver().call(
-                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
-                SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
-                MATCHING_ICCID, null);
-
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
-                null, null, null, null);
-        assertEquals(1, cursor.getCount());
-        cursor.moveToFirst();
-
-        // Make sure SubId didn't get overridden.
-        assertEquals(
-                (int) TEST_SIM_INFO_VALUES_FR.getAsInteger(
-                        Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
-        // Ensure all other values got updated.
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_ENHANCED_4G_MODE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_VT_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_MODE));
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE));
-
-        assertRestoredSubIdIsRemembered();
-    }
-
-    private void assertRestoredSubIdIsRemembered() {
-        PersistableBundle bundle = getPersistableBundleFromInternalStorageFile();
-        int[] previouslyRestoredSubIds =
-                bundle.getIntArray(TelephonyProvider.KEY_PREVIOUSLY_RESTORED_SUB_IDS);
-        assertNotNull(previouslyRestoredSubIds);
-        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE, previouslyRestoredSubIds[0]);
-    }
-
-    private PersistableBundle getPersistableBundleFromInternalStorageFile() {
-        File file = new File(Environment.getExternalStoragePublicDirectory(
-                Environment.DIRECTORY_DOWNLOADS),
-                TelephonyProvider.BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
-        try (FileInputStream fis = new FileInputStream(file)) {
-            return PersistableBundle.readFromStream(fis);
-        } catch (IOException e) {
-        }
-
-        return null;
-    }
-
-    private byte[] getBackupData(ContentValues[] contentValues) {
-        setUpMockContext(true);
-
-        int rowsAdded = mContentResolver.bulkInsert(SubscriptionManager.CONTENT_URI, contentValues);
-        assertEquals(rowsAdded, contentValues.length);
-
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
-            null, null, null, null);
-        assertEquals(cursor.getCount(), contentValues.length);
-
-        Bundle bundle =  mContext.getContentResolver().call(
-            SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
-            SubscriptionManager.GET_SIM_SPECIFIC_SETTINGS_METHOD_NAME, null, null);
-        byte[] data = bundle.getByteArray(SubscriptionManager.KEY_SIM_SPECIFIC_SETTINGS_DATA);
-
-        int rowsDeleted = mContentResolver.delete(SubscriptionManager.CONTENT_URI, null, null);
-        assertEquals(rowsDeleted, contentValues.length);
-
-        return data;
-    }
-
-    private void createInternalBackupFile(byte[] data) {
-        mTelephonyProviderTestable.writeSimSettingsToInternalStorage(data);
-    }
-
-    private int getIntValueFromCursor(Cursor cursor, String columnName) {
-        int columnIndex = cursor.getColumnIndex(columnName);
-        return cursor.getInt(columnIndex);
-    }
-
     private int parseIdFromInsertedUri(Uri uri) throws NumberFormatException {
         return (uri != null) ? Integer.parseInt(uri.getLastPathSegment()) : -1;
     }
@@ -992,8 +627,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testEnforceManagedUri() {
-        setUpMockContext(true);
-
         mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
 
         final int current = 1;
@@ -1116,8 +749,6 @@ public class TelephonyProviderTest extends TestCase {
      * Test URL_TELEPHONY cannot insert, query, update or delete DPC records.
      */
     public void testTelephonyUriDpcRecordAccessControl() {
-        setUpMockContext(true);
-
         mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
 
         final int current = 1;
@@ -1194,8 +825,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testDpcUri() {
-        setUpMockContext(true);
-
         int dpcRecordId = 0, othersRecordId = 0;
         try {
             mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
@@ -1287,8 +916,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testDpcUriOnConflict() {
-        setUpMockContext(true);
-
         int dpcRecordId1 = 0, dpcRecordId2 = 0;
         try {
             mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID);
@@ -1361,8 +988,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testAccessUrlDpcThrowSecurityExceptionFromOtherUid() {
-        setUpMockContext(true);
-
         mTelephonyProviderTestable.fakeCallingUid(Process.SYSTEM_UID + 123456);
 
         // Test insert().
@@ -1466,8 +1091,6 @@ public class TelephonyProviderTest extends TestCase {
     }
 
     private void preserveEditedValueInMerge(int value) {
-        setUpMockContext(true);
-
         // insert user deleted APN
         String carrierName1 = "carrier1";
         String numeric1 = "123234";
@@ -1515,8 +1138,6 @@ public class TelephonyProviderTest extends TestCase {
     }
 
     private void preserveDeletedValueInMerge(int value) {
-        setUpMockContext(true);
-
         // insert user deleted APN
         String carrierName1 = "carrier1";
         String numeric1 = "123234";
@@ -1563,8 +1184,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testQueryPreferredApn() {
-        setUpMockContext(true);
-
         // create APNs
         ContentValues preferredValues = new ContentValues();
         final String preferredApn = "preferredApn";
@@ -1611,8 +1230,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testApnSetId() {
-        setUpMockContext(true);
-
         // create APNs
         ContentValues values1 = new ContentValues();
         final String apn = "apnName";
@@ -1649,7 +1266,6 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(1, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(otherName, cursor.getString(0));
-        PhoneFactory.addLocalLog("TelephonyProvider", 1);
     }
 
     /**
@@ -1658,8 +1274,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testPreferApnSetUrl() {
-        setUpMockContext(true);
-
         // create APNs
         ContentValues values1 = new ContentValues();
         final String apn = "apnName";
@@ -1684,35 +1298,20 @@ public class TelephonyProviderTest extends TestCase {
         values3.put(Carriers.NUMERIC, TEST_OPERATOR);
         values3.put(Carriers.APN_SET_ID, 1);
 
-        // values4 has a matching setId but it belongs to a different carrier
-        ContentValues values4 = new ContentValues();
-        final String apn4 = "fourthApnName";
-        final String name4 = "name4";
-        values4.put(Carriers.APN, apn4);
-        values4.put(Carriers.NAME, name4);
-        values4.put(Carriers.NUMERIC, "999888");
-        values4.put(Carriers.APN_SET_ID, 1);
-
         // insert APNs
         // we explicitly include subid, as SubscriptionManager.getDefaultSubscriptionId() returns -1
         Log.d(TAG, "testPreferApnSetUrl: inserting contentValues=" + values1 + ", " + values2
-                + ", " + values3 + ", " + values4);
+                + ", " + values3);
         mContentResolver.insert(CONTENT_URI_WITH_SUBID, values1);
         mContentResolver.insert(CONTENT_URI_WITH_SUBID, values2);
-        mContentResolver.insert(CONTENT_URI_WITH_SUBID, values4);
         Uri uri = mContentResolver.insert(CONTENT_URI_WITH_SUBID, values3);
 
-        // verify all APNs were correctly inserted
+        // before there's a preferred APN set, assert that all APNs are returned
         final String[] testProjection = { Carriers.NAME };
         Cursor cursor = mContentResolver.query(
-                Carriers.CONTENT_URI, testProjection, null, null, null);
-        assertEquals(4, cursor.getCount());
-
-        // preferapnset/subId returns null when there is no preferred APN
-        cursor = mContentResolver.query(
                 Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
                 testProjection, null, null, null);
-        assertNull(cursor);
+        assertEquals(3, cursor.getCount());
 
         // set the APN from values3 (apn_set_id = 1) to the preferred APN
         final String preferredApnIdString = uri.getLastPathSegment();
@@ -1727,7 +1326,6 @@ public class TelephonyProviderTest extends TestCase {
         cursor = mContentResolver.query(
                 Uri.withAppendedPath(Carriers.CONTENT_URI, "preferapnset/subId/" + TEST_SUBID),
                 testProjection, null, null, null);
-        // values4 which was inserted with a different carrier is not included in the results
         assertEquals(2, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(name2, cursor.getString(0));
@@ -1741,8 +1339,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testRestoreDefaultApn() {
-        setUpMockContext(true);
-
         // setup for multi-SIM
         TelephonyManager telephonyManager =
                 (TelephonyManager) mContext.getSystemService(Context.TELEPHONY_SERVICE);
@@ -1839,8 +1435,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testUpdateWfcEnabled() {
-        setUpMockContext(true);
-
         // insert test contentValues
         ContentValues contentValues = new ContentValues();
         final int insertSubId = 1;
@@ -1887,8 +1481,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testSIMAPNLIST_MatchTheMVNOAPN() {
-        setUpMockContext(true);
-
         // Test on getSubscriptionMatchingAPNList() step 1
         final String apnName = "apnName";
         final String carrierName = "name";
@@ -1927,7 +1519,6 @@ public class TelephonyProviderTest extends TestCase {
                         Carriers.NUMERIC,
                         Carriers.MVNO_MATCH_DATA
                 };
-
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
                 testProjection, null, null, null);
 
@@ -1943,8 +1534,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testSIMAPNLIST_MatchTheMNOAPN() {
-        setUpMockContext(true);
-
         // Test on getSubscriptionMatchingAPNList() step 2
         final String apnName = "apnName";
         final String carrierName = "name";
@@ -1964,7 +1553,6 @@ public class TelephonyProviderTest extends TestCase {
                         Carriers.NAME,
                         Carriers.NUMERIC,
                 };
-
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
                 testProjection, null, null, null);
 
@@ -1977,8 +1565,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testSIMAPNLIST_MatchTheCarrierIDANDMNOAPN() {
-        setUpMockContext(true);
-
         // Test on getSubscriptionMatchingAPNList() will return the {MCCMNC}
         final String apnName = "apnName";
         final String carrierName = "name";
@@ -2006,7 +1592,6 @@ public class TelephonyProviderTest extends TestCase {
                 Carriers.NAME,
                 Carriers.CARRIER_ID,
             };
-
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST, testProjection, null, null, null);
 
         // The query based on SIM_APN_LIST will return MNO APN and the APN that has carrier id
@@ -2016,8 +1601,6 @@ public class TelephonyProviderTest extends TestCase {
     @Test
     @SmallTest
     public void testSIMAPNLIST_MatchTheCarrierAPNAndMVNOAPN() {
-        setUpMockContext(true);
-
         final String apnName = "apnName";
         final String carrierName = "name";
         final String mvnoType = "spn";
@@ -2055,7 +1638,6 @@ public class TelephonyProviderTest extends TestCase {
                 Carriers.CARRIER_ID,
                 Carriers.MVNO_TYPE,
             };
-
         Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
             testProjection, null, null, null);
 
@@ -2065,35 +1647,5 @@ public class TelephonyProviderTest extends TestCase {
             assertTrue(!TextUtils.isEmpty(cursor.getString(2))
                     || !TextUtils.isEmpty(cursor.getString(3)));
         }
-    }
-
-    @Test
-    @SmallTest
-    public void testSIMAPNLIST_isNotActiveSubscription() {
-        setUpMockContext(false);
-
-        // Test on getSubscriptionMatchingAPNList() step 2
-        final String apnName = "apnName";
-        final String carrierName = "name";
-        final String numeric = TEST_OPERATOR;
-
-        // Insert the MNO APN
-        ContentValues contentValues = new ContentValues();
-        contentValues.put(Carriers.APN, apnName);
-        contentValues.put(Carriers.NAME, carrierName);
-        contentValues.put(Carriers.NUMERIC, numeric);
-        mContentResolver.insert(Carriers.CONTENT_URI, contentValues);
-
-        // Query DB
-        final String[] testProjection =
-                {
-                        Carriers.APN,
-                        Carriers.NAME,
-                        Carriers.NUMERIC,
-                };
-        Cursor cursor = mContentResolver.query(URL_SIM_APN_LIST,
-                testProjection, null, null, null);
-
-        assertNull(cursor);
     }
 }
