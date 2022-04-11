@@ -7947,7 +7947,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2017
-  carrier_name: "Yes 4G"
+  carrier_name: "Yes 5G"
   carrier_attribute {
     mccmnc_tuple: "502152"
   }
@@ -9029,6 +9029,14 @@ carrier_id {
   carrier_name: "Vodafone Lab"
   carrier_attribute {
     mccmnc_tuple: "26209"
+  }
+}
+carrier_id {
+  canonical_id: 2148
+  carrier_name: "BIGLOBE"
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "24"
   }
 }
 carrier_id {
@@ -11627,6 +11635,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2515
+  carrier_name: "J:COM MOBILE"
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "22"
+  }
+}
+carrier_id {
   canonical_id: 2516
   carrier_name: "HMD Connect Pro"
   carrier_attribute {
@@ -12038,4 +12054,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 18
+version: 19
