@@ -7325,7 +7325,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2017
-  carrier_name: "Yes 4G"
+  carrier_name: "Yes 5G"
   carrier_attribute {
     mccmnc_tuple: "502152"
   }
@@ -7870,7 +7870,6 @@ carrier_id {
   carrier_name: "tele.ring"
   carrier_attribute {
     mccmnc_tuple: "23207"
-    gid1: ""
     gid1: "07"
     gid1: "FF"
     gid1: "30"
@@ -9789,7 +9788,6 @@ carrier_id {
   carrier_name: "Google CBRS"
   carrier_attribute {
     mccmnc_tuple: "312580"
-    mccmnc_tuple: "315010"
   }
 }
 carrier_id {
@@ -10157,6 +10155,7 @@ carrier_id {
     mccmnc_tuple: "44010"
     preferred_apn: "lte-d.ocn.ne.jp"
     preferred_apn: "lte.ocn.ne.jp"
+    preferred_apn: "ocn.ne.jp"
   }
 }
 carrier_id {
@@ -11174,7 +11173,6 @@ carrier_id {
   carrier_name: "1&1"
   carrier_attribute {
     mccmnc_tuple: "26207"
-    imsi_prefix_xpattern: "26207202x"
     gid1: "118004"
     gid1: "118006"
   }
@@ -11187,6 +11185,13 @@ carrier_id {
     mccmnc_tuple: "26203"
     imsi_prefix_xpattern: "26203293x"
     imsi_prefix_xpattern: "26203330x"
+  }
+}
+carrier_id {
+  canonical_id: 2537
+  carrier_name: "CBRS"
+  carrier_attribute {
+    mccmnc_tuple: "315010"
   }
 }
 carrier_id {
@@ -11510,4 +11515,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108873
+version: 67108874
