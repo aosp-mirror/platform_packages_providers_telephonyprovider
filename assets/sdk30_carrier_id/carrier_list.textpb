@@ -7668,7 +7668,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2017
-  carrier_name: "Yes 4G"
+  carrier_name: "Yes 5G"
   carrier_attribute {
     mccmnc_tuple: "502152"
   }
@@ -11860,4 +11860,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554476
+version: 33554477
