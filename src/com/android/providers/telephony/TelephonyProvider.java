@@ -194,11 +194,6 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_SIMINFO_SUW_RESTORE = 28;
     private static final int URL_SIMINFO_SIM_INSERTED_RESTORE = 29;
 
-    /**
-     * Default value for mtu_v4 and mtu_v6 if it's not set. Moved from PhoneConstants.
-     */
-    private static final int UNSPECIFIED_INT = -1;
-
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
     private static final String CARRIERS_TABLE_TMP = "carriers_tmp";
@@ -488,8 +483,8 @@ public class TelephonyProvider extends ContentProvider
                 WAIT_TIME_RETRY + " INTEGER DEFAULT 0," +
                 TIME_LIMIT_FOR_MAX_CONNECTIONS + " INTEGER DEFAULT 0," +
                 MTU + " INTEGER DEFAULT 0," +
-                MTU_V4 + " INTEGER DEFAULT " + UNSPECIFIED_INT + "," +
-                MTU_V6 + " INTEGER DEFAULT " + UNSPECIFIED_INT + "," +
+                MTU_V4 + " INTEGER DEFAULT 0," +
+                MTU_V6 + " INTEGER DEFAULT 0," +
                 EDITED_STATUS + " INTEGER DEFAULT " + UNEDITED + "," +
                 USER_VISIBLE + " BOOLEAN DEFAULT 1," +
                 USER_EDITABLE + " BOOLEAN DEFAULT 1," +
@@ -1763,10 +1758,10 @@ public class TelephonyProvider extends ContentProvider
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
                             + ALWAYS_ON + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
-                            + MTU_V4 + " INTEGER DEFAULT " + UNSPECIFIED_INT + ";");
+                            + MTU_V4 + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
-                            + MTU_V6 + " INTEGER DEFAULT " + UNSPECIFIED_INT + ";");
-                    // Populate MTU_V4 with MTU values, using default value -1 instead of 0
+                            + MTU_V6 + " INTEGER DEFAULT 0;");
+                    // Populate MTU_V4 with MTU values
                     db.execSQL("UPDATE " + CARRIERS_TABLE + " SET " + MTU_V4 + " = "
                             + MTU + " WHERE " + MTU + " != 0;");
                 } catch (SQLiteException e) {
@@ -2129,9 +2124,9 @@ public class TelephonyProvider extends ContentProvider
             whereArgs[i++] = values.containsKey(MTU) ?
                     values.getAsString(MTU) : "0";
             whereArgs[i++] = values.containsKey(MTU_V4) ?
-                    values.getAsString(MTU_V4) : String.valueOf(UNSPECIFIED_INT);
+                    values.getAsString(MTU_V4) : "0";
             whereArgs[i++] = values.containsKey(MTU_V6) ?
-                    values.getAsString(MTU_V6) : String.valueOf(UNSPECIFIED_INT);
+                    values.getAsString(MTU_V6) : "0";
 
             if (VDBG) {
                 log("deleteRow: where: " + where);
@@ -2434,11 +2429,13 @@ public class TelephonyProvider extends ContentProvider
                 // if not found a three digit mnc value is chosen
                 mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
             }
-
-            String numeric = (mccString == null | mncString == null) ? null : mccString + mncString;
+            // Make sure to set default values for numeric, mcc and mnc. This is the empty string.
+            // If default is not set here, a duplicate of each carrier id APN will be created next
+            // time the apn list is read. This happens at OTA or at restore.
+            String numeric = (mccString == null | mncString == null) ? "" : mccString + mncString;
             map.put(NUMERIC, numeric);
-            map.put(MCC, mccString);
-            map.put(MNC, mncString);
+            map.put(MCC, mccString != null ? mccString : "");
+            map.put(MNC, mncString != null ? mncString : "");
             map.put(NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
@@ -5092,6 +5089,7 @@ public class TelephonyProvider extends ContentProvider
         TelephonyManager telephonyManager =
             getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         String simOperator = telephonyManager.getSimOperator();
+        int simCarrierId = telephonyManager.getSimSpecificCarrierId();
         Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
                 NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
         String where = null;
@@ -5119,6 +5117,12 @@ public class TelephonyProvider extends ContentProvider
                         + " AND (" + MVNO_TYPE + "='' OR " + MVNO_MATCH_DATA + "='')"
                         + " AND " + IS_NOT_OWNED_BY_DPC;
             }
+            // Add carrier id APNs
+            if (TelephonyManager.UNKNOWN_CARRIER_ID < simCarrierId) {
+                where = where.concat(" OR " + CARRIER_ID + " = '" + simCarrierId + "'" + " AND "
+                        + IS_NOT_OWNED_BY_DPC);
+            }
+
         }
         return where;
     }
