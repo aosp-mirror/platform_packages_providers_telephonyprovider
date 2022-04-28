@@ -7389,7 +7389,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2017
-  carrier_name: "Yes 4G"
+  carrier_name: "Yes 5G"
   carrier_attribute {
     mccmnc_tuple: "502152"
   }
@@ -8485,6 +8485,10 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "44051"
+    gid1: "24"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "44054"
     gid1: "24"
   }
 }
@@ -11108,6 +11112,10 @@ carrier_id {
     mccmnc_tuple: "44051"
     gid1: "22"
   }
+  carrier_attribute {
+    mccmnc_tuple: "44054"
+    gid1: "22"
+  }
 }
 carrier_id {
   canonical_id: 2516
@@ -11562,4 +11570,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331668
+version: 50331669
