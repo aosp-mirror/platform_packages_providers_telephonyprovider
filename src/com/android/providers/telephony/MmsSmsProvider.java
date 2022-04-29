@@ -43,6 +43,8 @@ import android.provider.Telephony.ThreadsColumns;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.internal.telephony.TelephonyStatsLog;
+
 import com.google.android.mms.pdu.PduHeaders;
 
 import java.io.FileDescriptor;
@@ -78,6 +80,10 @@ public class MmsSmsProvider extends ContentProvider {
             new UriMatcher(UriMatcher.NO_MATCH);
     private static final String LOG_TAG = "MmsSmsProvider";
     private static final boolean DEBUG = false;
+    private static final int MULTIPLE_THREAD_IDS_FOUND = TelephonyStatsLog
+        .MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED__FAILURE_CODE__FAILURE_MULTIPLE_THREAD_IDS_FOUND;
+    private static final int FAILURE_FIND_OR_CREATE_THREAD_ID_SQL = TelephonyStatsLog
+        .MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED__FAILURE_CODE__FAILURE_FIND_OR_CREATE_THREAD_ID_SQL;
 
     private static final String NO_DELETES_INSERTS_OR_UPDATES =
             "MmsSmsProvider does not support deletes, inserts, or updates for this URI.";
@@ -686,6 +692,10 @@ public class MmsSmsProvider extends ContentProvider {
         if (addressIds.size() == 0) {
             Log.e(LOG_TAG, "getThreadId: NO receipients specified -- NOT creating thread",
                     new Exception());
+            TelephonyStatsLog.write(
+                TelephonyStatsLog.MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED,
+                TelephonyStatsLog
+                    .MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED__FAILURE_CODE__FAILURE_NO_RECIPIENTS);
             return null;
         } else if (addressIds.size() == 1) {
             // optimize for size==1, which should be most of the cases
@@ -724,12 +734,18 @@ public class MmsSmsProvider extends ContentProvider {
             db.setTransactionSuccessful();
         } catch (Throwable ex) {
             Log.e(LOG_TAG, ex.getMessage(), ex);
+            TelephonyStatsLog.write(
+                TelephonyStatsLog.MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED,
+                FAILURE_FIND_OR_CREATE_THREAD_ID_SQL);
         } finally {
             db.endTransaction();
         }
 
         if (cursor != null && cursor.getCount() > 1) {
             Log.w(LOG_TAG, "getThreadId: why is cursorCount=" + cursor.getCount());
+            TelephonyStatsLog.write(
+                TelephonyStatsLog.MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED,
+                MULTIPLE_THREAD_IDS_FOUND);
         }
         return cursor;
     }
