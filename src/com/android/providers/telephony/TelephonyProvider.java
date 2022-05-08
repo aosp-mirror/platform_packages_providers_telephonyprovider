@@ -159,7 +159,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 55 << 16;
+    private static final int DATABASE_VERSION = 56 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -576,7 +576,8 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT,"
                 + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED + " INTEGER DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER + " TEXT,"
-                + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS + " TEXT"
+                + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_PORT_INDEX + "  INTEGER DEFAULT -1"
                 + ");";
     }
 
@@ -1774,6 +1775,21 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 55 << 16 | 6;
             }
 
+            if (oldVersion < (56 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_PORT_INDEX
+                            + " INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
+                    }
+                }
+                oldVersion = 56 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -2398,11 +2414,13 @@ public class TelephonyProvider extends ContentProvider
                 // if not found a three digit mnc value is chosen
                 mncString = getBestStringMnc(mContext, mccString, Integer.parseInt(mnc));
             }
-
-            String numeric = (mccString == null | mncString == null) ? null : mccString + mncString;
+            // Make sure to set default values for numeric, mcc and mnc. This is the empty string.
+            // If default is not set here, a duplicate of each carrier id APN will be created next
+            // time the apn list is read. This happens at OTA or at restore.
+            String numeric = (mccString == null | mncString == null) ? "" : mccString + mncString;
             map.put(NUMERIC, numeric);
-            map.put(MCC, mccString);
-            map.put(MNC, mncString);
+            map.put(MCC, mccString != null ? mccString : "");
+            map.put(MNC, mncString != null ? mncString : "");
             map.put(NAME, parser.getAttributeValue(null, "carrier"));
 
             // do not add NULL to the map so that default values can be inserted in db
@@ -3450,10 +3468,11 @@ public class TelephonyProvider extends ContentProvider
             }
 
             if (bestRestoreMatch != null) {
-                if (bestRestoreMatch.getMatchScore() != 0) {
+                ContentValues newContentValues = bestRestoreMatch.getContentValues();
+                if (bestRestoreMatch.getMatchScore() != 0 && newContentValues != null) {
                     if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SUW) {
                         update(SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI,
-                                bestRestoreMatch.getContentValues(),
+                                newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                                 new String[]{Integer.toString(currSubIdFromDb)});
                     } else if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED) {
@@ -3461,7 +3480,7 @@ public class TelephonyProvider extends ContentProvider
                                 SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
                                 SIM_INSERTED_RESTORE_URI_SUFFIX);
                         update(simInsertedRestoreUri,
-                                bestRestoreMatch.getContentValues(),
+                                newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                                 new String[]{Integer.toString(currSubIdFromDb)});
                     }
@@ -3472,6 +3491,9 @@ public class TelephonyProvider extends ContentProvider
                             restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
                     newlyRestoredSubIds.add(currSubIdFromDb);
                 } else {
+                    /* If this block was reached because ContentValues was null, that means the
+                    database schema was newer during backup than during restore. We consider this
+                    a no-match to avoid updating columns that don't exist */
                     TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
                             TelephonyProtoEnums.SIM_RESTORE_RESULT_NONE_MATCH,
                             restoreCase, bestRestoreMatch.getMatchingCriteriaForLogging());
@@ -3599,7 +3621,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 55 << 16) {
+            if (DATABASE_VERSION != 56 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -5005,6 +5027,7 @@ public class TelephonyProvider extends ContentProvider
         TelephonyManager telephonyManager =
             getContext().getSystemService(TelephonyManager.class).createForSubscriptionId(subId);
         String simOperator = telephonyManager.getSimOperator();
+        int simCarrierId = telephonyManager.getSimSpecificCarrierId();
         Cursor cursor = db.query(CARRIERS_TABLE, new String[] {MVNO_TYPE, MVNO_MATCH_DATA},
                 NUMERIC + "='" + simOperator + "'", null, null, null, DEFAULT_SORT_ORDER);
         String where = null;
@@ -5032,6 +5055,12 @@ public class TelephonyProvider extends ContentProvider
                         + " AND (" + MVNO_TYPE + "='' OR " + MVNO_MATCH_DATA + "='')"
                         + " AND " + IS_NOT_OWNED_BY_DPC;
             }
+            // Add carrier id APNs
+            if (TelephonyManager.UNKNOWN_CARRIER_ID < simCarrierId) {
+                where = where.concat(" OR " + CARRIER_ID + " = '" + simCarrierId + "'" + " AND "
+                        + IS_NOT_OWNED_BY_DPC);
+            }
+
         }
         return where;
     }
