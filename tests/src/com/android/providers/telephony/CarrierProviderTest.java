@@ -22,13 +22,12 @@ import android.content.pm.ProviderInfo;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.database.SQLException;
+import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
-
-import com.android.providers.telephony.CarrierProvider;
 
 import junit.framework.TestCase;
 
@@ -60,11 +59,10 @@ public class CarrierProviderTest extends TestCase {
     public static final String test_mcc = "MCC005";
     public static final String test_key1 = "PUBKEY1";
     public static final String test_key2 = "PUBKEY2";
-    public static final String test_mvno_type = "100";
-    public static final String test_mvno_match_data = "101";
     public static final String  test_key_identifier_data = "key_identifier1";
     public static final long  test_key_expiration = 1496795015L;
-
+    public static final int TEST_CARRIER_ID_1 = 1;
+    public static final int TEST_CARRIER_ID_2 = 2;
 
     /**
      * This is used to give the CarrierProviderTest a mocked context which takes a
@@ -147,8 +145,7 @@ public class CarrierProviderTest extends TestCase {
         contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
         contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
         contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
         contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
         contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
         contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, test_key_expiration);
@@ -183,8 +180,7 @@ public class CarrierProviderTest extends TestCase {
         contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
         contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
         contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
         contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
         contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
         contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, test_key_expiration);
@@ -199,8 +195,9 @@ public class CarrierProviderTest extends TestCase {
             ContentValues updatedValues = new ContentValues();
             updatedValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key2);
             mContentResolver.update(CarrierProvider.CONTENT_URI, updatedValues,
-                    "mcc=? and mnc=? and key_type=?", new String[] { test_mcc, test_mnc,
-                            String.valueOf(test_type) });
+                    "mcc=? and mnc=? and carrier_id=? and key_type=?",
+                    new String[]{test_mcc, test_mnc, Integer.toString(TEST_CARRIER_ID_1),
+                            String.valueOf(test_type)});
         } catch (Exception e) {
             Log.d(TAG, "Error updating values:" + e);
         }
@@ -208,8 +205,9 @@ public class CarrierProviderTest extends TestCase {
         try {
             String[] columns ={CarrierDatabaseHelper.PUBLIC_KEY};
             Cursor findEntry = mContentResolver.query(CarrierProvider.CONTENT_URI, columns,
-                    "mcc=? and mnc=? and key_type=?",
-                    new String[] { test_mcc, test_mnc, String.valueOf(test_type) }, null);
+                    "mcc=? and mnc=? and carrier_id=? and key_type=?",
+                    new String[]{test_mcc, test_mnc, Integer.toString(TEST_CARRIER_ID_1),
+                            String.valueOf(test_type)}, null);
             findEntry.moveToFirst();
             key = findEntry.getString(0);
         } catch (Exception e) {
@@ -229,8 +227,7 @@ public class CarrierProviderTest extends TestCase {
         contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
         contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
         contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
         contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
         contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
 
@@ -238,10 +235,100 @@ public class CarrierProviderTest extends TestCase {
         contentValuesNew.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
         contentValuesNew.put(CarrierDatabaseHelper.MCC, test_mcc);
         contentValuesNew.put(CarrierDatabaseHelper.MNC, test_mnc2);
-        contentValuesNew.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
-        contentValuesNew.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
         contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
         contentValuesNew.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key2.getBytes());
+
+        try {
+            mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
+            mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValuesNew);
+        } catch (Exception e) {
+            System.out.println("Error inserting certificates:: " + e);
+        }
+
+        try {
+            Cursor countCursor = mContentResolver.query(CarrierProvider.CONTENT_URI,
+                    new String[]{"count(*) AS count"},
+                    null,
+                    null,
+                    null);
+            countCursor.moveToFirst();
+            count = countCursor.getInt(0);
+        } catch (Exception e) {
+            Log.d(TAG, "Exception in getting count:" + e);
+        }
+        assertEquals(2, count);
+    }
+
+    /**
+     * Test inserting cert with same MCC and MNC but with diff carrier ID
+     */
+    @Test
+    @SmallTest
+    public void testMnoandMvnoCertificates() {
+        int count = -1;
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
+
+        ContentValues contentValuesNew = new ContentValues();
+        contentValuesNew.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValuesNew.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValuesNew.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValuesNew.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_2);
+        contentValuesNew.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValuesNew.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
+
+        try {
+            mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
+            mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValuesNew);
+        } catch (Exception e) {
+            System.out.println("Error inserting certificates:: " + e);
+        }
+
+        try {
+            Cursor countCursor = mContentResolver.query(CarrierProvider.CONTENT_URI,
+                    new String[]{"count(*) AS count"},
+                    null,
+                    null,
+                    null);
+            countCursor.moveToFirst();
+            count = countCursor.getInt(0);
+        } catch (Exception e) {
+            Log.d(TAG, "Exception in getting count:" + e);
+        }
+        assertEquals(2, count);
+    }
+
+    /**
+     * once upgrade to version 3, carrierId = -1
+     * After upgrade, it triggers for new download with correct carrierId
+     * This test case will test writing the new entry, even old entry for same
+     * operator is already existed
+     */
+    @Test
+    @SmallTest
+    public void testOldAndNewDBEntries() {
+        int count = -1;
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TelephonyManager.UNKNOWN_CARRIER_ID);
+        contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
+
+        ContentValues contentValuesNew = new ContentValues();
+        contentValuesNew.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
+        contentValuesNew.put(CarrierDatabaseHelper.MCC, test_mcc);
+        contentValuesNew.put(CarrierDatabaseHelper.MNC, test_mnc);
+        contentValuesNew.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_2);
+        contentValuesNew.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
+        contentValuesNew.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
 
         try {
             mContentResolver.insert(CarrierProvider.CONTENT_URI, contentValues);
@@ -273,8 +360,7 @@ public class CarrierProviderTest extends TestCase {
         contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
         contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
         contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
         contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
 
         try {
@@ -300,8 +386,7 @@ public class CarrierProviderTest extends TestCase {
         contentValues.put(CarrierDatabaseHelper.KEY_TYPE, test_type);
         contentValues.put(CarrierDatabaseHelper.MCC, test_mcc);
         contentValues.put(CarrierDatabaseHelper.MNC, test_mnc);
-        contentValues.put(CarrierDatabaseHelper.MVNO_TYPE, test_mvno_type);
-        contentValues.put(CarrierDatabaseHelper.MVNO_MATCH_DATA, test_mvno_match_data);
+        contentValues.put(CarrierDatabaseHelper.CARRIER_ID, TEST_CARRIER_ID_1);
         contentValues.put(CarrierDatabaseHelper.KEY_IDENTIFIER, test_key_identifier_data);
         contentValues.put(CarrierDatabaseHelper.PUBLIC_KEY, test_key1.getBytes());
         contentValues.put(CarrierDatabaseHelper.EXPIRATION_TIME, test_key_expiration);
@@ -313,9 +398,11 @@ public class CarrierProviderTest extends TestCase {
         }
 
         try {
-            String whereClause = "mcc=? and mnc=?";
-            String[] whereArgs = new String[] { test_mcc, test_mnc };
-            numRowsDeleted = mContentResolver.delete(CarrierProvider.CONTENT_URI, whereClause, whereArgs);
+            String whereClause = "mcc=? and mnc=? and carrier_id=?";
+            String[] whereArgs = new String[]{test_mcc, test_mnc, Integer.toString(
+                    TEST_CARRIER_ID_1)};
+            numRowsDeleted = mContentResolver.delete(CarrierProvider.CONTENT_URI, whereClause,
+                    whereArgs);
         } catch (Exception e) {
             Log.d(TAG, "Error updating values:" + e);
         }
