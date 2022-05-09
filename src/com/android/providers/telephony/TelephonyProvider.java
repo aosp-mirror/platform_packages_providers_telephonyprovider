@@ -194,11 +194,6 @@ public class TelephonyProvider extends ContentProvider
     private static final int URL_SIMINFO_SUW_RESTORE = 28;
     private static final int URL_SIMINFO_SIM_INSERTED_RESTORE = 29;
 
-    /**
-     * Default value for mtu_v4 and mtu_v6 if it's not set. Moved from PhoneConstants.
-     */
-    private static final int UNSPECIFIED_INT = -1;
-
     private static final String TAG = "TelephonyProvider";
     private static final String CARRIERS_TABLE = "carriers";
     private static final String CARRIERS_TABLE_TMP = "carriers_tmp";
@@ -488,8 +483,8 @@ public class TelephonyProvider extends ContentProvider
                 WAIT_TIME_RETRY + " INTEGER DEFAULT 0," +
                 TIME_LIMIT_FOR_MAX_CONNECTIONS + " INTEGER DEFAULT 0," +
                 MTU + " INTEGER DEFAULT 0," +
-                MTU_V4 + " INTEGER DEFAULT " + UNSPECIFIED_INT + "," +
-                MTU_V6 + " INTEGER DEFAULT " + UNSPECIFIED_INT + "," +
+                MTU_V4 + " INTEGER DEFAULT 0," +
+                MTU_V6 + " INTEGER DEFAULT 0," +
                 EDITED_STATUS + " INTEGER DEFAULT " + UNEDITED + "," +
                 USER_VISIBLE + " BOOLEAN DEFAULT 1," +
                 USER_EDITABLE + " BOOLEAN DEFAULT 1," +
@@ -1763,10 +1758,10 @@ public class TelephonyProvider extends ContentProvider
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
                             + ALWAYS_ON + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
-                            + MTU_V4 + " INTEGER DEFAULT " + UNSPECIFIED_INT + ";");
+                            + MTU_V4 + " INTEGER DEFAULT 0;");
                     db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
-                            + MTU_V6 + " INTEGER DEFAULT " + UNSPECIFIED_INT + ";");
-                    // Populate MTU_V4 with MTU values, using default value -1 instead of 0
+                            + MTU_V6 + " INTEGER DEFAULT 0;");
+                    // Populate MTU_V4 with MTU values
                     db.execSQL("UPDATE " + CARRIERS_TABLE + " SET " + MTU_V4 + " = "
                             + MTU + " WHERE " + MTU + " != 0;");
                 } catch (SQLiteException e) {
@@ -2129,9 +2124,9 @@ public class TelephonyProvider extends ContentProvider
             whereArgs[i++] = values.containsKey(MTU) ?
                     values.getAsString(MTU) : "0";
             whereArgs[i++] = values.containsKey(MTU_V4) ?
-                    values.getAsString(MTU_V4) : String.valueOf(UNSPECIFIED_INT);
+                    values.getAsString(MTU_V4) : "0";
             whereArgs[i++] = values.containsKey(MTU_V6) ?
-                    values.getAsString(MTU_V6) : String.valueOf(UNSPECIFIED_INT);
+                    values.getAsString(MTU_V6) : "0";
 
             if (VDBG) {
                 log("deleteRow: where: " + where);
