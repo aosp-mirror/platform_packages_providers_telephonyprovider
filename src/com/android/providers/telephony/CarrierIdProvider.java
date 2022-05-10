@@ -189,14 +189,17 @@ public class CarrierIdProvider extends ContentProvider {
                 + CarrierId.All.MCCMNC + ");";
     }
 
+    static {
+        s_urlMatcher.addURI(AUTHORITY, "all", URL_ALL);
+        s_urlMatcher.addURI(AUTHORITY, "all/update_db", URL_ALL_UPDATE_FROM_PB);
+        s_urlMatcher.addURI(AUTHORITY, "all/get_version", URL_ALL_GET_VERSION);
+    }
+
     @Override
     public boolean onCreate() {
         Log.d(TAG, "onCreate");
         mDbHelper = new CarrierIdDatabaseHelper(getContext());
         mDbHelper.getReadableDatabase();
-        s_urlMatcher.addURI(AUTHORITY, "all", URL_ALL);
-        s_urlMatcher.addURI(AUTHORITY, "all/update_db", URL_ALL_UPDATE_FROM_PB);
-        s_urlMatcher.addURI(AUTHORITY, "all/get_version", URL_ALL_GET_VERSION);
         updateDatabaseFromPb(mDbHelper.getWritableDatabase());
         return true;
     }
