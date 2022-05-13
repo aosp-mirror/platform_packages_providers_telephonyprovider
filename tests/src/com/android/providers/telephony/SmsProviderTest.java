@@ -16,6 +16,11 @@
 
 package com.android.providers.telephony;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.eq;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import android.app.AppOpsManager;
 import android.content.ContentResolver;
 import android.content.ContentValues;
@@ -26,6 +31,8 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
+import android.os.Build;
+import android.os.Process;
 import android.provider.Telephony;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
@@ -33,11 +40,14 @@ import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 
+import androidx.test.InstrumentationRegistry;
+
 import junit.framework.TestCase;
 
 import org.junit.Test;
+import org.mockito.Mock;
 import org.mockito.Mockito;
-
+import org.mockito.MockitoAnnotations;
 
 /**
  * Tests for testing CRUD operations of SmsProvider.
@@ -54,9 +64,11 @@ import org.mockito.Mockito;
 public class SmsProviderTest extends TestCase {
     private static final String TAG = "SmsProviderTest";
 
-    private MockContextWithProvider mContext;
+    @Mock private Context mContext;
     private MockContentResolver mContentResolver;
     private SmsProviderTestable mSmsProviderTestable;
+    @Mock private PackageManager mPackageManager;
+    @Mock private Resources mMockResources;
 
     private int notifyChangeCount;
 
@@ -75,79 +87,55 @@ public class SmsProviderTest extends TestCase {
     private final Uri mRawUriPermanentDelete =
             Uri.withAppendedPath(Telephony.Sms.CONTENT_URI, "raw/permanentDelete");
 
-    /**
-     * This is used to give the SmsProviderTest a mocked context which takes a
-     * SmsProvider and attaches it to the ContentResolver with telephony authority.
-     * The mocked context also gives WRITE_APN_SETTINGS permissions
-     */
-    private class MockContextWithProvider extends MockContext {
-        private final MockContentResolver mResolver;
-
-        public MockContextWithProvider(SmsProvider smsProvider) {
-            mResolver = new MockContentResolver() {
-                @Override
-                public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork,
-                        int userHandle) {
-                    notifyChangeCount++;
-                }
-            };
-
-            // Add authority="sms" to given smsProvider
-            ProviderInfo providerInfo = new ProviderInfo();
-            providerInfo.authority = "sms";
-
-            // Add context to given smsProvider
-            smsProvider.attachInfoForTesting(this, providerInfo);
-            Log.d(TAG, "MockContextWithProvider: smsProvider.getContext(): "
-                    + smsProvider.getContext());
-
-            // Add given SmsProvider to mResolver with authority="sms" so that
-            // mResolver can send queries to mSmsProvider
-            mResolver.addProvider("sms", smsProvider);
-            Log.d(TAG, "MockContextWithProvider: Add SmsProvider to mResolver");
-        }
-
-        @Override
-        public Object getSystemService(String name) {
-            Log.d(TAG, "getSystemService: returning null");
-            switch (name) {
-                case Context.APP_OPS_SERVICE:
-                    return Mockito.mock(AppOpsManager.class);
-                case Context.TELEPHONY_SERVICE:
-                    return Mockito.mock(TelephonyManager.class);
-                default:
-                    return null;
-            }
-        }
-
-        @Override
-        public Resources getResources() {
-            Log.d(TAG, "getResources: returning null");
-            return null;
-        }
-
-        @Override
-        public int getUserId() {
-            return 0;
-        }
-
-        @Override
-        public MockContentResolver getContentResolver() {
-            return mResolver;
-        }
-
-        @Override
-        public int checkCallingOrSelfPermission(String permission) {
-            return PackageManager.PERMISSION_GRANTED;
-        }
-    }
-
     @Override
     protected void setUp() throws Exception {
         super.setUp();
+        MockitoAnnotations.initMocks(this);
         mSmsProviderTestable = new SmsProviderTestable();
-        mContext = new MockContextWithProvider(mSmsProviderTestable);
-        mContentResolver = mContext.getContentResolver();
+
+        when(mContext.getSystemService(eq(Context.APP_OPS_SERVICE)))
+                .thenReturn(mock(AppOpsManager.class));
+        when(mContext.getSystemService(eq(Context.TELEPHONY_SERVICE)))
+                .thenReturn(mock(TelephonyManager.class));
+
+        when(mContext.checkCallingOrSelfPermission(anyString()))
+                .thenReturn(PackageManager.PERMISSION_GRANTED);
+
+        when(mMockResources
+                        .getString(eq(com.android.internal.R.string.config_systemBluetoothStack)))
+                .thenReturn("com.android.bluetooth.services");
+        when(mContext.getResources()).thenReturn(mMockResources);
+        when(mContext.getUserId()).thenReturn(0);
+
+        when(mContext.getPackageManager()).thenReturn(mPackageManager);
+
+        /**
+         * This is used to give the SmsProviderTest a mocked context which takes a
+         * SmsProvider and attaches it to the ContentResolver with telephony authority.
+         * The mocked context also gives WRITE_APN_SETTINGS permissions
+         */
+        mContentResolver = new MockContentResolver() {
+            @Override
+            public void notifyChange(Uri uri, ContentObserver observer, boolean syncToNetwork,
+                    int userHandle) {
+                notifyChangeCount++;
+            }
+        };
+        when(mContext.getContentResolver()).thenReturn(mContentResolver);
+
+        // Add authority="sms" to given smsProvider
+        ProviderInfo providerInfo = new ProviderInfo();
+        providerInfo.authority = "sms";
+
+        // Add context to given smsProvider
+        mSmsProviderTestable.attachInfoForTesting(mContext, providerInfo);
+        Log.d(TAG, "MockContextWithProvider: smsProvider.getContext(): "
+                + mSmsProviderTestable.getContext());
+
+        // Add given SmsProvider to mResolver with authority="sms" so that
+        // mResolver can send queries to mSmsProvider
+        mContentResolver.addProvider("sms", mSmsProviderTestable);
+        Log.d(TAG, "MockContextWithProvider: Add SmsProvider to mResolver");
         notifyChangeCount = 0;
     }
 
