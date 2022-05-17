@@ -11812,6 +11812,22 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2538
+  carrier_name: "Universal DISH - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3438"
+  }
+}
+carrier_id {
+  canonical_id: 2539
+  carrier_name: "Project Genesis - MVNO2"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3440"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12054,4 +12070,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 19
+version: 20
