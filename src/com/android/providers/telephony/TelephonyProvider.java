@@ -3935,6 +3935,14 @@ public class TelephonyProvider extends ContentProvider
                 break;
             }
 
+            case URL_DPC_ID: {
+                constraints.add("_id = " + url.getLastPathSegment());
+                ensureCallingFromSystemOrPhoneUid("URL_DPC called from non SYSTEM_UID.");
+                // DPC query only returns DPC records.
+                constraints.add(IS_OWNED_BY_DPC);
+                break;
+            }
+
             case URL_FILTERED_ID:
             case URL_FILTERED_USING_SUBID: {
                 String idString = url.getLastPathSegment();
