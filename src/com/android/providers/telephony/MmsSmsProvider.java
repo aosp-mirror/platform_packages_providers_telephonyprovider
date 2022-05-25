@@ -1038,7 +1038,6 @@ public class MmsSmsProvider extends ContentProvider {
     private Cursor getMessagesByPhoneNumber(
             String phoneNumber, String[] projection, String selection,
             String sortOrder, String smsTable, String pduTable) {
-        String escapedPhoneNumber = DatabaseUtils.sqlEscapeString(phoneNumber);
         int minMatch =
             getContext().getResources().getInteger(
                     com.android.internal.R.integer.config_phonenumber_compare_min_match);
@@ -1049,8 +1048,7 @@ public class MmsSmsProvider extends ContentProvider {
         String finalSmsSelection =
                 concatSelections(
                         selection,
-                        "(address=" + escapedPhoneNumber + " OR PHONE_NUMBERS_EQUAL(address, " +
-                        escapedPhoneNumber +
+                        "(address=? OR PHONE_NUMBERS_EQUAL(address, ?" +
                         (mUseStrictPhoneNumberComparation ? ", 1))" : ", 0, " + minMatch + "))"));
         SQLiteQueryBuilder mmsQueryBuilder = new SQLiteQueryBuilder();
         SQLiteQueryBuilder smsQueryBuilder = new SQLiteQueryBuilder();
@@ -1060,9 +1058,8 @@ public class MmsSmsProvider extends ContentProvider {
         mmsQueryBuilder.setTables(
                 pduTable +
                 ", (SELECT msg_id AS address_msg_id " +
-                "FROM addr WHERE (address=" + escapedPhoneNumber +
-                " OR PHONE_NUMBERS_EQUAL(addr.address, " +
-                escapedPhoneNumber +
+                "FROM addr WHERE (address=?" +
+                " OR PHONE_NUMBERS_EQUAL(addr.address, ?" +
                 (mUseStrictPhoneNumberComparation ? ", 1))) " : ", 0, " + minMatch + "))) ") +
                 "AS matching_addresses");
         smsQueryBuilder.setTables(smsTable);
@@ -1081,7 +1078,8 @@ public class MmsSmsProvider extends ContentProvider {
         String unionQuery = unionQueryBuilder.buildUnionQuery(
                 new String[] { mmsSubQuery, smsSubQuery }, sortOrder, null);
 
-        return mOpenHelper.getReadableDatabase().rawQuery(unionQuery, EMPTY_STRING_ARRAY);
+        return mOpenHelper.getReadableDatabase().rawQuery(unionQuery,
+                new String[] { phoneNumber, phoneNumber, phoneNumber, phoneNumber });
     }
 
     /**
