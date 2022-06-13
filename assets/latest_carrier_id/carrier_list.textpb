@@ -4579,7 +4579,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1655
-  carrier_name: "Sun"
+  carrier_name: "Smart"
   carrier_attribute {
     mccmnc_tuple: "51503"
     imsi_prefix_xpattern: "5150363"
@@ -7118,6 +7118,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     imsi_prefix_xpattern: "31026097"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4276"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4276"
   }
   carrier_attribute {
     mccmnc_tuple: "311580"
@@ -11357,6 +11365,14 @@ carrier_id {
     mccmnc_tuple: "310260"
     imsi_prefix_xpattern: "31026097"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4276"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4276"
+  }
   parent_canonical_id: 1989
 }
 carrier_id {
@@ -11531,4 +11547,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108875
+version: 67108876
