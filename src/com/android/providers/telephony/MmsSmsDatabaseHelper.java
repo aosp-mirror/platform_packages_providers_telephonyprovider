@@ -341,7 +341,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForCe(Context context) {
         if (sCeInstance == null) {
-            if (StorageManager.isFileEncryptedNativeOrEmulated()) {
+            if (StorageManager.isFileEncrypted()) {
                 Context ceContext = ProviderUtil.getCredentialEncryptedContext(context);
                 sCeInstance = new MmsSmsDatabaseHelper(ceContext, getDbErrorHandler(ceContext));
             } else {
@@ -545,7 +545,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createIndices(db);
 
         // if FBE is not supported, or if this onCreate is for CE partition database
-        if (!StorageManager.isFileEncryptedNativeOrEmulated()
+        if (!StorageManager.isFileEncrypted()
                 || (mContext != null && mContext.isCredentialProtectedStorage())) {
             localLog("onCreate: broadcasting ACTION_SMS_MMS_DB_CREATED");
             // Broadcast ACTION_SMS_MMS_DB_CREATED
