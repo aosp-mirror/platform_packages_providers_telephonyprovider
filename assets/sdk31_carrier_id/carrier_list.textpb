@@ -7192,6 +7192,10 @@ carrier_id {
     gid1: "0001"
   }
   carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4276"
+  }
+  carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "4276"
   }
@@ -11508,6 +11512,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     imsi_prefix_xpattern: "31026097"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4276"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4276"
   }
   parent_canonical_id: 1989
 }
