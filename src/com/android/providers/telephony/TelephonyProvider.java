@@ -4136,11 +4136,12 @@ public class TelephonyProvider extends ContentProvider
 
         ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
         if (ret == null) {
-            loge("query current APN but cursor is null.");
+            loge("subId:" + subId + " query current APN but cursor is null.");
             return null;
         }
 
-        if (DBG) log("match current APN size:  " + ret.getCount());
+        if (DBG) log("subId:" + subId + " mccmnc=" + mccmnc + " carrierId=" + carrierId +
+                ", match current APN size:  " + ret.getCount());
 
         String[] columnNames = projectionIn != null ? projectionIn : ret.getColumnNames();
         MatrixCursor currentCursor = new MatrixCursor(columnNames);
