@@ -433,8 +433,9 @@ public class CarrierIdProvider extends ContentProvider {
             CarrierIdProto.CarrierAttribute attr, int index) {
         if (index > CARRIER_ATTR_END_IDX) {
             ContentValues carrier = new ContentValues(cv);
-            if (!cvs.contains(carrier))
-            cvs.add(carrier);
+            if (!cvs.contains(carrier)) {
+                cvs.add(carrier);
+            }
             return;
         }
         boolean found = false;
