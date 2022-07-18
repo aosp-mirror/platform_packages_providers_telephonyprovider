@@ -1327,7 +1327,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 745
-  carrier_name: "Bouygues Telecom Caraïbe"
+  carrier_name: "Digicel"
   carrier_attribute {
     mccmnc_tuple: "34020"
   }
@@ -4905,7 +4905,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1655
-  carrier_name: "Sun"
+  carrier_name: "Smart"
   carrier_attribute {
     mccmnc_tuple: "51503"
     imsi_prefix_xpattern: "5150363"
@@ -7473,6 +7473,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "312580"
     gid1: "0001"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4276"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4276"
   }
 }
 carrier_id {
@@ -11633,6 +11641,62 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2540
+  carrier_name: "mate."
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "mate."
+  }
+}
+carrier_id {
+  canonical_id: 2541
+  carrier_name: "Exetel"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Exetel"
+  }
+}
+carrier_id {
+  canonical_id: 2542
+  carrier_name: "Konec"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Konec"
+  }
+}
+carrier_id {
+  canonical_id: 2543
+  carrier_name: "More"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "More"
+  }
+}
+carrier_id {
+  canonical_id: 2544
+  carrier_name: "TANGERINE"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "TANGERINE"
+  }
+}
+carrier_id {
+  canonical_id: 2545
+  carrier_name: "Your provider"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Your provider"
+  }
+}
+carrier_id {
+  canonical_id: 2546
+  carrier_name: "Wizzee"
+  carrier_attribute {
+    mccmnc_tuple: "34020"
+    imsi_prefix_xpattern: "3402002"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11775,6 +11839,14 @@ carrier_id {
     mccmnc_tuple: "310260"
     imsi_prefix_xpattern: "31026097"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310260"
+    gid1: "4276"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4276"
+  }
   parent_canonical_id: 1989
 }
 carrier_id {
@@ -11876,4 +11948,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554478
+version: 33554479
