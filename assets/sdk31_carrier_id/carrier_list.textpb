@@ -10271,6 +10271,7 @@ carrier_id {
     mccmnc_tuple: "44010"
     preferred_apn: "lte-d.ocn.ne.jp"
     preferred_apn: "lte.ocn.ne.jp"
+    preferred_apn: "ocn.ne.jp"
   }
 }
 carrier_id {
