@@ -241,6 +241,10 @@ carrier_id {
     mccmnc_tuple: "23202"
     spn: ""
   }
+  carrier_attribute {
+    mccmnc_tuple: "23209"
+    spn: ""
+  }
 }
 carrier_id {
   canonical_id: 15
@@ -7563,6 +7567,46 @@ carrier_id {
     mccmnc_tuple: "311480"
     gid1: "BA01450000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310599"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311481"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311482"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311483"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311484"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311485"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311486"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311487"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311488"
+    gid1: "BA01450000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311489"
+    gid1: "BA01450000000000"
+  }
 }
 carrier_id {
   canonical_id: 2033
@@ -11368,6 +11412,18 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2547
+  carrier_name: "Telet"
+  carrier_attribute {
+    mccmnc_tuple: "23488"
+    spn: "Telet"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23588"
+    spn: "Telet"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11659,4 +11715,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331671
+version: 50331672
