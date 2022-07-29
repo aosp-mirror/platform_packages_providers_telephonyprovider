@@ -5847,6 +5847,16 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "310012"
+    mccmnc_tuple: "310590"
+    mccmnc_tuple: "310591"
+    mccmnc_tuple: "310592"
+    mccmnc_tuple: "310593"
+    mccmnc_tuple: "310594"
+    mccmnc_tuple: "310595"
+    mccmnc_tuple: "310596"
+    mccmnc_tuple: "310597"
+    mccmnc_tuple: "310598"
+    mccmnc_tuple: "310599"
     mccmnc_tuple: "311280"
     mccmnc_tuple: "311281"
     mccmnc_tuple: "311282"
@@ -5867,7 +5877,6 @@ carrier_id {
     mccmnc_tuple: "311487"
     mccmnc_tuple: "311488"
     mccmnc_tuple: "311489"
-    mccmnc_tuple: "310590"
   }
 }
 carrier_id {
@@ -7400,6 +7409,16 @@ carrier_id {
     gid1: "DEFF"
   }
   carrier_attribute {
+    mccmnc_tuple: "310590"
+    mccmnc_tuple: "310591"
+    mccmnc_tuple: "310592"
+    mccmnc_tuple: "310593"
+    mccmnc_tuple: "310594"
+    mccmnc_tuple: "310595"
+    mccmnc_tuple: "310596"
+    mccmnc_tuple: "310597"
+    mccmnc_tuple: "310598"
+    mccmnc_tuple: "310599"
     mccmnc_tuple: "311480"
     gid1: "BA01270000000000"
   }
@@ -11375,6 +11394,16 @@ carrier_id {
   canonical_id: 10008
   carrier_name: "Tracfone-VZW"
   carrier_attribute {
+    mccmnc_tuple: "310590"
+    mccmnc_tuple: "310591"
+    mccmnc_tuple: "310592"
+    mccmnc_tuple: "310593"
+    mccmnc_tuple: "310594"
+    mccmnc_tuple: "310595"
+    mccmnc_tuple: "310596"
+    mccmnc_tuple: "310597"
+    mccmnc_tuple: "310598"
+    mccmnc_tuple: "310599"
     mccmnc_tuple: "311480"
     gid1: "BA01270000000000"
   }
@@ -11615,4 +11644,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108878
+version: 67108880
