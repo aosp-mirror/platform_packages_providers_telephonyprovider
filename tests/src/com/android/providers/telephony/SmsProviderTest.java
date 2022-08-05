@@ -103,7 +103,7 @@ public class SmsProviderTest extends TestCase {
 
         when(mMockResources
                         .getString(eq(com.android.internal.R.string.config_systemBluetoothStack)))
-                .thenReturn("com.android.bluetooth.services");
+                .thenReturn("com.android.bluetooth");
         when(mContext.getResources()).thenReturn(mMockResources);
         when(mContext.getUserId()).thenReturn(0);
 
