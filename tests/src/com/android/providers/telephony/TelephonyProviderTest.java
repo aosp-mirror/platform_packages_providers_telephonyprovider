@@ -48,7 +48,7 @@ import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
-
+import com.android.internal.telephony.LocalLog;
 import androidx.test.InstrumentationRegistry;
 
 import junit.framework.TestCase;
@@ -64,7 +64,9 @@ import com.android.internal.telephony.PhoneFactory;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.stream.IntStream;
 
@@ -358,6 +360,12 @@ public class TelephonyProviderTest extends TestCase {
         notifyChangeRestoreCount = 0;
         // Required to access SIMINFO table
         mTelephonyProviderTestable.fakeCallingUid(Process.PHONE_UID);
+        // Ignore local log during test
+        Field field = PhoneFactory.class.getDeclaredField("sLocalLogs");
+        field.setAccessible(true);
+        HashMap<String, LocalLog> localLogs = new HashMap<>();
+        localLogs.put("TelephonyProvider", new LocalLog(0));
+        field.set(null, localLogs);
     }
 
     private void setUpMockContext(boolean isActiveSubId) {
@@ -1671,7 +1679,6 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(1, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(otherName, cursor.getString(0));
-        PhoneFactory.addLocalLog("TelephonyProvider", 1);
     }
 
     /**
