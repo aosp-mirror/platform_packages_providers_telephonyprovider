@@ -420,9 +420,9 @@ public class TelephonyProviderTest extends TestCase {
         };
         final String selection = Carriers.NUMERIC + "=?";
         String[] selectionArgs = { insertNumeric };
-        Log.d(TAG, "testInsertCarriers query projection: " + testProjection
+        Log.d(TAG, "testInsertCarriers query projection: " + Arrays.toString(testProjection)
                 + "\ntestInsertCarriers selection: " + selection
-                + "\ntestInsertCarriers selectionArgs: " + selectionArgs);
+                + "\ntestInsertCarriers selectionArgs: " + Arrays.toString(selectionArgs));
         Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
 
@@ -596,9 +596,9 @@ public class TelephonyProviderTest extends TestCase {
         };
         final String selection = Carriers.NUMERIC + "=?";
         String[] selectionArgs = { insertNumeric };
-        Log.d(TAG, "testInsertCarriers query projection: " + testProjection
+        Log.d(TAG, "testInsertCarriers query projection: " + Arrays.toString(testProjection)
                 + "\ntestInsertCarriers selection: " + selection
-                + "\ntestInsertCarriers selectionArgs: " + selectionArgs);
+                + "\ntestInsertCarriers selectionArgs: " + Arrays.toString(selectionArgs));
         Cursor cursor = mContentResolver.query(uri, testProjection, selection, selectionArgs, null);
 
         // verify that inserted values match results of query
@@ -614,7 +614,7 @@ public class TelephonyProviderTest extends TestCase {
         final String selectionToDelete = Carriers.NUMERIC + "=?";
         String[] selectionArgsToDelete = { insertNumeric };
         Log.d(TAG, "testInsertCarriers deleting selection: " + selectionToDelete
-                + "testInsertCarriers selectionArgs: " + selectionArgs);
+                + "testInsertCarriers selectionArgs: " + Arrays.toString(selectionArgs));
         int numRowsDeleted = mContentResolver.delete(uri, selectionToDelete, selectionArgsToDelete);
         assertEquals(1, numRowsDeleted);
 
@@ -651,9 +651,9 @@ public class TelephonyProviderTest extends TestCase {
         };
         final String selection = Carriers.NUMERIC + "=?";
         String[] selectionArgs = { insertNumeric };
-        Log.d(TAG, "testInsertCarriers query projection: " + testProjection
+        Log.d(TAG, "testInsertCarriers query projection: " + Arrays.toString(testProjection)
                 + "\ntestInsertCarriers selection: " + selection
-                + "\ntestInsertCarriers selectionArgs: " + selectionArgs);
+                + "\ntestInsertCarriers selectionArgs: " + Arrays.toString(selectionArgs));
         Cursor cursor = mContentResolver.query(Carriers.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
 
@@ -673,7 +673,7 @@ public class TelephonyProviderTest extends TestCase {
         final String selectionToDelete = Carriers.NUMERIC + "=?";
         String[] selectionArgsToDelete = { insertNumeric };
         Log.d(TAG, "testInsertCarriers deleting selection: " + selectionToDelete
-                + "testInsertCarriers selectionArgs: " + selectionArgs);
+                + "testInsertCarriers selectionArgs: " + Arrays.toString(selectionArgs));
         int numRowsDeleted = mContentResolver.delete(Carriers.CONTENT_URI,
                 selectionToDelete, selectionArgsToDelete);
         assertEquals(1, numRowsDeleted);
@@ -725,7 +725,7 @@ public class TelephonyProviderTest extends TestCase {
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
         Log.d(TAG,"\ntestSimTable selection: " + selection
-                + "\ntestSimTable selectionArgs: " + selectionArgs.toString());
+                + "\ntestSimTable selectionArgs: " + Arrays.toString(selectionArgs));
         Cursor cursor = mContentResolver.query(SimInfo.CONTENT_URI,
                 testProjection, selection, selectionArgs, null);
 
@@ -747,7 +747,7 @@ public class TelephonyProviderTest extends TestCase {
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgsToDelete = { insertDisplayName };
         Log.d(TAG, "testSimTable deleting selection: " + selectionToDelete
-                + "testSimTable selectionArgs: " + selectionArgs);
+                + "testSimTable selectionArgs: " + Arrays.toString(selectionArgs));
         int numRowsDeleted = mContentResolver.delete(SimInfo.CONTENT_URI,
                 selectionToDelete, selectionArgsToDelete);
         assertEquals(1, numRowsDeleted);
