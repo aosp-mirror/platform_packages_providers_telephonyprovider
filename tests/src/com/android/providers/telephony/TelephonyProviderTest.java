@@ -215,6 +215,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
                 arbitraryStringVal);
         contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, arbitraryIntVal);
+        contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING, arbitraryIntVal);
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
@@ -225,7 +226,7 @@ public class TelephonyProviderTest extends TestCase {
     /**
      * This is used to give the TelephonyProviderTest a mocked context which takes a
      * TelephonyProvider and attaches it to the ContentResolver with telephony authority.
-     * The mocked context also gives WRITE_APN_SETTINGS permissions
+     * The mocked context also gives permissions needed to access DB tables.
      */
     private class MockContextWithProvider extends MockContext {
         private final MockContentResolver mResolver;
@@ -234,7 +235,8 @@ public class TelephonyProviderTest extends TestCase {
 
         private final List<String> GRANTED_PERMISSIONS = Arrays.asList(
                 Manifest.permission.MODIFY_PHONE_STATE, Manifest.permission.WRITE_APN_SETTINGS,
-                Manifest.permission.READ_PRIVILEGED_PHONE_STATE);
+                Manifest.permission.READ_PRIVILEGED_PHONE_STATE,
+                "android.permission.ACCESS_TELEPHONY_SIMINFO_DB");
 
         public MockContextWithProvider(TelephonyProvider telephonyProvider,
                 Boolean isActiveSubscription) {
@@ -354,6 +356,8 @@ public class TelephonyProviderTest extends TestCase {
         when(mockContextResources.getStringArray(anyInt())).thenReturn(new String[]{"ca", "us"});
         notifyChangeCount = 0;
         notifyChangeRestoreCount = 0;
+        // Required to access SIMINFO table
+        mTelephonyProviderTestable.fakeCallingUid(Process.PHONE_UID);
     }
 
     private void setUpMockContext(boolean isActiveSubId) {
