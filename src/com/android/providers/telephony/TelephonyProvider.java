@@ -108,6 +108,7 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
+import android.service.carrier.IApnSourceService;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyProtoEnums;
@@ -116,41 +117,42 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.AtomicFile;
+import android.util.IndentingPrintWriter;
+import android.util.LocalLog;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.TelephonyStatsLog;
 import com.android.internal.util.XmlUtils;
-import android.service.carrier.IApnSourceService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.Integer;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.zip.CheckedInputStream;
 import java.util.zip.CRC32;
+import java.util.zip.CheckedInputStream;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -280,6 +282,8 @@ public class TelephonyProvider extends ContentProvider
     private Injector mInjector;
 
     private boolean mManagedApnEnforced;
+
+    private final LocalLog mLocalLog = new LocalLog(128);
 
     /**
      * Mobile country codes where there is a high likelyhood that the MNC has 3 digits
@@ -3041,13 +3045,6 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
-
-        try {
-            PhoneFactory.addLocalLog(TAG, 64);
-        } catch (IllegalArgumentException e) {
-            // ignore
-        }
-
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
         SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
@@ -3117,9 +3114,9 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
-    private static void localLog(String logMsg) {
+    private void localLog(String logMsg) {
         Log.d(TAG, logMsg);
-        PhoneFactory.localLog(TAG, logMsg);
+        mLocalLog.log(logMsg);
     }
 
     private synchronized boolean isManagedApnEnforced() {
@@ -5451,5 +5448,73 @@ public class TelephonyProvider extends ContentProvider
                     Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                     new String[]{subId});
         }
+    }
+
+    /**
+     * Dump the database table.
+     *
+     * @param tableName Table name.
+     * @param pw Print writer.
+     */
+    private void dumpTable(@NonNull String tableName, @NonNull IndentingPrintWriter pw) {
+        try (Cursor cursor = getReadableDatabase().query(false, tableName, null,
+                null, null, null, null, null, null)) {
+            pw.println(tableName + " table:");
+            pw.increaseIndent();
+            while (cursor != null && cursor.moveToNext()) {
+                List<String> columnStrings = new ArrayList<>();
+                String str = "";
+                for (int i = 0; i < cursor.getColumnCount(); i++) {
+                    str = cursor.getColumnName(i) + "=";
+                    int type = cursor.getType(i);
+                    try {
+                        switch (type) {
+                            case 0 /*FIELD_TYPE_NULL*/:
+                                str += "null";
+                                break;
+                            case 1 /*FIELD_TYPE_INTEGER*/:
+                                str += cursor.getInt(i);
+                                break;
+                            case 2 /*FIELD_TYPE_FLOAT*/:
+                                str += cursor.getFloat(i);
+                                break;
+                            case 3 /*FIELD_TYPE_STRING*/:
+                                str += cursor.getString(i);
+                                break;
+                            case 4 /*FIELD_TYPE_BLOB*/:
+                                str += "[blob]";
+                                break;
+                            default:
+                                str += "unknown";
+                                break;
+                        }
+                    } catch (Exception e) {
+                        str += "exception";
+                    }
+                    columnStrings.add(str);
+                }
+                pw.println(TextUtils.join(", ", columnStrings));
+            }
+            pw.decreaseIndent();
+        } catch (Exception ex) {
+            pw.println("Exception while dumping the table " + tableName + ", ex=" + ex);
+        }
+    }
+
+    @Override
+    public void dump(FileDescriptor fd, PrintWriter printWriter, String[] args) {
+        IndentingPrintWriter pw = new IndentingPrintWriter(printWriter, "  ");
+        pw.println(TAG + ":");
+        pw.increaseIndent();
+        pw.println("Database:");
+        pw.increaseIndent();
+        dumpTable(SIMINFO_TABLE, pw);
+        dumpTable(CARRIERS_TABLE, pw);
+        pw.decreaseIndent();
+        pw.println("Local log:");
+        pw.increaseIndent();
+        mLocalLog.dump(pw);
+        pw.decreaseIndent();
+        pw.decreaseIndent();
     }
 }
