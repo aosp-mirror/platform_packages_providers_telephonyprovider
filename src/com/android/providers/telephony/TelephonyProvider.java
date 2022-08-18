@@ -3835,8 +3835,9 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
-        if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
-                + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
+        if (VDBG) log("query: url=" + url + ", projectionIn=" + Arrays.toString(projectionIn)
+                + ", selection=" + selection + "selectionArgs=" + Arrays.toString(selectionArgs)
+                + ", sort=" + sort);
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
