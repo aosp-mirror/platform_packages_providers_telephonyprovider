@@ -361,8 +361,15 @@ public class MmsSmsProvider extends ContentProvider {
                 if ((simple != null) && simple.equals("true")) {
                     String threadType = uri.getQueryParameter("thread_type");
                     if (!TextUtils.isEmpty(threadType)) {
-                        selection = concatSelections(
-                                selection, Threads.TYPE + "=" + threadType);
+                        try {
+                            Integer.parseInt(threadType);
+                            selection = concatSelections(
+                                    selection, Threads.TYPE + "=" + threadType);
+                        } catch (NumberFormatException ex) {
+                            Log.e(LOG_TAG, "Thread type must be int");
+                            // return empty cursor
+                            break;
+                        }
                     }
                     cursor = getSimpleConversations(
                             projection, selection, selectionArgs, sortOrder);
@@ -491,9 +498,15 @@ public class MmsSmsProvider extends ContentProvider {
                 String extraSelection = (proto != -1) ?
                         (PendingMessages.PROTO_TYPE + "=" + proto) : " 0=0 ";
                 if (!TextUtils.isEmpty(msgId)) {
-                    extraSelection += " AND " + PendingMessages.MSG_ID + "=" + msgId;
+                    try {
+                        Long.parseLong(msgId);
+                        extraSelection += " AND " + PendingMessages.MSG_ID + "=" + msgId;
+                    } catch(NumberFormatException ex) {
+                        Log.e(LOG_TAG, "MSG ID must be a Long.");
+                        // return empty cursor
+                        break;
+                    }
                 }
-
                 String finalSelection = TextUtils.isEmpty(selection)
                         ? extraSelection : ("(" + extraSelection + ") AND " + selection);
                 String finalOrder = TextUtils.isEmpty(sortOrder)
