@@ -20,6 +20,7 @@ carrier_id {
     mccmnc_tuple: "310640"
     mccmnc_tuple: "310660"
     mccmnc_tuple: "310800"
+    mccmnc_tuple: "311490"
     mccmnc_tuple: "311660"
     mccmnc_tuple: "311882"
     mccmnc_tuple: "312250"
@@ -2162,7 +2163,6 @@ carrier_id {
   carrier_name: "Alltel Communications Inc."
   carrier_attribute {
     mccmnc_tuple: "311110"
-    mccmnc_tuple: "311270"
     mccmnc_tuple: "311271"
     mccmnc_tuple: "311272"
     mccmnc_tuple: "311273"
@@ -5857,6 +5857,7 @@ carrier_id {
     mccmnc_tuple: "310597"
     mccmnc_tuple: "310598"
     mccmnc_tuple: "310599"
+    mccmnc_tuple: "311270"
     mccmnc_tuple: "311280"
     mccmnc_tuple: "311281"
     mccmnc_tuple: "311282"
@@ -5986,9 +5987,6 @@ carrier_id {
 carrier_id {
   canonical_id: 1853
   carrier_name: "Virgin Mobile"
-  carrier_attribute {
-    mccmnc_tuple: "311490"
-  }
   carrier_attribute {
     mccmnc_tuple: "310120"
     mccmnc_tuple: "312530"
@@ -6710,6 +6708,7 @@ carrier_id {
     mccmnc_tuple: "310210"
     mccmnc_tuple: "310200"
     mccmnc_tuple: "310160"
+    mccmnc_tuple: "311490"
     mccmnc_tuple: "311660"
     mccmnc_tuple: "311882"
     mccmnc_tuple: "312250"
@@ -7991,7 +7990,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2107
-  carrier_name: "Telenor"
+  carrier_name: "ONE"
   carrier_attribute {
     mccmnc_tuple: "29701"
   }
@@ -10385,6 +10384,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "310240"
+    mccmnc_tuple: "311490"
     mccmnc_tuple: "311660"
     mccmnc_tuple: "311882"
     mccmnc_tuple: "312250"
@@ -10947,7 +10947,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2504
-  carrier_name: "Liberty Cablevision of Puerto Rico"
+  carrier_name: "Liberty Mobile"
   carrier_attribute {
     mccmnc_tuple: "313790"
   }
@@ -10981,6 +10981,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "27215"
     gid1: "75696531FFFFFFFFFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20601"
+    imsi_prefix_xpattern: "206018016"
   }
 }
 carrier_id {
@@ -11303,6 +11307,13 @@ carrier_id {
     mccmnc_tuple: "23488"
     mccmnc_tuple: "23588"
     spn: "Telet"
+  }
+}
+carrier_id {
+  canonical_id: 2548
+  carrier_name: "Ice Norway"
+  carrier_attribute {
+    mccmnc_tuple: "24214"
   }
 }
 carrier_id {
@@ -11644,4 +11655,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108880
+version: 67108881
