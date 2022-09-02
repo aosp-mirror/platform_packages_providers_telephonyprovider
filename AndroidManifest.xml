@@ -19,6 +19,10 @@
         coreApp="true"
         android:sharedUserId="android.uid.phone">
 
+    <permission android:name="android.permission.ACCESS_TELEPHONY_SIMINFO_DB"
+                android:label="Read and write SIMINFO table in TelephonyProvider"
+                android:protectionLevel="signature" />
+
     <uses-permission android:name="android.permission.RECEIVE_SMS" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_DEVICE_CONFIG" />

@@ -121,6 +121,19 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
+    public void databaseHelperOnUpgrade_hasPortIndexField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasPortIndexField");
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the PORT_INDEX field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "port index columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(SubscriptionManager.PORT_INDEX));
+    }
+
+    @Test
     public void databaseHelperOnUpgrade_hasSkip464XlatField() {
         Log.d(TAG, "databaseHelperOnUpgrade_hasSkip464XlatField");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
@@ -218,22 +231,6 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
-    public void databaseHelperOnUpgrade_hasVoImsOptInStatusField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasImsRcsUceEnabledField");
-        // (5 << 16) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, 4 << 16, TelephonyProvider.getVersion(mContext));
-
-        // the upgraded db must have the SubscriptionManager.VOIMS_OPT_IN_STATUS field
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
-
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS));
-    }
-
-    @Test
     public void databaseHelperOnUpgrade_hasD2DStatusSharingField() {
         Log.d(TAG, "databaseHelperOnUpgrade_hasD2DStatusSharingField");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
@@ -247,6 +244,22 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasVoImsOptInStatusField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasImsRcsUceEnabledField");
+        // (5 << 16) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, 4 << 16, TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the SubscriptionManager.VOIMS_OPT_IN_STATUS field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS));
     }
 
     @Test
@@ -320,6 +333,22 @@ public final class TelephonyDatabaseHelperTest {
         assertTrue(Arrays.asList(columns).contains(Carriers.ALWAYS_ON));
         assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V4));
         assertTrue(Arrays.asList(columns).contains(Carriers.MTU_V6));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasUsageSettingField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasUsageSettingField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have the Telephony.SimInfo.USAGE_SETTING field
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_USAGE_SETTING));
     }
 
     /**
