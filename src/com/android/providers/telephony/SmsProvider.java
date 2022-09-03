@@ -1192,13 +1192,13 @@ public class SmsProvider extends ContentProvider {
         sURLMatcher.addURI("sms", "failed/#", SMS_FAILED_ID);
         sURLMatcher.addURI("sms", "queued", SMS_QUEUED);
         sURLMatcher.addURI("sms", "conversations", SMS_CONVERSATIONS);
-        sURLMatcher.addURI("sms", "conversations/*", SMS_CONVERSATIONS_ID);
+        sURLMatcher.addURI("sms", "conversations/#", SMS_CONVERSATIONS_ID);
         sURLMatcher.addURI("sms", "raw", SMS_RAW_MESSAGE);
         sURLMatcher.addURI("sms", "raw/permanentDelete", SMS_RAW_MESSAGE_PERMANENT_DELETE);
         sURLMatcher.addURI("sms", "attachments", SMS_ATTACHMENT);
         sURLMatcher.addURI("sms", "attachments/#", SMS_ATTACHMENT_ID);
         sURLMatcher.addURI("sms", "threadID", SMS_NEW_THREAD_ID);
-        sURLMatcher.addURI("sms", "threadID/*", SMS_QUERY_THREAD_ID);
+        sURLMatcher.addURI("sms", "threadID/#", SMS_QUERY_THREAD_ID);
         sURLMatcher.addURI("sms", "status/#", SMS_STATUS_ID);
         sURLMatcher.addURI("sms", "sr_pending", SMS_STATUS_PENDING);
         sURLMatcher.addURI("sms", "icc", SMS_ALL_ICC);
