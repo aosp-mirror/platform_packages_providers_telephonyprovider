@@ -49,6 +49,8 @@ import android.text.TextUtils;
 import android.util.EventLog;
 import android.util.Log;
 
+import com.android.internal.annotations.VisibleForTesting;
+
 import com.google.android.mms.pdu.PduHeaders;
 import com.google.android.mms.util.DownloadDrmHelper;
 
@@ -1070,7 +1072,8 @@ public class MmsProvider extends ContentProvider {
         sURLMatcher.addURI("mms", "resetFilePerm/*",    MMS_PART_RESET_FILE_PERMISSION);
     }
 
-    private SQLiteOpenHelper mOpenHelper;
+    @VisibleForTesting
+    public SQLiteOpenHelper mOpenHelper;
 
     private static String concatSelections(String selection1, String selection2) {
         if (TextUtils.isEmpty(selection1)) {
