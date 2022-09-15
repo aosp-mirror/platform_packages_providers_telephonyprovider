@@ -22,7 +22,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -312,8 +311,11 @@ public class MmsSmsProvider extends ContentProvider {
 
     private boolean mUseStrictPhoneNumberComparation;
 
+    // Call() methods and parameters
     private static final String METHOD_IS_RESTORING = "is_restoring";
     private static final String IS_RESTORING_KEY = "restoring";
+    private static final String METHOD_GARBAGE_COLLECT = "garbage_collect";
+    private static final String DO_DELETE = "delete";
 
     @Override
     public boolean onCreate() {
@@ -1445,9 +1447,18 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public Bundle call(String method, String arg, Bundle extras) {
+        if (ProviderUtil.isAccessRestricted(
+                getContext(), getCallingPackage(), Binder.getCallingUid())) {
+            return null;
+        }
         if (METHOD_IS_RESTORING.equals(method)) {
             Bundle result = new Bundle();
             result.putBoolean(IS_RESTORING_KEY, TelephonyBackupAgent.getIsRestoring());
+            return result;
+        } else if (METHOD_GARBAGE_COLLECT.equals(method)) {
+            Bundle result = new Bundle();
+            boolean doDelete = TextUtils.equals(DO_DELETE, arg);
+            MmsPartsCleanup.cleanupDanglingParts(getContext(), doDelete, result);
             return result;
         }
         Log.w(LOG_TAG, "Ignored unsupported " + method + " call");
