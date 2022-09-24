@@ -218,6 +218,8 @@ public class TelephonyProviderTest extends TestCase {
                 arbitraryStringVal);
         contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING, arbitraryIntVal);
+        contentValues.put(Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES,
+                arbitraryStringVal);
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
@@ -817,6 +819,9 @@ public class TelephonyProviderTest extends TestCase {
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(
                         cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
+                getStringValueFromCursor(cursor,
+                        Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -1001,6 +1006,11 @@ public class TelephonyProviderTest extends TestCase {
     private int getIntValueFromCursor(Cursor cursor, String columnName) {
         int columnIndex = cursor.getColumnIndex(columnName);
         return cursor.getInt(columnIndex);
+    }
+
+    private String getStringValueFromCursor(Cursor cursor, String columnName) {
+        int columnIndex = cursor.getColumnIndex(columnName);
+        return cursor.getString(columnIndex);
     }
 
     private int parseIdFromInsertedUri(Uri uri) throws NumberFormatException {
