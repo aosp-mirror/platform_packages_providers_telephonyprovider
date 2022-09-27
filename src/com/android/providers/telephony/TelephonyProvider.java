@@ -587,7 +587,7 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.USAGE_SETTING_UNKNOWN + ","
                 + Telephony.SimInfo.COLUMN_TP_MESSAGE_REF +
                 "  INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT -10000"
+                + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT " + UserHandle.USER_NULL
                 + ");";
     }
 
@@ -1835,7 +1835,7 @@ public class TelephonyProvider extends ContentProvider
                     // Try to update the siminfo table with new columns.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_USER_HANDLE
-                            + "  INTEGER DEFAULT -10000;");
+                            + "  INTEGER DEFAULT " + UserHandle.USER_NULL +";");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade failed to update " + SIMINFO_TABLE
