@@ -51,6 +51,7 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
 
 /**
@@ -563,7 +564,7 @@ public class MmsSmsProvider extends ContentProvider {
         // We lowercase all email addresses, but not addresses that aren't numbers, because
         // that would incorrectly turn an address such as "My Vodafone" into "my vodafone"
         // and the thread title would be incorrect when displayed in the UI.
-        String refinedAddress = isEmail ? address.toLowerCase() : address;
+        String refinedAddress = isEmail ? address.toLowerCase(Locale.ROOT) : address;
 
         String selection = "address=?";
         String[] selectionArgs;

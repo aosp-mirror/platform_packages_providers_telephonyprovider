@@ -2699,8 +2699,8 @@ public class TelephonyProvider extends ContentProvider
                 if (oldType.equals("") || newType.equals("")) {
                     newRow.put(TYPE, "");
                 } else {
-                    String[] oldTypes = oldType.toLowerCase().split(",");
-                    String[] newTypes = newType.toLowerCase().split(",");
+                    String[] oldTypes = oldType.toLowerCase(Locale.ROOT).split(",");
+                    String[] newTypes = newType.toLowerCase(Locale.ROOT).split(",");
 
                     if (VDBG) {
                         log("mergeFieldsAndUpdateDb: Calling separateRowsNeeded() oldType=" +
@@ -3785,7 +3785,7 @@ public class TelephonyProvider extends ContentProvider
                             DEFAULT_INT_COLUMN_VALUE));
             if (isoCountryCodeFromDb != null
                     && !wfcRestoreBlockedCountries
-                            .contains(isoCountryCodeFromDb.toLowerCase())) {
+                            .contains(isoCountryCodeFromDb.toLowerCase(Locale.ROOT))) {
                 // Don't restore COLUMN_WFC_IMS_ENABLED if the sim is from one of the countries that
                 // requires WFC entitlement.
                 contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED,
@@ -5343,7 +5343,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private static int getMvnoTypeIntFromString(String mvnoType) {
-        String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase();
+        String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase(Locale.ROOT);
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
         return  mvnoTypeInt == null ? 0 : mvnoTypeInt;
     }
