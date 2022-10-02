@@ -22,7 +22,7 @@ public class SqlQueryChecker {
     private static final String SELECT_TOKEN = "select";
 
     static void checkToken(String token) {
-        if (SELECT_TOKEN.equals(token.toLowerCase())) {
+        if (SELECT_TOKEN.equalsIgnoreCase(token)) {
             throw new IllegalArgumentException("SELECT token not allowed in query");
         }
     }
