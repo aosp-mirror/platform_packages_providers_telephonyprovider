@@ -46,6 +46,7 @@ import android.provider.Telephony.Threads;
 import android.system.ErrnoException;
 import android.system.Os;
 import android.text.TextUtils;
+import android.util.EventLog;
 import android.util.Log;
 
 import com.google.android.mms.pdu.PduHeaders;
@@ -820,13 +821,21 @@ public class MmsProvider extends ContentProvider {
             case MMS_PART_RESET_FILE_PERMISSION:
                 String path = getContext().getDir(PARTS_DIR_NAME, 0).getPath() + '/' +
                         uri.getPathSegments().get(1);
-                // Reset the file permission back to read for everyone but me.
+
                 try {
+                    String partsDirPath = getContext().getDir(PARTS_DIR_NAME, 0).getCanonicalPath();
+                    if (!new File(path).getCanonicalPath().startsWith(partsDirPath)) {
+                        EventLog.writeEvent(0x534e4554, "240685104",
+                                Binder.getCallingUid(), (TAG + " update: path " + path +
+                                        " does not start with " + partsDirPath));
+                        return 0;
+                    }
+                    // Reset the file permission back to read for everyone but me.
                     Os.chmod(path, 0644);
                     if (LOCAL_LOGV) {
                         Log.d(TAG, "MmsProvider.update chmod is successful for path: " + path);
                     }
-                } catch (ErrnoException e) {
+                } catch (ErrnoException | IOException e) {
                     Log.e(TAG, "Exception in chmod: " + e);
                 }
                 return 0;
