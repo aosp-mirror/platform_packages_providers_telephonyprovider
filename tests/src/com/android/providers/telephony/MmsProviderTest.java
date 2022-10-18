@@ -16,8 +16,10 @@
 
 package com.android.providers.telephony;
 
-import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.anyInt;
+import static org.mockito.Mockito.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,6 +28,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.ProviderInfo;
+import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.net.Uri;
 import android.provider.Telephony;
@@ -36,39 +39,40 @@ import android.util.Log;
 import junit.framework.TestCase;
 
 import org.junit.Test;
-import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
 
 public class MmsProviderTest extends TestCase {
     private static final String TAG = "MmsProviderTest";
 
-    @Mock private Context mContext;
     private MockContentResolver mContentResolver;
     private MmsProviderTestable mMmsProviderTestable;
-    @Mock private PackageManager mPackageManager;
 
     private int notifyChangeCount;
 
     @Override
     protected void setUp() throws Exception {
         super.setUp();
-        MockitoAnnotations.initMocks(this);
+
         mMmsProviderTestable = new MmsProviderTestable();
 
         // setup mocks
-        when(mContext.getSystemService(eq(Context.APP_OPS_SERVICE)))
+        Context context = mock(Context.class);
+        PackageManager packageManager = mock(PackageManager.class);
+        Resources resources = mock(Resources.class);
+        when(context.getSystemService(eq(Context.APP_OPS_SERVICE)))
                 .thenReturn(mock(AppOpsManager.class));
-        when(mContext.getSystemService(eq(Context.TELEPHONY_SERVICE)))
+        when(context.getSystemService(eq(Context.TELEPHONY_SERVICE)))
                 .thenReturn(mock(TelephonyManager.class));
 
-        when(mContext.checkCallingOrSelfPermission(anyString()))
+        when(context.checkCallingOrSelfPermission(anyString()))
                 .thenReturn(PackageManager.PERMISSION_GRANTED);
-        when(mContext.getUserId()).thenReturn(0);
-        when(mContext.getPackageManager()).thenReturn(mPackageManager);
+        when(context.getUserId()).thenReturn(0);
+        when(context.getPackageManager()).thenReturn(packageManager);
+        when(context.getResources()).thenReturn(resources);
+        when(resources.getString(anyInt())).thenReturn("");
 
         /**
          * This is used to give the MmsProviderTest a mocked context which takes a
-         * SmsProvider and attaches it to the ContentResolver with telephony authority.
+         * MmsProvider and attaches it to the ContentResolver with telephony authority.
          * The mocked context also gives WRITE_APN_SETTINGS permissions
          */
         mContentResolver = new MockContentResolver() {
@@ -78,14 +82,14 @@ public class MmsProviderTest extends TestCase {
                 notifyChangeCount++;
             }
         };
-        when(mContext.getContentResolver()).thenReturn(mContentResolver);
+        when(context.getContentResolver()).thenReturn(mContentResolver);
 
         // Add authority="mms" to given mmsProvider
         ProviderInfo providerInfo = new ProviderInfo();
         providerInfo.authority = "mms";
 
         // Add context to given mmsProvider
-        mMmsProviderTestable.attachInfoForTesting(mContext, providerInfo);
+        mMmsProviderTestable.attachInfoForTesting(context, providerInfo);
         Log.d(TAG, "MockContextWithProvider: mmsProvider.getContext(): "
                 + mMmsProviderTestable.getContext());
 
@@ -104,6 +108,35 @@ public class MmsProviderTest extends TestCase {
 
     @Test
     public void testInsertMms() {
+        final ContentValues values = getTestContentValues();
+
+        Uri expected = Uri.parse("content://mms/1");
+        Uri actual = mContentResolver.insert(Telephony.Mms.CONTENT_URI, values);
+
+        assertEquals(expected, actual);
+        assertEquals(1, notifyChangeCount);
+    }
+
+    @Test
+    public void testInsertMmsWithoutNotify() {
+
+        MmsProvider.ProviderUtilWrapper providerUtilWrapper =
+                mock(MmsProvider.ProviderUtilWrapper.class);
+        when(providerUtilWrapper.isAccessRestricted(
+                any(Context.class), anyString(), anyInt())).thenReturn(false);
+        mMmsProviderTestable.setProviderUtilWrapper(providerUtilWrapper);
+
+        final ContentValues values = getTestContentValues();
+        values.put(TelephonyBackupAgent.NOTIFY, false);
+
+        Uri expected = Uri.parse("content://mms/1");
+        Uri actual = mContentResolver.insert(Telephony.Mms.CONTENT_URI, values);
+
+        assertEquals(expected, actual);
+        assertEquals(0, notifyChangeCount);
+    }
+
+    private ContentValues getTestContentValues() {
         final ContentValues values = new ContentValues();
         values.put(Telephony.Mms.READ, 1);
         values.put(Telephony.Mms.SEEN, 1);
@@ -111,11 +144,6 @@ public class MmsProviderTest extends TestCase {
         values.put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_ALL);
         values.put(Telephony.Mms.TEXT_ONLY, 1);
         values.put(Telephony.Mms.THREAD_ID, 1);
-
-        Uri expected = Uri.parse("content://mms/1");
-        Uri actual = mContentResolver.insert(Telephony.Mms.CONTENT_URI, values);
-
-        assertEquals(expected, actual);
-        assertEquals(1, notifyChangeCount);
+        return values;
     }
 }
