@@ -19,7 +19,6 @@ package com.android.providers.telephony;
 import static org.junit.Assert.assertArrayEquals;
 
 import android.annotation.TargetApi;
-import android.app.backup.BackupDataOutput;
 import android.app.backup.FullBackupDataOutput;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -43,6 +42,7 @@ import android.util.JsonReader;
 import android.util.JsonWriter;
 import android.util.SparseArray;
 
+import com.android.compatibility.common.util.ShellIdentityUtils;
 import com.android.internal.telephony.PhoneFactory;
 
 import libcore.io.IoUtils;
@@ -54,13 +54,11 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -652,13 +650,21 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
     /**
      * Test restore mms with the empty json array "[]".
-     * @throws Exception
      */
-    public void testRestoreMms_NoMms() throws Exception {
+    public void testRestoreMms_NoMms() {
         JsonReader jsonReader = new JsonReader(new StringReader(EMPTY_JSON_ARRAY));
         FakeMmsProvider mmsProvider = new FakeMmsProvider(null);
         mMockContentResolver.addProvider("mms", mmsProvider);
-        mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
+        ShellIdentityUtils.invokeMethodWithShellPermissions(
+                mTelephonyBackupAgent, (agent) -> {
+                    try {
+                        agent.putMmsMessagesToProvider(jsonReader);
+                    } catch (IOException e) {
+                        fail("Encountered exception: " + e);
+                    }
+                    return null;
+                }
+        );
         assertEquals(0, mmsProvider.getRowsAdded());
     }
 
@@ -670,7 +676,16 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         JsonReader jsonReader = new JsonReader(new StringReader(addRandomDataToJson(mAllMmsJson)));
         FakeMmsProvider mmsProvider = new FakeMmsProvider(mMmsAllContentValues);
         mMockContentResolver.addProvider("mms", mmsProvider);
-        mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
+        ShellIdentityUtils.invokeMethodWithShellPermissions(
+                mTelephonyBackupAgent, (agent) -> {
+                    try {
+                        agent.putMmsMessagesToProvider(jsonReader);
+                    } catch (IOException e) {
+                        fail("Encountered exception: " + e);
+                    }
+                    return null;
+                }
+        );
         assertEquals(18, mmsProvider.getRowsAdded());
         assertEquals(mThreadProvider.mIsThreadArchived, mThreadProvider.mUpdateThreadsArchived);
     }
@@ -684,7 +699,16 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 (new StringReader(addRandomDataToJson(mMmsAllAttachmentJson)));
         FakeMmsProvider mmsProvider = new FakeMmsProvider(mMmsAllContentValues);
         mMockContentResolver.addProvider("mms", mmsProvider);
-        mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
+        ShellIdentityUtils.invokeMethodWithShellPermissions(
+                mTelephonyBackupAgent, (agent) -> {
+                    try {
+                        agent.putMmsMessagesToProvider(jsonReader);
+                    } catch (IOException e) {
+                        fail("Encountered exception: " + e);
+                    }
+                    return null;
+                }
+        );
         assertEquals(7, mmsProvider.getRowsAdded());
     }
 
@@ -694,7 +718,16 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         FakeMmsProvider mmsProvider = new FakeMmsProvider(mMmsNullBodyContentValues);
         mMockContentResolver.addProvider("mms", mmsProvider);
 
-        mTelephonyBackupAgent.putMmsMessagesToProvider(jsonReader);
+        ShellIdentityUtils.invokeMethodWithShellPermissions(
+                mTelephonyBackupAgent, (agent) -> {
+                    try {
+                        agent.putMmsMessagesToProvider(jsonReader);
+                    } catch (IOException e) {
+                        fail("Encountered exception: " + e);
+                    }
+                    return null;
+                }
+        );
 
         assertEquals(3, mmsProvider.getRowsAdded());
     }
@@ -943,6 +976,8 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
             for (String key : modifiedValues.keySet()) {
                 assertEquals("Key:"+key, modifiedValues.get(key), values.get(key));
             }
+            values.remove(TelephonyBackupAgent.NOTIFY); // notify gets removed before final values
+
             assertEquals(modifiedValues.size(), values.size());
             return retUri;
         }

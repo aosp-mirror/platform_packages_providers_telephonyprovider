@@ -38,7 +38,6 @@ import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
 import android.provider.Telephony.Mms;
 import android.provider.Telephony.Mms.Addr;
-import android.provider.Telephony.Mms.Inbox;
 import android.provider.Telephony.Mms.Part;
 import android.provider.Telephony.Mms.Rate;
 import android.provider.Telephony.MmsSms;
@@ -74,12 +73,27 @@ public class MmsProvider extends ContentProvider {
     // The name of parts directory. The full dir is "app_parts".
     static final String PARTS_DIR_NAME = "parts";
 
+    private ProviderUtilWrapper providerUtilWrapper = new ProviderUtilWrapper();
+
+    @VisibleForTesting
+    public void setProviderUtilWrapper(ProviderUtilWrapper providerUtilWrapper) {
+        this.providerUtilWrapper = providerUtilWrapper;
+    }
+
     @Override
     public boolean onCreate() {
         setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         mOpenHelper = MmsSmsDatabaseHelper.getInstanceForCe(getContext());
         TelephonyBackupAgent.DeferredSmsMmsRestoreService.startIfFilesExist(getContext());
         return true;
+    }
+
+    // wrapper class to allow easier mocking of the static ProviderUtil in tests
+    @VisibleForTesting
+    public static class ProviderUtilWrapper {
+        public boolean isAccessRestricted(Context context, String packageName, int uid) {
+            return ProviderUtil.isAccessRestricted(context, packageName, uid);
+        }
     }
 
     /**
@@ -318,6 +332,15 @@ public class MmsProvider extends ContentProvider {
         final String callerPkg = getCallingPackage();
         int msgBox = Mms.MESSAGE_BOX_ALL;
         boolean notify = true;
+
+        boolean forceNoNotify = values.containsKey(TelephonyBackupAgent.NOTIFY)
+                && !values.getAsBoolean(TelephonyBackupAgent.NOTIFY);
+        values.remove(TelephonyBackupAgent.NOTIFY);
+        // check isAccessRestricted to prevent third parties from setting NOTIFY = false maliciously
+        if (forceNoNotify && !providerUtilWrapper.isAccessRestricted(
+                getContext(), getCallingPackage(), Binder.getCallingUid())) {
+            notify = false;
+        }
 
         int match = sURLMatcher.match(uri);
         if (LOCAL_LOGV) {
