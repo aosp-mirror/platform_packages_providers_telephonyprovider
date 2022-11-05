@@ -7893,7 +7893,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2003
-  carrier_name: "Movistar"
+  carrier_name: "Liberty"
   carrier_attribute {
     mccmnc_tuple: "71204"
   }
@@ -12030,6 +12030,20 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2551
+  carrier_name: "Magenta Telekom"
+  carrier_attribute {
+    mccmnc_tuple: "23203"
+  }
+}
+carrier_id {
+  canonical_id: 2552
+  carrier_name: "Mytel"
+  carrier_attribute {
+    mccmnc_tuple: "41409"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12272,4 +12286,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 26
+version: 27
