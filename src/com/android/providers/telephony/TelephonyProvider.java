@@ -161,7 +161,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 60 << 16;
+    private static final int DATABASE_VERSION = 61 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -1872,6 +1872,21 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 60 << 16 | 6;
+            }
+
+            if (oldVersion < (61 << 16 | 6)) {
+                try {
+                    // If default value of USER_HANDLE column is set to -1, then update it to -10000
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_USER_HANDLE + "=" + UserHandle.USER_NULL
+                            + "  WHERE " + Telephony.SimInfo.COLUMN_USER_HANDLE + "=-1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add message Reference. ");
+                    }
+                }
+                oldVersion = 61 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3699,7 +3714,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 60 << 16) {
+            if (DATABASE_VERSION != 61 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
