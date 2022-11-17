@@ -19,12 +19,16 @@ package com.android.providers.telephony;
 import static android.provider.Telephony.Carriers;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.UserHandle;
 import android.provider.Telephony;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
@@ -400,6 +404,59 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_USER_HANDLE));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasUserHandleField_updateNullUserHandleValue() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasUserHandleField_updateNullUserHandleValue");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        // UserHandle column is added in version 59 .
+        mHelper.onUpgrade(db, (4 << 16), 59);
+
+        // The upgraded db must have Telephony.SimInfo.COLUMN_USER_HANDLE.
+        Cursor cursor = db.query("siminfo", null, null, null,
+                null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(Telephony.SimInfo.COLUMN_USER_HANDLE));
+
+        // Insert test contentValues into db.
+        final int insertSubId = 11;
+        ContentValues contentValues = new ContentValues();
+        // Set userHandle=-1
+        contentValues.put(Telephony.SimInfo.COLUMN_USER_HANDLE, -1);
+        contentValues.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
+        // Populate NON NULL columns.
+        contentValues.put(Telephony.SimInfo.COLUMN_ICC_ID, "123");
+        contentValues.put(Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT, 0);
+        contentValues.put(Telephony.SimInfo.COLUMN_CARD_ID, "123");
+        db.insert("siminfo", null, contentValues);
+
+        // Query UserHandle value from db which should be equal to -1.
+        final String[] testProjection = {Telephony.SimInfo.COLUMN_USER_HANDLE};
+        final String selection = Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?";
+        String[] selectionArgs = { Integer.toString(insertSubId) };
+        cursor = db.query("siminfo", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        int userHandleVal = cursor.getInt(0);
+        assertEquals(-1, userHandleVal);
+
+        // Upgrade db from version 59 to version 61.
+        mHelper.onUpgrade(db, (59 << 16), 61);
+
+        // Query userHandle value from db which should be equal to UserHandle.USER_NULL(-10000)
+        // after db upgrade.
+        cursor = db.query("siminfo", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        userHandleVal = cursor.getInt(0);
+        assertEquals(UserHandle.USER_NULL, userHandleVal);
     }
 
     /**
