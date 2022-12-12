@@ -5329,7 +5329,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1690
-  carrier_name: "Telia Sonera AB"
+  carrier_name: "Telia Sverige AB"
   carrier_attribute {
     mccmnc_tuple: "24001"
   }
@@ -8343,6 +8343,10 @@ carrier_id {
     mccmnc_tuple: "302720"
     imsi_prefix_xpattern: "302720x84"
   }
+  carrier_attribute {
+    mccmnc_tuple: "302720"
+    imsi_prefix_xpattern: "302720x83"
+  }
 }
 carrier_id {
   canonical_id: 2056
@@ -11236,7 +11240,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2449
-  carrier_name: "Spectrum CBRS"
+  carrier_name: "Spectrum+"
   carrier_attribute {
     mccmnc_tuple: "314020"
   }
@@ -12286,4 +12290,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 27
+version: 28

@@ -4852,7 +4852,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1690
-  carrier_name: "Telia Sonera AB"
+  carrier_name: "Telia Sverige AB"
   carrier_attribute {
     mccmnc_tuple: "24001"
   }
@@ -5025,6 +5025,7 @@ carrier_id {
   carrier_name: "Orange"
   carrier_attribute {
     mccmnc_tuple: "23101"
+    spn: "Orange"
   }
 }
 carrier_id {
@@ -5833,7 +5834,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20404"
     spn: "C Spire"
-    spn: "C Spire"
   }
 }
 carrier_id {
@@ -7625,6 +7625,7 @@ carrier_id {
     mccmnc_tuple: "302720"
     imsi_prefix_xpattern: "302720x94"
     imsi_prefix_xpattern: "302720x84"
+    imsi_prefix_xpattern: "302720x83"
   }
   carrier_attribute {
     mccmnc_tuple: "302720"
@@ -8191,6 +8192,7 @@ carrier_id {
   carrier_name: "Simyo"
   carrier_attribute {
     mccmnc_tuple: "21419"
+    spn: "simyo"
   }
   carrier_attribute {
     mccmnc_tuple: "21403"
@@ -8203,6 +8205,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "311480"
     gid1: "BA01490000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "313450"
   }
 }
 carrier_id {
@@ -9729,14 +9734,6 @@ carrier_id {
   carrier_name: "Fonic Prepaid"
   carrier_attribute {
     mccmnc_tuple: "26207"
-    imsi_prefix_xpattern: "26207515"
-  }
-}
-carrier_id {
-  canonical_id: 2329
-  carrier_name: "Lidl Mobile"
-  carrier_attribute {
-    mccmnc_tuple: "26207"
     imsi_prefix_xpattern: "26207520"
   }
 }
@@ -10501,7 +10498,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2449
-  carrier_name: "Spectrum CBRS"
+  carrier_name: "Spectrum+"
   carrier_attribute {
     mccmnc_tuple: "314020"
   }
@@ -10635,13 +10632,6 @@ carrier_id {
   carrier_name: "Mobi"
   carrier_attribute {
     mccmnc_tuple: "313460"
-  }
-}
-carrier_id {
-  canonical_id: 2465
-  carrier_name: "Spectrum Data"
-  carrier_attribute {
-    mccmnc_tuple: "313450"
   }
 }
 carrier_id {
@@ -11463,7 +11453,6 @@ carrier_id {
   carrier_name: "C Spire-NL"
   carrier_attribute {
     mccmnc_tuple: "20404"
-    spn: "C Spire"
     spn: "C Spire"
   }
   parent_canonical_id: 1836
@@ -11684,4 +11673,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108883
+version: 67108884
