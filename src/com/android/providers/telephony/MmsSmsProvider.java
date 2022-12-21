@@ -22,6 +22,8 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.UriMatcher;
 import android.database.Cursor;
+import android.database.DatabaseUtils;
+import android.database.MatrixCursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
@@ -39,9 +41,12 @@ import android.provider.Telephony.Sms;
 import android.provider.Telephony.Sms.Conversations;
 import android.provider.Telephony.Threads;
 import android.provider.Telephony.ThreadsColumns;
+import android.telephony.SmsManager;
+import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.TelephonyStatsLog;
 
 import com.google.android.mms.pdu.PduHeaders;
@@ -332,12 +337,15 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public Cursor query(Uri uri, String[] projection,
             String selection, String[] selectionArgs, String sortOrder) {
+        final int callerUid = Binder.getCallingUid();
+        final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+
         // First check if restricted views of the "sms" and "pdu" tables should be used based on the
         // caller's identity. Only system, phone or the default sms app can have full access
         // of sms/mms data. For other apps, we present a restricted view which only contains sent
         // or received messages, without wap pushes.
         final boolean accessRestricted = ProviderUtil.isAccessRestricted(
-                getContext(), getCallingPackage(), Binder.getCallingUid());
+                getContext(), getCallingPackage(), callerUid);
         final String pduTable = MmsProvider.getPduTable(accessRestricted);
         final String smsTable = SmsProvider.getSmsTable(accessRestricted);
 
@@ -351,11 +359,28 @@ public class MmsSmsProvider extends ContentProvider {
             }
         }
 
+        String selectionBySubIds;
+        final long token = Binder.clearCallingIdentity();
+        try {
+            // Filter MMS/SMS based on subId
+            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(), callerUserHandle);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
         Cursor cursor = null;
+        Cursor emptyCursor = new MatrixCursor((projection == null) ?
+                (new String[] {}) : projection);
         final int match = URI_MATCHER.match(uri);
         switch (match) {
             case URI_COMPLETE_CONVERSATIONS:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = getCompleteConversations(projection, selection, sortOrder, smsTable,
                         pduTable);
                 break;
@@ -377,11 +402,23 @@ public class MmsSmsProvider extends ContentProvider {
                     cursor = getSimpleConversations(
                             projection, selection, selectionArgs, sortOrder);
                 } else {
+                    if (selectionBySubIds == null) {
+                        // No subscriptions associated with user, return empty cursor.
+                        return emptyCursor;
+                    }
+                    selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                     cursor = getConversations(
                             projection, selection, sortOrder, smsTable, pduTable);
                 }
                 break;
             case URI_CONVERSATIONS_MESSAGES:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = getConversationMessages(uri.getPathSegments().get(1), projection,
                         selection, sortOrder, smsTable, pduTable);
                 break;
@@ -396,6 +433,12 @@ public class MmsSmsProvider extends ContentProvider {
                         selectionArgs, sortOrder);
                 break;
             case URI_MESSAGES_BY_PHONE:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return emptyCursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = getMessagesByPhoneNumber(
                         uri.getPathSegments().get(2), projection, selection, sortOrder, smsTable,
                         pduTable);
@@ -510,6 +553,14 @@ public class MmsSmsProvider extends ContentProvider {
                         break;
                     }
                 }
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                // In PendingMessages table, SUBSCRIPTION_ID column name is pending_sub_id.
+                selectionBySubIds = "pending_" + selectionBySubIds;
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 String finalSelection = TextUtils.isEmpty(selection)
                         ? extraSelection : ("(" + extraSelection + ") AND " + selection);
                 String finalOrder = TextUtils.isEmpty(sortOrder)
@@ -519,11 +570,23 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
             }
             case URI_UNDELIVERED_MSG: {
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = getUndeliveredMessages(projection, selection,
                         selectionArgs, sortOrder, smsTable, pduTable);
                 break;
             }
             case URI_DRAFT: {
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = getDraftThread(projection, selection, sortOrder, smsTable, pduTable);
                 break;
             }
@@ -535,11 +598,25 @@ public class MmsSmsProvider extends ContentProvider {
                     Log.e(LOG_TAG, "Thread ID must be a long.");
                     break;
                 }
-                cursor = getFirstLockedMessage(projection, "thread_id=" + Long.toString(threadId),
-                        sortOrder, smsTable, pduTable);
+                selection = DatabaseUtils.concatenateWhere(selection, ("thread_id=" + threadId));
+
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
+                cursor = getFirstLockedMessage(projection, selection, sortOrder,
+                        smsTable, pduTable);
                 break;
             }
             case URI_FIRST_LOCKED_MESSAGE_ALL: {
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = getFirstLockedMessage(
                         projection, selection, sortOrder, smsTable, pduTable);
                 break;
@@ -1263,6 +1340,16 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public int delete(Uri uri, String selection,
             String[] selectionArgs) {
+        final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+        String selectionBySubIds;
+        final long token = Binder.clearCallingIdentity();
+        try {
+            // Filter MMS/SMS based on subId
+            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(), callerUserHandle);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         Context context = getContext();
         int affectedRows = 0;
@@ -1276,10 +1363,23 @@ public class MmsSmsProvider extends ContentProvider {
                     Log.e(LOG_TAG, "Thread ID must be a long.");
                     break;
                 }
+
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
+                    return 0;
+                }
+                selection = DatabaseUtils.concatenateWhere(selectionBySubIds, selection);
+
                 affectedRows = deleteConversation(uri, selection, selectionArgs);
                 MmsSmsDatabaseHelper.updateThread(db, threadId);
                 break;
             case URI_CONVERSATIONS:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
+                    return 0;
+                }
+                selection = DatabaseUtils.concatenateWhere(selectionBySubIds, selection);
+
                 affectedRows = MmsProvider.deleteMessages(context, db,
                                         selection, selectionArgs, uri)
                         + db.delete("sms", selection, selectionArgs);
@@ -1319,10 +1419,26 @@ public class MmsSmsProvider extends ContentProvider {
 
     @Override
     public Uri insert(Uri uri, ContentValues values) {
+        final UserHandle callerUserHandle = Binder.getCallingUserHandle();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int matchIndex = URI_MATCHER.match(uri);
 
         if (matchIndex == URI_PENDING_MSG) {
+            int subId;
+            if (values.containsKey(PendingMessages.SUBSCRIPTION_ID)) {
+                subId = values.getAsInteger(PendingMessages.SUBSCRIPTION_ID);
+            } else {
+                subId = SmsManager.getDefaultSmsSubscriptionId();
+                if (SubscriptionManager.isValidSubscriptionId(subId)) {
+                    values.put(PendingMessages.SUBSCRIPTION_ID, subId);
+                }
+            }
+            if (!TelephonyPermissions
+                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
+                // TODO(b/258629881): Display error dialog.
+                return null;
+            }
+
             long rowId = db.insert(TABLE_PENDING_MSG, null, values);
             return uri.buildUpon().appendPath(Long.toString(rowId)).build();
         } else if (matchIndex == URI_CANONICAL_ADDRESS) {
@@ -1336,17 +1452,42 @@ public class MmsSmsProvider extends ContentProvider {
     public int update(Uri uri, ContentValues values,
             String selection, String[] selectionArgs) {
         final int callerUid = Binder.getCallingUid();
+        final UserHandle callerUserHandle = Binder.getCallingUserHandle();
         final String callerPkg = getCallingPackage();
+
+        String selectionBySubIds;
+        final long token = Binder.clearCallingIdentity();
+        try {
+            // Filter MMS/SMS based on subId.
+            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(), callerUserHandle);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int affectedRows = 0;
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
+                    return 0;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 String threadIdString = uri.getPathSegments().get(1);
                 affectedRows = updateConversation(threadIdString, values,
                         selection, selectionArgs, callerUid, callerPkg);
                 break;
 
             case URI_PENDING_MSG:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
+                    return 0;
+                }
+                // In PendingMessages table, SUBSCRIPTION_ID column name is pending_sub_id.
+                selectionBySubIds = "pending_" + selectionBySubIds;
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 affectedRows = db.update(TABLE_PENDING_MSG, values, selection, null);
                 break;
 
