@@ -717,6 +717,7 @@ public class TelephonyProviderTest extends TestCase {
         final int insertProfileClass = SubscriptionManager.PROFILE_CLASS_DEFAULT;
         final int insertPortIndex = 1;
         final int insertUserHandle = 0;
+        final int insertSatelliteEnabled = 1;
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
@@ -725,6 +726,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(SubscriptionManager.PROFILE_CLASS, insertProfileClass);
         contentValues.put(SubscriptionManager.PORT_INDEX, insertPortIndex);
         contentValues.put(SubscriptionManager.USER_HANDLE, insertUserHandle);
+        contentValues.put(SubscriptionManager.SATELLITE_ENABLED, insertSatelliteEnabled);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
@@ -738,6 +740,7 @@ public class TelephonyProviderTest extends TestCase {
             SubscriptionManager.PROFILE_CLASS,
             SubscriptionManager.PORT_INDEX,
             SubscriptionManager.USER_HANDLE,
+            SubscriptionManager.SATELLITE_ENABLED,
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -756,11 +759,13 @@ public class TelephonyProviderTest extends TestCase {
         final int resultProfileClass = cursor.getInt(3);
         final int resultPortIndex = cursor.getInt(4);
         final int resultUserHandle = cursor.getInt(5);
+        final int resultSatelliteEnabled = cursor.getInt(6);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
         assertEquals(insertPortIndex, resultPortIndex);
         assertEquals(insertUserHandle, resultUserHandle);
+        assertEquals(insertSatelliteEnabled, resultSatelliteEnabled);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
