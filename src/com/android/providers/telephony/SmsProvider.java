@@ -45,6 +45,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.TelephonyPermissions;
+import com.android.internal.telephony.util.TelephonyUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -282,6 +283,10 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
+                        if (TelephonyUtils.isUidForeground(getContext(), callingUid)) {
+                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
+                                getContext(), subId);
+                        }
                         // If subId is not associated with user, return empty cursor.
                         return emptyCursor;
                     }
@@ -311,6 +316,10 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
+                        if (TelephonyUtils.isUidForeground(getContext(), callingUid)) {
+                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
+                                getContext(), subId);
+                        }
                         // If subId is not associated with user, return empty cursor.
                         return emptyCursor;
                     }
@@ -673,7 +682,10 @@ public class SmsProvider extends ContentProvider {
 
                 if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
                         callerUserHandle)) {
-                    // TODO(b/258629881): Display error dialog.
+                    if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
+                        TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
+                            getContext(), subId);
+                    }
                     return null;
                 }
 
@@ -815,7 +827,11 @@ public class SmsProvider extends ContentProvider {
             }
             if (!TelephonyPermissions
                     .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
-                // TODO(b/258629881): Display error dialog.
+                if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
+                    TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(getContext(),
+                        subId);
+                }
+                return null;
             }
         }
 
@@ -913,6 +929,7 @@ public class SmsProvider extends ContentProvider {
     @Override
     public int delete(Uri url, String where, String[] whereArgs) {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+        final int callerUid = Binder.getCallingUid();
         final long token = Binder.clearCallingIdentity();
         String selectionBySubIds;
         try {
@@ -1011,6 +1028,10 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
+                        if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
+                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
+                                getContext(), subId);
+                        }
                         // If subId is not associated with user, return 0.
                         return 0;
                     }
@@ -1048,6 +1069,10 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
+                        if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
+                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
+                                getContext(), subId);
+                        }
                         // If subId is not associated with user, return 0.
                         return 0;
                     }
