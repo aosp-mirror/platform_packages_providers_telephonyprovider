@@ -317,6 +317,23 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
+    public void databaseHelperOnUpgrade_hasMessageReferenceField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasMessageReferenceField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have
+        // Telephony.SimInfo.COLUMN_TP_MESSAGE_REF
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_TP_MESSAGE_REF));
+    }
+
+    @Test
     public void databaseHelperOnUpgrade_hasLingeringNetworkTypeAlwaysOnMtuFields() {
         Log.d(TAG, "databaseHelperOnUpgrade_hasLingeringNetworkTypeAlwaysOnMtuFields");
         // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
