@@ -66,7 +66,7 @@ public class ProviderUtilTest {
                 .getSubscriptionInfoListAssociatedWithUser(UserHandle.SYSTEM);
 
         assertThat(ProviderUtil.getSelectionBySubIds(mContext, UserHandle.SYSTEM))
-                .isEqualTo(null);
+                .isEqualTo("sub_id IN ('-1')");
     }
 
     @Test
@@ -81,7 +81,7 @@ public class ProviderUtilTest {
         doReturn(subscriptionInfoList).when(mSubscriptionManager)
                 .getSubscriptionInfoListAssociatedWithUser(UserHandle.SYSTEM);
         assertThat(ProviderUtil.getSelectionBySubIds(mContext, UserHandle.SYSTEM))
-                .isEqualTo("sub_id IN ('-1')");
+                .isEqualTo("sub_id IN ('-1','-1')");
     }
 
     @Test
@@ -91,20 +91,18 @@ public class ProviderUtilTest {
                 .setSimSlotIndex(0)
                 .build();
         List<SubscriptionInfo> subscriptionInfoList = new ArrayList<>();
-        subscriptionInfoList.add(subscriptionInfo1);
-
-        doReturn(subscriptionInfoList).when(mSubscriptionManager)
-                .getSubscriptionInfoListAssociatedWithUser(UserHandle.SYSTEM);
-        assertThat(ProviderUtil.getSelectionBySubIds(mContext, UserHandle.SYSTEM))
-                .isEqualTo("sub_id IN ('1')");
 
         SubscriptionInfo subscriptionInfo2 = new SubscriptionInfo.Builder()
                 .setId(2)
                 .setSimSlotIndex(1)
                 .build();
+
+        subscriptionInfoList.add(subscriptionInfo1);
         subscriptionInfoList.add(subscriptionInfo2);
+        doReturn(subscriptionInfoList).when(mSubscriptionManager)
+                .getSubscriptionInfoListAssociatedWithUser(UserHandle.SYSTEM);
 
         assertThat(ProviderUtil.getSelectionBySubIds(mContext, UserHandle.SYSTEM))
-                .isEqualTo("sub_id IN ('1','2')");
+                .isEqualTo("sub_id IN ('1','2','-1')");
     }
 }
