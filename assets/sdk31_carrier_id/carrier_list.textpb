@@ -5891,7 +5891,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20404"
     spn: "C Spire"
-    spn: "C Spire"
   }
 }
 carrier_id {
@@ -8069,7 +8068,6 @@ carrier_id {
   carrier_name: "tele.ring"
   carrier_attribute {
     mccmnc_tuple: "23207"
-    gid1: ""
     gid1: "07"
     gid1: "FF"
     gid1: "30"
@@ -11649,7 +11647,6 @@ carrier_id {
   carrier_name: "C Spire-NL"
   carrier_attribute {
     mccmnc_tuple: "20404"
-    spn: "C Spire"
     spn: "C Spire"
   }
   parent_canonical_id: 1836
