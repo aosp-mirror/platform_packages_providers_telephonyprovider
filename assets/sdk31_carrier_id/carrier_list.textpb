@@ -1136,7 +1136,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 760
-  carrier_name: "3HK"
+  carrier_name: "3HK/SUPREME"
   carrier_attribute {
     mccmnc_tuple: "45403"
   }
@@ -11521,12 +11521,22 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "23203"
   }
+  carrier_attribute {
+    mccmnc_tuple: "23207"
+  }
 }
 carrier_id {
   canonical_id: 2552
   carrier_name: "Mytel"
   carrier_attribute {
     mccmnc_tuple: "41409"
+  }
+}
+carrier_id {
+  canonical_id: 2553
+  carrier_name: "4ka SK"
+  carrier_attribute {
+    mccmnc_tuple: "23103"
   }
 }
 carrier_id {
@@ -11830,4 +11840,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331678
+version: 50331679
