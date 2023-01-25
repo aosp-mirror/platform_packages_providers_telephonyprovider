@@ -1375,7 +1375,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 760
-  carrier_name: "3HK"
+  carrier_name: "3HK/SUPREME"
   carrier_attribute {
     mccmnc_tuple: "45403"
   }
@@ -6153,7 +6153,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20404"
     spn: "C Spire"
-    spn: "C Spire"
   }
 }
 carrier_id {
@@ -11857,6 +11856,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2553
+  carrier_name: "4ka SK"
+  carrier_attribute {
+    mccmnc_tuple: "23103"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11970,7 +11976,6 @@ carrier_id {
   carrier_name: "C Spire-NL"
   carrier_attribute {
     mccmnc_tuple: "20404"
-    spn: "C Spire"
     spn: "C Spire"
   }
   parent_canonical_id: 1836
@@ -12118,4 +12123,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554486
+version: 33554487
