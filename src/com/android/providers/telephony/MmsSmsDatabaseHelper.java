@@ -44,6 +44,7 @@ import android.provider.Telephony.MmsSms.PendingMessages;
 import android.provider.Telephony.Sms;
 import android.provider.Telephony.Sms.Intents;
 import android.provider.Telephony.Threads;
+import android.telephony.AnomalyReporter;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
@@ -61,6 +62,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -272,6 +274,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String INITIAL_CREATE_DONE = "initial_create_done";
     // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
     private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
+
+    private static final UUID CREATE_CALLED_MULTIPLE_TIMES_UUID = UUID.fromString(
+        "6ead002e-c001-4c05-9bca-67d7c4e29782");
 
     /**
      * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
@@ -555,7 +560,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             if (isInitialCreateDone()) {
                 // this onCreate is called after onCreate was called once initially. The db file
                 // disappeared mysteriously?
-                localLogWtf("onCreate: was already called once earlier");
+                AnomalyReporter.reportAnomaly(CREATE_CALLED_MULTIPLE_TIMES_UUID,
+                                              "MmsSmsDatabaseHelper: onCreate() was already "
+                                              + "called once earlier");
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, false);
             } else {
                 setInitialCreateDone();
