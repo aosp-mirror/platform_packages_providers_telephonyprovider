@@ -1764,9 +1764,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
 
         Log.e(TAG, "Destroying all old data.");
-        localLog("onUpgrade: Calling dropAll() and onCreate(). Upgrading database"
+        localLog("onUpgrade: Calling wipeDbOnFailedUpgrade() and onCreate()."
+                + " Upgrading database"
                 + " from version " + oldVersion + " to " + currentVersion + "failed.");
-        dropAll(db);
+        db = wipeDbOnFailedUpgrade(db);
         onCreate(db);
     }
 
@@ -1788,24 +1789,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             exception);
     }
 
-    private void dropAll(SQLiteDatabase db) {
-        // Clean the database out in order to start over from scratch.
-        // We don't need to drop our triggers here because SQLite automatically
-        // drops a trigger when its attached database is dropped.
-        localLog("****DROPPING ALL SMS-MMS TABLES****");
-        db.execSQL("DROP TABLE IF EXISTS canonical_addresses");
-        db.execSQL("DROP TABLE IF EXISTS threads");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsSmsProvider.TABLE_PENDING_MSG);
-        db.execSQL("DROP TABLE IF EXISTS sms");
-        db.execSQL("DROP TABLE IF EXISTS raw");
-        db.execSQL("DROP TABLE IF EXISTS attachments");
-        db.execSQL("DROP TABLE IF EXISTS thread_ids");
-        db.execSQL("DROP TABLE IF EXISTS sr_pending");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_PDU + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_ADDR + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_PART + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_RATE + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_DRM + ";");
+    public SQLiteDatabase wipeDbOnFailedUpgrade(SQLiteDatabase db) {
+        // Delete the database in order to start over from scratch.
+        File databaseFile = new File(db.getPath());
+        db.close();
+        boolean didDelete = SQLiteDatabase.deleteDatabase(databaseFile);
+        Log.e(TAG, "wipeDbOnFailedUpgrade: didDelete: " + didDelete);
+        return getWritableDatabase();
     }
 
     private void upgradeDatabaseToVersion41(SQLiteDatabase db) {
