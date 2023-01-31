@@ -3919,11 +3919,19 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
-            String[] selectionArgs, String sort) {
+    public Cursor query(Uri url, String[] projectionIn, String selection,  String[] selectionArgs,
+            String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + Arrays.toString(projectionIn)
                 + ", selection=" + selection + "selectionArgs=" + Arrays.toString(selectionArgs)
                 + ", sort=" + sort);
+        int match = s_urlMatcher.match(url);
+        checkPermissionCompat(match, projectionIn);
+
+        return queryInternal(url, projectionIn, selection, selectionArgs, sort);
+    }
+
+    private synchronized Cursor queryInternal(Uri url, String[] projectionIn, String selection,
+            String[] selectionArgs, String sort) {
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -3933,7 +3941,6 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 // The behaves exactly same as URL_SIM_APN_LIST_ID.
@@ -4118,7 +4125,7 @@ public class TelephonyProvider extends ContentProvider
                     qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
                 }
                 return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
-                    sort, subId);
+                        sort, subId);
             }
 
             default: {
