@@ -48,6 +48,7 @@ import android.util.Log;
 
 import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.TelephonyStatsLog;
+import com.android.internal.telephony.util.TelephonyUtils;
 
 import com.google.android.mms.pdu.PduHeaders;
 
@@ -1420,6 +1421,7 @@ public class MmsSmsProvider extends ContentProvider {
     @Override
     public Uri insert(Uri uri, ContentValues values) {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+        final int callerUid = Binder.getCallingUid();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int matchIndex = URI_MATCHER.match(uri);
 
@@ -1435,7 +1437,10 @@ public class MmsSmsProvider extends ContentProvider {
             }
             if (!TelephonyPermissions
                     .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
-                // TODO(b/258629881): Display error dialog.
+                if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
+                    TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(getContext(),
+                        subId);
+                }
                 return null;
             }
 
