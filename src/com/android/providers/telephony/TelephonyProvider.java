@@ -108,6 +108,7 @@ import android.os.RemoteException;
 import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
+import android.service.carrier.IApnSourceService;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyProtoEnums;
@@ -116,41 +117,42 @@ import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
 import android.util.AtomicFile;
+import android.util.IndentingPrintWriter;
+import android.util.LocalLog;
 import android.util.Log;
 import android.util.Pair;
 import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.TelephonyStatsLog;
 import com.android.internal.util.XmlUtils;
-import android.service.carrier.IApnSourceService;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.Integer;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
-import java.util.zip.CheckedInputStream;
 import java.util.zip.CRC32;
+import java.util.zip.CheckedInputStream;
 
 public class TelephonyProvider extends ContentProvider
 {
@@ -159,7 +161,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 56 << 16;
+    private static final int DATABASE_VERSION = 59 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -280,6 +282,8 @@ public class TelephonyProvider extends ContentProvider
     private Injector mInjector;
 
     private boolean mManagedApnEnforced;
+
+    private final LocalLog mLocalLog = new LocalLog(128);
 
     /**
      * Mobile country codes where there is a high likelyhood that the MNC has 3 digits
@@ -430,16 +434,19 @@ public class TelephonyProvider extends ContentProvider
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
+                Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_WFC_IMS_MODE, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_WFC_IMS_ROAMING_MODE, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
-                Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS,
-                Cursor.FIELD_TYPE_STRING);
-        SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_USAGE_SETTING,
+                Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -566,13 +573,18 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_RCS_CONFIG + " BLOB,"
                 + Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS + " TEXT,"
-                + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING_SELECTED_CONTACTS + " TEXT,"
                 + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED + " INTEGER DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_CARRIER + " TEXT,"
                 + Telephony.SimInfo.COLUMN_PHONE_NUMBER_SOURCE_IMS + " TEXT,"
-                + Telephony.SimInfo.COLUMN_PORT_INDEX + "  INTEGER DEFAULT -1"
+                + Telephony.SimInfo.COLUMN_PORT_INDEX + "  INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_USAGE_SETTING + " INTEGER DEFAULT "
+                + SubscriptionManager.USAGE_SETTING_UNKNOWN + ","
+                + Telephony.SimInfo.COLUMN_TP_MESSAGE_REF +
+                "  INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT -1"
                 + ");";
     }
 
@@ -1656,27 +1668,26 @@ public class TelephonyProvider extends ContentProvider
                 try {
                     // Try to update the siminfo table. It might not be there.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS
-                            + " INTEGER DEFAULT 0;");
-                } catch (SQLiteException e) {
-                    if (DBG) {
-                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. "
-                                + "The table will get created in onOpen.");
-                    }
-                }
-                oldVersion = 49 << 16 | 6;
-            }
-
-            if (oldVersion < (50 << 16 | 6)) {
-                try {
-                    // Try to update the siminfo table. It might not be there.
-                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_D2D_STATUS_SHARING
                             + " INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade failed to updated " + SIMINFO_TABLE
                                 + " to add d2d status sharing column. ");
+                    }
+                }
+            }
+
+            if (oldVersion < (50 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_VOIMS_OPT_IN_STATUS
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade skipping " + SIMINFO_TABLE + " upgrade. " +
+                                "The table will get created in onOpen.");
                     }
                 }
                 oldVersion = 50 << 16 | 6;
@@ -1700,7 +1711,7 @@ public class TelephonyProvider extends ContentProvider
             if (oldVersion < (52 << 16 | 6)) {
                 try {
                     // Try to update the siminfo table. It might not be there.
-                    db.execSQL("ALERT TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED
                             + " INTEGER DEFAULT -1;");
                 } catch (SQLiteException e) {
@@ -1785,6 +1796,51 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 56 << 16 | 6;
             }
 
+            if (oldVersion < (57 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table. It might not be there.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_USAGE_SETTING
+                            + " INTEGER DEFAULT " + SubscriptionManager.USAGE_SETTING_UNKNOWN
+                            + ";");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to updated " + SIMINFO_TABLE
+                                + " to add preferred usage setting");
+                    }
+                }
+                oldVersion = 57 << 16 | 6;
+            }
+
+            if (oldVersion < (58 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_TP_MESSAGE_REF
+                            + "  INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add message Reference. ");
+                    }
+                }
+                oldVersion = 58 << 16 | 6;
+            }
+
+            if (oldVersion < (59 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_USER_HANDLE
+                            + "  INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add message Reference. ");
+                    }
+                }
+                oldVersion = 59 << 16 | 6;
+            }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -3005,13 +3061,6 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
-
-        try {
-            PhoneFactory.addLocalLog(TAG, 100);
-        } catch (IllegalArgumentException e) {
-            // ignore
-        }
-
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
         SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
@@ -3081,9 +3130,9 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
-    private static void localLog(String logMsg) {
+    private void localLog(String logMsg) {
         Log.d(TAG, logMsg);
-        PhoneFactory.localLog(TAG, logMsg);
+        mLocalLog.log(logMsg);
     }
 
     private synchronized boolean isManagedApnEnforced() {
@@ -3244,8 +3293,10 @@ public class TelephonyProvider extends ContentProvider
     }
 
     boolean isCallingFromSystemOrPhoneUid() {
-        return mInjector.binderGetCallingUid() == Process.SYSTEM_UID ||
-                mInjector.binderGetCallingUid() == Process.PHONE_UID;
+        int callingUid = mInjector.binderGetCallingUid();
+        return callingUid == Process.SYSTEM_UID || callingUid == Process.PHONE_UID
+                // Allow ROOT for testing. ROOT can access underlying DB files anyways.
+                || callingUid == Process.ROOT_UID;
     }
 
     void ensureCallingFromSystemOrPhoneUid(String message) {
@@ -3616,7 +3667,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 56 << 16) {
+            if (DATABASE_VERSION != 59 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3658,6 +3709,12 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 57 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_USAGE_SETTING,
+                                SubscriptionManager.USAGE_SETTING_UNKNOWN));
+            }
             if (backupDataFormatVersion >= 52 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED,
                         backedUpSimInfoEntry.getInt(
@@ -3794,8 +3851,9 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
-        if (VDBG) log("query: url=" + url + ", projectionIn=" + projectionIn + ", selection="
-                + selection + "selectionArgs=" + selectionArgs + ", sort=" + sort);
+        if (VDBG) log("query: url=" + url + ", projectionIn=" + Arrays.toString(projectionIn)
+                + ", selection=" + selection + "selectionArgs=" + Arrays.toString(selectionArgs)
+                + ", sort=" + sort);
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -3901,6 +3959,14 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_DPC: {
+                ensureCallingFromSystemOrPhoneUid("URL_DPC called from non SYSTEM_UID.");
+                // DPC query only returns DPC records.
+                constraints.add(IS_OWNED_BY_DPC);
+                break;
+            }
+
+            case URL_DPC_ID: {
+                constraints.add("_id = " + url.getLastPathSegment());
                 ensureCallingFromSystemOrPhoneUid("URL_DPC called from non SYSTEM_UID.");
                 // DPC query only returns DPC records.
                 constraints.add(IS_OWNED_BY_DPC);
@@ -4300,12 +4366,12 @@ public class TelephonyProvider extends ContentProvider
         Uri result = null;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
-        checkPermission();
+        int match = s_urlMatcher.match(url);
+        checkPermission(match);
         syncBearerBitmaskAndNetworkTypeBitmask(initialValues);
 
         boolean notify = false;
         SQLiteDatabase db = getWritableDatabase();
-        int match = s_urlMatcher.match(url);
         switch (match)
         {
             case URL_TELEPHONY_USING_SUBID:
@@ -4453,10 +4519,10 @@ public class TelephonyProvider extends ContentProvider
         ContentValues cv = new ContentValues();
         cv.put(EDITED_STATUS, USER_DELETED);
 
-        checkPermission();
+        int match = s_urlMatcher.match(url);
+        checkPermission(match);
 
         SQLiteDatabase db = getWritableDatabase();
-        int match = s_urlMatcher.match(url);
         switch (match)
         {
             case URL_DELETE:
@@ -4615,11 +4681,11 @@ public class TelephonyProvider extends ContentProvider
         int uriType = URL_UNKNOWN;
         int subId = SubscriptionManager.getDefaultSubscriptionId();
 
-        checkPermission();
+        int match = s_urlMatcher.match(url);
+        checkPermission(match);
         syncBearerBitmaskAndNetworkTypeBitmask(values);
 
         SQLiteDatabase db = getWritableDatabase();
-        int match = s_urlMatcher.match(url);
         switch (match)
         {
             case URL_TELEPHONY_USING_SUBID:
@@ -4893,6 +4959,12 @@ public class TelephonyProvider extends ContentProvider
                                         Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED),
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
+                    if (values.containsKey(Telephony.SimInfo.COLUMN_USAGE_SETTING)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_USAGE_SETTING),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
                     break;
                 default:
                     getContext().getContentResolver().notifyChange(
@@ -4907,7 +4979,28 @@ public class TelephonyProvider extends ContentProvider
         return (usingSubId) ? Uri.withAppendedPath(uri, "" + subId) : uri;
     }
 
-    private void checkPermission() {
+    /**
+     * Checks permission to query or insert/update/delete the database. The permissions required
+     * for APN DB and SIMINFO DB are different:
+     * <ul>
+     * <li>APN DB requires WRITE_APN_SETTINGS or carrier privileges
+     * <li>SIMINFO DB requires phone UID; it's for phone internal usage only
+     * </ul>
+     */
+    private void checkPermission(int match) {
+        switch (match) {
+            case URL_SIMINFO:
+            case URL_SIMINFO_USING_SUBID:
+            case URL_SIMINFO_SUW_RESTORE:
+            case URL_SIMINFO_SIM_INSERTED_RESTORE:
+                checkPermissionForSimInfoTable();
+                break;
+            default:
+                checkPermissionForApnTable();
+        }
+    }
+
+    private void checkPermissionForApnTable() {
         int status = getContext().checkCallingOrSelfPermission(
                 "android.permission.WRITE_APN_SETTINGS");
         if (status == PackageManager.PERMISSION_GRANTED) {
@@ -4948,12 +5041,14 @@ public class TelephonyProvider extends ContentProvider
             log("Using old permission behavior for telephony provider compat");
             checkQueryPermission(match, projectionIn);
         } else {
-            checkPermission();
+            checkPermission(match);
         }
     }
 
     private void checkQueryPermission(int match, String[] projectionIn) {
-        if (match != URL_SIMINFO) {
+        if (match == URL_SIMINFO) {
+            checkPermissionForSimInfoTable();
+        } else {
             if (projectionIn != null) {
                 for (String column : projectionIn) {
                     if (TYPE.equals(column) ||
@@ -4965,15 +5060,25 @@ public class TelephonyProvider extends ContentProvider
                             APN.equals(column)) {
                         // noop
                     } else {
-                        checkPermission();
+                        checkPermissionForApnTable();
                         break;
                     }
                 }
             } else {
                 // null returns all columns, so need permission check
-                checkPermission();
+                checkPermissionForApnTable();
             }
         }
+    }
+
+    private void checkPermissionForSimInfoTable() {
+        ensureCallingFromSystemOrPhoneUid("Access SIMINFO table from not phone/system UID");
+        if (getContext().checkCallingOrSelfPermission(
+                    "android.permission.ACCESS_TELEPHONY_SIMINFO_DB")
+                == PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        throw new SecurityException("No permission to access SIMINFO table");
     }
 
     private DatabaseHelper mOpenHelper;
@@ -5359,5 +5464,73 @@ public class TelephonyProvider extends ContentProvider
                     Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                     new String[]{subId});
         }
+    }
+
+    /**
+     * Dump the database table.
+     *
+     * @param tableName Table name.
+     * @param pw Print writer.
+     */
+    private void dumpTable(@NonNull String tableName, @NonNull IndentingPrintWriter pw) {
+        try (Cursor cursor = getReadableDatabase().query(false, tableName, null,
+                null, null, null, null, null, null)) {
+            pw.println(tableName + " table:");
+            pw.increaseIndent();
+            while (cursor != null && cursor.moveToNext()) {
+                List<String> columnStrings = new ArrayList<>();
+                String str = "";
+                for (int i = 0; i < cursor.getColumnCount(); i++) {
+                    str = cursor.getColumnName(i) + "=";
+                    int type = cursor.getType(i);
+                    try {
+                        switch (type) {
+                            case 0 /*FIELD_TYPE_NULL*/:
+                                str += "null";
+                                break;
+                            case 1 /*FIELD_TYPE_INTEGER*/:
+                                str += cursor.getInt(i);
+                                break;
+                            case 2 /*FIELD_TYPE_FLOAT*/:
+                                str += cursor.getFloat(i);
+                                break;
+                            case 3 /*FIELD_TYPE_STRING*/:
+                                str += cursor.getString(i);
+                                break;
+                            case 4 /*FIELD_TYPE_BLOB*/:
+                                str += "[blob]";
+                                break;
+                            default:
+                                str += "unknown";
+                                break;
+                        }
+                    } catch (Exception e) {
+                        str += "exception";
+                    }
+                    columnStrings.add(str);
+                }
+                pw.println(TextUtils.join(", ", columnStrings));
+            }
+            pw.decreaseIndent();
+        } catch (Exception ex) {
+            pw.println("Exception while dumping the table " + tableName + ", ex=" + ex);
+        }
+    }
+
+    @Override
+    public void dump(FileDescriptor fd, PrintWriter printWriter, String[] args) {
+        IndentingPrintWriter pw = new IndentingPrintWriter(printWriter, "  ");
+        pw.println(TAG + ":");
+        pw.increaseIndent();
+        pw.println("Database:");
+        pw.increaseIndent();
+        dumpTable(SIMINFO_TABLE, pw);
+        dumpTable(CARRIERS_TABLE, pw);
+        pw.decreaseIndent();
+        pw.println("Local log:");
+        pw.increaseIndent();
+        mLocalLog.dump(pw);
+        pw.decreaseIndent();
+        pw.decreaseIndent();
     }
 }

@@ -134,6 +134,10 @@ carrier_id {
     spn: "T-Mobile.pl Q"
     spn: "heyah"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26002"
+    spn: "tu biedronka"
+  }
 }
 carrier_id {
   canonical_id: 8
@@ -1371,7 +1375,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 760
-  carrier_name: "3HK"
+  carrier_name: "3HK/SUPREME"
   carrier_attribute {
     mccmnc_tuple: "45403"
   }
@@ -5162,7 +5166,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1690
-  carrier_name: "Telia Sonera AB"
+  carrier_name: "Telia Sverige AB"
   carrier_attribute {
     mccmnc_tuple: "24001"
   }
@@ -6149,7 +6153,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "20404"
     spn: "C Spire"
-    spn: "C Spire"
   }
 }
 carrier_id {
@@ -7621,7 +7624,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2003
-  carrier_name: "Movistar"
+  carrier_name: "Liberty"
   carrier_attribute {
     mccmnc_tuple: "71204"
   }
@@ -8426,7 +8429,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2107
-  carrier_name: "Telenor"
+  carrier_name: "ONE"
   carrier_attribute {
     mccmnc_tuple: "29701"
   }
@@ -11019,7 +11022,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2449
-  carrier_name: "Spectrum CBRS"
+  carrier_name: "Spectrum+"
   carrier_attribute {
     mccmnc_tuple: "314020"
   }
@@ -11426,7 +11429,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2498
-  carrier_name: "Altice USA"
+  carrier_name: "Optimum"
   carrier_attribute {
     mccmnc_tuple: "313390"
   }
@@ -11473,7 +11476,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2504
-  carrier_name: "Liberty Cablevision of Puerto Rico"
+  carrier_name: "Liberty Mobile"
   carrier_attribute {
     mccmnc_tuple: "313790"
   }
@@ -11816,6 +11819,50 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2548
+  carrier_name: "Ice Norway"
+  carrier_attribute {
+    mccmnc_tuple: "24214"
+  }
+}
+carrier_id {
+  canonical_id: 2549
+  carrier_name: "Lycamobile"
+  carrier_attribute {
+    mccmnc_tuple: "50519"
+    spn: "Lycamobile"
+  }
+}
+carrier_id {
+  canonical_id: 2550
+  carrier_name: "Vodafone"
+  carrier_attribute {
+    mccmnc_tuple: "54715"
+    spn: "Vodafone PF"
+  }
+}
+carrier_id {
+  canonical_id: 2551
+  carrier_name: "Magenta Telekom"
+  carrier_attribute {
+    mccmnc_tuple: "23203"
+  }
+}
+carrier_id {
+  canonical_id: 2552
+  carrier_name: "Mytel"
+  carrier_attribute {
+    mccmnc_tuple: "41409"
+  }
+}
+carrier_id {
+  canonical_id: 2553
+  carrier_name: "4ka SK"
+  carrier_attribute {
+    mccmnc_tuple: "23103"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11929,7 +11976,6 @@ carrier_id {
   carrier_name: "C Spire-NL"
   carrier_attribute {
     mccmnc_tuple: "20404"
-    spn: "C Spire"
     spn: "C Spire"
   }
   parent_canonical_id: 1836
@@ -12077,4 +12123,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554482
+version: 33554487
