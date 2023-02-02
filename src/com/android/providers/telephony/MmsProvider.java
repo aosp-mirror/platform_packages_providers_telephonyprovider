@@ -54,6 +54,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.TelephonyPermissions;
+import com.android.internal.telephony.util.TelephonyUtils;
 
 import com.google.android.mms.pdu.PduHeaders;
 import com.google.android.mms.util.DownloadDrmHelper;
@@ -436,7 +437,10 @@ public class MmsProvider extends ContentProvider {
 
             if (!TelephonyPermissions
                     .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
-                // TODO(b/258629881): Display error dialog.
+                if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
+                    TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(getContext(),
+                        subId);
+                }
                 return null;
             }
 
