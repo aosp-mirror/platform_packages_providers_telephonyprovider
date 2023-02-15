@@ -590,10 +590,9 @@ public class SmsProvider extends ContentProvider {
         try {
             Uri insertUri = insertInner(url, initialValues, callerUid, callerPkg, callerUserHandle);
 
-            int match = sURLMatcher.match(url);
-            // Skip notifyChange() if insertUri is null for SMS_ALL_ICC or SMS_ALL_ICC_SUBID caused
-            // by failure of insertMessageToIcc()(e.g. SIM full).
-            if (insertUri != null || (match != SMS_ALL_ICC && match != SMS_ALL_ICC_SUBID)) {
+            // Skip notifyChange() if insertUri is null
+            if (insertUri != null) {
+                int match = sURLMatcher.match(url);
                 // The raw table is used by the telephony layer for storing an sms before sending
                 // out a notification that an sms has arrived. We don't want to notify the default
                 // sms app of changes to this table.
