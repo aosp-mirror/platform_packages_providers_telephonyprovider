@@ -109,6 +109,7 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
 import android.service.carrier.IApnSourceService;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyProtoEnums;
@@ -5613,7 +5614,16 @@ public class TelephonyProvider extends ContentProvider
                                 str += cursor.getFloat(i);
                                 break;
                             case 3 /*FIELD_TYPE_STRING*/:
-                                str += cursor.getString(i);
+                                String columnValue = cursor.getString(i);
+                                // Redact icc_id and card_id
+                                if (SIMINFO_TABLE.equals(tableName)
+                                        && (Telephony.SimInfo.COLUMN_ICC_ID.equals(
+                                                cursor.getColumnName(i))
+                                        || Telephony.SimInfo.COLUMN_CARD_ID.equals(
+                                                cursor.getColumnName(i)))) {
+                                    columnValue = SubscriptionInfo.givePrintableIccid(columnValue);
+                                }
+                                str += columnValue;
                                 break;
                             case 4 /*FIELD_TYPE_BLOB*/:
                                 str += "[blob]";
