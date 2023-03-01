@@ -126,6 +126,13 @@
                   android:singleUser="true"
                   android:multiprocess="false" />
 
+        <provider android:name="SatelliteProvider"
+                  android:authorities="satellite"
+                  android:exported="false"
+                  android:singleUser="true"
+                  android:multiprocess="false"
+                  android:writePermission="android.permission.MODIFY_PHONE_STATE" />
+
         <service
             android:name=".TelephonyBackupAgent$DeferredSmsMmsRestoreService"
             android:exported="false" />
