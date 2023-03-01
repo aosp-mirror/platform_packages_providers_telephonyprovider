@@ -11388,6 +11388,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2558
+  carrier_name: "Wintel"
+  carrier_attribute {
+    mccmnc_tuple: "45209"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11516,6 +11523,8 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "310280"
+    mccmnc_tuple: "310950"
+    mccmnc_tuple: "311180"
     gid1: "4201"
   }
   parent_canonical_id: 2026
@@ -11718,4 +11727,4 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108885
+version: 67108886
