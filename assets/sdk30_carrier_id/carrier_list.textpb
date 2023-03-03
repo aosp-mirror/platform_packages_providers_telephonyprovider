@@ -8395,6 +8395,16 @@ carrier_id {
     spn: "congstar"
     spn: "congstar.de"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "congstar"
+    gid1: "44"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "congstar.de"
+    gid1: "44"
+  }
 }
 carrier_id {
   canonical_id: 2093
@@ -11804,6 +11814,9 @@ carrier_id {
     imsi_prefix_xpattern: "26207414x"
     gid1: "250109"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26223"
+  }
 }
 carrier_id {
   canonical_id: 2538
@@ -12009,10 +12022,26 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2557
+  carrier_name: "fraenk"
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "fraenk"
+    gid1: "44"
+  }
+}
+carrier_id {
   canonical_id: 2558
   carrier_name: "Wintel"
   carrier_attribute {
     mccmnc_tuple: "45209"
+  }
+}
+carrier_id {
+  canonical_id: 2559
+  carrier_name: "MONACO TELECOM"
+  carrier_attribute {
+    mccmnc_tuple: "212010"
   }
 }
 carrier_id {
@@ -12276,4 +12305,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554488
+version: 33554489
