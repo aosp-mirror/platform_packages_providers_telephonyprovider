@@ -5534,32 +5534,14 @@ public class TelephonyProvider extends ContentProvider
         if (overrideRule != null) {
             ContentValues cv = new ContentValues(1);
 
-            cv.put(Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES,
-                    convertFromOverrideRuleLegacy(overrideRule));
+            // convert override rule to its corresponding mobile data policy
+            overrideRule = overrideRule.contains("mms") ?
+                    String.valueOf(TelephonyManager.MOBILE_DATA_POLICY_MMS_ALWAYS_ALLOWED): "";
+            cv.put(Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES, overrideRule);
             db.update(SIMINFO_TABLE, cv,
                     Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
                     new String[]{subId});
         }
-    }
-
-    /**
-     * Convert legacy override rule retrieved from Telephony database to mobile data policy.
-     *
-     * @param rules String legacy override rule retrieved from Telephony database.
-     * @return The corresponding mobile data policy.
-     */
-    private static String convertFromOverrideRuleLegacy(@NonNull String rules) {
-        if (TextUtils.isEmpty(rules)) return null;
-        String policies = "";
-        if (rules.contains("mms")) {
-            policies += String.valueOf(TelephonyManager.MOBILE_DATA_POLICY_MMS_ALWAYS_ALLOWED);
-        }
-        if (rules.contains("*")) {
-            if (policies.length() != 0) policies += ",";
-            policies += String.valueOf(
-                    TelephonyManager.MOBILE_DATA_POLICY_DATA_ON_NON_DEFAULT_DURING_VOICE_CALL);
-        }
-        return policies;
     }
 
     /**
