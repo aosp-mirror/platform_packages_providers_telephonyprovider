@@ -238,6 +238,10 @@ carrier_id {
     mccmnc_tuple: "29401"
     spn: "Telekom MK"
   }
+  carrier_attribute {
+    mccmnc_tuple: "29401"
+    spn: "T-Mobile MK"
+  }
 }
 carrier_id {
   canonical_id: 14
@@ -8098,6 +8102,22 @@ carrier_id {
     mccmnc_tuple: "310599"
     gid1: "BA01270000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "DDFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "DDFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "DEFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "330110"
+    gid1: "DEFF"
+  }
 }
 carrier_id {
   canonical_id: 2023
@@ -8109,6 +8129,14 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "310280"
+    gid1: "2AC9"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "2AC9"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
     gid1: "2AC9"
   }
 }
@@ -8135,6 +8163,14 @@ carrier_id {
     mccmnc_tuple: "310280"
     gid1: "62FF"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "62FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "62FF"
+  }
 }
 carrier_id {
   canonical_id: 2026
@@ -8146,6 +8182,14 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "310280"
+    gid1: "4201"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "4201"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
     gid1: "4201"
   }
 }
@@ -8160,6 +8204,14 @@ carrier_id {
     mccmnc_tuple: "310280"
     gid1: "44FF"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "44FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "44FF"
+  }
 }
 carrier_id {
   canonical_id: 2028
@@ -8170,6 +8222,14 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "310280"
+    gid1: "4102"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "4102"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
     gid1: "4102"
   }
 }
@@ -8202,6 +8262,14 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "310280"
+    gid1: "69FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "69FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
     gid1: "69FF"
   }
 }
@@ -8619,6 +8687,16 @@ carrier_id {
     mccmnc_tuple: "26201"
     spn: "congstar"
     spn: "congstar.de"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "congstar"
+    gid1: "44"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "congstar.de"
+    gid1: "44"
   }
 }
 carrier_id {
@@ -10940,6 +11018,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2407
+  carrier_name: "OCN MOBILE ONE"
+  carrier_attribute {
+    mccmnc_tuple: "44013"
+  }
+}
+carrier_id {
   canonical_id: 2408
   carrier_name: "Vmax Telecom"
   carrier_attribute {
@@ -11925,6 +12010,9 @@ carrier_id {
     imsi_prefix_xpattern: "26207414x"
     gid1: "250109"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26223"
+  }
 }
 carrier_id {
   canonical_id: 2538
@@ -11933,12 +12021,20 @@ carrier_id {
     mccmnc_tuple: "310410"
     gid1: "3438"
   }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3438"
+  }
 }
 carrier_id {
   canonical_id: 2539
   carrier_name: "Project Genesis - MVNO2"
   carrier_attribute {
     mccmnc_tuple: "310410"
+    gid1: "3440"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
     gid1: "3440"
   }
 }
@@ -12052,6 +12148,96 @@ carrier_id {
   carrier_name: "4ka SK"
   carrier_attribute {
     mccmnc_tuple: "23103"
+  }
+}
+carrier_id {
+  canonical_id: 2554
+  carrier_name: "Cellhire"
+  carrier_attribute {
+    mccmnc_tuple: "20834"
+    spn: "eSIMsmart"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20834"
+    spn: "O-Events"
+  }
+}
+carrier_id {
+  canonical_id: 2556
+  carrier_name: "Xfinity Mobile 2.0"
+  carrier_attribute {
+    mccmnc_tuple: "310591"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310599"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311481"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311482"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311483"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311484"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311485"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311486"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311487"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311488"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311489"
+    gid1: "BA01640000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "314240"
+  }
+}
+carrier_id {
+  canonical_id: 2557
+  carrier_name: "fraenk"
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "fraenk"
+    gid1: "44"
+  }
+}
+carrier_id {
+  canonical_id: 2558
+  carrier_name: "Wintel"
+  carrier_attribute {
+    mccmnc_tuple: "45209"
+  }
+}
+carrier_id {
+  canonical_id: 2559
+  carrier_name: "MONACO TELECOM"
+  carrier_attribute {
+    mccmnc_tuple: "212010"
   }
 }
 carrier_id {
@@ -12296,4 +12482,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 29
+version: 31
