@@ -784,7 +784,7 @@ public class SmsProvider extends ContentProvider {
                                 CONTACT_QUERY_PROJECTION,
                                 null, null, null);
 
-                        if (cursor.moveToFirst()) {
+                        if (cursor != null && cursor.moveToFirst()) {
                             Long id = Long.valueOf(cursor.getLong(PERSON_ID_COLUMN));
                             values.put(Sms.PERSON, id);
                         }
