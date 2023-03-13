@@ -5621,7 +5621,7 @@ public class TelephonyProvider extends ContentProvider
                                                 cursor.getColumnName(i))
                                         || Telephony.SimInfo.COLUMN_CARD_ID.equals(
                                                 cursor.getColumnName(i)))) {
-                                    columnValue = SubscriptionInfo.givePrintableIccid(columnValue);
+                                    columnValue = SubscriptionInfo.getPrintableId(columnValue);
                                 }
                                 str += columnValue;
                                 break;
