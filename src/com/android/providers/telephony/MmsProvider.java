@@ -18,11 +18,13 @@ package com.android.providers.telephony;
 
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentProvider;
 import android.content.ContentUris;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
@@ -35,6 +37,7 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.ParcelFileDescriptor;
 import android.os.UserHandle;
+import android.os.UserManager;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
 import android.provider.Telephony.CanonicalAddressesColumns;
@@ -91,6 +94,13 @@ public class MmsProvider extends ContentProvider {
         setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
         mOpenHelper = MmsSmsDatabaseHelper.getInstanceForCe(getContext());
         TelephonyBackupAgent.DeferredSmsMmsRestoreService.startIfFilesExist(getContext());
+
+        // Creating intent broadcast receiver for user actions like Intent.ACTION_USER_REMOVED,
+        // where we would need to remove MMS related to removed user.
+        IntentFilter userIntentFilter = new IntentFilter(Intent.ACTION_USER_REMOVED);
+        getContext().registerReceiver(mUserIntentReceiver, userIntentFilter,
+                Context.RECEIVER_NOT_EXPORTED);
+
         return true;
     }
 
@@ -1185,4 +1195,49 @@ public class MmsProvider extends ContentProvider {
             return selection1 + " AND " + selection2;
         }
     }
+
+    private BroadcastReceiver mUserIntentReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getAction()) {
+                case Intent.ACTION_USER_REMOVED:
+                    UserHandle userToBeRemoved  = intent.getParcelableExtra(Intent.EXTRA_USER,
+                            UserHandle.class);
+                    UserManager userManager = context.getSystemService(UserManager.class);
+                    if ((userToBeRemoved == null) || (userManager == null) ||
+                            (!userManager.isManagedProfile(userToBeRemoved.getIdentifier()))) {
+                        // Do not delete MMS if removed profile is not managed profile.
+                        return;
+                    }
+                    Log.d(TAG, "Received ACTION_USER_REMOVED for managed profile - Deleting MMS.");
+
+                    // Deleting MMS related to managed profile.
+                    Uri uri = Telephony.Mms.CONTENT_URI;
+                    SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+
+                    final long token = Binder.clearCallingIdentity();
+                    String selectionBySubIds;
+                    try {
+                        // Filter MMS based on subId.
+                        selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
+                                userToBeRemoved);
+                    } finally {
+                        Binder.restoreCallingIdentity(token);
+                    }
+                    if (selectionBySubIds == null) {
+                        // No subscriptions associated with user, return.
+                        return;
+                    }
+
+                    int deletedRows = deleteMessages(getContext(), db, selectionBySubIds,
+                            null, uri);
+                    if (deletedRows > 0) {
+                        // Don't update threads unless something changed.
+                        MmsSmsDatabaseHelper.updateThreads(db, selectionBySubIds, null);
+                        notifyChange(uri, null);
+                    }
+                    break;
+            }
+        }
+    };
 }
