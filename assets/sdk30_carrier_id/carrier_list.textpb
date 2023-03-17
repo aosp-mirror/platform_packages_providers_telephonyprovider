@@ -6118,6 +6118,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310930"
   }
+  carrier_attribute {
+    mccmnc_tuple: "312380"
+  }
 }
 carrier_id {
   canonical_id: 1831
@@ -6768,6 +6771,12 @@ carrier_id {
   carrier_name: "COX"
   carrier_attribute {
     mccmnc_tuple: "311600"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    spn: "Cox Mobile"
+    gid1: "BA01570000000000"
+    gid2: "B100000000000000"
   }
 }
 carrier_id {
@@ -10237,6 +10246,9 @@ carrier_id {
     mccmnc_tuple: "310960"
     spn: "strata"
   }
+  carrier_attribute {
+    mccmnc_tuple: "312290"
+  }
 }
 carrier_id {
   canonical_id: 2321
@@ -12045,6 +12057,26 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2560
+  carrier_name: "U+264A"
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302760"
+    gid1: "F1"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4280"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12305,4 +12337,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554489
+version: 33554490
