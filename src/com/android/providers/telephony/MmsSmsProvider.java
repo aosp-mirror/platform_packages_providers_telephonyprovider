@@ -450,6 +450,12 @@ public class MmsSmsProvider extends ContentProvider {
                 cursor = getThreadId(recipients);
                 break;
             case URI_CANONICAL_ADDRESS: {
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 String extraSelection = "_id=" + uri.getPathSegments().get(1);
                 String finalSelection = TextUtils.isEmpty(selection)
                         ? extraSelection : extraSelection + " AND " + selection;
@@ -462,6 +468,12 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
             }
             case URI_CANONICAL_ADDRESSES:
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 cursor = db.query(TABLE_CANONICAL_ADDRESSES,
                         CANONICAL_ADDRESSES_COLUMNS_2,
                         selection,
@@ -668,15 +680,19 @@ public class MmsSmsProvider extends ContentProvider {
                     selection, selectionArgs, null, null, null);
 
             if (cursor.getCount() == 0) {
+                // TODO (b/256992531): Currently, one sim card is set as default sms subId in work
+                //  profile. Default sms subId should be updated based on user pref.
+                int subId = SmsManager.getDefaultSmsSubscriptionId();
                 ContentValues contentValues = new ContentValues(1);
                 contentValues.put(CanonicalAddressesColumns.ADDRESS, refinedAddress);
+                contentValues.put(CanonicalAddressesColumns.SUBSCRIPTION_ID, subId);
 
                 db = mOpenHelper.getWritableDatabase();
                 retVal = db.insert("canonical_addresses",
                         CanonicalAddressesColumns.ADDRESS, contentValues);
 
                 Log.d(LOG_TAG, "getSingleAddressId: insert new canonical_address for " +
-                        /*address*/ "xxxxxx" + ", _id=" + retVal);
+                        /*address*/ "xxxxxx" + ", sub_id=" + subId + ", _id=" + retVal);
 
                 return retVal;
             }
@@ -757,6 +773,9 @@ public class MmsSmsProvider extends ContentProvider {
         long date = System.currentTimeMillis();
         values.put(ThreadsColumns.DATE, date - date % 1000);
         values.put(ThreadsColumns.RECIPIENT_IDS, recipientIds);
+        // TODO (b/256992531): Currently, one sim card is set as default sms subId in work
+        //  profile. Default sms subId should be updated based on user pref.
+        values.put(ThreadsColumns.SUBSCRIPTION_ID, SmsManager.getDefaultSmsSubscriptionId());
         if (numberOfRecipients > 1) {
             values.put(Threads.TYPE, Threads.BROADCAST_THREAD);
         }
@@ -1425,26 +1444,36 @@ public class MmsSmsProvider extends ContentProvider {
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
         int matchIndex = URI_MATCHER.match(uri);
 
+        // TODO (b/256992531): Currently, one sim card is set as default sms subId in work
+        //  profile. Default sms subId should be updated based on user pref.
+        int defaultSmsSubId = SmsManager.getDefaultSmsSubscriptionId();
         if (matchIndex == URI_PENDING_MSG) {
             int subId;
             if (values.containsKey(PendingMessages.SUBSCRIPTION_ID)) {
                 subId = values.getAsInteger(PendingMessages.SUBSCRIPTION_ID);
             } else {
-                subId = SmsManager.getDefaultSmsSubscriptionId();
+                subId = defaultSmsSubId;
                 if (SubscriptionManager.isValidSubscriptionId(subId)) {
                     values.put(PendingMessages.SUBSCRIPTION_ID, subId);
                 }
             }
+
             if (!TelephonyPermissions
-                .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
+                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
                 TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
-                    callerUid, getCallingPackage());
+                        callerUid, getCallingPackage());
                 return null;
             }
 
             long rowId = db.insert(TABLE_PENDING_MSG, null, values);
             return uri.buildUpon().appendPath(Long.toString(rowId)).build();
         } else if (matchIndex == URI_CANONICAL_ADDRESS) {
+            if (!values.containsKey(CanonicalAddressesColumns.SUBSCRIPTION_ID)) {
+                if (SubscriptionManager.isValidSubscriptionId(defaultSmsSubId)) {
+                    values.put(CanonicalAddressesColumns.SUBSCRIPTION_ID, defaultSmsSubId);
+                }
+            }
+
             long rowId = db.insert(TABLE_CANONICAL_ADDRESSES, null, values);
             return uri.buildUpon().appendPath(Long.toString(rowId)).build();
         }
@@ -1495,6 +1524,12 @@ public class MmsSmsProvider extends ContentProvider {
                 break;
 
             case URI_CANONICAL_ADDRESS: {
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
+                    return 0;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 String extraSelection = "_id=" + uri.getPathSegments().get(1);
                 String finalSelection = TextUtils.isEmpty(selection)
                         ? extraSelection : extraSelection + " AND " + selection;
@@ -1504,6 +1539,12 @@ public class MmsSmsProvider extends ContentProvider {
             }
 
             case URI_CONVERSATIONS: {
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
+                    return 0;
+                }
+                selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+
                 final ContentValues finalValues = new ContentValues(1);
                 if (values.containsKey(Threads.ARCHIVED)) {
                     // Only allow update archived

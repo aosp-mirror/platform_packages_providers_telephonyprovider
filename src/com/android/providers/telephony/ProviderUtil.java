@@ -177,7 +177,11 @@ public class ProviderUtil {
         String subIdListStr = associatedSubscriptionsList.stream()
                 .map(subInfo -> ("'" + subInfo.getSubscriptionId() + "'"))
                 .collect(Collectors.joining(","));
-        return (Telephony.Sms.SUBSCRIPTION_ID + " IN (" + subIdListStr + ")");
+        String selectionBySubId = (Telephony.Sms.SUBSCRIPTION_ID + " IN (" + subIdListStr + ")");
+        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+            Log.d(TAG, "getSelectionBySubIds: " + selectionBySubId);
+        }
+        return selectionBySubId;
     }
 
     /**
