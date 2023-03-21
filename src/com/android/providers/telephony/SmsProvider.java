@@ -294,10 +294,6 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
-                        if (TelephonyUtils.isUidForeground(getContext(), callingUid)) {
-                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
-                                getContext(), subId);
-                        }
                         // If subId is not associated with user, return empty cursor.
                         return emptyCursor;
                     }
@@ -327,10 +323,6 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
-                        if (TelephonyUtils.isUidForeground(getContext(), callingUid)) {
-                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
-                                getContext(), subId);
-                        }
                         // If subId is not associated with user, return empty cursor.
                         return emptyCursor;
                     }
@@ -691,11 +683,9 @@ public class SmsProvider extends ContentProvider {
                 }
 
                 if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
-                        callerUserHandle)) {
-                    if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
-                        TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
-                            getContext(), subId);
-                    }
+                    callerUserHandle)) {
+                    TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
+                        subId, callerUid, callerPkg);
                     return null;
                 }
 
@@ -836,11 +826,9 @@ public class SmsProvider extends ContentProvider {
                 }
             }
             if (!TelephonyPermissions
-                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
-                if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
-                    TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(getContext(),
-                        subId);
-                }
+                .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
+                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
+                    callerUid, callerPkg);
                 return null;
             }
         }
@@ -1038,10 +1026,6 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
-                        if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
-                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
-                                getContext(), subId);
-                        }
                         // If subId is not associated with user, return 0.
                         return 0;
                     }
@@ -1079,10 +1063,6 @@ public class SmsProvider extends ContentProvider {
 
                     if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                             subId, callerUserHandle)) {
-                        if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
-                            TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(
-                                getContext(), subId);
-                        }
                         // If subId is not associated with user, return 0.
                         return 0;
                     }
