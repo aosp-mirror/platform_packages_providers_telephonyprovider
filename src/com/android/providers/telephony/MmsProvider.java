@@ -445,12 +445,10 @@ public class MmsProvider extends ContentProvider {
                 }
             }
 
-            if (!TelephonyPermissions
-                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
-                if (TelephonyUtils.isUidForeground(getContext(), callerUid)) {
-                    TelephonyUtils.showErrorIfSubscriptionAssociatedWithManagedProfile(getContext(),
-                        subId);
-                }
+            if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
+                callerUserHandle)) {
+                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
+                    callerUid, callerPkg);
                 return null;
             }
 
