@@ -41,6 +41,8 @@
     <uses-permission android:name="android.permission.MODIFY_PHONE_STATE" />
     <!-- Allows accessing the messages on ICC -->
     <uses-permission android:name="android.permission.ACCESS_MESSAGES_ON_ICC" />
+    <!-- Needed to query user associated with a subscription. -->
+    <uses-permission android:name="android.permission.MANAGE_SUBSCRIPTION_USER_ASSOCIATION"/>
 
     <application android:process="com.android.phone"
                  android:allowClearUserData="false"
