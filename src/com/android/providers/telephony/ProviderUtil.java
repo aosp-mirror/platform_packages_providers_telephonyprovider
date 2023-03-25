@@ -30,6 +30,8 @@ import android.os.UserManager;
 import android.provider.Telephony;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
+import android.telephony.emergency.EmergencyNumber;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -37,6 +39,7 @@ import com.android.internal.telephony.SmsApplication;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -177,4 +180,36 @@ public class ProviderUtil {
         return (Telephony.Sms.SUBSCRIPTION_ID + " IN (" + subIdListStr + ")");
     }
 
+    /**
+     * Get emergency number list in the format of a selection string.
+     * @param context context
+     * @return emergency number list in the format of a selection string
+     * or {@code null} if emergency number list is empty.
+     */
+    @Nullable
+    public static String getSelectionByEmergencyNumbers(@NonNull Context context) {
+        // Get emergency number list to add it to selection string.
+        TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+        Map<Integer, List<EmergencyNumber>> emergencyNumberList = null;
+        if (tm != null) {
+            emergencyNumberList = tm.getEmergencyNumberList();
+        }
+
+        String selectionByEmergencyNumber = null;
+        if (emergencyNumberList != null && !emergencyNumberList.isEmpty()) {
+            String emergencyNumberListStr = "";
+            for (Map.Entry<Integer, List<EmergencyNumber>> entry : emergencyNumberList.entrySet()) {
+                if (!emergencyNumberListStr.isEmpty() && !entry.getValue().isEmpty()) {
+                    emergencyNumberListStr += ',';
+                }
+
+                emergencyNumberListStr += entry.getValue().stream()
+                        .map(emergencyNumber -> ("'" + emergencyNumber.getNumber() + "'"))
+                        .collect(Collectors.joining(","));
+            }
+            selectionByEmergencyNumber = Telephony.Sms.ADDRESS +
+                    " IN (" + emergencyNumberListStr + ")";
+        }
+        return selectionByEmergencyNumber;
+    }
 }
