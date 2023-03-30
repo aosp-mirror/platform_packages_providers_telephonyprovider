@@ -341,30 +341,18 @@ public class SmsProvider extends ContentProvider {
         if (qb.getTables().equals(smsTable)) {
             final long token = Binder.clearCallingIdentity();
             String selectionBySubIds;
-            String selectionByEmergencyNumbers;
             try {
-                // Filter SMS based on subId and emergency numbers.
+                // Filter SMS based on subId.
                selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                        callerUserHandle);
-               selectionByEmergencyNumbers = ProviderUtil
-                       .getSelectionByEmergencyNumbers(getContext());
             } finally {
                 Binder.restoreCallingIdentity(token);
             }
-
-            if (selectionBySubIds == null && selectionByEmergencyNumbers == null) {
-                // No subscriptions associated with user and no emergne return empty cursor.
+            if (selectionBySubIds == null) {
+                // No subscriptions associated with user, return empty cursor.
                 return emptyCursor;
             }
-            String filter = "";
-            if (selectionBySubIds != null && selectionByEmergencyNumbers != null) {
-                filter = (selectionBySubIds + " OR " + selectionByEmergencyNumbers);
-            } else {
-                filter = selectionBySubIds == null ?
-                        selectionByEmergencyNumbers : selectionBySubIds;
-            }
-
-            selection = DatabaseUtils.concatenateWhere(selection, filter);
+            selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
         }
 
         String orderBy = null;
@@ -837,15 +825,10 @@ public class SmsProvider extends ContentProvider {
                     values.put(Telephony.Sms.SUBSCRIPTION_ID, subId);
                 }
             }
-            String address = "";
-            if (values.containsKey(Sms.ADDRESS)) {
-                address = values.getAsString(Sms.ADDRESS);
-            }
-
-            if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
-                    callerUserHandle, address)) {
+            if (!TelephonyPermissions
+                .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
                 TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
-                        callerUid, callerPkg);
+                    callerUid, callerPkg);
                 return null;
             }
         }
@@ -946,28 +929,12 @@ public class SmsProvider extends ContentProvider {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
         final int callerUid = Binder.getCallingUid();
         final long token = Binder.clearCallingIdentity();
-
         String selectionBySubIds;
-        String selectionByEmergencyNumbers;
         try {
-            // Filter SMS based on subId and emergency numbers.
-            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
-                    callerUserHandle);
-            selectionByEmergencyNumbers = ProviderUtil
-                    .getSelectionByEmergencyNumbers(getContext());
+            // Filter SMS based on subId.
+            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(), callerUserHandle);
         } finally {
             Binder.restoreCallingIdentity(token);
-        }
-
-        String filter = "";
-        if (selectionBySubIds == null && selectionByEmergencyNumbers == null) {
-            // No subscriptions associated with user and no emergency numbers
-            filter = null;
-        } else if (selectionBySubIds != null && selectionByEmergencyNumbers != null) {
-            filter = (selectionBySubIds + " OR " + selectionByEmergencyNumbers);
-        } else {
-            filter = selectionBySubIds == null ?
-                    selectionByEmergencyNumbers : selectionBySubIds;
         }
 
         int count;
@@ -976,11 +943,11 @@ public class SmsProvider extends ContentProvider {
         boolean notifyIfNotDefault = true;
         switch (match) {
             case SMS_ALL:
-                if (filter == null) {
-                    // No subscriptions associated with user and no emergency numbers, return 0.
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
                     return 0;
                 }
-                where = DatabaseUtils.concatenateWhere(where, filter);
+                where = DatabaseUtils.concatenateWhere(where, selectionBySubIds);
                 count = db.delete(TABLE_SMS, where, whereArgs);
                 if (count != 0) {
                     // Don't update threads unless something changed.
@@ -1011,11 +978,11 @@ public class SmsProvider extends ContentProvider {
 
                 // delete the messages from the sms table
                 where = DatabaseUtils.concatenateWhere("thread_id=" + threadID, where);
-                if (filter == null) {
-                    // No subscriptions associated with user and no emergency numbers, return 0.
+                if (selectionBySubIds == null) {
+                    // No subscriptions associated with user, return 0.
                     return 0;
                 }
-                where = DatabaseUtils.concatenateWhere(where, filter);
+                where = DatabaseUtils.concatenateWhere(where, selectionBySubIds);
                 count = db.delete(TABLE_SMS, where, whereArgs);
                 MmsSmsDatabaseHelper.updateThread(db, threadID);
                 break;
@@ -1253,30 +1220,18 @@ public class SmsProvider extends ContentProvider {
         if (table.equals(TABLE_SMS)) {
             final long token = Binder.clearCallingIdentity();
             String selectionBySubIds;
-            String selectionByEmergencyNumbers;
             try {
-                // Filter SMS based on subId and emergency numbers.
+                // Filter SMS based on subId.
                 selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                         callerUserHandle);
-                selectionByEmergencyNumbers = ProviderUtil
-                        .getSelectionByEmergencyNumbers(getContext());
             } finally {
                 Binder.restoreCallingIdentity(token);
             }
-
-            if (selectionBySubIds == null && selectionByEmergencyNumbers == null) {
-                // No subscriptions associated with user and no emergency numbers, return 0.
+            if (selectionBySubIds == null) {
+                // No subscriptions associated with user, return 0;
                 return 0;
             }
-            String filter = "";
-            if (selectionBySubIds != null && selectionByEmergencyNumbers != null) {
-                filter = (selectionBySubIds + " OR " + selectionByEmergencyNumbers);
-            } else {
-                filter = selectionBySubIds == null ?
-                        selectionByEmergencyNumbers : selectionBySubIds;
-            }
-
-            where = DatabaseUtils.concatenateWhere(where, filter);
+            where = DatabaseUtils.concatenateWhere(where, selectionBySubIds);
         }
 
         where = DatabaseUtils.concatenateWhere(where, extraWhere);
