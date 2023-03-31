@@ -6877,10 +6877,6 @@ carrier_id {
     mccmnc_tuple: "302370"
     gid1: "DD"
   }
-  carrier_attribute {
-    mccmnc_tuple: "302370"
-    mccmnc_tuple: "30237"
-  }
 }
 carrier_id {
   canonical_id: 1963
@@ -11449,13 +11445,50 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2561
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "20838"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2562
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "26214"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2563
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "20417"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2564
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "23487"
+    spn: "Lebara"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
     mccmnc_tuple: "310280"
     mccmnc_tuple: "310410"
+    mccmnc_tuple: "311180"
     gid1: "DDFF"
     gid1: "DEFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "DDFF"
   }
   parent_canonical_id: 2022
 }
@@ -11817,4 +11850,4 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 67108888
+version: 67108889
