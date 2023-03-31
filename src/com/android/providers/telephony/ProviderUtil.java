@@ -26,6 +26,7 @@ import android.net.Uri;
 import android.os.Binder;
 import android.os.Process;
 import android.os.UserHandle;
+import android.os.UserManager;
 import android.provider.Telephony;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
@@ -34,6 +35,7 @@ import android.util.Log;
 
 import com.android.internal.telephony.SmsApplication;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -145,18 +147,30 @@ public class ProviderUtil {
      */
     @Nullable
     public static String getSelectionBySubIds(Context context, @NonNull UserHandle userHandle) {
-        List<SubscriptionInfo> associatedSubscriptionsList = null;
+        List<SubscriptionInfo> associatedSubscriptionsList = new ArrayList<>();
         SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
         if (subManager != null) {
             // Get list of subscriptions associated with this user.
             associatedSubscriptionsList = subManager
                     .getSubscriptionInfoListAssociatedWithUser(userHandle);
         }
-        if ((associatedSubscriptionsList == null) || associatedSubscriptionsList.isEmpty()) {
+
+        UserManager userManager = context.getSystemService(UserManager.class);
+        if ((userManager != null) && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
+            // SMS/MMS restored from another device have sub_id=-1.
+            // To query/update/delete those messages, sub_id=-1 should be in the selection string.
+            SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
+                    .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                    .build();
+            associatedSubscriptionsList.add(invalidSubInfo);
+        }
+
+        if (associatedSubscriptionsList.isEmpty()) {
             return null;
         }
 
-        // Converts [1,2,3,4] to "'1', '2', '3', '4'" so that it can be appended to selection string
+        // Converts [1,2,3,4,-1] to "'1','2','3','4','-1'" so that it can be appended to
+        // selection string
         String subIdListStr = associatedSubscriptionsList.stream()
                 .map(subInfo -> ("'" + subInfo.getSubscriptionId() + "'"))
                 .collect(Collectors.joining(","));
