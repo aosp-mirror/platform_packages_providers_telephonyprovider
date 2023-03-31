@@ -161,7 +161,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 61 << 16;
+    private static final int DATABASE_VERSION = 62 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -587,7 +587,9 @@ public class TelephonyProvider extends ContentProvider
                 + SubscriptionManager.USAGE_SETTING_UNKNOWN + ","
                 + Telephony.SimInfo.COLUMN_TP_MESSAGE_REF +
                 "  INTEGER DEFAULT -1,"
-                + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT " + UserHandle.USER_NULL
+                + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT "
+                + UserHandle.USER_NULL + ","
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT -1"
                 + ");";
     }
 
@@ -1887,6 +1889,21 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 61 << 16 | 6;
+            }
+
+            if (oldVersion < (62 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED
+                            + "  INTEGER DEFAULT -1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite enabled. ");
+                    }
+                }
+                oldVersion = 62 << 16 | 6;
             }
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3714,7 +3731,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 61 << 16) {
+            if (DATABASE_VERSION != 62 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
