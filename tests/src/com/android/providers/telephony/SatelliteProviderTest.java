@@ -123,11 +123,10 @@ public class SatelliteProviderTest extends TestCase {
             Log.d(TAG, "Error inserting satellite datagram:" + e);
         }
 
-        try {
-            String whereClause = (Telephony.SatelliteDatagrams.COLUMN_UNIQUE_KEY_DATAGRAM_ID
-                    + "=" +testDatagramId);
-            Cursor cursor = mContentResolver.query(Telephony.SatelliteDatagrams.CONTENT_URI,
-                    null, whereClause, null, null);
+        String whereClause = (Telephony.SatelliteDatagrams.COLUMN_UNIQUE_KEY_DATAGRAM_ID
+                + "=" +testDatagramId);
+        try (Cursor cursor = mContentResolver.query(Telephony.SatelliteDatagrams.CONTENT_URI,
+                null, whereClause, null, null)) {
             cursor.moveToFirst();
             byte[] datagram = cursor.getBlob(0);
             assertEquals(testDatagram, new String(datagram));
@@ -162,14 +161,12 @@ public class SatelliteProviderTest extends TestCase {
         }
         assertEquals(1, numRowsDeleted);
 
-        try {
-            Cursor cursor = mContentResolver.query(Telephony.SatelliteDatagrams.CONTENT_URI,
-                    null, whereClause, null, null);
+        try (Cursor cursor = mContentResolver.query(Telephony.SatelliteDatagrams.CONTENT_URI,
+                null, whereClause, null, null)) {
             assertNotNull(cursor);
             assertEquals(0, cursor.getCount());
         } catch (Exception e) {
             Log.d(TAG, "Exception in getting count:" + e);
         }
     }
-
 }
