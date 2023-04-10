@@ -18,10 +18,13 @@ package com.android.providers.telephony;
 
 import android.annotation.NonNull;
 import android.app.AppOpsManager;
+import android.content.BroadcastReceiver;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
+import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.UriMatcher;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
@@ -32,6 +35,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.UserHandle;
+import android.os.UserManager;
 import android.provider.Contacts;
 import android.provider.Telephony;
 import android.provider.Telephony.MmsSms;
@@ -45,6 +49,7 @@ import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.TelephonyPermissions;
+import com.android.internal.telephony.util.TelephonyUtils;
 
 import java.util.HashMap;
 import java.util.List;
@@ -102,6 +107,13 @@ public class SmsProvider extends ContentProvider {
         mDeOpenHelper = MmsSmsDatabaseHelper.getInstanceForDe(getContext());
         mCeOpenHelper = MmsSmsDatabaseHelper.getInstanceForCe(getContext());
         TelephonyBackupAgent.DeferredSmsMmsRestoreService.startIfFilesExist(getContext());
+
+        // Creating intent broadcast receiver for user actions like Intent.ACTION_USER_REMOVED,
+        // where we would need to remove SMS related to removed user.
+        IntentFilter userIntentFilter = new IntentFilter(Intent.ACTION_USER_REMOVED);
+        getContext().registerReceiver(mUserIntentReceiver, userIntentFilter,
+                Context.RECEIVER_NOT_EXPORTED);
+
         return true;
     }
 
@@ -329,18 +341,30 @@ public class SmsProvider extends ContentProvider {
         if (qb.getTables().equals(smsTable)) {
             final long token = Binder.clearCallingIdentity();
             String selectionBySubIds;
+            String selectionByEmergencyNumbers;
             try {
-                // Filter SMS based on subId.
+                // Filter SMS based on subId and emergency numbers.
                selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                        callerUserHandle);
+               selectionByEmergencyNumbers = ProviderUtil
+                       .getSelectionByEmergencyNumbers(getContext());
             } finally {
                 Binder.restoreCallingIdentity(token);
             }
-            if (selectionBySubIds == null) {
-                // No subscriptions associated with user, return empty cursor.
+
+            if (selectionBySubIds == null && selectionByEmergencyNumbers == null) {
+                // No subscriptions associated with user and no emergne return empty cursor.
                 return emptyCursor;
             }
-            selection = DatabaseUtils.concatenateWhere(selection, selectionBySubIds);
+            String filter = "";
+            if (selectionBySubIds != null && selectionByEmergencyNumbers != null) {
+                filter = (selectionBySubIds + " OR " + selectionByEmergencyNumbers);
+            } else {
+                filter = selectionBySubIds == null ?
+                        selectionByEmergencyNumbers : selectionBySubIds;
+            }
+
+            selection = DatabaseUtils.concatenateWhere(selection, filter);
         }
 
         String orderBy = null;
@@ -581,10 +605,9 @@ public class SmsProvider extends ContentProvider {
         try {
             Uri insertUri = insertInner(url, initialValues, callerUid, callerPkg, callerUserHandle);
 
-            int match = sURLMatcher.match(url);
-            // Skip notifyChange() if insertUri is null for SMS_ALL_ICC or SMS_ALL_ICC_SUBID caused
-            // by failure of insertMessageToIcc()(e.g. SIM full).
-            if (insertUri != null || (match != SMS_ALL_ICC && match != SMS_ALL_ICC_SUBID)) {
+            // Skip notifyChange() if insertUri is null
+            if (insertUri != null) {
+                int match = sURLMatcher.match(url);
                 // The raw table is used by the telephony layer for storing an sms before sending
                 // out a notification that an sms has arrived. We don't want to notify the default
                 // sms app of changes to this table.
@@ -672,8 +695,9 @@ public class SmsProvider extends ContentProvider {
                 }
 
                 if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
-                        callerUserHandle)) {
-                    // TODO(b/258629881): Display error dialog.
+                    callerUserHandle)) {
+                    TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
+                        subId, callerUid, callerPkg);
                     return null;
                 }
 
@@ -772,7 +796,7 @@ public class SmsProvider extends ContentProvider {
                                 CONTACT_QUERY_PROJECTION,
                                 null, null, null);
 
-                        if (cursor.moveToFirst()) {
+                        if (cursor != null && cursor.moveToFirst()) {
                             Long id = Long.valueOf(cursor.getLong(PERSON_ID_COLUMN));
                             values.put(Sms.PERSON, id);
                         }
@@ -813,9 +837,16 @@ public class SmsProvider extends ContentProvider {
                     values.put(Telephony.Sms.SUBSCRIPTION_ID, subId);
                 }
             }
-            if (!TelephonyPermissions
-                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
-                // TODO(b/258629881): Display error dialog.
+            String address = "";
+            if (values.containsKey(Sms.ADDRESS)) {
+                address = values.getAsString(Sms.ADDRESS);
+            }
+
+            if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
+                    callerUserHandle, address)) {
+                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
+                        callerUid, callerPkg);
+                return null;
             }
         }
 
@@ -913,13 +944,30 @@ public class SmsProvider extends ContentProvider {
     @Override
     public int delete(Uri url, String where, String[] whereArgs) {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+        final int callerUid = Binder.getCallingUid();
         final long token = Binder.clearCallingIdentity();
+
         String selectionBySubIds;
+        String selectionByEmergencyNumbers;
         try {
-            // Filter SMS based on subId.
-            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(), callerUserHandle);
+            // Filter SMS based on subId and emergency numbers.
+            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
+                    callerUserHandle);
+            selectionByEmergencyNumbers = ProviderUtil
+                    .getSelectionByEmergencyNumbers(getContext());
         } finally {
             Binder.restoreCallingIdentity(token);
+        }
+
+        String filter = "";
+        if (selectionBySubIds == null && selectionByEmergencyNumbers == null) {
+            // No subscriptions associated with user and no emergency numbers
+            filter = null;
+        } else if (selectionBySubIds != null && selectionByEmergencyNumbers != null) {
+            filter = (selectionBySubIds + " OR " + selectionByEmergencyNumbers);
+        } else {
+            filter = selectionBySubIds == null ?
+                    selectionByEmergencyNumbers : selectionBySubIds;
         }
 
         int count;
@@ -928,11 +976,11 @@ public class SmsProvider extends ContentProvider {
         boolean notifyIfNotDefault = true;
         switch (match) {
             case SMS_ALL:
-                if (selectionBySubIds == null) {
-                    // No subscriptions associated with user, return 0.
+                if (filter == null) {
+                    // No subscriptions associated with user and no emergency numbers, return 0.
                     return 0;
                 }
-                where = DatabaseUtils.concatenateWhere(where, selectionBySubIds);
+                where = DatabaseUtils.concatenateWhere(where, filter);
                 count = db.delete(TABLE_SMS, where, whereArgs);
                 if (count != 0) {
                     // Don't update threads unless something changed.
@@ -963,11 +1011,11 @@ public class SmsProvider extends ContentProvider {
 
                 // delete the messages from the sms table
                 where = DatabaseUtils.concatenateWhere("thread_id=" + threadID, where);
-                if (selectionBySubIds == null) {
-                    // No subscriptions associated with user, return 0.
+                if (filter == null) {
+                    // No subscriptions associated with user and no emergency numbers, return 0.
                     return 0;
                 }
-                where = DatabaseUtils.concatenateWhere(where, selectionBySubIds);
+                where = DatabaseUtils.concatenateWhere(where, filter);
                 count = db.delete(TABLE_SMS, where, whereArgs);
                 MmsSmsDatabaseHelper.updateThread(db, threadID);
                 break;
@@ -1205,18 +1253,30 @@ public class SmsProvider extends ContentProvider {
         if (table.equals(TABLE_SMS)) {
             final long token = Binder.clearCallingIdentity();
             String selectionBySubIds;
+            String selectionByEmergencyNumbers;
             try {
-                // Filter SMS based on subId.
+                // Filter SMS based on subId and emergency numbers.
                 selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                         callerUserHandle);
+                selectionByEmergencyNumbers = ProviderUtil
+                        .getSelectionByEmergencyNumbers(getContext());
             } finally {
                 Binder.restoreCallingIdentity(token);
             }
-            if (selectionBySubIds == null) {
-                // No subscriptions associated with user, return 0;
+
+            if (selectionBySubIds == null && selectionByEmergencyNumbers == null) {
+                // No subscriptions associated with user and no emergency numbers, return 0.
                 return 0;
             }
-            where = DatabaseUtils.concatenateWhere(where, selectionBySubIds);
+            String filter = "";
+            if (selectionBySubIds != null && selectionByEmergencyNumbers != null) {
+                filter = (selectionBySubIds + " OR " + selectionByEmergencyNumbers);
+            } else {
+                filter = selectionBySubIds == null ?
+                        selectionByEmergencyNumbers : selectionBySubIds;
+            }
+
+            where = DatabaseUtils.concatenateWhere(where, filter);
         }
 
         where = DatabaseUtils.concatenateWhere(where, extraWhere);
@@ -1337,4 +1397,49 @@ public class SmsProvider extends ContentProvider {
     SQLiteDatabase getWritableDatabase(int match) {
         return  getDBOpenHelper(match).getWritableDatabase();
     }
+
+    private BroadcastReceiver mUserIntentReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            switch (intent.getAction()) {
+                case Intent.ACTION_USER_REMOVED:
+                    UserHandle userToBeRemoved  = intent.getParcelableExtra(Intent.EXTRA_USER,
+                            UserHandle.class);
+                    UserManager userManager = context.getSystemService(UserManager.class);
+                    if ((userToBeRemoved == null) || (userManager == null) ||
+                            (!userManager.isManagedProfile(userToBeRemoved.getIdentifier()))) {
+                        // Do not delete SMS if removed profile is not managed profile.
+                        return;
+                    }
+                    Log.d(TAG, "Received ACTION_USER_REMOVED for managed profile - Deleting SMS.");
+
+                    // Deleting SMS related to managed profile.
+                    Uri uri = Sms.CONTENT_URI;
+                    int match = sURLMatcher.match(uri);
+                    SQLiteDatabase db = getWritableDatabase(match);
+
+                    final long token = Binder.clearCallingIdentity();
+                    String selectionBySubIds;
+                    try {
+                        // Filter SMS based on subId.
+                        selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
+                                userToBeRemoved);
+                    } finally {
+                        Binder.restoreCallingIdentity(token);
+                    }
+                    if (selectionBySubIds == null) {
+                        // No subscriptions associated with user, return.
+                        return;
+                    }
+
+                    int count = db.delete(TABLE_SMS, selectionBySubIds, null);
+                    if (count != 0) {
+                        // Don't update threads unless something changed.
+                        MmsSmsDatabaseHelper.updateThreads(db, selectionBySubIds, null);
+                        notifyChange(true, uri, getCallingPackage());
+                    }
+                    break;
+            }
+        }
+    };
 }
