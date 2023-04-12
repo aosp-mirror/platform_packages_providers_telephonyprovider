@@ -264,7 +264,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 67;
+    static final int DATABASE_VERSION = 68;
     private static final int IDLE_CONNECTION_TIMEOUT_MS = 30000;
 
     private final Context mContext;
@@ -642,6 +642,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, body);
                         cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, id);
                         cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+                        cv.put(MmsSms.WordsTable.SUBSCRIPTION_ID, -1);
                         db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
                     }
                 }
@@ -675,6 +676,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, body);
                         cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, id);
                         cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+                        cv.put(MmsSms.WordsTable.SUBSCRIPTION_ID, -1);
                         db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
                     }
                 }
@@ -693,7 +695,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private void createWordsTables(
             SQLiteDatabase db, int oldVersion, int currentVersion, int upgradeVersion) {
         try {
-            db.execSQL("CREATE VIRTUAL TABLE words USING FTS3 (_id INTEGER PRIMARY KEY, index_text TEXT, source_id INTEGER, table_to_use INTEGER);");
+            db.execSQL("CREATE VIRTUAL TABLE words USING FTS3 (_id INTEGER PRIMARY KEY, index_text TEXT, source_id INTEGER, table_to_use INTEGER, sub_id INTEGER);");
 
             // monitor the sms table
             // NOTE don't handle inserts using a trigger because it has an unwanted
@@ -787,7 +789,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             Addr.CONTACT_ID + " INTEGER," +
             Addr.ADDRESS + " TEXT," +
             Addr.TYPE + " INTEGER," +
-            Addr.CHARSET + " INTEGER);";
+            Addr.CHARSET + " INTEGER," +
+            Addr.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                    ");";
 
     @VisibleForTesting
     public static String CREATE_PART_TABLE_STR =
@@ -805,7 +809,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             Part.CT_START + " INTEGER," +
             Part.CT_TYPE + " TEXT," +
             Part._DATA + " TEXT," +
-            Part.TEXT + " TEXT);";
+            Part.TEXT + " TEXT," +
+            Part.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                    ");";
 
     public static String CREATE_PDU_TABLE_STR =
             "CREATE TABLE " + MmsProvider.TABLE_PDU + " (" +
@@ -849,13 +855,18 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     @VisibleForTesting
     public static String CREATE_RATE_TABLE_STR =
             "CREATE TABLE " + MmsProvider.TABLE_RATE + " (" +
-            Rate.SENT_TIME + " INTEGER);";
+            Rate.SENT_TIME + " INTEGER," +
+                    Rate.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                    ");";
 
     @VisibleForTesting
     public static String CREATE_DRM_TABLE_STR =
             "CREATE TABLE " + MmsProvider.TABLE_DRM + " (" +
             BaseColumns._ID + " INTEGER PRIMARY KEY," +
-            "_data TEXT);";
+            "_data TEXT," +
+            "sub_id INTEGER DEFAULT -1" +
+                    ");";
+
 
     @VisibleForTesting
     void createMmsTables(SQLiteDatabase db) {
@@ -1099,7 +1110,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             "CREATE TABLE attachments (" +
             "sms_id INTEGER," +
             "content_url TEXT," +
-            "offset INTEGER);";
+            "offset INTEGER," +
+            "sub_id INTEGER DEFAULT -1" +
+                    ");";
 
     /**
      * This table is used by the SMS dispatcher to hold
@@ -1138,7 +1151,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE sr_pending (" +
                    "reference_number INTEGER," +
                    "action TEXT," +
-                   "data TEXT);");
+                   "data TEXT," +
+                   "sub_id INTEGER DEFAULT -1" +
+                ");");
 
         // Restricted view of sms table, only sent/received messages
         db.execSQL("CREATE VIEW " + SmsProvider.VIEW_SMS_RESTRICTED + " AS " +
@@ -1187,7 +1202,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
          */
         db.execSQL("CREATE TABLE canonical_addresses (" +
                    "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                   "address TEXT);");
+                   "address TEXT," +
+                   Telephony.CanonicalAddressesColumns.SUBSCRIPTION_ID + " INTEGER DEFAULT -1"
+                + ");");
 
         /**
          * This table maps the subject and an ordered set of recipient
@@ -1208,7 +1225,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Threads.ARCHIVED + " INTEGER DEFAULT 0," +
                    Threads.TYPE + " INTEGER DEFAULT 0," +
                    Threads.ERROR + " INTEGER DEFAULT 0," +
-                   Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0);");
+                   Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0," +
+                   Threads.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                ");");
 
         /**
          * This table stores the queue of messages to be sent/downloaded.
@@ -1767,6 +1786,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             } finally {
                 db.endTransaction();
             }
+            // fall through
+        case 67:
+            if (currentVersion <= 67) {
+                return;
+            }
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion68(db, oldVersion, currentVersion);
+                db.setTransactionSuccessful();
+            } catch(Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                break; // force to destroy all old data;
+            } finally {
+                db.endTransaction();
+            }
             return;
         }
 
@@ -2085,6 +2119,42 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
     }
 
+    private void upgradeDatabaseToVersion68(SQLiteDatabase db, int oldVersion, int currentVersion) {
+        try {
+            db.execSQL("ALTER TABLE " + MmsSmsProvider.TABLE_THREADS
+                    + " ADD COLUMN " + Telephony.ThreadsColumns.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PART
+                    + " ADD COLUMN " + Part.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_CANONICAL_ADDRESSES
+                    + " ADD COLUMN " + Telephony.CanonicalAddressesColumns.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_ATTACHMENTS
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_ADDR
+                    + " ADD COLUMN " + Addr.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_RATE
+                    + " ADD COLUMN " + Rate.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_DRM
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_WORDS
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_SR_PENDING
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+        } catch (SQLiteException e) {
+            Log.e(TAG, "[upgradeDatabaseToVersion68] Exception adding column "
+                    + "sub_id; " + e);
+            logException(e, oldVersion, currentVersion, 68);
+        }
+    }
+
     @Override
     public synchronized  SQLiteDatabase getReadableDatabase() {
         SQLiteDatabase db = super.getWritableDatabase();
@@ -2271,7 +2341,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 Threads.READ + " INTEGER DEFAULT 1," +
                 Threads.TYPE + " INTEGER DEFAULT 0," +
                 Threads.ERROR + " INTEGER DEFAULT 0," +
-                Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0);");
+                Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0," +
+                Threads.SUBSCRIPTION_ID + " INTEGER DEFAULT -1"
+                +");");
 
         db.execSQL("INSERT INTO threads_temp SELECT * from threads;");
         db.execSQL("DROP TABLE threads;");
@@ -2293,7 +2365,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Have to create a new temp canonical_addresses table. Copy all the info from the old
         // table. Drop the old table and rename the new table to that of the old.
         db.execSQL("CREATE TABLE canonical_addresses_temp (_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "address TEXT);");
+                "address TEXT," +
+                Telephony.CanonicalAddressesColumns.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                ");");
 
         db.execSQL("INSERT INTO canonical_addresses_temp SELECT * from canonical_addresses;");
         db.execSQL("DROP TABLE canonical_addresses;");
@@ -2328,7 +2402,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 Part.CT_START + " INTEGER," +
                 Part.CT_TYPE + " TEXT," +
                 Part._DATA + " TEXT," +
-                Part.TEXT + " TEXT);");
+                Part.TEXT + " TEXT," +
+                Part.SUBSCRIPTION_ID + " INTEGER DEFAULT -1"
+                + ");");
 
         db.execSQL("INSERT INTO part_temp SELECT * from part;");
         db.execSQL("DROP TABLE part;");
