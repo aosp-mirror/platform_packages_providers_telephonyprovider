@@ -17,9 +17,11 @@
 package com.android.providers.telephony;
 
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.spy;
 
 import android.app.AppOpsManager;
 import android.content.ContentResolver;
@@ -33,13 +35,19 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Process;
+import android.os.UserHandle;
 import android.provider.Telephony;
+import android.telephony.SmsManager;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
 import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 
+
+import androidx.test.core.app.ApplicationProvider;
 import androidx.test.InstrumentationRegistry;
 
 import junit.framework.TestCase;
@@ -48,6 +56,9 @@ import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Tests for testing CRUD operations of SmsProvider.
@@ -64,11 +75,12 @@ import org.mockito.MockitoAnnotations;
 public class SmsProviderTest extends TestCase {
     private static final String TAG = "SmsProviderTest";
 
-    @Mock private Context mContext;
+    private Context mContext;
     private MockContentResolver mContentResolver;
     private SmsProviderTestable mSmsProviderTestable;
     @Mock private PackageManager mPackageManager;
     @Mock private Resources mMockResources;
+    @Mock private SubscriptionManager mSubscriptionManager;
 
     private int notifyChangeCount;
 
@@ -92,6 +104,7 @@ public class SmsProviderTest extends TestCase {
         super.setUp();
         MockitoAnnotations.initMocks(this);
         mSmsProviderTestable = new SmsProviderTestable();
+        mContext = spy(ApplicationProvider.getApplicationContext());
 
         when(mContext.getSystemService(eq(Context.APP_OPS_SERVICE)))
                 .thenReturn(mock(AppOpsManager.class));
@@ -137,6 +150,20 @@ public class SmsProviderTest extends TestCase {
         mContentResolver.addProvider("sms", mSmsProviderTestable);
         Log.d(TAG, "MockContextWithProvider: Add SmsProvider to mResolver");
         notifyChangeCount = 0;
+
+        when(mContext.getSystemService(SubscriptionManager.class)).thenReturn(mSubscriptionManager);
+        List<SubscriptionInfo> subscriptionInfoList = new ArrayList<>();
+        SubscriptionInfo subscriptionInfo1 = new SubscriptionInfo.Builder()
+                .setId(SmsManager.getDefaultSmsSubscriptionId())
+                .setSimSlotIndex(0)
+                .build();
+        subscriptionInfoList.add(subscriptionInfo1);
+        // Return subscriptions associated with SYSTEM user.
+        doReturn(subscriptionInfoList).when(mSubscriptionManager)
+                .getSubscriptionInfoListAssociatedWithUser(UserHandle.SYSTEM);
+        doReturn(true).when(mSubscriptionManager).isSubscriptionAssociatedWithUser(
+                SubscriptionManager.getDefaultSmsSubscriptionId(),
+                UserHandle.of(UserHandle.USER_SYSTEM));
     }
 
     @Override
@@ -150,7 +177,6 @@ public class SmsProviderTest extends TestCase {
     public void testInsertUri() {
         // insert test contentValues
         final ContentValues values = new ContentValues();
-        values.put(Telephony.Sms.SUBSCRIPTION_ID, 1);
         values.put(Telephony.Sms.ADDRESS, "12345");
         values.put(Telephony.Sms.BODY, "test");
         values.put(Telephony.Sms.DATE, System.currentTimeMillis()); // milliseconds
