@@ -30,6 +30,8 @@ import android.os.UserManager;
 import android.provider.Telephony;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
+import android.telephony.emergency.EmergencyNumber;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -37,6 +39,7 @@ import com.android.internal.telephony.SmsApplication;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -155,8 +158,9 @@ public class ProviderUtil {
                     .getSubscriptionInfoListAssociatedWithUser(userHandle);
         }
 
-        UserManager userManager = context.getSystemService(UserManager.class);
-        if ((userManager != null) && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
+        // TODO (b/280821823): Update this logic when backup and restore is supported for
+        //  work profile messages as well.
+        if (allowAccessToRestoredMessages(context, userHandle)) {
             // SMS/MMS restored from another device have sub_id=-1.
             // To query/update/delete those messages, sub_id=-1 should be in the selection string.
             SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
@@ -174,7 +178,67 @@ public class ProviderUtil {
         String subIdListStr = associatedSubscriptionsList.stream()
                 .map(subInfo -> ("'" + subInfo.getSubscriptionId() + "'"))
                 .collect(Collectors.joining(","));
-        return (Telephony.Sms.SUBSCRIPTION_ID + " IN (" + subIdListStr + ")");
+        String selectionBySubId = (Telephony.Sms.SUBSCRIPTION_ID + " IN (" + subIdListStr + ")");
+        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+            Log.d(TAG, "getSelectionBySubIds: " + selectionBySubId);
+        }
+        return selectionBySubId;
     }
 
+    /**
+     * Get emergency number list in the format of a selection string.
+     * @param context context
+     * @return emergency number list in the format of a selection string
+     * or {@code null} if emergency number list is empty.
+     */
+    @Nullable
+    public static String getSelectionByEmergencyNumbers(@NonNull Context context) {
+        // Get emergency number list to add it to selection string.
+        TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+        Map<Integer, List<EmergencyNumber>> emergencyNumberList = null;
+        if (tm != null) {
+            emergencyNumberList = tm.getEmergencyNumberList();
+        }
+
+        String selectionByEmergencyNumber = null;
+        if (emergencyNumberList != null && !emergencyNumberList.isEmpty()) {
+            String emergencyNumberListStr = "";
+            for (Map.Entry<Integer, List<EmergencyNumber>> entry : emergencyNumberList.entrySet()) {
+                if (!emergencyNumberListStr.isEmpty() && !entry.getValue().isEmpty()) {
+                    emergencyNumberListStr += ',';
+                }
+
+                emergencyNumberListStr += entry.getValue().stream()
+                        .map(emergencyNumber -> ("'" + emergencyNumber.getNumber() + "'"))
+                        .collect(Collectors.joining(","));
+            }
+            selectionByEmergencyNumber = Telephony.Sms.ADDRESS +
+                    " IN (" + emergencyNumberListStr + ")";
+        }
+        return selectionByEmergencyNumber;
+    }
+
+    private static boolean allowAccessToRestoredMessages(@NonNull Context context,
+            @NonNull UserHandle userHandle) {
+        UserManager userManager = context.getSystemService(UserManager.class);
+        if (userManager != null && !userManager.isManagedProfile(userHandle.getIdentifier())) {
+            // userHandle is not a managed profile - allow access to restored messages
+            return true;
+        }
+
+        SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
+        if (subManager != null) {
+            for(SubscriptionInfo subInfo:
+                    subManager.getActiveSubscriptionInfoList()) {
+                // If there is a SIM association policy set, then work profile telephony feature is
+                // enabled, so do not allow access to restored messages from work profile
+                if (subManager.getSubscriptionUserHandle(
+                        subInfo.getSubscriptionId()) != null) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
 }

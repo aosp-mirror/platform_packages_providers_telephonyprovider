@@ -5792,6 +5792,7 @@ carrier_id {
   carrier_name: "Copper Valley Wireless"
   carrier_attribute {
     mccmnc_tuple: "310930"
+    mccmnc_tuple: "312380"
   }
 }
 carrier_id {
@@ -6413,6 +6414,12 @@ carrier_id {
   canonical_id: 1910
   carrier_name: "COX"
   carrier_attribute {
+    mccmnc_tuple: "311480"
+    spn: "Cox Mobile"
+    gid1: "BA01570000000000"
+    gid2: "B100000000000000"
+  }
+  carrier_attribute {
     mccmnc_tuple: "311600"
   }
 }
@@ -6869,10 +6876,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "302370"
     gid1: "DD"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "302370"
-    mccmnc_tuple: "30237"
   }
 }
 carrier_id {
@@ -9675,6 +9678,9 @@ carrier_id {
     mccmnc_tuple: "310960"
     spn: "strata"
   }
+  carrier_attribute {
+    mccmnc_tuple: "312290"
+  }
 }
 carrier_id {
   canonical_id: 2321
@@ -10940,6 +10946,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2503
+  carrier_name: "Boost"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "BOOST"
+  }
+}
+carrier_id {
   canonical_id: 2504
   carrier_name: "Liberty Mobile"
   carrier_attribute {
@@ -11411,13 +11425,70 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2560
+  carrier_name: "U+264A"
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302760"
+    gid1: "F1"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4280"
+  }
+}
+carrier_id {
+  canonical_id: 2561
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "20838"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2562
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "26214"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2563
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "20417"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2564
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "23487"
+    spn: "Lebara"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
     mccmnc_tuple: "310280"
     mccmnc_tuple: "310410"
+    mccmnc_tuple: "311180"
     gid1: "DDFF"
     gid1: "DEFF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "DDFF"
   }
   parent_canonical_id: 2022
 }
@@ -11743,4 +11814,40 @@ carrier_id {
   }
   parent_canonical_id: 2531
 }
-version: 67108887
+carrier_id {
+  canonical_id: 10032
+  carrier_name: "U+264A-3AT Operational"
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040D"
+  }
+  parent_canonical_id: 2560
+}
+carrier_id {
+  canonical_id: 10033
+  carrier_name: "U+264A-3AT Provisioning"
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040E"
+  }
+  parent_canonical_id: 2560
+}
+carrier_id {
+  canonical_id: 10034
+  carrier_name: "U+264A-Telus"
+  carrier_attribute {
+    mccmnc_tuple: "302760"
+    gid1: "F1"
+  }
+  parent_canonical_id: 2560
+}
+carrier_id {
+  canonical_id: 10035
+  carrier_name: "U+264A-TMO"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4280"
+  }
+  parent_canonical_id: 2560
+}
+version: 67108889
