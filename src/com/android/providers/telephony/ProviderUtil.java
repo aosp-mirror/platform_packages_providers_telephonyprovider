@@ -196,8 +196,12 @@ public class ProviderUtil {
         // Get emergency number list to add it to selection string.
         TelephonyManager tm = context.getSystemService(TelephonyManager.class);
         Map<Integer, List<EmergencyNumber>> emergencyNumberList = null;
-        if (tm != null) {
-            emergencyNumberList = tm.getEmergencyNumberList();
+        try {
+            if (tm != null) {
+                emergencyNumberList = tm.getEmergencyNumberList();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot get emergency number list: " + e);
         }
 
         String selectionByEmergencyNumber = null;
