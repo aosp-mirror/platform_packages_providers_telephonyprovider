@@ -4532,7 +4532,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1644
-  carrier_name: "KPN/Telfort"
+  carrier_name: "KPN Mobiel"
   carrier_attribute {
     mccmnc_tuple: "20408"
     mccmnc_tuple: "20412"
@@ -4696,6 +4696,9 @@ carrier_id {
   carrier_name: "NOS"
   carrier_attribute {
     mccmnc_tuple: "26803"
+    mccmnc_tuple: "26897"
+    mccmnc_tuple: "26898"
+    mccmnc_tuple: "26899"
   }
 }
 carrier_id {
@@ -11519,6 +11522,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2569
+  carrier_name: "Safaricom Telecommunications Ethiopia"
+  carrier_attribute {
+    mccmnc_tuple: "63602"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11894,4 +11904,4 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 117440537
+version: 117440538
