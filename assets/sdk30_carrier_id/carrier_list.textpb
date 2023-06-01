@@ -4852,7 +4852,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1644
-  carrier_name: "KPN/Telfort"
+  carrier_name: "KPN Mobiel"
   carrier_attribute {
     mccmnc_tuple: "20408"
     mccmnc_tuple: "20412"
@@ -5016,6 +5016,15 @@ carrier_id {
   carrier_name: "NOS"
   carrier_attribute {
     mccmnc_tuple: "26803"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26897"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26898"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26899"
   }
 }
 carrier_id {
@@ -12109,6 +12118,49 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2565
+  carrier_name: "Best Telecom"
+  carrier_attribute {
+    mccmnc_tuple: "45707"
+    imsi_prefix_xpattern: "457070001"
+    spn: "Best Mobile"
+  }
+}
+carrier_id {
+  canonical_id: 2566
+  carrier_name: "Zeop_RE"
+  carrier_attribute {
+    mccmnc_tuple: "64704"
+  }
+}
+carrier_id {
+  canonical_id: 2567
+  carrier_name: "SSi Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "302480"
+    imsi_prefix_xpattern: "302480017"
+    spn: "SSi Mobile"
+    gid1: "FF"
+  }
+}
+carrier_id {
+  canonical_id: 2568
+  carrier_name: "Eeyou Mobility"
+  carrier_attribute {
+    mccmnc_tuple: "302480"
+    imsi_prefix_xpattern: "3024800002"
+    spn: "Eeyou Mobility"
+    gid1: "FF"
+  }
+}
+carrier_id {
+  canonical_id: 2569
+  carrier_name: "Safaricom Telecommunications Ethiopia"
+  carrier_attribute {
+    mccmnc_tuple: "63602"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12369,4 +12421,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554491
+version: 33554492
