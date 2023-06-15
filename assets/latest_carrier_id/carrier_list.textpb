@@ -2521,6 +2521,7 @@ carrier_id {
   carrier_name: "Telstra"
   carrier_attribute {
     mccmnc_tuple: "50501"
+    mccmnc_tuple: "50539"
     mccmnc_tuple: "50571"
     mccmnc_tuple: "50572"
   }
@@ -3557,7 +3558,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1495
-  carrier_name: "Colt Mobile Telecommunications Ltd"
+  carrier_name: "Spitfire Network Services Ltd"
   carrier_attribute {
     mccmnc_tuple: "23405"
   }
@@ -10953,6 +10954,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "50501"
     spn: "BOOST"
+    spn: "Boost"
   }
 }
 carrier_id {
@@ -11529,6 +11531,40 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2570
+  carrier_name: "Netcom Group"
+  carrier_attribute {
+    mccmnc_tuple: "20801"
+    spn: "Netcom Mobile"
+    spn: "Mobile O"
+    spn: "YouPrice O"
+  }
+}
+carrier_id {
+  canonical_id: 2571
+  carrier_name: "IZI"
+  carrier_attribute {
+    mccmnc_tuple: "43701"
+    imsi_prefix_xpattern: "437018"
+  }
+}
+carrier_id {
+  canonical_id: 2572
+  carrier_name: "Southern"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "SOUTHERN"
+  }
+}
+carrier_id {
+  canonical_id: 2573
+  carrier_name: "Everyday"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Everyday"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11904,4 +11940,17 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 117440538
+carrier_id {
+  canonical_id: 10036
+  carrier_name: "Spectrum NaaS"
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid2: "A701490000000000"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid2: "A701490000000001"
+  }
+  parent_canonical_id: 2126
+}
+version: 117440539
