@@ -828,15 +828,16 @@ public class MmsProvider extends ContentProvider {
                         uri.getPathSegments().get(1);
 
                 try {
+                    File canonicalFile = new File(path).getCanonicalFile();
                     String partsDirPath = getContext().getDir(PARTS_DIR_NAME, 0).getCanonicalPath();
-                    if (!new File(path).getCanonicalPath().startsWith(partsDirPath)) {
+                    if (!canonicalFile.getPath().startsWith(partsDirPath + '/')) {
                         EventLog.writeEvent(0x534e4554, "240685104",
                                 Binder.getCallingUid(), (TAG + " update: path " + path +
                                         " does not start with " + partsDirPath));
                         return 0;
                     }
                     // Reset the file permission back to read for everyone but me.
-                    Os.chmod(path, 0644);
+                    Os.chmod(canonicalFile.getPath(), 0644);
                     if (LOCAL_LOGV) {
                         Log.d(TAG, "MmsProvider.update chmod is successful for path: " + path);
                     }
