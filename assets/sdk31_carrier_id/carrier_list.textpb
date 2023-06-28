@@ -2564,6 +2564,9 @@ carrier_id {
     mccmnc_tuple: "50571"
     mccmnc_tuple: "50572"
   }
+  carrier_attribute {
+    mccmnc_tuple: "50539"
+  }
 }
 carrier_id {
   canonical_id: 1346
@@ -3599,7 +3602,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1495
-  carrier_name: "Colt Mobile Telecommunications Ltd"
+  carrier_name: "Spitfire Network Services Ltd"
   carrier_attribute {
     mccmnc_tuple: "23405"
   }
@@ -10223,13 +10226,8 @@ carrier_id {
   carrier_name: "Telefonica"
   carrier_attribute {
     mccmnc_tuple: "26203"
-    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -10237,13 +10235,8 @@ carrier_id {
   carrier_name: "o2"
   carrier_attribute {
     mccmnc_tuple: "26207"
-    gid1: "000000FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "000500FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
     gid1: "010901FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "010251FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020302FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
-    gid1: "020902FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
   }
 }
 carrier_id {
@@ -11249,6 +11242,10 @@ carrier_id {
     mccmnc_tuple: "50501"
     spn: "BOOST"
   }
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Boost"
+  }
 }
 carrier_id {
   canonical_id: 2504
@@ -11846,6 +11843,30 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2571
+  carrier_name: "IZI"
+  carrier_attribute {
+    mccmnc_tuple: "43701"
+    imsi_prefix_xpattern: "437018"
+  }
+}
+carrier_id {
+  canonical_id: 2572
+  carrier_name: "Southern"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "SOUTHERN"
+  }
+}
+carrier_id {
+  canonical_id: 2573
+  carrier_name: "Everyday"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Everyday"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12146,4 +12167,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331684
+version: 50331685
