@@ -10,6 +10,7 @@ android_test {
         "compatibility-device-util-axt",
         "androidx.test.rules",
         "truth-prebuilt",
+        "androidx.test.core",
     ],
     libs: [
         "android.test.runner",
