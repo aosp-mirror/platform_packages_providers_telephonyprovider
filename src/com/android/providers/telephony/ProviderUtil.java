@@ -16,17 +16,31 @@
 
 package com.android.providers.telephony;
 
+import android.annotation.NonNull;
+import android.annotation.Nullable;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Process;
+import android.os.UserHandle;
+import android.os.UserManager;
 import android.provider.Telephony;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
+import android.telephony.TelephonyManager;
+import android.telephony.emergency.EmergencyNumber;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.telephony.SmsApplication;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * Helpers
@@ -125,5 +139,85 @@ public class ProviderUtil {
             return context;
         }
         return context.createDeviceProtectedStorageContext();
+    }
+
+    /**
+     * Get subscriptions associated with the user in the format of a selection string.
+     * @param context context
+     * @param userHandle caller user handle.
+     * @return subscriptions associated with the user in the format of a selection string
+     * or {@code null} if user is not associated with any subscription.
+     */
+    @Nullable
+    public static String getSelectionBySubIds(Context context, @NonNull UserHandle userHandle) {
+        List<SubscriptionInfo> associatedSubscriptionsList = new ArrayList<>();
+        SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
+        if (subManager != null) {
+            // Get list of subscriptions associated with this user.
+            associatedSubscriptionsList = subManager
+                    .getSubscriptionInfoListAssociatedWithUser(userHandle);
+        }
+
+        UserManager userManager = context.getSystemService(UserManager.class);
+        if ((userManager != null) && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
+            // SMS/MMS restored from another device have sub_id=-1.
+            // To query/update/delete those messages, sub_id=-1 should be in the selection string.
+            SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
+                    .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                    .build();
+            associatedSubscriptionsList.add(invalidSubInfo);
+        }
+
+        if (associatedSubscriptionsList.isEmpty()) {
+            return null;
+        }
+
+        // Converts [1,2,3,4,-1] to "'1','2','3','4','-1'" so that it can be appended to
+        // selection string
+        String subIdListStr = associatedSubscriptionsList.stream()
+                .map(subInfo -> ("'" + subInfo.getSubscriptionId() + "'"))
+                .collect(Collectors.joining(","));
+        String selectionBySubId = (Telephony.Sms.SUBSCRIPTION_ID + " IN (" + subIdListStr + ")");
+        if (Log.isLoggable(TAG, Log.VERBOSE)) {
+            Log.d(TAG, "getSelectionBySubIds: " + selectionBySubId);
+        }
+        return selectionBySubId;
+    }
+
+    /**
+     * Get emergency number list in the format of a selection string.
+     * @param context context
+     * @return emergency number list in the format of a selection string
+     * or {@code null} if emergency number list is empty.
+     */
+    @Nullable
+    public static String getSelectionByEmergencyNumbers(@NonNull Context context) {
+        // Get emergency number list to add it to selection string.
+        TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+        Map<Integer, List<EmergencyNumber>> emergencyNumberList = null;
+        try {
+            if (tm != null) {
+                emergencyNumberList = tm.getEmergencyNumberList();
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Cannot get emergency number list: " + e);
+        }
+
+        String selectionByEmergencyNumber = null;
+        if (emergencyNumberList != null && !emergencyNumberList.isEmpty()) {
+            String emergencyNumberListStr = "";
+            for (Map.Entry<Integer, List<EmergencyNumber>> entry : emergencyNumberList.entrySet()) {
+                if (!emergencyNumberListStr.isEmpty() && !entry.getValue().isEmpty()) {
+                    emergencyNumberListStr += ',';
+                }
+
+                emergencyNumberListStr += entry.getValue().stream()
+                        .map(emergencyNumber -> ("'" + emergencyNumber.getNumber() + "'"))
+                        .collect(Collectors.joining(","));
+            }
+            selectionByEmergencyNumber = Telephony.Sms.ADDRESS +
+                    " IN (" + emergencyNumberListStr + ")";
+        }
+        return selectionByEmergencyNumber;
     }
 }

@@ -16,11 +16,13 @@
 
 package com.android.providers.telephony;
 
+import android.util.Log;
+
 public class SqlQueryChecker {
     private static final String SELECT_TOKEN = "select";
 
     static void checkToken(String token) {
-        if (SELECT_TOKEN.equals(token.toLowerCase())) {
+        if (SELECT_TOKEN.equalsIgnoreCase(token)) {
             throw new IllegalArgumentException("SELECT token not allowed in query");
         }
     }
@@ -32,14 +34,18 @@ public class SqlQueryChecker {
      */
     static void checkQueryParametersForSubqueries(String[] projection,
             String selection, String sortOrder) {
+        Log.v("MmsProvider", "inside checkQueryParametersForSubqueries");
         if (projection != null) {
             for (String proj : projection) {
+                Log.v("MmsProvider", "checkQueryParametersForSubqueries checking proj: " + proj);
                 SQLiteTokenizer.tokenize(proj, SQLiteTokenizer.OPTION_NONE,
                         SqlQueryChecker::checkToken);
             }
         }
+        Log.v("MmsProvider", "checkQueryParametersForSubqueries checking sel: " + selection);
         SQLiteTokenizer.tokenize(selection, SQLiteTokenizer.OPTION_NONE,
                 SqlQueryChecker::checkToken);
+        Log.v("MmsProvider", "checkQueryParametersForSubqueries checking sort: " + sortOrder);
         SQLiteTokenizer.tokenize(sortOrder, SQLiteTokenizer.OPTION_NONE,
                 SqlQueryChecker::checkToken);
     }
