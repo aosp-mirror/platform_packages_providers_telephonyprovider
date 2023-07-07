@@ -31,6 +31,7 @@ import android.database.DefaultDatabaseErrorHandler;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteException;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.FileUtils;
 import android.os.storage.StorageManager;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
@@ -44,11 +45,13 @@ import android.provider.Telephony.MmsSms.PendingMessages;
 import android.provider.Telephony.Sms;
 import android.provider.Telephony.Sms.Intents;
 import android.provider.Telephony.Threads;
+import android.telephony.AnomalyReporter;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneFactory;
+import com.android.internal.telephony.TelephonyStatsLog;
 
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
@@ -60,6 +63,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
@@ -81,6 +85,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String TAG = "MmsSmsDatabaseHelper";
+    private static final int SECURITY_EXCEPTION = TelephonyStatsLog
+            .MMS_SMS_DATABASE_HELPER_ON_UPGRADE_FAILED__FAILURE_CODE__FAILURE_SECURITY_EXCEPTION;
+    private static final int FAILURE_UNKNOWN = TelephonyStatsLog
+        .MMS_SMS_DATABASE_HELPER_ON_UPGRADE_FAILED__FAILURE_CODE__FAILURE_UNKNOWN;
+    private static final int SQL_EXCEPTION = TelephonyStatsLog
+            .MMS_SMS_DATABASE_HELPER_ON_UPGRADE_FAILED__FAILURE_CODE__FAILURE_SQL_EXCEPTION;
+    private static final int IO_EXCEPTION = TelephonyStatsLog
+            .MMS_SMS_DATABASE_HELPER_ON_UPGRADE_FAILED__FAILURE_CODE__FAILURE_IO_EXCEPTION;
 
     private static final String SMS_UPDATE_THREAD_READ_BODY =
                         "  UPDATE threads SET read = " +
@@ -252,7 +264,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static boolean sFakeLowStorageTest = false;     // for testing only
 
     static final String DATABASE_NAME = "mmssms.db";
-    static final int DATABASE_VERSION = 67;
+    static final int DATABASE_VERSION = 68;
     private static final int IDLE_CONNECTION_TIMEOUT_MS = 30000;
 
     private final Context mContext;
@@ -263,6 +275,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     private static final String INITIAL_CREATE_DONE = "initial_create_done";
     // cache for INITIAL_CREATE_DONE shared pref so access to it can be avoided when possible
     private static AtomicBoolean sInitialCreateDone = new AtomicBoolean(false);
+
+    private static final UUID CREATE_CALLED_MULTIPLE_TIMES_UUID = UUID.fromString(
+        "6ead002e-c001-4c05-9bca-67d7c4e29782");
 
     /**
      * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
@@ -332,7 +347,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      */
     /* package */ static synchronized MmsSmsDatabaseHelper getInstanceForCe(Context context) {
         if (sCeInstance == null) {
-            if (StorageManager.isFileEncryptedNativeOrEmulated()) {
+            if (StorageManager.isFileEncrypted()) {
                 Context ceContext = ProviderUtil.getCredentialEncryptedContext(context);
                 sCeInstance = new MmsSmsDatabaseHelper(ceContext, getDbErrorHandler(ceContext));
             } else {
@@ -523,6 +538,21 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         return rows;
     }
 
+    private void clearMmsParts() {
+        try {
+            String partsDirPath = mContext.getDir(MmsProvider.PARTS_DIR_NAME, 0)
+                    .getCanonicalPath();
+            localLog("clearMmsParts: removing all attachments from: " + partsDirPath);
+            File partsDir = new File(partsDirPath);
+            if (!FileUtils.deleteContents(partsDir)) {
+                localLogWtf("clearMmsParts: couldn't delete all attachments");
+            }
+        }
+        catch (IOException e){
+            Log.e(TAG, "clearMmsParts: failed " + e, e);
+        }
+    }
+
     @Override
     public void onCreate(SQLiteDatabase db) {
         localLog("onCreate: Creating all SMS-MMS tables.");
@@ -535,8 +565,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         createWordsTables(db);
         createIndices(db);
 
+        clearMmsParts();    // leave no dangling MMS attachments when rebuilding the DB
+
         // if FBE is not supported, or if this onCreate is for CE partition database
-        if (!StorageManager.isFileEncryptedNativeOrEmulated()
+        if (!StorageManager.isFileEncrypted()
                 || (mContext != null && mContext.isCredentialProtectedStorage())) {
             localLog("onCreate: broadcasting ACTION_SMS_MMS_DB_CREATED");
             // Broadcast ACTION_SMS_MMS_DB_CREATED
@@ -546,7 +578,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             if (isInitialCreateDone()) {
                 // this onCreate is called after onCreate was called once initially. The db file
                 // disappeared mysteriously?
-                localLogWtf("onCreate: was already called once earlier");
+                AnomalyReporter.reportAnomaly(CREATE_CALLED_MULTIPLE_TIMES_UUID,
+                                              "MmsSmsDatabaseHelper: onCreate() was already "
+                                              + "called once earlier");
                 intent.putExtra(Intents.EXTRA_IS_INITIAL_CREATE, false);
             } else {
                 setInitialCreateDone();
@@ -608,6 +642,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, body);
                         cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, id);
                         cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+                        cv.put(MmsSms.WordsTable.SUBSCRIPTION_ID, -1);
                         db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
                     }
                 }
@@ -641,6 +676,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         cv.put(Telephony.MmsSms.WordsTable.INDEXED_TEXT, body);
                         cv.put(Telephony.MmsSms.WordsTable.SOURCE_ROW_ID, id);
                         cv.put(Telephony.MmsSms.WordsTable.TABLE_ID, 1);
+                        cv.put(MmsSms.WordsTable.SUBSCRIPTION_ID, -1);
                         db.insert(TABLE_WORDS, Telephony.MmsSms.WordsTable.INDEXED_TEXT, cv);
                     }
                 }
@@ -653,8 +689,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void createWordsTables(SQLiteDatabase db) {
+        createWordsTables(db, -1, -1, -1);
+    }
+
+    private void createWordsTables(
+            SQLiteDatabase db, int oldVersion, int currentVersion, int upgradeVersion) {
         try {
-            db.execSQL("CREATE VIRTUAL TABLE words USING FTS3 (_id INTEGER PRIMARY KEY, index_text TEXT, source_id INTEGER, table_to_use INTEGER);");
+            db.execSQL("CREATE VIRTUAL TABLE words USING FTS3 (_id INTEGER PRIMARY KEY, index_text TEXT, source_id INTEGER, table_to_use INTEGER, sub_id INTEGER);");
 
             // monitor the sms table
             // NOTE don't handle inserts using a trigger because it has an unwanted
@@ -670,6 +711,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             populateWordsTable(db);
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating words table: " + ex.toString());
+            logException(ex, oldVersion, currentVersion, upgradeVersion);
         }
     }
 
@@ -681,112 +723,165 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void createThreadIdIndex(SQLiteDatabase db) {
+        createThreadIdIndex(db, -1, -1, -1);
+    }
+
+    private void createThreadIdIndex(
+            SQLiteDatabase db, int oldVersion, int currentVersion, int upgradeVersion) {
         try {
             db.execSQL("CREATE INDEX IF NOT EXISTS typeThreadIdIndex ON sms" +
             " (type, thread_id);");
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating indices: " + ex.toString());
+            logException(ex, oldVersion, currentVersion, upgradeVersion);
         }
     }
 
     private void createThreadIdDateIndex(SQLiteDatabase db) {
+        createThreadIdDateIndex(db, -1, -1, -1);
+    }
+
+    private void createThreadIdDateIndex(
+            SQLiteDatabase db, int oldVersion, int currentVersion, int upgradeVersion) {
         try {
             db.execSQL("CREATE INDEX IF NOT EXISTS threadIdDateIndex ON sms" +
             " (thread_id, date);");
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating indices: " + ex.toString());
+            logException(ex, oldVersion, currentVersion, upgradeVersion);
         }
     }
 
     private void createPartMidIndex(SQLiteDatabase db) {
+        createPartMidIndex(db, -1, -1, -1);
+    }
+
+    private void createPartMidIndex(
+            SQLiteDatabase db, int oldVersion, int currentVersion, int upgradeVersion) {
         try {
             db.execSQL("CREATE INDEX IF NOT EXISTS partMidIndex ON part (mid)");
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating indices: " + ex.toString());
+            logException(ex, oldVersion, currentVersion, upgradeVersion);
         }
     }
 
     private void createAddrMsgIdIndex(SQLiteDatabase db) {
+        createAddrMsgIdIndex(db, -1, -1, -1);
+    }
+
+    private void createAddrMsgIdIndex(
+            SQLiteDatabase db, int oldVersion, int currentVersion, int upgradeVersion) {
         try {
             db.execSQL("CREATE INDEX IF NOT EXISTS addrMsgIdIndex ON addr (msg_id)");
         } catch (Exception ex) {
             Log.e(TAG, "got exception creating indices: " + ex.toString());
+            logException(ex, oldVersion, currentVersion, upgradeVersion);
         }
     }
+
+
+    @VisibleForTesting
+    public static String CREATE_ADDR_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
+            Addr._ID + " INTEGER PRIMARY KEY," +
+            Addr.MSG_ID + " INTEGER," +
+            Addr.CONTACT_ID + " INTEGER," +
+            Addr.ADDRESS + " TEXT," +
+            Addr.TYPE + " INTEGER," +
+            Addr.CHARSET + " INTEGER," +
+            Addr.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                    ");";
+
+    @VisibleForTesting
+    public static String CREATE_PART_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_PART + " (" +
+            Part._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+            Part.MSG_ID + " INTEGER," +
+            Part.SEQ + " INTEGER DEFAULT 0," +
+            Part.CONTENT_TYPE + " TEXT," +
+            Part.NAME + " TEXT," +
+            Part.CHARSET + " INTEGER," +
+            Part.CONTENT_DISPOSITION + " TEXT," +
+            Part.FILENAME + " TEXT," +
+            Part.CONTENT_ID + " TEXT," +
+            Part.CONTENT_LOCATION + " TEXT," +
+            Part.CT_START + " INTEGER," +
+            Part.CT_TYPE + " TEXT," +
+            Part._DATA + " TEXT," +
+            Part.TEXT + " TEXT," +
+            Part.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                    ");";
+
+    public static String CREATE_PDU_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_PDU + " (" +
+            Mms._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+            Mms.THREAD_ID + " INTEGER," +
+            Mms.DATE + " INTEGER," +
+            Mms.DATE_SENT + " INTEGER DEFAULT 0," +
+            Mms.MESSAGE_BOX + " INTEGER," +
+            Mms.READ + " INTEGER DEFAULT 0," +
+            Mms.MESSAGE_ID + " TEXT," +
+            Mms.SUBJECT + " TEXT," +
+            Mms.SUBJECT_CHARSET + " INTEGER," +
+            Mms.CONTENT_TYPE + " TEXT," +
+            Mms.CONTENT_LOCATION + " TEXT," +
+            Mms.EXPIRY + " INTEGER," +
+            Mms.MESSAGE_CLASS + " TEXT," +
+            Mms.MESSAGE_TYPE + " INTEGER," +
+            Mms.MMS_VERSION + " INTEGER," +
+            Mms.MESSAGE_SIZE + " INTEGER," +
+            Mms.PRIORITY + " INTEGER," +
+            Mms.READ_REPORT + " INTEGER," +
+            Mms.REPORT_ALLOWED + " INTEGER," +
+            Mms.RESPONSE_STATUS + " INTEGER," +
+            Mms.STATUS + " INTEGER," +
+            Mms.TRANSACTION_ID + " TEXT," +
+            Mms.RETRIEVE_STATUS + " INTEGER," +
+            Mms.RETRIEVE_TEXT + " TEXT," +
+            Mms.RETRIEVE_TEXT_CHARSET + " INTEGER," +
+            Mms.READ_STATUS + " INTEGER," +
+            Mms.CONTENT_CLASS + " INTEGER," +
+            Mms.RESPONSE_TEXT + " TEXT," +
+            Mms.DELIVERY_TIME + " INTEGER," +
+            Mms.DELIVERY_REPORT + " INTEGER," +
+            Mms.LOCKED + " INTEGER DEFAULT 0," +
+            Mms.SUBSCRIPTION_ID + " INTEGER DEFAULT "
+                    + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
+            Mms.SEEN + " INTEGER DEFAULT 0," +
+            Mms.CREATOR + " TEXT," +
+            Mms.TEXT_ONLY + " INTEGER DEFAULT 0);";
+
+    @VisibleForTesting
+    public static String CREATE_RATE_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_RATE + " (" +
+            Rate.SENT_TIME + " INTEGER," +
+                    Rate.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                    ");";
+
+    @VisibleForTesting
+    public static String CREATE_DRM_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_DRM + " (" +
+            BaseColumns._ID + " INTEGER PRIMARY KEY," +
+            "_data TEXT," +
+            "sub_id INTEGER DEFAULT -1" +
+                    ");";
+
 
     @VisibleForTesting
     void createMmsTables(SQLiteDatabase db) {
         // N.B.: Whenever the columns here are changed, the columns in
         // {@ref MmsSmsProvider} must be changed to match.
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_PDU + " (" +
-                   Mms._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-                   Mms.THREAD_ID + " INTEGER," +
-                   Mms.DATE + " INTEGER," +
-                   Mms.DATE_SENT + " INTEGER DEFAULT 0," +
-                   Mms.MESSAGE_BOX + " INTEGER," +
-                   Mms.READ + " INTEGER DEFAULT 0," +
-                   Mms.MESSAGE_ID + " TEXT," +
-                   Mms.SUBJECT + " TEXT," +
-                   Mms.SUBJECT_CHARSET + " INTEGER," +
-                   Mms.CONTENT_TYPE + " TEXT," +
-                   Mms.CONTENT_LOCATION + " TEXT," +
-                   Mms.EXPIRY + " INTEGER," +
-                   Mms.MESSAGE_CLASS + " TEXT," +
-                   Mms.MESSAGE_TYPE + " INTEGER," +
-                   Mms.MMS_VERSION + " INTEGER," +
-                   Mms.MESSAGE_SIZE + " INTEGER," +
-                   Mms.PRIORITY + " INTEGER," +
-                   Mms.READ_REPORT + " INTEGER," +
-                   Mms.REPORT_ALLOWED + " INTEGER," +
-                   Mms.RESPONSE_STATUS + " INTEGER," +
-                   Mms.STATUS + " INTEGER," +
-                   Mms.TRANSACTION_ID + " TEXT," +
-                   Mms.RETRIEVE_STATUS + " INTEGER," +
-                   Mms.RETRIEVE_TEXT + " TEXT," +
-                   Mms.RETRIEVE_TEXT_CHARSET + " INTEGER," +
-                   Mms.READ_STATUS + " INTEGER," +
-                   Mms.CONTENT_CLASS + " INTEGER," +
-                   Mms.RESPONSE_TEXT + " TEXT," +
-                   Mms.DELIVERY_TIME + " INTEGER," +
-                   Mms.DELIVERY_REPORT + " INTEGER," +
-                   Mms.LOCKED + " INTEGER DEFAULT 0," +
-                   Mms.SUBSCRIPTION_ID + " INTEGER DEFAULT "
-                           + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-                   Mms.SEEN + " INTEGER DEFAULT 0," +
-                   Mms.CREATOR + " TEXT," +
-                   Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
-                   ");");
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
-                   Addr._ID + " INTEGER PRIMARY KEY," +
-                   Addr.MSG_ID + " INTEGER," +
-                   Addr.CONTACT_ID + " INTEGER," +
-                   Addr.ADDRESS + " TEXT," +
-                   Addr.TYPE + " INTEGER," +
-                   Addr.CHARSET + " INTEGER);");
+        db.execSQL(CREATE_PDU_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_PART + " (" +
-                   Part._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-                   Part.MSG_ID + " INTEGER," +
-                   Part.SEQ + " INTEGER DEFAULT 0," +
-                   Part.CONTENT_TYPE + " TEXT," +
-                   Part.NAME + " TEXT," +
-                   Part.CHARSET + " INTEGER," +
-                   Part.CONTENT_DISPOSITION + " TEXT," +
-                   Part.FILENAME + " TEXT," +
-                   Part.CONTENT_ID + " TEXT," +
-                   Part.CONTENT_LOCATION + " TEXT," +
-                   Part.CT_START + " INTEGER," +
-                   Part.CT_TYPE + " TEXT," +
-                   Part._DATA + " TEXT," +
-                   Part.TEXT + " TEXT);");
+        db.execSQL(CREATE_ADDR_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_RATE + " (" +
-                   Rate.SENT_TIME + " INTEGER);");
+        db.execSQL(CREATE_PART_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_DRM + " (" +
-                   BaseColumns._ID + " INTEGER PRIMARY KEY," +
-                   "_data TEXT);");
+        db.execSQL(CREATE_RATE_TABLE_STR);
+
+        db.execSQL(CREATE_DRM_TABLE_STR);
 
         // Restricted view of pdu table, only sent/received messages without wap pushes
         db.execSQL("CREATE VIEW " + MmsProvider.VIEW_PDU_RESTRICTED + " AS " +
@@ -1015,7 +1110,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             "CREATE TABLE attachments (" +
             "sms_id INTEGER," +
             "content_url TEXT," +
-            "offset INTEGER);";
+            "offset INTEGER," +
+            "sub_id INTEGER DEFAULT -1" +
+                    ");";
 
     /**
      * This table is used by the SMS dispatcher to hold
@@ -1054,7 +1151,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("CREATE TABLE sr_pending (" +
                    "reference_number INTEGER," +
                    "action TEXT," +
-                   "data TEXT);");
+                   "data TEXT," +
+                   "sub_id INTEGER DEFAULT -1" +
+                ");");
 
         // Restricted view of sms table, only sent/received messages
         db.execSQL("CREATE VIEW " + SmsProvider.VIEW_SMS_RESTRICTED + " AS " +
@@ -1103,7 +1202,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
          */
         db.execSQL("CREATE TABLE canonical_addresses (" +
                    "_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                   "address TEXT);");
+                   "address TEXT," +
+                   Telephony.CanonicalAddressesColumns.SUBSCRIPTION_ID + " INTEGER DEFAULT -1"
+                + ");");
 
         /**
          * This table maps the subject and an ordered set of recipient
@@ -1124,7 +1225,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                    Threads.ARCHIVED + " INTEGER DEFAULT 0," +
                    Threads.TYPE + " INTEGER DEFAULT 0," +
                    Threads.ERROR + " INTEGER DEFAULT 0," +
-                   Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0);");
+                   Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0," +
+                   Threads.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                ");");
 
         /**
          * This table stores the queue of messages to be sent/downloaded.
@@ -1248,6 +1351,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 41);
                 break;
             } finally {
                 db.endTransaction();
@@ -1264,6 +1368,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 42);
                 break;
             } finally {
                 db.endTransaction();
@@ -1280,6 +1385,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 43);
                 break;
             } finally {
                 db.endTransaction();
@@ -1296,6 +1402,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 44);
                 break;
             } finally {
                 db.endTransaction();
@@ -1312,6 +1419,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 45);
                 break;
             } finally {
                 db.endTransaction();
@@ -1323,10 +1431,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             }
             db.beginTransaction();
             try {
-                upgradeDatabaseToVersion46(db);
+                upgradeDatabaseToVersion46(db, oldVersion, currentVersion);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 46);
                 break;
             } finally {
                 db.endTransaction();
@@ -1343,6 +1452,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 47);
                 break;
             } finally {
                 db.endTransaction();
@@ -1359,6 +1469,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 48);
                 break;
             } finally {
                 db.endTransaction();
@@ -1371,10 +1482,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             db.beginTransaction();
             try {
-                createWordsTables(db);
+                createWordsTables(db, oldVersion, currentVersion, 49);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 49);
                 break;
             } finally {
                 db.endTransaction();
@@ -1386,10 +1498,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             }
             db.beginTransaction();
             try {
-                createThreadIdIndex(db);
+                createThreadIdIndex(db, oldVersion, currentVersion, 50);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 50);
                 break; // force to destroy all old data;
             } finally {
                 db.endTransaction();
@@ -1406,6 +1519,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 51);
                 break;
             } finally {
                 db.endTransaction();
@@ -1428,6 +1542,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 53);
                 break;
             } finally {
                 db.endTransaction();
@@ -1444,6 +1559,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 54);
                 break;
             } finally {
                 db.endTransaction();
@@ -1460,6 +1576,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 55);
                 break;
             } finally {
                 db.endTransaction();
@@ -1476,6 +1593,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 56);
                 break;
             } finally {
                 db.endTransaction();
@@ -1492,6 +1610,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 57);
                 break;
             } finally {
                 db.endTransaction();
@@ -1508,6 +1627,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 58);
                 break;
             } finally {
                 db.endTransaction();
@@ -1524,6 +1644,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 59);
                 break;
             } finally {
                 db.endTransaction();
@@ -1540,6 +1661,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 60);
                 break;
             } finally {
                 db.endTransaction();
@@ -1556,6 +1678,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 61);
                 break;
             } finally {
                 db.endTransaction();
@@ -1568,10 +1691,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             db.beginTransaction();
             try {
-                upgradeDatabaseToVersion62(db);
+                upgradeDatabaseToVersion62(db, oldVersion, currentVersion);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 62);
                 break;
             } finally {
                 db.endTransaction();
@@ -1585,10 +1709,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             db.beginTransaction();
             try {
                 // upgrade to 63: just add a happy little index.
-                createThreadIdDateIndex(db);
+                createThreadIdDateIndex(db, oldVersion, currentVersion, 63);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 63);
                 break;
             } finally {
                 db.endTransaction();
@@ -1605,6 +1730,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 64);
                 break;
             } finally {
                 db.endTransaction();
@@ -1617,10 +1743,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             db.beginTransaction();
             try {
-                upgradeDatabaseToVersion65(db);
+                upgradeDatabaseToVersion65(db, oldVersion, currentVersion);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 65);
                 break;
             } finally {
                 db.endTransaction();
@@ -1633,10 +1760,11 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
             db.beginTransaction();
             try {
-                upgradeDatabaseToVersion66(db);
+                upgradeDatabaseToVersion66(db, oldVersion, currentVersion);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 66);
                 break;
             } finally {
                 db.endTransaction();
@@ -1648,10 +1776,26 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
             }
             db.beginTransaction();
             try {
-                createPartMidIndex(db);
-                createAddrMsgIdIndex(db);
+                createPartMidIndex(db, oldVersion, currentVersion, 67);
+                createAddrMsgIdIndex(db, oldVersion, currentVersion, 67);
                 db.setTransactionSuccessful();
             } catch (Throwable ex) {
+                Log.e(TAG, ex.getMessage(), ex);
+                logException(ex, oldVersion, currentVersion, 67);
+                break; // force to destroy all old data;
+            } finally {
+                db.endTransaction();
+            }
+            // fall through
+        case 67:
+            if (currentVersion <= 67) {
+                return;
+            }
+            db.beginTransaction();
+            try {
+                upgradeDatabaseToVersion68(db, oldVersion, currentVersion);
+                db.setTransactionSuccessful();
+            } catch(Throwable ex) {
                 Log.e(TAG, ex.getMessage(), ex);
                 break; // force to destroy all old data;
             } finally {
@@ -1661,30 +1805,38 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
 
         Log.e(TAG, "Destroying all old data.");
-        localLog("onUpgrade: Calling dropAll() and onCreate(). Upgrading database"
+        localLog("onUpgrade: Calling wipeDbOnFailedUpgrade() and onCreate()."
+                + " Upgrading database"
                 + " from version " + oldVersion + " to " + currentVersion + "failed.");
-        dropAll(db);
+        db = wipeDbOnFailedUpgrade(db);
         onCreate(db);
     }
 
-    private void dropAll(SQLiteDatabase db) {
-        // Clean the database out in order to start over from scratch.
-        // We don't need to drop our triggers here because SQLite automatically
-        // drops a trigger when its attached database is dropped.
-        localLog("****DROPPING ALL SMS-MMS TABLES****");
-        db.execSQL("DROP TABLE IF EXISTS canonical_addresses");
-        db.execSQL("DROP TABLE IF EXISTS threads");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsSmsProvider.TABLE_PENDING_MSG);
-        db.execSQL("DROP TABLE IF EXISTS sms");
-        db.execSQL("DROP TABLE IF EXISTS raw");
-        db.execSQL("DROP TABLE IF EXISTS attachments");
-        db.execSQL("DROP TABLE IF EXISTS thread_ids");
-        db.execSQL("DROP TABLE IF EXISTS sr_pending");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_PDU + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_ADDR + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_PART + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_RATE + ";");
-        db.execSQL("DROP TABLE IF EXISTS " + MmsProvider.TABLE_DRM + ";");
+    private void logException(
+            Throwable ex, int oldVersion, int currentVersion, int upgradeVersion) {
+        int exception = FAILURE_UNKNOWN;
+        if (ex instanceof SQLiteException) {
+            exception = SQL_EXCEPTION;
+        } else if (ex instanceof IOException) {
+            exception = IO_EXCEPTION;
+        } else if (ex instanceof SecurityException) {
+            exception = SECURITY_EXCEPTION;
+        }
+        TelephonyStatsLog.write(
+            TelephonyStatsLog.MMS_SMS_DATABASE_HELPER_ON_UPGRADE_FAILED,
+            oldVersion,
+            currentVersion,
+            upgradeVersion,
+            exception);
+    }
+
+    public SQLiteDatabase wipeDbOnFailedUpgrade(SQLiteDatabase db) {
+        // Delete the database in order to start over from scratch.
+        File databaseFile = new File(db.getPath());
+        db.close();
+        boolean didDelete = SQLiteDatabase.deleteDatabase(databaseFile);
+        Log.e(TAG, "wipeDbOnFailedUpgrade: didDelete: " + didDelete);
+        return getWritableDatabase();
     }
 
     private void upgradeDatabaseToVersion41(SQLiteDatabase db) {
@@ -1733,7 +1885,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("ALTER TABLE pdu ADD COLUMN " + Mms.LOCKED + " INTEGER DEFAULT 0");
     }
 
-    private void upgradeDatabaseToVersion46(SQLiteDatabase db) {
+    private void upgradeDatabaseToVersion46(SQLiteDatabase db, int oldVersion, int currentVersion) {
         // add the "text" column for caching inline text (e.g. strings) instead of
         // putting them in an external file
         db.execSQL("ALTER TABLE part ADD COLUMN " + Part.TEXT + " TEXT");
@@ -1771,6 +1923,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                         } catch (IOException e) {
                             // TODO Auto-generated catch block
                             e.printStackTrace();
+                            logException(e, oldVersion, currentVersion, 46);
                         }
                     }
                 }
@@ -1783,6 +1936,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                     (new File(pathToDelete)).delete();
                 } catch (SecurityException ex) {
                     Log.e(TAG, "unable to clean up old mms file for " + pathToDelete, ex);
+                    logException(ex, oldVersion, currentVersion, 46);
                 }
             }
             if (textRows != null) {
@@ -1904,7 +2058,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     }
 
-    private void upgradeDatabaseToVersion62(SQLiteDatabase db) {
+    private void upgradeDatabaseToVersion62(SQLiteDatabase db, int oldVersion, int currentVersion) {
         // When a non-FBE device is upgraded to N, all MMS attachment files are moved from
         // /data/data to /data/user_de. We need to update the paths stored in the parts table to
         // reflect this change.
@@ -1914,6 +2068,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
         catch (IOException e){
             Log.e(TAG, "openFile: check file path failed " + e, e);
+            logException(e, oldVersion, currentVersion, 62);
             return;
         }
 
@@ -1938,7 +2093,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW +" ADD COLUMN deleted INTEGER DEFAULT 0");
     }
 
-    private void upgradeDatabaseToVersion65(SQLiteDatabase db) {
+    private void upgradeDatabaseToVersion65(SQLiteDatabase db, int oldVersion, int currentVersion) {
         // aosp and internal code diverged at version 63. Aosp did createThreadIdDateIndex() on
         // upgrading to 63, whereas internal (nyc) added column 'deleted'. A device upgrading from
         // nyc will have columns deleted and message_body in raw table with version 64, but not
@@ -1948,17 +2103,55 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         } catch (SQLiteException e) {
             Log.w(TAG, "[upgradeDatabaseToVersion65] Exception adding column message_body; " +
                     "trying createThreadIdDateIndex() instead: " + e);
+            logException(e, oldVersion, currentVersion, 65);
             createThreadIdDateIndex(db);
         }
     }
 
-    private void upgradeDatabaseToVersion66(SQLiteDatabase db) {
+    private void upgradeDatabaseToVersion66(SQLiteDatabase db, int oldVersion, int currentVersion) {
         try {
             db.execSQL("ALTER TABLE " + SmsProvider.TABLE_RAW
                     + " ADD COLUMN display_originating_addr TEXT");
         } catch (SQLiteException e) {
             Log.e(TAG, "[upgradeDatabaseToVersion66] Exception adding column "
                     + "display_originating_addr; " + e);
+            logException(e, oldVersion, currentVersion, 66);
+        }
+    }
+
+    private void upgradeDatabaseToVersion68(SQLiteDatabase db, int oldVersion, int currentVersion) {
+        try {
+            db.execSQL("ALTER TABLE " + MmsSmsProvider.TABLE_THREADS
+                    + " ADD COLUMN " + Telephony.ThreadsColumns.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_PART
+                    + " ADD COLUMN " + Part.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_CANONICAL_ADDRESSES
+                    + " ADD COLUMN " + Telephony.CanonicalAddressesColumns.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_ATTACHMENTS
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_ADDR
+                    + " ADD COLUMN " + Addr.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_RATE
+                    + " ADD COLUMN " + Rate.SUBSCRIPTION_ID
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_DRM
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + MmsProvider.TABLE_WORDS
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+            db.execSQL("ALTER TABLE " + SmsProvider.TABLE_SR_PENDING
+                    + " ADD COLUMN sub_id"
+                    + " INTEGER DEFAULT " + SubscriptionManager.INVALID_SUBSCRIPTION_ID);
+        } catch (SQLiteException e) {
+            Log.e(TAG, "[upgradeDatabaseToVersion68] Exception adding column "
+                    + "sub_id; " + e);
+            logException(e, oldVersion, currentVersion, 68);
         }
     }
 
@@ -2148,7 +2341,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 Threads.READ + " INTEGER DEFAULT 1," +
                 Threads.TYPE + " INTEGER DEFAULT 0," +
                 Threads.ERROR + " INTEGER DEFAULT 0," +
-                Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0);");
+                Threads.HAS_ATTACHMENT + " INTEGER DEFAULT 0," +
+                Threads.SUBSCRIPTION_ID + " INTEGER DEFAULT -1"
+                +");");
 
         db.execSQL("INSERT INTO threads_temp SELECT * from threads;");
         db.execSQL("DROP TABLE threads;");
@@ -2170,7 +2365,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         // Have to create a new temp canonical_addresses table. Copy all the info from the old
         // table. Drop the old table and rename the new table to that of the old.
         db.execSQL("CREATE TABLE canonical_addresses_temp (_id INTEGER PRIMARY KEY AUTOINCREMENT," +
-                "address TEXT);");
+                "address TEXT," +
+                Telephony.CanonicalAddressesColumns.SUBSCRIPTION_ID + " INTEGER DEFAULT -1" +
+                ");");
 
         db.execSQL("INSERT INTO canonical_addresses_temp SELECT * from canonical_addresses;");
         db.execSQL("DROP TABLE canonical_addresses;");
@@ -2205,7 +2402,9 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
                 Part.CT_START + " INTEGER," +
                 Part.CT_TYPE + " TEXT," +
                 Part._DATA + " TEXT," +
-                Part.TEXT + " TEXT);");
+                Part.TEXT + " TEXT," +
+                Part.SUBSCRIPTION_ID + " INTEGER DEFAULT -1"
+                + ");");
 
         db.execSQL("INSERT INTO part_temp SELECT * from part;");
         db.execSQL("DROP TABLE part;");
