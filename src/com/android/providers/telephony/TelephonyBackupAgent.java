@@ -31,11 +31,11 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.database.DatabaseUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.os.PowerManager;
+import android.os.UserHandle;
 import android.preference.PreferenceManager;
 import android.provider.BaseColumns;
 import android.provider.Telephony;
@@ -288,6 +288,8 @@ public class TelephonyBackupAgent extends BackupAgent {
     private static final String QUOTA_RESET_TIME = "reset_quota_time";
     private static final long QUOTA_RESET_INTERVAL = 30 * AlarmManager.INTERVAL_DAY; // 30 days.
 
+    // Key for explicitly settings whether mms restore should notify or not
+    static final String NOTIFY = "notify";
 
     static {
         // Consider restored messages read and seen by default. The actual data can override
@@ -732,6 +734,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         jsonReader.beginArray();
         int total = 0;
         int numExceptions = 0;
+        final int notifyAfterCount = mMaxMsgPerFile;
         while (jsonReader.hasNext()) {
             final Mms mms = readMmsFromReader(jsonReader);
             if (DEBUG) {
@@ -747,15 +750,30 @@ public class TelephonyBackupAgent extends BackupAgent {
                     continue;
                 }
                 total++;
+                mms.values.put(NOTIFY, false);
                 addMmsMessage(mms);
+                // notifying every 1000 messages to follow sms restore pattern
+                if (total % notifyAfterCount == 0) {
+                    notifyBulkMmsChange();
+                }
             } catch (Exception e) {
                 Log.e(TAG, "putMmsMessagesToProvider", e);
                 numExceptions++;
                 DeferredSmsMmsRestoreService.localLog("putMmsMessagesToProvider: Exception " + e);
             }
         }
+        // notifying for any remaining messages
+        if (total % notifyAfterCount > 0) {
+            notifyBulkMmsChange();
+        }
         Log.d(TAG, "putMmsMessagesToProvider handled " + total + " new messages.");
         incremenentSharedPref(false, total, numExceptions);
+    }
+
+    private void notifyBulkMmsChange() {
+        mContentResolver.notifyChange(Telephony.MmsSms.CONTENT_URI, null,
+                ContentResolver.NOTIFY_SYNC_TO_NETWORK, UserHandle.USER_ALL);
+        ProviderUtil.notifyIfNotDefaultSmsApp(Telephony.Mms.CONTENT_URI, null, this);
     }
 
     @VisibleForTesting
