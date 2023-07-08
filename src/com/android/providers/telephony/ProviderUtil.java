@@ -158,9 +158,8 @@ public class ProviderUtil {
                     .getSubscriptionInfoListAssociatedWithUser(userHandle);
         }
 
-        // TODO (b/280821823): Update this logic when backup and restore is supported for
-        //  work profile messages as well.
-        if (allowAccessToRestoredMessages(context, userHandle)) {
+        UserManager userManager = context.getSystemService(UserManager.class);
+        if ((userManager != null) && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
             // SMS/MMS restored from another device have sub_id=-1.
             // To query/update/delete those messages, sub_id=-1 should be in the selection string.
             SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
@@ -220,29 +219,5 @@ public class ProviderUtil {
                     " IN (" + emergencyNumberListStr + ")";
         }
         return selectionByEmergencyNumber;
-    }
-
-    private static boolean allowAccessToRestoredMessages(@NonNull Context context,
-            @NonNull UserHandle userHandle) {
-        UserManager userManager = context.getSystemService(UserManager.class);
-        if (userManager != null && !userManager.isManagedProfile(userHandle.getIdentifier())) {
-            // userHandle is not a managed profile - allow access to restored messages
-            return true;
-        }
-
-        SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
-        if (subManager != null) {
-            for(SubscriptionInfo subInfo:
-                    subManager.getActiveSubscriptionInfoList()) {
-                // If there is a SIM association policy set, then work profile telephony feature is
-                // enabled, so do not allow access to restored messages from work profile
-                if (subManager.getSubscriptionUserHandle(
-                        subInfo.getSubscriptionId()) != null) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
     }
 }
