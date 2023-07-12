@@ -715,6 +715,11 @@ carrier_id {
     mccmnc_tuple: "302630"
     mccmnc_tuple: "302640"
   }
+  carrier_attribute {
+    mccmnc_tuple: "302690"
+    gid1: "41"
+    gid1: "43"
+  }
 }
 carrier_id {
   canonical_id: 577
@@ -1102,7 +1107,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 760
-  carrier_name: "3HK/SUPREME"
+  carrier_name: "Hutchison HK"
   carrier_attribute {
     mccmnc_tuple: "45403"
   }
@@ -4690,6 +4695,7 @@ carrier_id {
   carrier_name: "St. Pierre-et-Miquelon Télécom"
   carrier_attribute {
     mccmnc_tuple: "30801"
+    mccmnc_tuple: "30808"
   }
 }
 carrier_id {
@@ -6418,7 +6424,6 @@ carrier_id {
   carrier_name: "COX"
   carrier_attribute {
     mccmnc_tuple: "311480"
-    spn: "Cox Mobile"
     gid1: "BA01570000000000"
     gid2: "B100000000000000"
   }
@@ -11063,6 +11068,7 @@ carrier_id {
   canonical_id: 2517
   carrier_name: "Dish"
   carrier_attribute {
+    mccmnc_tuple: "303220"
     mccmnc_tuple: "313340"
     gid1: "6530"
   }
@@ -11071,6 +11077,7 @@ carrier_id {
   canonical_id: 2518
   carrier_name: "Boost Mobile - MNO"
   carrier_attribute {
+    mccmnc_tuple: "303220"
     mccmnc_tuple: "313340"
     gid1: "6332"
   }
@@ -11509,8 +11516,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "302480"
     imsi_prefix_xpattern: "302480017"
-    spn: "SSi Mobile"
-    gid1: "FF"
   }
 }
 carrier_id {
@@ -11519,8 +11524,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "302480"
     imsi_prefix_xpattern: "3024800002"
-    spn: "Eeyou Mobility"
-    gid1: "FF"
   }
 }
 carrier_id {
@@ -11953,4 +11956,4 @@ carrier_id {
   }
   parent_canonical_id: 2126
 }
-version: 117440539
+version: 117440540
