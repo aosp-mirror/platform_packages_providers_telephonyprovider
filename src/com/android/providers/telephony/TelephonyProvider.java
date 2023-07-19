@@ -3386,7 +3386,16 @@ public class TelephonyProvider extends ContentProvider
                     android.Manifest.permission.MODIFY_PHONE_STATE, TAG);
             final long identity = Binder.clearCallingIdentity();
             try {
-                restoreSimSpecificSettings(bundle, args);
+                Bundle resultBundle = new Bundle();
+                boolean changed = restoreSimSpecificSettings(bundle, args);
+                if (changed) {
+                    mLocalLog.log("Restoration changed the subscription database.");
+                    log("Restoration changed the subscription database.");
+                }
+                resultBundle.putBoolean(
+                        SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_DATABASE_UPDATED,
+                        changed);
+                return resultBundle;
             } finally {
                 Binder.restoreCallingIdentity(identity);
             }
@@ -3416,19 +3425,21 @@ public class TelephonyProvider extends ContentProvider
      * data should already be in internal storage and will be retrieved from there.
      * @param iccId of the SIM that a restore is being attempted for. If {@code null}, then try to
      * restore for all simInfo entries in SimInfoDB
+     *
+     * @return {@code true} if the restoration changed the subscription database.
      */
-    private void restoreSimSpecificSettings(@Nullable Bundle bundle, @Nullable String iccId) {
+    private boolean restoreSimSpecificSettings(@Nullable Bundle bundle, @Nullable String iccId) {
         int restoreCase = TelephonyProtoEnums.SIM_RESTORE_CASE_UNDEFINED_USE_CASE;
         if (bundle != null) {
             restoreCase = TelephonyProtoEnums.SIM_RESTORE_CASE_SUW;
             if (!writeSimSettingsToInternalStorage(
                     bundle.getByteArray(SubscriptionManager.KEY_SIM_SPECIFIC_SETTINGS_DATA))) {
-                return;
+                return false;
             }
         } else if (iccId != null){
             restoreCase = TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED;
         }
-        mergeBackedUpDataToSimInfoDb(restoreCase, iccId);
+        return mergeBackedUpDataToSimInfoDb(restoreCase, iccId);
     }
 
     @VisibleForTesting
@@ -3460,14 +3471,16 @@ public class TelephonyProvider extends ContentProvider
      * frameworks/proto_logging/stats/enums/telephony/enums.proto
      * @param iccId of the SIM that a restore is being attempted for. If {@code null}, then try to
      * restore for all simInfo entries in SimInfoDB
+     *
+     * @return {@code true} if the restoration changed the subscription database.
      */
-    private void mergeBackedUpDataToSimInfoDb(int restoreCase, @Nullable String iccId) {
+    private boolean mergeBackedUpDataToSimInfoDb(int restoreCase, @Nullable String iccId) {
         // Get data stored in internal file
         File file = new File(getContext().getFilesDir(), BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE);
         if (!file.exists()) {
             loge("internal sim-specific settings backup data file does not exist. "
                 + "Aborting restore");
-            return;
+            return false;
         }
 
         AtomicFile atomicFile = new AtomicFile(file);
@@ -3477,7 +3490,7 @@ public class TelephonyProvider extends ContentProvider
         } catch (IOException e) {
             loge("Failed to convert backed up per-sim configs to bundle. Stopping restore. "
                 + "Failed with error " + e);
-            return;
+            return false;
         }
 
         String selection = null;
@@ -3497,13 +3510,23 @@ public class TelephonyProvider extends ContentProvider
                 selection,
                 selectionArgs,
                 ORDER_BY_SUB_ID)) {
-            findAndRestoreAllMatches(bundle.deepCopy(), cursor, restoreCase);
+            return findAndRestoreAllMatches(bundle.deepCopy(), cursor, restoreCase);
         }
     }
 
-    // backedUpDataBundle must to be mutable
-    private void findAndRestoreAllMatches(PersistableBundle backedUpDataBundle, Cursor cursor,
+    /**
+     * Find the matched subscription and restore SIM specific settings to them.
+     *
+     * @param backedUpDataBundle The backed-up data to be restored.
+     * @param cursor The database cursor.
+     * @param restoreCase one of the SimSpecificSettingsRestoreMatchingCriteria values defined in
+     * frameworks/proto_logging/stats/enums/telephony/enums.proto
+     *
+     * @return {@code true} if the restoration changed the subscription database.
+     */
+    private boolean findAndRestoreAllMatches(PersistableBundle backedUpDataBundle, Cursor cursor,
             int restoreCase) {
+        boolean changed = false;
         int[] previouslyRestoredSubIdsArray =
                 backedUpDataBundle.getIntArray(KEY_PREVIOUSLY_RESTORED_SUB_IDS);
         List<Integer> previouslyRestoredSubIdsList = previouslyRestoredSubIdsArray != null
@@ -3582,20 +3605,31 @@ public class TelephonyProvider extends ContentProvider
                 ContentValues newContentValues = bestRestoreMatch.getContentValues();
                 if (bestRestoreMatch.getMatchScore() != 0 && newContentValues != null) {
                     if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SUW) {
-                        update(SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI,
+                        if (update(SubscriptionManager.SIM_INFO_SUW_RESTORE_CONTENT_URI,
                                 newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
-                                new String[]{Integer.toString(currSubIdFromDb)});
+                                new String[]{Integer.toString(currSubIdFromDb)}) > 0) {
+                            mLocalLog.log("Restored sub " + currSubIdFromDb + " from backup"
+                                    + ". case=SUW");
+                            log("Restored sub " + currSubIdFromDb + " from backup. case=SUW");
+                            changed = true;
+                        }
                     } else if (restoreCase == TelephonyProtoEnums.SIM_RESTORE_CASE_SIM_INSERTED) {
                         Uri simInsertedRestoreUri = Uri.withAppendedPath(
                                 SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
                                 SIM_INSERTED_RESTORE_URI_SUFFIX);
-                        update(simInsertedRestoreUri,
+                        if (update(simInsertedRestoreUri,
                                 newContentValues,
                                 Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?",
-                                new String[]{Integer.toString(currSubIdFromDb)});
+                                new String[]{Integer.toString(currSubIdFromDb)}) > 0) {
+                            mLocalLog.log("Restored sub " + currSubIdFromDb + " from backup. "
+                                    + "case=SIM inserted.");
+                            log("Restored sub " + currSubIdFromDb + " from backup. "
+                                    + "case=SIM inserted.");
+                            changed = true;
+                        }
                     }
-                    log("Restore of inserterd SIM's sim-specific settings has been successfully "
+                    log("Restore of inserted SIM's sim-specific settings has been successfully "
                             + "completed.");
                     TelephonyStatsLog.write(TelephonyStatsLog.SIM_SPECIFIC_SETTINGS_RESTORED,
                             TelephonyProtoEnums.SIM_RESTORE_RESULT_SUCCESS,
@@ -3629,6 +3663,7 @@ public class TelephonyProvider extends ContentProvider
             loge("Not able to convert SimInfoDB to byte array. Not storing which subIds were "
                     + "restored");
         }
+        return changed;
     }
 
     private static class SimRestoreMatch {
