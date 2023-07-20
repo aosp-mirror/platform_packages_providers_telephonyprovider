@@ -11370,6 +11370,10 @@ carrier_id {
     mccmnc_tuple: "303220"
     gid1: "6530"
   }
+  carrier_attribute {
+    mccmnc_tuple: "302220"
+    gid1: "6530"
+  }
 }
 carrier_id {
   canonical_id: 2518
@@ -11380,6 +11384,10 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "303220"
+    gid1: "6332"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302220"
     gid1: "6332"
   }
 }
@@ -11881,6 +11889,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2575
+  carrier_name: "Reach"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "20FF"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12181,4 +12197,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331686
+version: 50331687
