@@ -12402,6 +12402,14 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2575
+  carrier_name: "Reach"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "20FF"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12643,4 +12651,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 36
+version: 37
