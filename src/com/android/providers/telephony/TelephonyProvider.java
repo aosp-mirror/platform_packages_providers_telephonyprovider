@@ -408,7 +408,7 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
         CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
 
-        MVNO_TYPE_STRING_MAP = new ArrayMap<String, Integer>();
+        MVNO_TYPE_STRING_MAP = new ArrayMap<>();
         MVNO_TYPE_STRING_MAP.put("spn", ApnSetting.MVNO_TYPE_SPN);
         MVNO_TYPE_STRING_MAP.put("imsi", ApnSetting.MVNO_TYPE_IMSI);
         MVNO_TYPE_STRING_MAP.put("gid", ApnSetting.MVNO_TYPE_GID);
@@ -5420,7 +5420,7 @@ public class TelephonyProvider extends ContentProvider
     private static int getMvnoTypeIntFromString(String mvnoType) {
         String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase(Locale.ROOT);
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
-        return  mvnoTypeInt == null ? 0 : mvnoTypeInt;
+        return  mvnoTypeInt == null ? ApnSetting.MVNO_TYPE_UNKNOWN : mvnoTypeInt;
     }
 
     private static int getBitmaskFromString(String bearerList) {
