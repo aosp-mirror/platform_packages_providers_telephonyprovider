@@ -109,6 +109,7 @@ import android.os.SystemProperties;
 import android.os.UserHandle;
 import android.provider.Telephony;
 import android.service.carrier.IApnSourceService;
+import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.telephony.TelephonyProtoEnums;
@@ -2731,8 +2732,8 @@ public class TelephonyProvider extends ContentProvider
                 if (oldType.equals("") || newType.equals("")) {
                     newRow.put(TYPE, "");
                 } else {
-                    String[] oldTypes = oldType.toLowerCase().split(",");
-                    String[] newTypes = newType.toLowerCase().split(",");
+                    String[] oldTypes = oldType.toLowerCase(Locale.ROOT).split(",");
+                    String[] newTypes = newType.toLowerCase(Locale.ROOT).split(",");
 
                     if (VDBG) {
                         log("mergeFieldsAndUpdateDb: Calling separateRowsNeeded() oldType=" +
@@ -3817,7 +3818,7 @@ public class TelephonyProvider extends ContentProvider
                             DEFAULT_INT_COLUMN_VALUE));
             if (isoCountryCodeFromDb != null
                     && !wfcRestoreBlockedCountries
-                            .contains(isoCountryCodeFromDb.toLowerCase())) {
+                            .contains(isoCountryCodeFromDb.toLowerCase(Locale.ROOT))) {
                 // Don't restore COLUMN_WFC_IMS_ENABLED if the sim is from one of the countries that
                 // requires WFC entitlement.
                 contentValues.put(Telephony.SimInfo.COLUMN_WFC_IMS_ENABLED,
@@ -3919,11 +3920,19 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public synchronized Cursor query(Uri url, String[] projectionIn, String selection,
-            String[] selectionArgs, String sort) {
+    public Cursor query(Uri url, String[] projectionIn, String selection,  String[] selectionArgs,
+            String sort) {
         if (VDBG) log("query: url=" + url + ", projectionIn=" + Arrays.toString(projectionIn)
                 + ", selection=" + selection + "selectionArgs=" + Arrays.toString(selectionArgs)
                 + ", sort=" + sort);
+        int match = s_urlMatcher.match(url);
+        checkPermissionCompat(match, projectionIn);
+
+        return queryInternal(url, projectionIn, selection, selectionArgs, sort);
+    }
+
+    private synchronized Cursor queryInternal(Uri url, String[] projectionIn, String selection,
+            String[] selectionArgs, String sort) {
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
@@ -3933,7 +3942,6 @@ public class TelephonyProvider extends ContentProvider
         List<String> constraints = new ArrayList<String>();
 
         int match = s_urlMatcher.match(url);
-        checkPermissionCompat(match, projectionIn);
         switch (match) {
             case URL_TELEPHONY_USING_SUBID: {
                 // The behaves exactly same as URL_SIM_APN_LIST_ID.
@@ -4118,7 +4126,7 @@ public class TelephonyProvider extends ContentProvider
                     qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
                 }
                 return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
-                    sort, subId);
+                        sort, subId);
             }
 
             default: {
@@ -4220,11 +4228,12 @@ public class TelephonyProvider extends ContentProvider
 
         ret = qb.query(db, null, selection, selectionArgs, null, null, sort);
         if (ret == null) {
-            loge("query current APN but cursor is null.");
+            loge("subId:" + subId + " query current APN but cursor is null.");
             return null;
         }
 
-        if (DBG) log("match current APN size:  " + ret.getCount());
+        if (DBG) log("subId:" + subId + " mccmnc=" + mccmnc + " carrierId=" + carrierId +
+                ", match current APN size:  " + ret.getCount());
 
         String[] columnNames = projectionIn != null ? projectionIn : ret.getColumnNames();
         MatrixCursor currentCursor = new MatrixCursor(columnNames);
@@ -5374,7 +5383,7 @@ public class TelephonyProvider extends ContentProvider
     }
 
     private static int getMvnoTypeIntFromString(String mvnoType) {
-        String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase();
+        String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase(Locale.ROOT);
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
         return  mvnoTypeInt == null ? 0 : mvnoTypeInt;
     }
@@ -5605,7 +5614,16 @@ public class TelephonyProvider extends ContentProvider
                                 str += cursor.getFloat(i);
                                 break;
                             case 3 /*FIELD_TYPE_STRING*/:
-                                str += cursor.getString(i);
+                                String columnValue = cursor.getString(i);
+                                // Redact icc_id and card_id
+                                if (SIMINFO_TABLE.equals(tableName)
+                                        && (Telephony.SimInfo.COLUMN_ICC_ID.equals(
+                                                cursor.getColumnName(i))
+                                        || Telephony.SimInfo.COLUMN_CARD_ID.equals(
+                                                cursor.getColumnName(i)))) {
+                                    columnValue = SubscriptionInfo.getPrintableId(columnValue);
+                                }
+                                str += columnValue;
                                 break;
                             case 4 /*FIELD_TYPE_BLOB*/:
                                 str += "[blob]";
