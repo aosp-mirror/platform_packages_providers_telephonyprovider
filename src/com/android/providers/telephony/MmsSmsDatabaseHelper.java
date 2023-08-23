@@ -761,78 +761,96 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     @VisibleForTesting
+    public static String CREATE_ADDR_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
+                    Addr._ID + " INTEGER PRIMARY KEY," +
+                    Addr.MSG_ID + " INTEGER," +
+                    Addr.CONTACT_ID + " INTEGER," +
+                    Addr.ADDRESS + " TEXT," +
+                    Addr.TYPE + " INTEGER," +
+                    Addr.CHARSET + " INTEGER);";
+
+    @VisibleForTesting
+    public static String CREATE_PART_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_PART + " (" +
+                    Part._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    Part.MSG_ID + " INTEGER," +
+                    Part.SEQ + " INTEGER DEFAULT 0," +
+                    Part.CONTENT_TYPE + " TEXT," +
+                    Part.NAME + " TEXT," +
+                    Part.CHARSET + " INTEGER," +
+                    Part.CONTENT_DISPOSITION + " TEXT," +
+                    Part.FILENAME + " TEXT," +
+                    Part.CONTENT_ID + " TEXT," +
+                    Part.CONTENT_LOCATION + " TEXT," +
+                    Part.CT_START + " INTEGER," +
+                    Part.CT_TYPE + " TEXT," +
+                    Part._DATA + " TEXT," +
+                    Part.TEXT + " TEXT);";
+
+    public static String CREATE_PDU_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_PDU + " (" +
+                    Mms._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    Mms.THREAD_ID + " INTEGER," +
+                    Mms.DATE + " INTEGER," +
+                    Mms.DATE_SENT + " INTEGER DEFAULT 0," +
+                    Mms.MESSAGE_BOX + " INTEGER," +
+                    Mms.READ + " INTEGER DEFAULT 0," +
+                    Mms.MESSAGE_ID + " TEXT," +
+                    Mms.SUBJECT + " TEXT," +
+                    Mms.SUBJECT_CHARSET + " INTEGER," +
+                    Mms.CONTENT_TYPE + " TEXT," +
+                    Mms.CONTENT_LOCATION + " TEXT," +
+                    Mms.EXPIRY + " INTEGER," +
+                    Mms.MESSAGE_CLASS + " TEXT," +
+                    Mms.MESSAGE_TYPE + " INTEGER," +
+                    Mms.MMS_VERSION + " INTEGER," +
+                    Mms.MESSAGE_SIZE + " INTEGER," +
+                    Mms.PRIORITY + " INTEGER," +
+                    Mms.READ_REPORT + " INTEGER," +
+                    Mms.REPORT_ALLOWED + " INTEGER," +
+                    Mms.RESPONSE_STATUS + " INTEGER," +
+                    Mms.STATUS + " INTEGER," +
+                    Mms.TRANSACTION_ID + " TEXT," +
+                    Mms.RETRIEVE_STATUS + " INTEGER," +
+                    Mms.RETRIEVE_TEXT + " TEXT," +
+                    Mms.RETRIEVE_TEXT_CHARSET + " INTEGER," +
+                    Mms.READ_STATUS + " INTEGER," +
+                    Mms.CONTENT_CLASS + " INTEGER," +
+                    Mms.RESPONSE_TEXT + " TEXT," +
+                    Mms.DELIVERY_TIME + " INTEGER," +
+                    Mms.DELIVERY_REPORT + " INTEGER," +
+                    Mms.LOCKED + " INTEGER DEFAULT 0," +
+                    Mms.SUBSCRIPTION_ID + " INTEGER DEFAULT "
+                    + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
+                    Mms.SEEN + " INTEGER DEFAULT 0," +
+                    Mms.CREATOR + " TEXT," +
+                    Mms.TEXT_ONLY + " INTEGER DEFAULT 0);";
+
+    @VisibleForTesting
+    public static String CREATE_RATE_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_RATE + " (" +
+                    Rate.SENT_TIME + " INTEGER);";
+
+    @VisibleForTesting
+    public static String CREATE_DRM_TABLE_STR =
+            "CREATE TABLE " + MmsProvider.TABLE_DRM + " (" +
+                    BaseColumns._ID + " INTEGER PRIMARY KEY," +
+                    "_data TEXT);";
+
+    @VisibleForTesting
     void createMmsTables(SQLiteDatabase db) {
         // N.B.: Whenever the columns here are changed, the columns in
         // {@ref MmsSmsProvider} must be changed to match.
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_PDU + " (" +
-                   Mms._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-                   Mms.THREAD_ID + " INTEGER," +
-                   Mms.DATE + " INTEGER," +
-                   Mms.DATE_SENT + " INTEGER DEFAULT 0," +
-                   Mms.MESSAGE_BOX + " INTEGER," +
-                   Mms.READ + " INTEGER DEFAULT 0," +
-                   Mms.MESSAGE_ID + " TEXT," +
-                   Mms.SUBJECT + " TEXT," +
-                   Mms.SUBJECT_CHARSET + " INTEGER," +
-                   Mms.CONTENT_TYPE + " TEXT," +
-                   Mms.CONTENT_LOCATION + " TEXT," +
-                   Mms.EXPIRY + " INTEGER," +
-                   Mms.MESSAGE_CLASS + " TEXT," +
-                   Mms.MESSAGE_TYPE + " INTEGER," +
-                   Mms.MMS_VERSION + " INTEGER," +
-                   Mms.MESSAGE_SIZE + " INTEGER," +
-                   Mms.PRIORITY + " INTEGER," +
-                   Mms.READ_REPORT + " INTEGER," +
-                   Mms.REPORT_ALLOWED + " INTEGER," +
-                   Mms.RESPONSE_STATUS + " INTEGER," +
-                   Mms.STATUS + " INTEGER," +
-                   Mms.TRANSACTION_ID + " TEXT," +
-                   Mms.RETRIEVE_STATUS + " INTEGER," +
-                   Mms.RETRIEVE_TEXT + " TEXT," +
-                   Mms.RETRIEVE_TEXT_CHARSET + " INTEGER," +
-                   Mms.READ_STATUS + " INTEGER," +
-                   Mms.CONTENT_CLASS + " INTEGER," +
-                   Mms.RESPONSE_TEXT + " TEXT," +
-                   Mms.DELIVERY_TIME + " INTEGER," +
-                   Mms.DELIVERY_REPORT + " INTEGER," +
-                   Mms.LOCKED + " INTEGER DEFAULT 0," +
-                   Mms.SUBSCRIPTION_ID + " INTEGER DEFAULT "
-                           + SubscriptionManager.INVALID_SUBSCRIPTION_ID + ", " +
-                   Mms.SEEN + " INTEGER DEFAULT 0," +
-                   Mms.CREATOR + " TEXT," +
-                   Mms.TEXT_ONLY + " INTEGER DEFAULT 0" +
-                   ");");
+        db.execSQL(CREATE_PDU_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_ADDR + " (" +
-                   Addr._ID + " INTEGER PRIMARY KEY," +
-                   Addr.MSG_ID + " INTEGER," +
-                   Addr.CONTACT_ID + " INTEGER," +
-                   Addr.ADDRESS + " TEXT," +
-                   Addr.TYPE + " INTEGER," +
-                   Addr.CHARSET + " INTEGER);");
+        db.execSQL(CREATE_ADDR_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_PART + " (" +
-                   Part._ID + " INTEGER PRIMARY KEY AUTOINCREMENT," +
-                   Part.MSG_ID + " INTEGER," +
-                   Part.SEQ + " INTEGER DEFAULT 0," +
-                   Part.CONTENT_TYPE + " TEXT," +
-                   Part.NAME + " TEXT," +
-                   Part.CHARSET + " INTEGER," +
-                   Part.CONTENT_DISPOSITION + " TEXT," +
-                   Part.FILENAME + " TEXT," +
-                   Part.CONTENT_ID + " TEXT," +
-                   Part.CONTENT_LOCATION + " TEXT," +
-                   Part.CT_START + " INTEGER," +
-                   Part.CT_TYPE + " TEXT," +
-                   Part._DATA + " TEXT," +
-                   Part.TEXT + " TEXT);");
+        db.execSQL(CREATE_PART_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_RATE + " (" +
-                   Rate.SENT_TIME + " INTEGER);");
+        db.execSQL(CREATE_RATE_TABLE_STR);
 
-        db.execSQL("CREATE TABLE " + MmsProvider.TABLE_DRM + " (" +
-                   BaseColumns._ID + " INTEGER PRIMARY KEY," +
-                   "_data TEXT);");
+        db.execSQL(CREATE_DRM_TABLE_STR);
 
         // Restricted view of pdu table, only sent/received messages without wap pushes
         db.execSQL("CREATE VIEW " + MmsProvider.VIEW_PDU_RESTRICTED + " AS " +
