@@ -16,6 +16,7 @@
 
 package com.android.providers.telephony;
 
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -33,6 +34,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Process;
+import android.os.UserManager;
 import android.provider.Telephony;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
@@ -69,6 +71,7 @@ public class SmsProviderTest extends TestCase {
     private SmsProviderTestable mSmsProviderTestable;
     @Mock private PackageManager mPackageManager;
     @Mock private Resources mMockResources;
+    @Mock private UserManager mUserManager;
 
     private int notifyChangeCount;
 
@@ -97,6 +100,7 @@ public class SmsProviderTest extends TestCase {
                 .thenReturn(mock(AppOpsManager.class));
         when(mContext.getSystemService(eq(Context.TELEPHONY_SERVICE)))
                 .thenReturn(mock(TelephonyManager.class));
+        when(mContext.getSystemService(eq(Context.USER_SERVICE))).thenReturn(mUserManager);
 
         when(mContext.checkCallingOrSelfPermission(anyString()))
                 .thenReturn(PackageManager.PERMISSION_GRANTED);
@@ -240,6 +244,51 @@ public class SmsProviderTest extends TestCase {
                 "raw", null, null, null, null, null, null);
         assertEquals(0, cursor.getCount());
         cursor.close();
+    }
+
+    @Test
+    public void testInsertUsingManagedProfile() {
+        when(mUserManager.isManagedProfile(anyInt())).thenReturn(true);
+
+        try {
+            assertNull(mContentResolver.insert(Telephony.Sms.CONTENT_URI, null));
+        } catch (Exception e) {
+            Log.d(TAG, "Error inserting sms: " + e);
+        }
+    }
+
+    @Test
+    public void testQueryUsingManagedProfile() {
+        when(mUserManager.isManagedProfile(anyInt())).thenReturn(true);
+
+        try (Cursor cursor = mContentResolver.query(Telephony.Sms.CONTENT_URI,
+                null, null, null, null)) {
+            assertEquals(0, cursor.getCount());
+        } catch (Exception e) {
+            Log.d(TAG, "Exception in getting count: " + e);
+        }
+    }
+
+    @Test
+    public void testUpdateUsingManagedProfile() {
+        when(mUserManager.isManagedProfile(anyInt())).thenReturn(true);
+
+        try {
+            assertEquals(0, mContentResolver.update(Telephony.Sms.CONTENT_URI, null, null, null));
+        } catch (Exception e) {
+            Log.d(TAG, "Exception in updating sms: " + e);
+        }
+    }
+
+    @Test
+    public void testDeleteUsingManagedProfile() {
+        when(mUserManager.isManagedProfile(anyInt())).thenReturn(true);
+
+        try {
+            assertEquals(0, mContentResolver.delete(Telephony.Sms.CONTENT_URI, null, null));
+        } catch (Exception e) {
+            Log.d(TAG, "Exception in deleting sms: " + e);
+        }
     }
 
     private ContentValues getFakeRawValue() {
