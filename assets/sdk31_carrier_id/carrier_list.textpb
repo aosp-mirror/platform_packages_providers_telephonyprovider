@@ -11447,7 +11447,7 @@ carrier_id {
     mccmnc_tuple: "313340"
   }
   carrier_attribute {
-    mccmnc_tuple: "303220"
+    mccmnc_tuple: "20809"
     gid1: "6530"
   }
   carrier_attribute {
@@ -11463,7 +11463,7 @@ carrier_id {
     gid1: "6332"
   }
   carrier_attribute {
-    mccmnc_tuple: "303220"
+    mccmnc_tuple: "20809"
     gid1: "6332"
   }
   carrier_attribute {
