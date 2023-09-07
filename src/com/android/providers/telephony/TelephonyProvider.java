@@ -162,7 +162,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 63 << 16;
+    private static final int DATABASE_VERSION = 64 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -455,6 +455,8 @@ public class TelephonyProvider extends ContentProvider
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                 Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_IS_NTN, Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -595,9 +597,10 @@ public class TelephonyProvider extends ContentProvider
                 "  INTEGER DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT "
                 + UserHandle.USER_NULL + ","
-                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT -1,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
-                + " INTEGER DEFAULT -1"
+                + " INTEGER DEFAULT 0, "
+                + Telephony.SimInfo.COLUMN_IS_NTN + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -1904,7 +1907,7 @@ public class TelephonyProvider extends ContentProvider
                     // Try to update the siminfo table with new columns.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED
-                            + "  INTEGER DEFAULT -1;");
+                            + "  INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade failed to update " + SIMINFO_TABLE
@@ -1919,7 +1922,7 @@ public class TelephonyProvider extends ContentProvider
                     // Try to update the siminfo table with new columns.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
-                            + "  INTEGER DEFAULT -1;");
+                            + "  INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade failed to update " + SIMINFO_TABLE
@@ -1927,6 +1930,34 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 63 << 16 | 6;
+            }
+
+            if (oldVersion < (64 << 16 | 6)) {
+                try {
+                    /* If default value of COLUMN_SATELLITE_ENABLED column is set to -1, then update
+                     it to 0 */
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + "=0"
+                            + "  WHERE " + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + "=-1;");
+                    /* If default value of COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER column is set
+                     to -1, then update it to 0 */
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER + "=0"
+                            + "  WHERE "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                            + "=-1;");
+
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_IS_NTN
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite is ntn. ");
+                    }
+                }
+                oldVersion = 64 << 16 | 6;
             }
 
             if (DBG) {
@@ -3790,7 +3821,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 63 << 16) {
+            if (DATABASE_VERSION != 64 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3832,12 +3863,15 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 64 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_IS_NTN,
+                        backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_IS_NTN,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 63 << 16) {
-                contentValues.put(
-                        Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                         backedUpSimInfoEntry.getInt(
-                                Telephony.SimInfo
-                                        .COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                                 DEFAULT_INT_COLUMN_VALUE));
             }
             if (backupDataFormatVersion >= 62 << 16) {
