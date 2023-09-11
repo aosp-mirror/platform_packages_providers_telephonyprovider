@@ -32,6 +32,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.UserHandle;
+import android.os.UserManager;
 import android.provider.Contacts;
 import android.provider.Telephony;
 import android.provider.Telephony.MmsSms;
@@ -117,6 +118,16 @@ public class SmsProvider extends ContentProvider {
     @Override
     public Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
+        Cursor emptyCursor = new MatrixCursor((projectionIn == null) ?
+                (new String[] {}) : projectionIn);
+        UserManager userManager = (UserManager) getContext().getSystemService(Context.USER_SERVICE);
+        if ((userManager != null) && (userManager.isManagedProfile(
+                Binder.getCallingUserHandle().getIdentifier()))) {
+            // If work profile is trying to query sms, return empty cursor.
+            Log.e(TAG, "Managed profile is not allowed to query SMS.");
+            return emptyCursor;
+        }
+
         // First check if a restricted view of the "sms" table should be used based on the
         // caller's identity. Only system, phone or the default sms app can have full access
         // of sms data. For other apps, we present a restricted view which only contains sent
@@ -557,6 +568,14 @@ public class SmsProvider extends ContentProvider {
     }
 
     private Uri insertInner(Uri url, ContentValues initialValues, int callerUid, String callerPkg) {
+        UserManager userManager = (UserManager) getContext().getSystemService(Context.USER_SERVICE);
+        if ((userManager != null) && (userManager.isManagedProfile(
+                Binder.getCallingUserHandle().getIdentifier()))) {
+            // If work profile is trying to insert sms, return null.
+            Log.e(TAG, "Managed profile is not allowed to insert SMS.");
+            return null;
+        }
+
         ContentValues values;
         long rowID;
         int type = Sms.MESSAGE_TYPE_ALL;
@@ -848,6 +867,14 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public int delete(Uri url, String where, String[] whereArgs) {
+        UserManager userManager = (UserManager) getContext().getSystemService(Context.USER_SERVICE);
+        if ((userManager != null) && (userManager.isManagedProfile(
+                Binder.getCallingUserHandle().getIdentifier()))) {
+            // If work profile is trying to delete sms, return 0.
+            Log.e(TAG, "Managed profile is not allowed to delete SMS.");
+            return 0;
+        }
+
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getWritableDatabase(match);
@@ -1033,6 +1060,14 @@ public class SmsProvider extends ContentProvider {
 
     @Override
     public int update(Uri url, ContentValues values, String where, String[] whereArgs) {
+        UserManager userManager = (UserManager) getContext().getSystemService(Context.USER_SERVICE);
+        if ((userManager != null) && (userManager.isManagedProfile(
+                Binder.getCallingUserHandle().getIdentifier()))) {
+            // If work profile is trying to update sms, return 0.
+            Log.e(TAG, "Managed profile is not allowed to update SMS.");
+            return 0;
+        }
+
         final int callerUid = Binder.getCallingUid();
         final String callerPkg = getCallingPackage();
         int count = 0;
