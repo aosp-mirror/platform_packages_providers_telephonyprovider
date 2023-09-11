@@ -7419,6 +7419,8 @@ carrier_id {
   canonical_id: 2022
   carrier_name: "TracFone"
   carrier_attribute {
+    mccmnc_tuple: "310240"
+    mccmnc_tuple: "310260"
     mccmnc_tuple: "310280"
     mccmnc_tuple: "310410"
     mccmnc_tuple: "310950"
@@ -7736,6 +7738,7 @@ carrier_id {
   canonical_id: 2067
   carrier_name: "Lyca Mobile"
   carrier_attribute {
+    mccmnc_tuple: "310240"
     mccmnc_tuple: "310260"
     gid1: "6C79"
   }
@@ -7746,14 +7749,6 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "3201"
-  }
-}
-carrier_id {
-  canonical_id: 2069
-  carrier_name: "MVNE2/AMDOCS"
-  carrier_attribute {
-    mccmnc_tuple: "310260"
-    gid1: "6132"
   }
 }
 carrier_id {
@@ -7768,16 +7763,23 @@ carrier_id {
   canonical_id: 2071
   carrier_name: "Plintron"
   carrier_attribute {
+    mccmnc_tuple: "310240"
     mccmnc_tuple: "310260"
+    gid1: "6902"
     gid1: "7031"
+    gid1: "7032"
   }
 }
 carrier_id {
   canonical_id: 2073
   carrier_name: "PWG/Cintex"
   carrier_attribute {
+    mccmnc_tuple: "310240"
     mccmnc_tuple: "310260"
     gid1: "4358"
+    gid1: "6901"
+    gid1: "6909"
+    gid1: "7531"
   }
 }
 carrier_id {
@@ -7792,8 +7794,10 @@ carrier_id {
   canonical_id: 2075
   carrier_name: "Republic Wireless (MVNE2)"
   carrier_attribute {
+    mccmnc_tuple: "310240"
     mccmnc_tuple: "310260"
     gid1: "6134"
+    gid1: "6905"
   }
 }
 carrier_id {
@@ -7841,11 +7845,17 @@ carrier_id {
   canonical_id: 2083
   carrier_name: "Ultra/Univision"
   carrier_attribute {
+    mccmnc_tuple: "310240"
     mccmnc_tuple: "310260"
     gid1: "354D"
     gid1: "364D"
     gid1: "4153"
+    gid1: "4154"
+    gid1: "4155"
     gid1: "554D"
+    gid1: "6132"
+    gid1: "6303"
+    gid1: "756D"
   }
 }
 carrier_id {
@@ -11068,7 +11078,8 @@ carrier_id {
   canonical_id: 2517
   carrier_name: "Dish"
   carrier_attribute {
-    mccmnc_tuple: "303220"
+    mccmnc_tuple: "20809"
+    mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6530"
   }
@@ -11077,7 +11088,8 @@ carrier_id {
   canonical_id: 2518
   carrier_name: "Boost Mobile - MNO"
   carrier_attribute {
-    mccmnc_tuple: "303220"
+    mccmnc_tuple: "20809"
+    mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6332"
   }
@@ -11568,6 +11580,58 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2575
+  carrier_name: "Reach"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    mccmnc_tuple: "310950"
+    gid1: "20FF"
+  }
+}
+carrier_id {
+  canonical_id: 2576
+  carrier_name: "iWireless"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    mccmnc_tuple: "310260"
+    gid1: "6957"
+  }
+}
+carrier_id {
+  canonical_id: 2577
+  carrier_name: "Qlink"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    mccmnc_tuple: "310260"
+    gid1: "514C"
+  }
+}
+carrier_id {
+  canonical_id: 2578
+  carrier_name: "Tello"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    mccmnc_tuple: "310260"
+    gid1: "6941"
+  }
+}
+carrier_id {
+  canonical_id: 2579
+  carrier_name: "iSea"
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    mccmnc_tuple: "20671"
+    mccmnc_tuple: "20672"
+    mccmnc_tuple: "20673"
+    mccmnc_tuple: "20674"
+    spn: "iSea"
+    spn: "BELPOL"
+    spn: "BPS-BPV"
+    spn: "PZA"
+    spn: "POA"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11947,13 +12011,13 @@ carrier_id {
   canonical_id: 10036
   carrier_name: "Spectrum NaaS"
   carrier_attribute {
-    mccmnc_tuple: "311480"
-    gid2: "A701490000000000"
+    mccmnc_tuple: "313450"
+    gid2: "A700000000000001"
   }
   carrier_attribute {
     mccmnc_tuple: "311480"
-    gid2: "A701490000000001"
+    gid2: "A700000000000001"
   }
   parent_canonical_id: 2126
 }
-version: 117440540
+version: 117440542
