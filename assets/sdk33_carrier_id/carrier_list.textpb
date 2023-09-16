@@ -7469,6 +7469,10 @@ carrier_id {
     mccmnc_tuple: "311480"
     gid1: "BA01270000000000"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "DDFF"
+  }
 }
 carrier_id {
   canonical_id: 2023
@@ -7752,6 +7756,10 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "6C79"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6C79"
+  }
 }
 carrier_id {
   canonical_id: 2068
@@ -7784,6 +7792,18 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "7031"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6902"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7031"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7032"
+  }
 }
 carrier_id {
   canonical_id: 2073
@@ -7791,6 +7811,22 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "4358"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4358"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6901"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6909"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7531"
   }
 }
 carrier_id {
@@ -7807,6 +7843,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "6134"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6134"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6905"
   }
 }
 carrier_id {
@@ -7859,6 +7903,42 @@ carrier_id {
     gid1: "364D"
     gid1: "4153"
     gid1: "554D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "354D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "364D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4153"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4154"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4155"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "554D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6132"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6303"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "756D"
   }
 }
 carrier_id {
@@ -11088,7 +11168,11 @@ carrier_id {
     gid1: "6530"
   }
   carrier_attribute {
-    mccmnc_tuple: "303220"
+    mccmnc_tuple: "20809"
+    gid1: "6530"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302220"
     gid1: "6530"
   }
 }
@@ -11100,7 +11184,11 @@ carrier_id {
     gid1: "6332"
   }
   carrier_attribute {
-    mccmnc_tuple: "303220"
+    mccmnc_tuple: "20809"
+    gid1: "6332"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302220"
     gid1: "6332"
   }
 }
@@ -11580,6 +11668,146 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2575
+  carrier_name: "Reach"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "20FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "20FF"
+  }
+}
+carrier_id {
+  canonical_id: 2576
+  carrier_name: "iWireless"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6957"
+  }
+}
+carrier_id {
+  canonical_id: 2577
+  carrier_name: "Qlink"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "514C"
+  }
+}
+carrier_id {
+  canonical_id: 2578
+  carrier_name: "Tello"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6941"
+  }
+}
+carrier_id {
+  canonical_id: 2579
+  carrier_name: "iSea"
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "POA"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -11955,4 +12183,4 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 100663324
+version: 100663326
