@@ -46,7 +46,6 @@ import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.TelephonyStatsLog;
 import com.android.internal.telephony.util.TelephonyUtils;
 
@@ -1458,8 +1457,9 @@ public class MmsSmsProvider extends ContentProvider {
                 }
             }
 
-            if (!TelephonyPermissions
-                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
+            if (!ProviderUtil
+                    .allowInteractingWithEntryOfSubscription(getContext(), subId,
+                            callerUserHandle)) {
                 TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
                         callerUid, getCallingPackage());
                 return null;
