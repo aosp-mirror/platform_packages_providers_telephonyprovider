@@ -19,6 +19,7 @@ package com.android.providers.telephony;
 import static org.junit.Assert.assertArrayEquals;
 
 import android.annotation.TargetApi;
+import android.app.backup.BackupManager;
 import android.app.backup.FullBackupDataOutput;
 import android.content.ContentProvider;
 import android.content.ContentResolver;
@@ -52,6 +53,7 @@ import com.google.android.mms.pdu.CharacterSets;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.mockito.Mockito;
 
 import java.io.File;
 import java.io.IOException;
@@ -110,6 +112,34 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private static final String EMPTY_JSON_ARRAY = "[]";
 
     TelephonyBackupAgent mTelephonyBackupAgent;
+
+    private boolean mItemBackedUp = false;
+    private boolean mItemBackedUpFailed = false;
+    private boolean mItemRestored = false;
+    private boolean mItemsRestoreFailed = false;
+
+    private TelephonyBackupAgent.BackupRestoreEventLoggerProxy mBackupRestoreEventLoggerProxy =
+            new TelephonyBackupAgent.BackupRestoreEventLoggerProxy() {
+        @Override
+        public void logItemsBackedUp(String dataType, int count) {
+            mItemBackedUp = true;
+        }
+
+        @Override
+        public void logItemsBackupFailed(String dataType, int count, String error) {
+            mItemBackedUpFailed = true;
+        }
+
+        @Override
+        public void logItemsRestored(String dataType, int count) {
+            mItemRestored = true;
+        }
+
+        @Override
+        public void logItemsRestoreFailed(String dataType, int count, String error) {
+            mItemsRestoreFailed = true;
+        }
+    };
 
     @Override
     protected void setUp() throws Exception {
@@ -317,12 +347,22 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mTelephonyBackupAgent.clearSharedPreferences();
         mTelephonyBackupAgent.setContentResolver(mMockContentResolver);
         mTelephonyBackupAgent.setSubId(mSubId2Phone, mPhone2SubId);
+
+        mItemBackedUp = false;
+        mItemBackedUpFailed = false;
+        mItemRestored = false;
+        mItemsRestoreFailed = false;
+        BackupManager mockBackupManager = Mockito.mock(BackupManager.class);
+        mTelephonyBackupAgent.setBackupRestoreEventLoggerProxy(mBackupRestoreEventLoggerProxy);
+        mTelephonyBackupAgent.setBackupManager(mockBackupManager);
     }
 
     @Override
     protected void tearDown() throws Exception {
         mTelephonyBackupAgent.clearSharedPreferences();
         super.tearDown();
+        mTelephonyBackupAgent.setBackupRestoreEventLoggerProxy(null);
+        mTelephonyBackupAgent.setBackupManager(null);
     }
 
     private static String makeJsonArray(String[] json) {
@@ -479,6 +519,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupSms_NoSms() throws Exception {
         mTelephonyBackupAgent.putSmsMessagesToJson(mSmsCursor, new JsonWriter(mStringWriter));
         assertEquals(EMPTY_JSON_ARRAY, mStringWriter.toString());
+        assertFalse(mItemBackedUp);
     }
 
     /**
@@ -534,6 +575,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     public void testBackupMms_NoMms() throws Exception {
         mTelephonyBackupAgent.putMmsMessagesToJson(mMmsCursor, new JsonWriter(mStringWriter));
         assertEquals(EMPTY_JSON_ARRAY, mStringWriter.toString());
+        assertFalse(mItemBackedUp);
     }
 
     /**
@@ -666,6 +708,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 }
         );
         assertEquals(0, mmsProvider.getRowsAdded());
+        assertFalse(mItemRestored);
     }
 
     /**
@@ -710,6 +753,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
                 }
         );
         assertEquals(7, mmsProvider.getRowsAdded());
+        assertTrue(mItemRestored);
     }
 
     public void testRestoreMmsWithNullBody() throws Exception {
@@ -730,6 +774,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         );
 
         assertEquals(3, mmsProvider.getRowsAdded());
+        assertTrue(mItemRestored);
     }
 
     /**
@@ -750,17 +795,23 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         FullBackupDataOutput fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSize, fullBackupDataOutput.getSize());
+        assertTrue(mItemBackedUp);
+        mItemBackedUp = false;
 
         mTelephonyBackupAgent.onQuotaExceeded(backupSize, backupSize - 100);
         fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSizeAfterFirstQuotaHit, fullBackupDataOutput.getSize());
+        assertTrue(mItemBackedUp);
+        mItemBackedUp = false;
 
         mTelephonyBackupAgent.onQuotaExceeded(backupSizeAfterFirstQuotaHit,
                 backupSizeAfterFirstQuotaHit - 200);
         fullBackupDataOutput = new FullBackupDataOutput(Long.MAX_VALUE);
         mTelephonyBackupAgent.onFullBackup(fullBackupDataOutput);
         assertEquals(backupSizeAfterSecondQuotaHit, fullBackupDataOutput.getSize());
+        assertTrue(mItemBackedUp);
+        mItemBackedUp = false;
     }
 
     /**
