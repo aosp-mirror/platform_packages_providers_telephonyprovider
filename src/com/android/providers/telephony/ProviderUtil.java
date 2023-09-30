@@ -23,7 +23,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Binder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -36,6 +35,9 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.telephony.SmsApplication;
+import com.android.internal.telephony.TelephonyPermissions;
+import com.android.internal.telephony.flags.FeatureFlags;
+import com.android.internal.telephony.flags.FeatureFlagsImpl;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +49,8 @@ import java.util.stream.Collectors;
  */
 public class ProviderUtil {
     private final static String TAG = "SmsProvider";
+    /** Feature flags for Provider features. */
+    public static final FeatureFlags sFeatureFlag = new FeatureFlagsImpl();
 
     /**
      * Check if a caller of the provider has restricted access,
@@ -219,5 +223,25 @@ public class ProviderUtil {
                     " IN (" + emergencyNumberListStr + ")";
         }
         return selectionByEmergencyNumber;
+    }
+
+    /**
+     * Check sub is either default value(for backup restore) or is accessible by the caller profile.
+     * @param ctx Context
+     * @param subId The sub Id associated with the entry
+     * @param callerUserHandle The user handle of the caller profile
+     * @return {@code true} if allow the caller to insert an entry that's associated with this sub.
+     */
+    public static boolean allowInteractingWithEntryOfSubscription(Context ctx,
+            int subId, UserHandle callerUserHandle) {
+        if (sFeatureFlag.rejectBadSubIdInteraction()) {
+            return TelephonyPermissions
+                    .checkSubscriptionAssociatedWithUser(ctx, subId, callerUserHandle)
+                    // INVALID_SUBSCRIPTION_ID represents backup restore.
+                    || subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+        } else {
+            return TelephonyPermissions.checkSubscriptionAssociatedWithUser(ctx, subId,
+                    callerUserHandle);
+        }
     }
 }
