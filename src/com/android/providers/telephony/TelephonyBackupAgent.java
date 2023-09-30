@@ -304,7 +304,8 @@ public class TelephonyBackupAgent extends BackupAgent {
 
         sDefaultValuesMms.put(Telephony.Mms.READ, 1);
         sDefaultValuesMms.put(Telephony.Mms.SEEN, 1);
-        sDefaultValuesMms.put(Telephony.Mms.SUBSCRIPTION_ID, -1);
+        sDefaultValuesMms.put(Telephony.Mms.SUBSCRIPTION_ID,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID);
         sDefaultValuesMms.put(Telephony.Mms.MESSAGE_BOX, Telephony.Mms.MESSAGE_BOX_ALL);
         sDefaultValuesMms.put(Telephony.Mms.TEXT_ONLY, 1);
 

@@ -280,59 +280,57 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_ALL_ICC:
-            case SMS_ALL_ICC_SUBID:
-                {
-                    int subId;
-                    if (match == SMS_ALL_ICC) {
-                        subId = SmsManager.getDefaultSmsSubscriptionId();
-                    } else {
-                        try {
-                            subId = Integer.parseInt(url.getPathSegments().get(1));
-                        } catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Wrong path segements, uri= " + url);
-                        }
-                    }
-
-                    if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
-                            subId, callerUserHandle)) {
-                        // If subId is not associated with user, return empty cursor.
-                        return emptyCursor;
-                    }
-
-                    Cursor ret = getAllMessagesFromIcc(subId);
-                    ret.setNotificationUri(getContext().getContentResolver(),
-                            match == SMS_ALL_ICC ? ICC_URI : ICC_SUBID_URI);
-                    return ret;
-                }
-
-            case SMS_ICC:
-            case SMS_ICC_SUBID:
-                {
-                    int subId;
-                    int messageIndex;
+            case SMS_ALL_ICC_SUBID: {
+                int subId;
+                if (match == SMS_ALL_ICC) {
+                    subId = SmsManager.getDefaultSmsSubscriptionId();
+                } else {
                     try {
-                        if (match == SMS_ICC) {
-                            subId = SmsManager.getDefaultSmsSubscriptionId();
-                            messageIndex = Integer.parseInt(url.getPathSegments().get(1));
-                        } else {
-                            subId = Integer.parseInt(url.getPathSegments().get(1));
-                            messageIndex = Integer.parseInt(url.getPathSegments().get(2));
-                        }
+                        subId = Integer.parseInt(url.getPathSegments().get(1));
                     } catch (NumberFormatException e) {
                         throw new IllegalArgumentException("Wrong path segements, uri= " + url);
                     }
-
-                    if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
-                            subId, callerUserHandle)) {
-                        // If subId is not associated with user, return empty cursor.
-                        return emptyCursor;
-                    }
-
-                    Cursor ret = getSingleMessageFromIcc(subId, messageIndex);
-                    ret.setNotificationUri(getContext().getContentResolver(),
-                            match == SMS_ICC ? ICC_URI : ICC_SUBID_URI);
-                    return ret;
                 }
+
+                if (!ProviderUtil.allowInteractingWithEntryOfSubscription(getContext(),
+                        subId, callerUserHandle)) {
+                    // If subId is not associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+
+                Cursor ret = getAllMessagesFromIcc(subId);
+                ret.setNotificationUri(getContext().getContentResolver(),
+                        match == SMS_ALL_ICC ? ICC_URI : ICC_SUBID_URI);
+                return ret;
+            }
+
+            case SMS_ICC:
+            case SMS_ICC_SUBID: {
+                int subId;
+                int messageIndex;
+                try {
+                    if (match == SMS_ICC) {
+                        subId = SmsManager.getDefaultSmsSubscriptionId();
+                        messageIndex = Integer.parseInt(url.getPathSegments().get(1));
+                    } else {
+                        subId = Integer.parseInt(url.getPathSegments().get(1));
+                        messageIndex = Integer.parseInt(url.getPathSegments().get(2));
+                    }
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Wrong path segements, uri= " + url);
+                }
+
+                if (!ProviderUtil.allowInteractingWithEntryOfSubscription(getContext(),
+                        subId, callerUserHandle)) {
+                    // If subId is not associated with user, return empty cursor.
+                    return emptyCursor;
+                }
+
+                Cursor ret = getSingleMessageFromIcc(subId, messageIndex);
+                ret.setNotificationUri(getContext().getContentResolver(),
+                        match == SMS_ICC ? ICC_URI : ICC_SUBID_URI);
+                return ret;
+            }
 
             default:
                 Log.e(TAG, "Invalid request: " + url);
@@ -703,7 +701,7 @@ public class SmsProvider extends ContentProvider {
                     }
                 }
 
-                if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
+                if (!ProviderUtil.allowInteractingWithEntryOfSubscription(getContext(), subId,
                     callerUserHandle)) {
                     TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
                         subId, callerUid, callerPkg);
@@ -857,8 +855,16 @@ public class SmsProvider extends ContentProvider {
                 address = values.getAsString(Sms.ADDRESS);
             }
 
-            if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
-                    callerUserHandle, address)) {
+            if (ProviderUtil.sFeatureFlag.rejectBadSubIdInteraction()) {
+                if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID
+                        && !TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
+                        subId, callerUserHandle, address)) {
+                    TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
+                            subId, callerUid, callerPkg);
+                    return null;
+                }
+            } else if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
+                    subId, callerUserHandle, address)) {
                 TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
                         callerUid, callerPkg);
                 return null;
@@ -1064,75 +1070,73 @@ public class SmsProvider extends ContentProvider {
                 break;
 
             case SMS_ALL_ICC:
-            case SMS_ALL_ICC_SUBID:
-                {
-                    int subId;
-                    int deletedCnt;
-                    if (match == SMS_ALL_ICC) {
-                        subId = SmsManager.getDefaultSmsSubscriptionId();
-                    } else {
-                        try {
-                            subId = Integer.parseInt(url.getPathSegments().get(1));
-                        } catch (NumberFormatException e) {
-                            throw new IllegalArgumentException("Wrong path segements, uri= " + url);
-                        }
-                    }
-
-                    if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
-                            subId, callerUserHandle)) {
-                        // If subId is not associated with user, return 0.
-                        return 0;
-                    }
-
-                    deletedCnt = deleteAllMessagesFromIcc(subId);
-                    // Notify changes even failure case since there might be some changes should be
-                    // known.
-                    getContext()
-                            .getContentResolver()
-                            .notifyChange(
-                                    match == SMS_ALL_ICC ? ICC_URI : ICC_SUBID_URI,
-                                    null,
-                                    true,
-                                    UserHandle.USER_ALL);
-                    return deletedCnt;
-                }
-
-            case SMS_ICC:
-            case SMS_ICC_SUBID:
-                {
-                    int subId;
-                    int messageIndex;
-                    boolean success;
+            case SMS_ALL_ICC_SUBID: {
+                int subId;
+                int deletedCnt;
+                if (match == SMS_ALL_ICC) {
+                    subId = SmsManager.getDefaultSmsSubscriptionId();
+                } else {
                     try {
-                        if (match == SMS_ICC) {
-                            subId = SmsManager.getDefaultSmsSubscriptionId();
-                            messageIndex = Integer.parseInt(url.getPathSegments().get(1));
-                        } else {
-                            subId = Integer.parseInt(url.getPathSegments().get(1));
-                            messageIndex = Integer.parseInt(url.getPathSegments().get(2));
-                        }
+                        subId = Integer.parseInt(url.getPathSegments().get(1));
                     } catch (NumberFormatException e) {
                         throw new IllegalArgumentException("Wrong path segements, uri= " + url);
                     }
-
-                    if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
-                            subId, callerUserHandle)) {
-                        // If subId is not associated with user, return 0.
-                        return 0;
-                    }
-
-                    success = deleteMessageFromIcc(subId, messageIndex);
-                    // Notify changes even failure case since there might be some changes should be
-                    // known.
-                    getContext()
-                            .getContentResolver()
-                            .notifyChange(
-                                    match == SMS_ICC ? ICC_URI : ICC_SUBID_URI,
-                                    null,
-                                    true,
-                                    UserHandle.USER_ALL);
-                    return success ? 1 : 0; // return deleted count
                 }
+
+                if (!ProviderUtil.allowInteractingWithEntryOfSubscription(getContext(),
+                        subId, callerUserHandle)) {
+                    // If subId is not associated with user, return 0.
+                    return 0;
+                }
+
+                deletedCnt = deleteAllMessagesFromIcc(subId);
+                // Notify changes even failure case since there might be some changes should be
+                // known.
+                getContext()
+                        .getContentResolver()
+                        .notifyChange(
+                                match == SMS_ALL_ICC ? ICC_URI : ICC_SUBID_URI,
+                                null,
+                                true,
+                                UserHandle.USER_ALL);
+                return deletedCnt;
+            }
+
+            case SMS_ICC:
+            case SMS_ICC_SUBID: {
+                int subId;
+                int messageIndex;
+                boolean success;
+                try {
+                    if (match == SMS_ICC) {
+                        subId = SmsManager.getDefaultSmsSubscriptionId();
+                        messageIndex = Integer.parseInt(url.getPathSegments().get(1));
+                    } else {
+                        subId = Integer.parseInt(url.getPathSegments().get(1));
+                        messageIndex = Integer.parseInt(url.getPathSegments().get(2));
+                    }
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("Wrong path segements, uri= " + url);
+                }
+
+                if (!ProviderUtil.allowInteractingWithEntryOfSubscription(getContext(),
+                        subId, callerUserHandle)) {
+                    // If subId is not associated with user, return 0.
+                    return 0;
+                }
+
+                success = deleteMessageFromIcc(subId, messageIndex);
+                // Notify changes even failure case since there might be some changes should be
+                // known.
+                getContext()
+                        .getContentResolver()
+                        .notifyChange(
+                                match == SMS_ICC ? ICC_URI : ICC_SUBID_URI,
+                                null,
+                                true,
+                                UserHandle.USER_ALL);
+                return success ? 1 : 0; // return deleted count
+            }
 
             default:
                 throw new IllegalArgumentException("Unknown URL");
