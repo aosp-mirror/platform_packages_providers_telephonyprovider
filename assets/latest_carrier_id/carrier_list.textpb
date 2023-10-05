@@ -617,7 +617,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 548
-  carrier_name: "Telemat Cel"
+  carrier_name: "Unifique"
   carrier_attribute {
     mccmnc_tuple: "72429"
   }
@@ -2639,7 +2639,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1362
-  carrier_name: "GramenPhone"
+  carrier_name: "Grameenphone"
   carrier_attribute {
     mccmnc_tuple: "47001"
   }
@@ -11451,7 +11451,7 @@ carrier_id {
   canonical_id: 2559
   carrier_name: "MONACO TELECOM"
   carrier_attribute {
-    mccmnc_tuple: "212010"
+    mccmnc_tuple: "21210"
   }
 }
 carrier_id {
@@ -11464,6 +11464,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "23210"
     gid1: "040E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302690"
+    gid1: "F1"
   }
   carrier_attribute {
     mccmnc_tuple: "302760"
@@ -11629,6 +11633,135 @@ carrier_id {
     spn: "BPS-BPV"
     spn: "PZA"
     spn: "POA"
+  }
+}
+carrier_id {
+  canonical_id: 2580
+  carrier_name: "Vodafone Oman"
+  carrier_attribute {
+    mccmnc_tuple: "42206"
+  }
+}
+carrier_id {
+  canonical_id: 2581
+  carrier_name: "DITO Telecommunity Corporation"
+  carrier_attribute {
+    mccmnc_tuple: "51566"
+    spn: "DITO"
+  }
+}
+carrier_id {
+  canonical_id: 2582
+  carrier_name: "Viti"
+  carrier_attribute {
+    mccmnc_tuple: "54705"
+  }
+}
+carrier_id {
+  canonical_id: 2583
+  carrier_name: "DENT"
+  carrier_attribute {
+    mccmnc_tuple: "23450"
+    mccmnc_tuple: "26001"
+    mccmnc_tuple: "26003"
+    mccmnc_tuple: "26006"
+    mccmnc_tuple: "27877"
+    mccmnc_tuple: "42501"
+    mccmnc_tuple: "44011"
+    mccmnc_tuple: "45403"
+    mccmnc_tuple: "51503"
+    mccmnc_tuple: "310240"
+    mccmnc_tuple: "310260"
+    mccmnc_tuple: "311882"
+    gid1: "3597bfd533"
+  }
+}
+carrier_id {
+  canonical_id: 2584
+  carrier_name: "MVNO #A1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "21FF"
+  }
+}
+carrier_id {
+  canonical_id: 2585
+  carrier_name: "MVNO #B1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "22FF"
+  }
+}
+carrier_id {
+  canonical_id: 2586
+  carrier_name: "MVNO #C1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "23FF"
+  }
+}
+carrier_id {
+  canonical_id: 2587
+  carrier_name: "MVNO #D1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "24FF"
+  }
+}
+carrier_id {
+  canonical_id: 2588
+  carrier_name: "MVNO #E1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "25FF"
+  }
+}
+carrier_id {
+  canonical_id: 2589
+  carrier_name: "MVNO #F1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "26FF"
+  }
+}
+carrier_id {
+  canonical_id: 2590
+  carrier_name: "MVNO #G1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "27FF"
+  }
+}
+carrier_id {
+  canonical_id: 2591
+  carrier_name: "MVNO #H1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "28FF"
+  }
+}
+carrier_id {
+  canonical_id: 2592
+  carrier_name: "MVNO #I1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "29FF"
+  }
+}
+carrier_id {
+  canonical_id: 2593
+  carrier_name: "MVNO #J1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "30FF"
+  }
+}
+carrier_id {
+  canonical_id: 2594
+  carrier_name: "Coriolis ESP"
+  carrier_attribute {
+    mccmnc_tuple: "20810"
+    gid1: "434F5249"
   }
 }
 carrier_id {
@@ -12020,4 +12153,13 @@ carrier_id {
   }
   parent_canonical_id: 2126
 }
-version: 117440542
+carrier_id {
+  canonical_id: 10037
+  carrier_name: "U+264A-Bell"
+  carrier_attribute {
+    mccmnc_tuple: "302690"
+    gid1: "F1"
+  }
+  parent_canonical_id: 2560
+}
+version: 117440543
