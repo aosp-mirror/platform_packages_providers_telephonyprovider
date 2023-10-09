@@ -3217,8 +3217,8 @@ public class TelephonyProvider extends ContentProvider
                 Context.MODE_PRIVATE);
         mManagedApnEnforced = spEnforcedFile.getBoolean(ENFORCED_KEY, false);
 
+        ProviderUtil.logRunningTelephonyProviderProcesses(getContext());
         if (VDBG) log("onCreate:- ret true");
-
         return true;
     }
 
