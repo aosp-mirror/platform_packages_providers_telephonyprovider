@@ -18,6 +18,7 @@ package com.android.providers.telephony;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
@@ -40,6 +41,7 @@ import com.android.internal.telephony.flags.FeatureFlags;
 import com.android.internal.telephony.flags.FeatureFlagsImpl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -49,6 +51,8 @@ import java.util.stream.Collectors;
  */
 public class ProviderUtil {
     private final static String TAG = "SmsProvider";
+    private static final String TELEPHONY_PROVIDER_PACKAGE = "com.android.providers.telephony";
+    private static final int PHONE_UID = 1001;
     /** Feature flags for Provider features. */
     public static final FeatureFlags sFeatureFlag = new FeatureFlagsImpl();
 
@@ -243,5 +247,35 @@ public class ProviderUtil {
             return TelephonyPermissions.checkSubscriptionAssociatedWithUser(ctx, subId,
                     callerUserHandle);
         }
+    }
+
+    /**
+     * Log all running processes of the telephony provider package.
+     */
+    public static void logRunningTelephonyProviderProcesses(@NonNull Context context) {
+        if (!sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+            return;
+        }
+
+        ActivityManager am = context.getSystemService(ActivityManager.class);
+        List<ActivityManager.RunningAppProcessInfo> processInfos = am.getRunningAppProcesses();
+        StringBuilder sb = new StringBuilder();
+        for (ActivityManager.RunningAppProcessInfo processInfo : processInfos) {
+            if (Arrays.asList(processInfo.pkgList).contains(TELEPHONY_PROVIDER_PACKAGE)
+                    || processInfo.uid == PHONE_UID) {
+                sb.append("{ProcessName=");
+                sb.append(processInfo.processName);
+                sb.append(";PID=");
+                sb.append(processInfo.pid);
+                sb.append(";UID=");
+                sb.append(processInfo.uid);
+                sb.append(";pkgList=");
+                for (String pkg : processInfo.pkgList) {
+                    sb.append(pkg + ";");
+                }
+                sb.append("}");
+            }
+        }
+        Log.d(TAG, "RunningTelephonyProviderProcesses:" + sb.toString());
     }
 }
