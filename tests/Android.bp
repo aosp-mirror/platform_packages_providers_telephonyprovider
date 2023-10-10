@@ -9,7 +9,7 @@ android_test {
         "mockito-target",
         "compatibility-device-util-axt",
         "androidx.test.rules",
-        "truth-prebuilt",
+        "truth",
         "androidx.test.core",
     ],
     libs: [
@@ -18,7 +18,10 @@ android_test {
         "android.test.base",
         "android.test.mock",
     ],
-    srcs: ["src/**/*.java", ":telephonyprovider-shared-srcs"],
+    srcs: [
+        "src/**/*.java",
+        ":telephonyprovider-shared-srcs",
+    ],
     platform_apis: true,
     test_suites: ["device-tests"],
     certificate: "platform",
