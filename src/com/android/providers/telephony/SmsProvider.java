@@ -132,6 +132,7 @@ public class SmsProvider extends ContentProvider {
     @Override
     public Cursor query(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
+        String callingPackage = getCallingPackage();
         final int callingUid = Binder.getCallingUid();
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
 
@@ -160,6 +161,11 @@ public class SmsProvider extends ContentProvider {
         // Generate the body of the query.
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getReadableDatabase(match);
+        SQLiteOpenHelper sqLiteOpenHelper = getDBOpenHelper(match);
+        if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) sqLiteOpenHelper).addDatabaseOpeningDebugLog(
+                    callingPackage + ";SmsProvider.query;" + url, true);
+        }
         switch (match) {
             case SMS_ALL:
                 constructQueryForBox(qb, Sms.MESSAGE_TYPE_ALL, smsTable);
@@ -741,6 +747,11 @@ public class SmsProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = getWritableDatabase(match);
+        SQLiteOpenHelper sqLiteOpenHelper = getDBOpenHelper(match);
+        if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) sqLiteOpenHelper).addDatabaseOpeningDebugLog(
+                    callerPkg + ";SmsProvider.insert;" + url, false);
+        }
 
         if (table.equals(TABLE_SMS)) {
             boolean addDate = false;
@@ -901,6 +912,9 @@ public class SmsProvider extends ContentProvider {
             return uri;
         } else {
             Log.e(TAG, "insert: failed!");
+            if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
+                ((MmsSmsDatabaseHelper) sqLiteOpenHelper).printDatabaseOpeningDebugLog();
+            }
         }
 
         return null;
@@ -995,6 +1009,11 @@ public class SmsProvider extends ContentProvider {
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getWritableDatabase(match);
+        SQLiteOpenHelper sqLiteOpenHelper = getDBOpenHelper(match);
+        if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) sqLiteOpenHelper).addDatabaseOpeningDebugLog(
+                    getCallingPackage() + ";SmsProvider.delete;" + url, false);
+        }
         boolean notifyIfNotDefault = true;
         switch (match) {
             case SMS_ALL:
@@ -1213,6 +1232,11 @@ public class SmsProvider extends ContentProvider {
         boolean notifyIfNotDefault = true;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getWritableDatabase(match);
+        SQLiteOpenHelper sqLiteOpenHelper = getDBOpenHelper(match);
+        if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) sqLiteOpenHelper).addDatabaseOpeningDebugLog(
+                    callerPkg + ";SmsProvider.update;" + url, false);
+        }
 
         switch (match) {
             case SMS_RAW_MESSAGE:
