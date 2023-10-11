@@ -51,6 +51,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -458,7 +459,7 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case GID1_INDEX:
                 for (String str : attr.gid1) {
-                    cv.put(CarrierId.All.GID1, str.toLowerCase());
+                    cv.put(CarrierId.All.GID1, str.toLowerCase(Locale.ROOT));
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.GID1);
                     found = true;
@@ -466,7 +467,7 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case GID2_INDEX:
                 for (String str : attr.gid2) {
-                    cv.put(CarrierId.All.GID2, str.toLowerCase());
+                    cv.put(CarrierId.All.GID2, str.toLowerCase(Locale.ROOT));
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.GID2);
                     found = true;
@@ -482,7 +483,7 @@ public class CarrierIdProvider extends ContentProvider {
                 break;
             case SPN_INDEX:
                 for (String str : attr.spn) {
-                    cv.put(CarrierId.All.SPN, str.toLowerCase());
+                    cv.put(CarrierId.All.SPN, str.toLowerCase(Locale.ROOT));
                     convertCarrierAttrToContentValues(cv, cvs, attr, index + 1);
                     cv.remove(CarrierId.All.SPN);
                     found = true;
