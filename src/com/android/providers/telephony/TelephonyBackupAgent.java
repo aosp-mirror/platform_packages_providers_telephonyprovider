@@ -23,6 +23,8 @@ import android.app.IntentService;
 import android.app.backup.BackupAgent;
 import android.app.backup.BackupDataInput;
 import android.app.backup.BackupDataOutput;
+import android.app.backup.BackupManager;
+import android.app.backup.BackupRestoreEventLogger;
 import android.app.backup.FullBackupDataOutput;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -310,6 +312,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         sDefaultValuesAddr.put(Telephony.Mms.Addr.CHARSET, CharacterSets.DEFAULT_CHARSET);
     }
 
+    private final boolean mIsDeferredRestoreServiceStarted;
 
     private SparseArray<String> mSubId2phone = new SparseArray<String>();
     private Map<String, Integer> mPhone2subId = new ArrayMap<String, Integer>();
@@ -318,6 +321,10 @@ public class TelephonyBackupAgent extends BackupAgent {
     private ContentResolver mContentResolver;
     // How many bytes we can backup to fit into quota.
     private long mBytesOverQuota;
+    private BackupRestoreEventLogger mLogger;
+    private BackupManager mBackupManager;
+    private int mSmsCount = 0;
+    private int mMmsCount = 0;
 
     // Cache list of recipients by threadId. It reduces db requests heavily. Used during backup.
     @VisibleForTesting
@@ -325,6 +332,56 @@ public class TelephonyBackupAgent extends BackupAgent {
     // Cache threadId by list of recipients. Used during restore.
     @VisibleForTesting
     Map<Set<String>, Long> mCacheGetOrCreateThreadId = null;
+
+    /**
+     * BackupRestoreEventLogger Dependencies for unit testing.
+     */
+    @VisibleForTesting
+    public interface BackupRestoreEventLoggerProxy {
+        void logItemsBackedUp(String dataType, int count);
+        void logItemsBackupFailed(String dataType, int count, String error);
+        void logItemsRestored(String dataType, int count);
+        void logItemsRestoreFailed(String dataType, int count, String error);
+    }
+
+    private BackupRestoreEventLoggerProxy mBackupRestoreEventLoggerProxy =
+            new BackupRestoreEventLoggerProxy() {
+        @Override
+        public void logItemsBackedUp(String dataType, int count) {
+            mLogger.logItemsBackedUp(dataType, count);
+        }
+
+        @Override
+        public void logItemsBackupFailed(String dataType, int count, String error) {
+            mLogger.logItemsBackupFailed(dataType, count, error);
+        }
+
+        @Override
+        public void logItemsRestored(String dataType, int count) {
+            mLogger.logItemsRestored(dataType, count);
+        }
+
+        @Override
+        public void logItemsRestoreFailed(String dataType, int count, String error) {
+            mLogger.logItemsRestoreFailed(dataType, count, error);
+        }
+    };
+
+    public TelephonyBackupAgent() {
+        mIsDeferredRestoreServiceStarted = false;
+    }
+
+    public TelephonyBackupAgent(boolean isServiceStarted) {
+        mIsDeferredRestoreServiceStarted = isServiceStarted;
+    }
+
+    /**
+     * Overrides BackupRestoreEventLogger dependencies for unit testing.
+     */
+    @VisibleForTesting
+    public void setBackupRestoreEventLoggerProxy(BackupRestoreEventLoggerProxy proxy) {
+        mBackupRestoreEventLoggerProxy = proxy;
+    }
 
     @Override
     public void onCreate() {
@@ -342,6 +399,18 @@ public class TelephonyBackupAgent extends BackupAgent {
                 }
             }
         }
+
+        mBackupManager = new BackupManager(getBaseContext());
+        if (mIsDeferredRestoreServiceStarted) {
+            try {
+                mLogger = mBackupManager.getDelayedRestoreLogger();
+            } catch (SecurityException e) {
+                Log.e(TAG, "onCreate" + e.toString());
+            }
+        } else {
+            mLogger = mBackupManager.getBackupRestoreEventLogger(TelephonyBackupAgent.this);
+        }
+
         mContentResolver = getContentResolver();
         initUnknownSender();
     }
@@ -350,6 +419,7 @@ public class TelephonyBackupAgent extends BackupAgent {
     void setContentResolver(ContentResolver contentResolver) {
         mContentResolver = contentResolver;
     }
+
     @VisibleForTesting
     void setSubId(SparseArray<String> subId2Phone, Map<String, Integer> phone2subId) {
         mSubId2phone = subId2Phone;
@@ -361,6 +431,11 @@ public class TelephonyBackupAgent extends BackupAgent {
         mUnknownSenderThreadId = getOrCreateThreadId(null);
         sDefaultValuesSms.put(Telephony.Sms.THREAD_ID, mUnknownSenderThreadId);
         sDefaultValuesMms.put(Telephony.Mms.THREAD_ID, mUnknownSenderThreadId);
+    }
+
+    @VisibleForTesting
+    void setBackupManager(BackupManager backupManager) {
+        mBackupManager = backupManager;
     }
 
     @Override
@@ -395,6 +470,8 @@ public class TelephonyBackupAgent extends BackupAgent {
             // messages, otherwise 1000 MMS messages. Repeat until out of SMS's or MMS's.
             // It ensures backups are incremental.
             int fileNum = 0;
+            mSmsCount = 0;
+            mMmsCount = 0;
             while (smsCursor != null && !smsCursor.isAfterLast() &&
                     mmsCursor != null && !mmsCursor.isAfterLast()) {
                 final long smsDate = TimeUnit.MILLISECONDS.toSeconds(getMessageDate(smsCursor));
@@ -416,6 +493,14 @@ public class TelephonyBackupAgent extends BackupAgent {
             while (mmsCursor != null && !mmsCursor.isAfterLast()) {
                 backupAll(data, mmsCursor,
                         String.format(Locale.US, MMS_BACKUP_FILE_FORMAT, fileNum++));
+            }
+
+            if (mSmsCount > 0) {
+                mBackupRestoreEventLoggerProxy.logItemsBackedUp("SMS", mSmsCount);
+            }
+
+            if (mMmsCount > 0) {
+                mBackupRestoreEventLoggerProxy.logItemsBackedUp("MMS", mMmsCount);
             }
         }
 
@@ -463,8 +548,10 @@ public class TelephonyBackupAgent extends BackupAgent {
         try (JsonWriter jsonWriter = getJsonWriter(fileName)) {
             if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
                 chunk = putSmsMessagesToJson(cursor, jsonWriter);
+                mSmsCount = chunk.count;
             } else {
                 chunk = putMmsMessagesToJson(cursor, jsonWriter);
+                mMmsCount = chunk.count;
             }
         }
         backupFile(chunk, fileName, data);
@@ -610,9 +697,14 @@ public class TelephonyBackupAgent extends BackupAgent {
             } catch (IllegalArgumentException e) {
                 // ignore
             }
-            mTelephonyBackupAgent = new TelephonyBackupAgent();
+
+            mTelephonyBackupAgent = new TelephonyBackupAgent(true);
             mTelephonyBackupAgent.attach(this);
-            mTelephonyBackupAgent.onCreate();
+            try {
+                 mTelephonyBackupAgent.onCreate();
+            } catch (IllegalStateException e) {
+                Log.e(TAG, "onCreate" + e.toString());
+            }
 
             PowerManager pm = (PowerManager) getSystemService(Context.POWER_SERVICE);
             mWakeLock = pm.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, TAG);
@@ -704,6 +796,16 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
         jsonReader.endArray();
         incremenentSharedPref(true, msgCount, numExceptions);
+        if (msgCount > 0) {
+            mBackupRestoreEventLoggerProxy.logItemsRestored("SMS", msgCount);
+        }
+
+        if (numExceptions > 0) {
+            mBackupRestoreEventLoggerProxy.logItemsRestoreFailed("SMS", numExceptions,
+                    "provider_exception");
+        }
+
+        reportDelayedRestoreResult();
     }
 
     void incremenentSharedPref(boolean sms, int msgCount, int numExceptions) {
@@ -768,12 +870,32 @@ public class TelephonyBackupAgent extends BackupAgent {
         }
         Log.d(TAG, "putMmsMessagesToProvider handled " + total + " new messages.");
         incremenentSharedPref(false, total, numExceptions);
+        if (total > 0) {
+            mBackupRestoreEventLoggerProxy.logItemsRestored("MMS", total);
+        }
+
+        if (numExceptions > 0) {
+            mBackupRestoreEventLoggerProxy.logItemsRestoreFailed("MMS", numExceptions,
+                    "provider_exception");
+        }
+
+        reportDelayedRestoreResult();
     }
 
     private void notifyBulkMmsChange() {
         mContentResolver.notifyChange(Telephony.MmsSms.CONTENT_URI, null,
                 ContentResolver.NOTIFY_SYNC_TO_NETWORK, UserHandle.USER_ALL);
         ProviderUtil.notifyIfNotDefaultSmsApp(Telephony.Mms.CONTENT_URI, null, this);
+    }
+
+    private void reportDelayedRestoreResult() {
+        if (mIsDeferredRestoreServiceStarted) {
+            try {
+                mBackupManager.reportDelayedRestoreResult(mLogger);
+            } catch (SecurityException e) {
+                Log.e(TAG, "putMmsMessagesToProvider" + e.toString());
+            }
+        }
     }
 
     @VisibleForTesting
