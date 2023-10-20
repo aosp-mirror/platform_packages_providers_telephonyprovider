@@ -32,6 +32,7 @@ import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED_STATUS;
+import static android.provider.Telephony.Carriers.INFRASTRUCTURE_BITMASK;
 import static android.provider.Telephony.Carriers.LINGERING_NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
@@ -162,7 +163,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 64 << 16;
+    private static final int DATABASE_VERSION = 65 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -375,7 +376,7 @@ public class TelephonyProvider extends ContentProvider
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
         // wait_time, max_conns_time, mtu, mtu_v4, mtu_v6, bearer_bitmask, user_visible,
-        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on
+        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on.
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
@@ -397,6 +398,8 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_APN_SET_ID));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ID,
                 String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(INFRASTRUCTURE_BITMASK,
+                String.valueOf(ApnSetting.INFRASTRUCTURE_CELLULAR));
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
 
@@ -506,6 +509,7 @@ public class TelephonyProvider extends ContentProvider
                 APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
                 SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
                 ALWAYS_ON + " INTEGER DEFAULT 0," +
+                INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 1," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
@@ -1960,6 +1964,19 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 64 << 16 | 6;
             }
 
+            if (oldVersion < (65 << 16 | 6)) {
+                try {
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add infrastructure bitmask value.");
+                    }
+                }
+                oldVersion = 65 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -2408,6 +2425,7 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, APN_SET_ID);
             getIntValueFromCursor(cv, c, SKIP_464XLAT);
             getIntValueFromCursor(cv, c, ALWAYS_ON);
+            getIntValueFromCursor(cv, c, INFRASTRUCTURE_BITMASK);
         }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
@@ -2632,6 +2650,13 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
             addBoolAttribute(parser, "always_on", map, ALWAYS_ON);
+
+            int infrastructureBitmask = ApnSetting.INFRASTRUCTURE_CELLULAR;
+            String infrastructureList = parser.getAttributeValue(null, "infrastructure_bitmask");
+            if (infrastructureList != null) {
+                infrastructureBitmask = getInfrastructureListFromString(infrastructureList);
+            }
+            map.put(INFRASTRUCTURE_BITMASK, infrastructureBitmask);
 
             int networkTypeBitmask = 0;
             String networkTypeList = parser.getAttributeValue(null, "network_type_bitmask");
@@ -3821,7 +3846,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 64 << 16) {
+            if (DATABASE_VERSION != 65 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -5511,6 +5536,30 @@ public class TelephonyProvider extends ContentProvider
             bearerBitmask |= getBitmaskForTech(bearerInt);
         }
         return bearerBitmask;
+    }
+
+    /**
+     * Get the infrastructure bitmask from string
+     *
+     * @param infrastructureString The infrastructure list in string format. For example
+     * {@code "cellular|satellite"}.
+     *
+     * @return The infrastructure bitmask.
+     */
+    private static int getInfrastructureListFromString(@NonNull String infrastructureString) {
+        String[] infras = infrastructureString.split("\\|");
+        int infrastructureBitmask = 0;
+        for (String infrastructure : infras) {
+            switch (infrastructure.toLowerCase(Locale.ROOT)) {
+                case "cellular":
+                    infrastructureBitmask |= ApnSetting.INFRASTRUCTURE_CELLULAR;
+                    break;
+                case "satellite":
+                    infrastructureBitmask |= ApnSetting.INFRASTRUCTURE_SATELLITE;
+                    break;
+            }
+        }
+        return infrastructureBitmask;
     }
 
     /**
