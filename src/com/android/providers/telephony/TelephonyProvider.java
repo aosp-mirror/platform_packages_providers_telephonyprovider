@@ -734,6 +734,9 @@ public class TelephonyProvider extends ContentProvider
             } else {
                 log("dbh.onCreate: Apply apns from xml.");
                 initDatabase(db);
+                // Notify listeners of DB change since DB has been updated
+                mContext.getContentResolver().notifyChange(
+                        CONTENT_URI, null, true, UserHandle.USER_ALL);
             }
             if (DBG) log("dbh.onCreate:- db=" + db);
         }
@@ -5256,12 +5259,15 @@ public class TelephonyProvider extends ContentProvider
             return;
         }
 
+        // On first boot getWritableDatabase() triggers
+        // DatabaseHelper.onCreate() which in turn will call initDatabase.
+        // To avoid loading APNs twice call getWritableDatabase() before needApnDbUpdate()
+        SQLiteDatabase db = getWritableDatabase();
+
         if (!needApnDbUpdate()) {
             log("Skipping apn db update since apn-conf has not changed.");
             return;
         }
-
-        SQLiteDatabase db = getWritableDatabase();
 
         // Delete preferred APN for all subIds
         deletePreferredApnId(getContext());
