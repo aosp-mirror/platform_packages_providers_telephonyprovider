@@ -66,6 +66,8 @@ public class ProviderUtilTest {
         when(mContext.getSystemService(SubscriptionManager.class)).thenReturn(mSubscriptionManager);
         when(mContext.getSystemService(TelephonyManager.class)).thenReturn(mTelephonyManager);
         replaceFeatureFlag(mMockFeatureFlag);
+
+        doReturn(true).when(mMockFeatureFlag).workProfileApiSplit();
     }
 
     @After
