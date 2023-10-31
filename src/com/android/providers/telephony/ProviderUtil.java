@@ -157,23 +157,52 @@ public class ProviderUtil {
      * or {@code null} if user is not associated with any subscription.
      */
     @Nullable
-    public static String getSelectionBySubIds(Context context, @NonNull UserHandle userHandle) {
+    public static String getSelectionBySubIds(Context context,
+            @NonNull final UserHandle userHandle) {
         List<SubscriptionInfo> associatedSubscriptionsList = new ArrayList<>();
         SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
-        if (subManager != null) {
-            // Get list of subscriptions associated with this user.
-            associatedSubscriptionsList = subManager
-                    .getSubscriptionInfoListAssociatedWithUser(userHandle);
-        }
-
         UserManager userManager = context.getSystemService(UserManager.class);
-        if ((userManager != null) && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
-            // SMS/MMS restored from another device have sub_id=-1.
-            // To query/update/delete those messages, sub_id=-1 should be in the selection string.
-            SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
-                    .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
-                    .build();
-            associatedSubscriptionsList.add(invalidSubInfo);
+
+        if (sFeatureFlag.workProfileApiSplit()) {
+            if (subManager != null) {
+                // Get list of subscriptions accessible to this user.
+                associatedSubscriptionsList = subManager
+                        .getSubscriptionInfoListAssociatedWithUser(userHandle);
+
+                if ((userManager != null)
+                        && userManager.isManagedProfile(userHandle.getIdentifier())) {
+                    // Work profile caller can only see subscriptions explicitly associated with it.
+                    associatedSubscriptionsList = associatedSubscriptionsList.stream()
+                            .filter(info -> userHandle.equals(subManager
+                                            .getSubscriptionUserHandle(info.getSubscriptionId())))
+                            .collect(Collectors.toList());
+                } else {
+                    // SMS/MMS restored from another device have sub_id=-1.
+                    // To query/update/delete those messages, sub_id=-1 should be in the selection
+                    // string.
+                    SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
+                            .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                            .build();
+                    associatedSubscriptionsList.add(invalidSubInfo);
+                }
+            }
+        } else {
+            if (subManager != null) {
+                // Get list of subscriptions associated with this user.
+                associatedSubscriptionsList = subManager
+                        .getSubscriptionInfoListAssociatedWithUser(userHandle);
+            }
+
+            if ((userManager != null)
+                    && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
+                // SMS/MMS restored from another device have sub_id=-1.
+                // To query/update/delete those messages, sub_id=-1 should be in the selection
+                // string.
+                SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
+                        .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                        .build();
+                associatedSubscriptionsList.add(invalidSubInfo);
+            }
         }
 
         if (associatedSubscriptionsList.isEmpty()) {
