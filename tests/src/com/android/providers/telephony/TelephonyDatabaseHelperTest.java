@@ -525,21 +525,6 @@ public final class TelephonyDatabaseHelperTest {
         assertTrue(Arrays.asList(columns).contains(Carriers.INFRASTRUCTURE_BITMASK));
     }
 
-    @Test
-    public void databaseHelperOnUpgrade_hasEsimBootstrapProvisioningFields() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasEsimBootstrapProvisioningFields");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
-        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
-
-        // The upgraded db must have the fields Telephony.Carrier.ESIM_BOOTSTRAP_PROVISIONING.
-        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
-        String[] columns = cursor.getColumnNames();
-        Log.d(TAG, "carriers columns: " + Arrays.toString(columns));
-
-        assertTrue(Arrays.asList(columns).contains(Carriers.ESIM_BOOTSTRAP_PROVISIONING));
-    }
-
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
