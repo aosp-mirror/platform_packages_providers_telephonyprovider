@@ -11765,6 +11765,28 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2595
+  carrier_name: "SIMBA"
+  carrier_attribute {
+    mccmnc_tuple: "52510"
+    spn: "SIMBA"
+  }
+}
+carrier_id {
+  canonical_id: 2596
+  carrier_name: "Paradise Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "350007"
+  }
+}
+carrier_id {
+  canonical_id: 2597
+  carrier_name: "Skylo"
+  carrier_attribute {
+    mccmnc_tuple: "90198"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12162,4 +12184,4 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 117440543
+version: 117440544
