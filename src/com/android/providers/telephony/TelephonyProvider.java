@@ -33,7 +33,6 @@ import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED_STATUS;
 import static android.provider.Telephony.Carriers.INFRASTRUCTURE_BITMASK;
-import static android.provider.Telephony.Carriers.ESIM_BOOTSTRAP_PROVISIONING;
 import static android.provider.Telephony.Carriers.LINGERING_NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
@@ -164,7 +163,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 66 << 16;
+    private static final int DATABASE_VERSION = 65 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -401,7 +400,6 @@ public class TelephonyProvider extends ContentProvider
                 String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(INFRASTRUCTURE_BITMASK,
                 String.valueOf(ApnSetting.INFRASTRUCTURE_CELLULAR));
-        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(ESIM_BOOTSTRAP_PROVISIONING, "0");
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
 
@@ -512,14 +510,13 @@ public class TelephonyProvider extends ContentProvider
                 SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
                 ALWAYS_ON + " INTEGER DEFAULT 0," +
                 INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 1," +
-                ESIM_BOOTSTRAP_PROVISIONING + " INTEGER DEFAULT 0,"
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
                 // user, server, password, authtype, type, sub_id, modem_cognitive, max_conns,
                 // wait_time, max_conns_time, mtu, mtu_v4, mtu_v6, bearer_bitmask, user_visible,
                 // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on.
-                + "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
+                "UNIQUE (" + TextUtils.join(", ", CARRIERS_UNIQUE_FIELDS) + "));";
     }
 
     @VisibleForTesting
@@ -1983,21 +1980,6 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 65 << 16 | 6;
             }
 
-            if (oldVersion < (66 << 16 | 6)) {
-                try {
-                    // Try to add new field ESIM_BOOTSTRAP_PROVISIONING
-                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
-                            + ESIM_BOOTSTRAP_PROVISIONING + " INTEGER DEFAULT 0;");
-                } catch (SQLiteException e) {
-                    if (DBG) {
-                        log("onUpgrade failed to update " + CARRIERS_TABLE
-                                    + " to add esim bootstrap provisioning flag");
-                    }
-
-                }
-                oldVersion = 66 << 16 | 6;
-            }
-
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -2447,7 +2429,6 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, SKIP_464XLAT);
             getIntValueFromCursor(cv, c, ALWAYS_ON);
             getIntValueFromCursor(cv, c, INFRASTRUCTURE_BITMASK);
-            getIntValueFromCursor(cv, c, ESIM_BOOTSTRAP_PROVISIONING);
         }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
@@ -2672,8 +2653,6 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
             addBoolAttribute(parser, "always_on", map, ALWAYS_ON);
-            addBoolAttribute(parser, "esim_bootstrap_provisioning", map,
-                    ESIM_BOOTSTRAP_PROVISIONING);
 
             int infrastructureBitmask = ApnSetting.INFRASTRUCTURE_CELLULAR;
             String infrastructureList = parser.getAttributeValue(null, "infrastructure_bitmask");
@@ -3870,7 +3849,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 66 << 16) {
+            if (DATABASE_VERSION != 65 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
