@@ -164,7 +164,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 66 << 16;
+    private static final int DATABASE_VERSION = 67 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -400,7 +400,8 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ID,
                 String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(INFRASTRUCTURE_BITMASK,
-                String.valueOf(ApnSetting.INFRASTRUCTURE_CELLULAR));
+                String.valueOf(
+                        ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(ESIM_BOOTSTRAP_PROVISIONING, "0");
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
@@ -512,7 +513,7 @@ public class TelephonyProvider extends ContentProvider
                 APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
                 SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
                 ALWAYS_ON + " INTEGER DEFAULT 0," +
-                INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 1," +
+                INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 3," +
                 ESIM_BOOTSTRAP_PROVISIONING + " BOOLEAN DEFAULT 0," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
@@ -1999,6 +2000,21 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 66 << 16 | 6;
             }
 
+            if (oldVersion < (67 << 16 | 6)) {
+                try {
+                    // If default value of infrastructure_bitmask column is set to 1, then update
+                    // it to 3
+                    db.execSQL("UPDATE " + CARRIERS_TABLE + " SET " + INFRASTRUCTURE_BITMASK + "=3"
+                            + "  WHERE " + INFRASTRUCTURE_BITMASK + "=1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add infrastructure bitmask value.");
+                    }
+                }
+                oldVersion = 67 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -2676,7 +2692,8 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "esim_bootstrap_provisioning", map,
                     ESIM_BOOTSTRAP_PROVISIONING);
 
-            int infrastructureBitmask = ApnSetting.INFRASTRUCTURE_CELLULAR;
+            int infrastructureBitmask =
+                    ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE;
             String infrastructureList = parser.getAttributeValue(null, "infrastructure_bitmask");
             if (infrastructureList != null) {
                 infrastructureBitmask = getInfrastructureListFromString(infrastructureList);
@@ -3871,7 +3888,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 66 << 16) {
+            if (DATABASE_VERSION != 67 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
