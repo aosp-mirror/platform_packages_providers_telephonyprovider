@@ -21,7 +21,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
-
+import static org.mockito.Mockito.when;
 
 import android.Manifest;
 import android.content.ContentUris;
@@ -34,8 +34,8 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Environment;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.PersistableBundle;
 import android.os.Process;
 import android.provider.Telephony;
@@ -45,20 +45,20 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
-import com.android.internal.telephony.LocalLog;
+
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SmallTest;
+
+import com.android.internal.telephony.LocalLog;
+import com.android.internal.telephony.PhoneFactory;
 
 import junit.framework.TestCase;
 
 import org.junit.Test;
-import org.mockito.MockitoAnnotations;
 import org.mockito.Mock;
-import static org.mockito.Mockito.when;
-
-import com.android.internal.telephony.PhoneFactory;
+import org.mockito.MockitoAnnotations;
 
 import java.io.File;
 import java.io.FileInputStream;
