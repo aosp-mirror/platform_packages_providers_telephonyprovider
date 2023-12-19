@@ -4104,7 +4104,14 @@ public class TelephonyProvider extends ContentProvider
         return queryInternal(url, projectionIn, selection, selectionArgs, sort);
     }
 
-    private synchronized Cursor queryInternal(Uri url, String[] projectionIn, String selection,
+    /**
+     * Internally queries the database.
+     *
+     * Things to keep in mind when writing code for this function:
+     *   - Must be wrapped in synchronized before quering database.
+     *   - Please call external APIs, that use locks, outside of synchronized.
+     */
+    private Cursor queryInternal(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
         int subId = SubscriptionManager.getDefaultSubscriptionId();
         String subIdString;
@@ -4312,29 +4319,32 @@ public class TelephonyProvider extends ContentProvider
             qb.appendWhere(TextUtils.join(" AND ", constraints));
         }
 
-        SQLiteDatabase db = getReadableDatabase();
-        Cursor ret = null;
-        try {
-            // Exclude entries marked deleted
-            if (CARRIERS_TABLE.equals(qb.getTables())) {
-                if (TextUtils.isEmpty(selection)) {
-                    selection = "";
-                } else {
-                    selection += " and ";
+        synchronized (this) {
+            SQLiteDatabase db = getReadableDatabase();
+            Cursor ret = null;
+            try {
+                // Exclude entries marked deleted
+                if (CARRIERS_TABLE.equals(qb.getTables())) {
+                    if (TextUtils.isEmpty(selection)) {
+                        selection = "";
+                    } else {
+                        selection += " and ";
+                    }
+                    selection += IS_NOT_USER_DELETED + " and "
+                            + IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and "
+                            + IS_NOT_CARRIER_DELETED + " and "
+                            + IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML;
+                    if (VDBG) log("query: selection modified to " + selection);
                 }
-                selection += IS_NOT_USER_DELETED + " and " +
-                        IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and " +
-                        IS_NOT_CARRIER_DELETED + " and " +
-                        IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML;
-                if (VDBG) log("query: selection modified to " + selection);
+                ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
+            } catch (SQLException e) {
+                loge("got exception when querying: " + e);
             }
-            ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
-        } catch (SQLException e) {
-            loge("got exception when querying: " + e);
+            if (ret != null) {
+                ret.setNotificationUri(getContext().getContentResolver(), url);
+            }
+            return ret;
         }
-        if (ret != null)
-            ret.setNotificationUri(getContext().getContentResolver(), url);
-        return ret;
     }
 
     /**
@@ -4373,14 +4383,25 @@ public class TelephonyProvider extends ContentProvider
      */
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
             String selection, String[] selectionArgs, String sort, int subId) {
-        Cursor ret;
         Context context = getContext();
-        SubscriptionManager subscriptionManager = (SubscriptionManager) context
+
+        // The SubscriptionManager can use the lock to query tables such as sim_info again, so
+        // calling subscriptionManager should be performed outside of synchronized.
+        final SubscriptionManager subscriptionManager = (SubscriptionManager) context
                 .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
         if (!subscriptionManager.isActiveSubscriptionId(subId)) {
             return null;
         }
 
+        return getSubscriptionMatchingAPNListSynchronized(qb, projectionIn, selection,
+                selectionArgs, sort, subId);
+    }
+
+    private synchronized Cursor getSubscriptionMatchingAPNListSynchronized(
+            SQLiteQueryBuilder qb, String[] projectionIn, String selection, String[] selectionArgs,
+            String sort, int subId) {
+        Cursor ret;
+        Context context = getContext();
         final TelephonyManager tm = ((TelephonyManager) context
                 .getSystemService(Context.TELEPHONY_SERVICE))
                 .createForSubscriptionId(subId);
