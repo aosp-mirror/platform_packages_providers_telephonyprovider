@@ -593,6 +593,22 @@ public final class TelephonyDatabaseHelperTest {
         assertEquals(expectedInfrastructureBitmask, infrastructureBitmask);
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasServiceCapabilitiesFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasServiceCapabilitiesFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // The upgraded db must have the fields
+        //  Telephony.SimInfo.COLUMN_CELLULAR_SERVICE_CAPABILITIES
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(columns));
+
+        assertTrue(Arrays.asList(columns).contains(Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
