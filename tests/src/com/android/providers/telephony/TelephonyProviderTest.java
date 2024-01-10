@@ -45,11 +45,14 @@ import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
 import android.test.mock.MockContext;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SmallTest;
+
+import com.android.internal.telephony.LocalLog;
+import com.android.internal.telephony.PhoneFactory;
 
 import com.android.internal.telephony.LocalLog;
 import com.android.internal.telephony.PhoneFactory;
