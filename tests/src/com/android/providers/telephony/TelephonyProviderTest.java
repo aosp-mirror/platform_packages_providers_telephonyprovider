@@ -38,6 +38,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.PersistableBundle;
 import android.os.Process;
+import android.os.UserHandle;
 import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
 import android.provider.Telephony.SimInfo;
@@ -356,6 +357,11 @@ public class TelephonyProviderTest extends TestCase {
         @Override
         public File getFilesDir() {
             return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+        }
+
+        @Override
+        public int getUserId() {
+            return UserHandle.USER_SYSTEM;
         }
     }
 
