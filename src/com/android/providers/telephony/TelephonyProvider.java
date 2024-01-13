@@ -4149,7 +4149,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
                 return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
                         sort, subId);
@@ -4170,7 +4169,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -4198,7 +4196,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -4217,7 +4214,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -4620,7 +4616,7 @@ public class TelephonyProvider extends ContentProvider
      *
      * @param values the value that caller wants to insert
      * @return a pair in which the first element refers to the Uri for the row inserted, the second
-     *         element refers to whether sends out nofitication.
+     *         element refers to whether sends out notification.
      */
     private Pair<Uri, Boolean> insertRowWithValue(ContentValues values) {
         Uri result = null;
@@ -4635,7 +4631,7 @@ public class TelephonyProvider extends ContentProvider
                 result = ContentUris.withAppendedId(CONTENT_URI, rowID);
                 notify = true;
             }
-            if (VDBG) log("insert: inserted " + values.toString() + " rowID = " + rowID);
+            if (DBG) log("insert: inserted " + values + ", rowID = " + rowID);
         } catch (SQLException e) {
             log("insert: exception " + e);
             // Insertion failed which could be due to a conflict. Check if that is the case
@@ -4673,7 +4669,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return Pair.create(result, notify);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             //intentional fall through from above case
 
@@ -4708,7 +4703,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return Pair.create(result, notify);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // FIXME use subId in the query
             }
             //intentional fall through from above case
@@ -4743,7 +4737,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return Pair.create(result, notify);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             //intentional fall through from above case
 
@@ -4834,7 +4827,6 @@ public class TelephonyProvider extends ContentProvider
                      loge("NumberFormatException" + e);
                      throw new IllegalArgumentException("Invalid subId " + url);
                  }
-                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // FIXME use subId in query
             }
             //intentional fall through from above case
@@ -4858,7 +4850,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // FIXME use subId in query
             }
             //intentional fall through from above case
@@ -4897,7 +4888,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             // intentional fall through from above case
 
@@ -4919,7 +4909,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             //intentional fall through from above case
 
@@ -4987,7 +4976,6 @@ public class TelephonyProvider extends ContentProvider
                      loge("NumberFormatException" + e);
                      throw new IllegalArgumentException("Invalid subId " + url);
                  }
-                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 //FIXME use subId in the query
             }
             //intentional fall through from above case
@@ -5016,7 +5004,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 //FIXME use subId in the query
             }
             //intentional fall through from above case
@@ -5077,7 +5064,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
 
             case URL_PREFERAPN:
@@ -5129,7 +5115,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 if (where != null || whereArgs != null) {
                     throw new UnsupportedOperationException(
                             "Cannot update URL " + url + " with a where clause");
