@@ -32,6 +32,8 @@ import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED_STATUS;
+import static android.provider.Telephony.Carriers.INFRASTRUCTURE_BITMASK;
+import static android.provider.Telephony.Carriers.ESIM_BOOTSTRAP_PROVISIONING;
 import static android.provider.Telephony.Carriers.LINGERING_NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
@@ -162,7 +164,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 62 << 16;
+    private static final int DATABASE_VERSION = 67 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -375,7 +377,7 @@ public class TelephonyProvider extends ContentProvider
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
         // wait_time, max_conns_time, mtu, mtu_v4, mtu_v6, bearer_bitmask, user_visible,
-        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on
+        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on.
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
@@ -397,6 +399,10 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_APN_SET_ID));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ID,
                 String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(INFRASTRUCTURE_BITMASK,
+                String.valueOf(
+                        ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(ESIM_BOOTSTRAP_PROVISIONING, "0");
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
 
@@ -407,8 +413,9 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_BOOLEAN_FIELDS.add(MODEM_PERSIST);
         CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
         CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
+        CARRIERS_BOOLEAN_FIELDS.add(ESIM_BOOTSTRAP_PROVISIONING);
 
-        MVNO_TYPE_STRING_MAP = new ArrayMap<String, Integer>();
+        MVNO_TYPE_STRING_MAP = new ArrayMap<>();
         MVNO_TYPE_STRING_MAP.put("spn", ApnSetting.MVNO_TYPE_SPN);
         MVNO_TYPE_STRING_MAP.put("imsi", ApnSetting.MVNO_TYPE_IMSI);
         MVNO_TYPE_STRING_MAP.put("gid", ApnSetting.MVNO_TYPE_GID);
@@ -450,6 +457,13 @@ public class TelephonyProvider extends ContentProvider
                 Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES, Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_IS_NTN, Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -499,6 +513,8 @@ public class TelephonyProvider extends ContentProvider
                 APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
                 SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
                 ALWAYS_ON + " INTEGER DEFAULT 0," +
+                INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 3," +
+                ESIM_BOOTSTRAP_PROVISIONING + " BOOLEAN DEFAULT 0," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
@@ -590,7 +606,10 @@ public class TelephonyProvider extends ContentProvider
                 "  INTEGER DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT "
                 + UserHandle.USER_NULL + ","
-                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT -1"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                + " INTEGER DEFAULT 0, "
+                + Telephony.SimInfo.COLUMN_IS_NTN + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -1900,7 +1919,7 @@ public class TelephonyProvider extends ContentProvider
                     // Try to update the siminfo table with new columns.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED
-                            + "  INTEGER DEFAULT -1;");
+                            + "  INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade failed to update " + SIMINFO_TABLE
@@ -1909,6 +1928,93 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 62 << 16 | 6;
             }
+
+            if (oldVersion < (63 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite attach for carrier enabled by user. ");
+                    }
+                }
+                oldVersion = 63 << 16 | 6;
+            }
+
+            if (oldVersion < (64 << 16 | 6)) {
+                try {
+                    /* If default value of COLUMN_SATELLITE_ENABLED column is set to -1, then update
+                     it to 0 */
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + "=0"
+                            + "  WHERE " + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + "=-1;");
+                    /* If default value of COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER column is set
+                     to -1, then update it to 0 */
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER + "=0"
+                            + "  WHERE "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                            + "=-1;");
+
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_IS_NTN
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite is ntn. ");
+                    }
+                }
+                oldVersion = 64 << 16 | 6;
+            }
+
+            if (oldVersion < (65 << 16 | 6)) {
+                try {
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add infrastructure bitmask value.");
+                    }
+                }
+                oldVersion = 65 << 16 | 6;
+            }
+
+            if (oldVersion < (66 << 16 | 6)) {
+                try {
+                    // Try to add new field ESIM_BOOTSTRAP_PROVISIONING
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + ESIM_BOOTSTRAP_PROVISIONING + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                    + " to add esim bootstrap provisioning flag");
+                    }
+
+                }
+                oldVersion = 66 << 16 | 6;
+            }
+
+            if (oldVersion < (67 << 16 | 6)) {
+                try {
+                    // If default value of infrastructure_bitmask column is set to 1, then update
+                    // it to 3
+                    db.execSQL("UPDATE " + CARRIERS_TABLE + " SET " + INFRASTRUCTURE_BITMASK + "=3"
+                            + "  WHERE " + INFRASTRUCTURE_BITMASK + "=1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add infrastructure bitmask value.");
+                    }
+                }
+                oldVersion = 67 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -2357,6 +2463,8 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, APN_SET_ID);
             getIntValueFromCursor(cv, c, SKIP_464XLAT);
             getIntValueFromCursor(cv, c, ALWAYS_ON);
+            getIntValueFromCursor(cv, c, INFRASTRUCTURE_BITMASK);
+            getIntValueFromCursor(cv, c, ESIM_BOOTSTRAP_PROVISIONING);
         }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
@@ -2581,6 +2689,16 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
             addBoolAttribute(parser, "always_on", map, ALWAYS_ON);
+            addBoolAttribute(parser, "esim_bootstrap_provisioning", map,
+                    ESIM_BOOTSTRAP_PROVISIONING);
+
+            int infrastructureBitmask =
+                    ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE;
+            String infrastructureList = parser.getAttributeValue(null, "infrastructure_bitmask");
+            if (infrastructureList != null) {
+                infrastructureBitmask = getInfrastructureListFromString(infrastructureList);
+            }
+            map.put(INFRASTRUCTURE_BITMASK, infrastructureBitmask);
 
             int networkTypeBitmask = 0;
             String networkTypeList = parser.getAttributeValue(null, "network_type_bitmask");
@@ -3166,8 +3284,8 @@ public class TelephonyProvider extends ContentProvider
                 Context.MODE_PRIVATE);
         mManagedApnEnforced = spEnforcedFile.getBoolean(ENFORCED_KEY, false);
 
+        ProviderUtil.logRunningTelephonyProviderProcesses(getContext());
         if (VDBG) log("onCreate:- ret true");
-
         return true;
     }
 
@@ -3770,7 +3888,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 62 << 16) {
+            if (DATABASE_VERSION != 67 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3812,6 +3930,23 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 64 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_IS_NTN,
+                        backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_IS_NTN,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 63 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 62 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENABLED,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ENABLED,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 60 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES,
                         backedUpSimInfoEntry.getString(
@@ -3822,7 +3957,7 @@ public class TelephonyProvider extends ContentProvider
                 contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING,
                         backedUpSimInfoEntry.getInt(
                                 Telephony.SimInfo.COLUMN_USAGE_SETTING,
-                                SubscriptionManager.USAGE_SETTING_UNKNOWN));
+                                DEFAULT_INT_COLUMN_VALUE));
             }
             if (backupDataFormatVersion >= 52 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED,
@@ -5426,7 +5561,7 @@ public class TelephonyProvider extends ContentProvider
     private static int getMvnoTypeIntFromString(String mvnoType) {
         String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase(Locale.ROOT);
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
-        return  mvnoTypeInt == null ? 0 : mvnoTypeInt;
+        return  mvnoTypeInt == null ? ApnSetting.MVNO_TYPE_UNKNOWN : mvnoTypeInt;
     }
 
     private static int getBitmaskFromString(String bearerList) {
@@ -5446,6 +5581,30 @@ public class TelephonyProvider extends ContentProvider
             bearerBitmask |= getBitmaskForTech(bearerInt);
         }
         return bearerBitmask;
+    }
+
+    /**
+     * Get the infrastructure bitmask from string
+     *
+     * @param infrastructureString The infrastructure list in string format. For example
+     * {@code "cellular|satellite"}.
+     *
+     * @return The infrastructure bitmask.
+     */
+    private static int getInfrastructureListFromString(@NonNull String infrastructureString) {
+        String[] infras = infrastructureString.split("\\|");
+        int infrastructureBitmask = 0;
+        for (String infrastructure : infras) {
+            switch (infrastructure.toLowerCase(Locale.ROOT)) {
+                case "cellular":
+                    infrastructureBitmask |= ApnSetting.INFRASTRUCTURE_CELLULAR;
+                    break;
+                case "satellite":
+                    infrastructureBitmask |= ApnSetting.INFRASTRUCTURE_SATELLITE;
+                    break;
+            }
+        }
+        return infrastructureBitmask;
     }
 
     /**
