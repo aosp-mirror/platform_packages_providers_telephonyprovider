@@ -237,7 +237,7 @@ public class ProviderUtil {
                 emergencyNumberList = tm.getEmergencyNumberList();
             }
         } catch (Exception e) {
-            Log.e(TAG, "Cannot get emergency number list: " + e);
+            Log.e(TAG, "Cannot get emergency number list", e);
         }
 
         String selectionByEmergencyNumber = null;
