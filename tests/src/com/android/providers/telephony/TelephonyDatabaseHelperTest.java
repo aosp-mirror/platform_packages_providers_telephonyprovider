@@ -683,6 +683,37 @@ public final class TelephonyDatabaseHelperTest {
         assertTrue(Arrays.asList(columns).contains(Telephony.SimInfo.COLUMN_TRANSFER_STATUS));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteEntitlementStatusFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteEntitlementStatusFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteEntitlementPlmnsFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteEntitlementPlmnsFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS));
+    }
 
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
