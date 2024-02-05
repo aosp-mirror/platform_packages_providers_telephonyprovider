@@ -4721,9 +4721,8 @@ carrier_id {
   canonical_id: 1670
   carrier_name: "MEO"
   carrier_attribute {
-    mccmnc_tuple: "26802"
     mccmnc_tuple: "26806"
-    mccmnc_tuple: "26880"
+    mccmnc_tuple: "26808"
   }
 }
 carrier_id {
@@ -11593,11 +11592,23 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2575
-  carrier_name: "Reach"
+  carrier_name: "MVNO"
   carrier_attribute {
     mccmnc_tuple: "310280"
+    mccmnc_tuple: "310410"
     mccmnc_tuple: "310950"
-    gid1: "20FF"
+    mccmnc_tuple: "311180"
+    gid1: "20"
+    gid1: "21"
+    gid1: "22"
+    gid1: "23"
+    gid1: "24"
+    gid1: "25"
+    gid1: "26"
+    gid1: "27"
+    gid1: "28"
+    gid1: "29"
+    gid1: "30"
   }
 }
 carrier_id {
@@ -11682,86 +11693,6 @@ carrier_id {
     mccmnc_tuple: "310260"
     mccmnc_tuple: "311882"
     gid1: "3597bfd533"
-  }
-}
-carrier_id {
-  canonical_id: 2584
-  carrier_name: "MVNO #A1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "21FF"
-  }
-}
-carrier_id {
-  canonical_id: 2585
-  carrier_name: "MVNO #B1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "22FF"
-  }
-}
-carrier_id {
-  canonical_id: 2586
-  carrier_name: "MVNO #C1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "23FF"
-  }
-}
-carrier_id {
-  canonical_id: 2587
-  carrier_name: "MVNO #D1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "24FF"
-  }
-}
-carrier_id {
-  canonical_id: 2588
-  carrier_name: "MVNO #E1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "25FF"
-  }
-}
-carrier_id {
-  canonical_id: 2589
-  carrier_name: "MVNO #F1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "26FF"
-  }
-}
-carrier_id {
-  canonical_id: 2590
-  carrier_name: "MVNO #G1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "27FF"
-  }
-}
-carrier_id {
-  canonical_id: 2591
-  carrier_name: "MVNO #H1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "28FF"
-  }
-}
-carrier_id {
-  canonical_id: 2592
-  carrier_name: "MVNO #I1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "29FF"
-  }
-}
-carrier_id {
-  canonical_id: 2593
-  carrier_name: "MVNO #J1"
-  carrier_attribute {
-    mccmnc_tuple: "310280"
-    gid1: "30FF"
   }
 }
 carrier_id {
@@ -12046,6 +11977,34 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6838"
+  }
+}
+carrier_id {
+  canonical_id: 2623
+  carrier_name: "FLOW"
+  carrier_attribute {
+    mccmnc_tuple: "344921"
+  }
+}
+carrier_id {
+  canonical_id: 2624
+  carrier_name: "FLOW"
+  carrier_attribute {
+    mccmnc_tuple: "356110"
+  }
+}
+carrier_id {
+  canonical_id: 2625
+  carrier_name: "BTC"
+  carrier_attribute {
+    mccmnc_tuple: "364039"
+  }
+}
+carrier_id {
+  canonical_id: 2626
+  carrier_name: "Digi Portugal"
+  carrier_attribute {
+    mccmnc_tuple: "26802"
   }
 }
 carrier_id {
@@ -12446,4 +12405,4 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 117440545
+version: 117440546
