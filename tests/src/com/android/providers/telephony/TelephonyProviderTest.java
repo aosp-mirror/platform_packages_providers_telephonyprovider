@@ -54,9 +54,6 @@ import androidx.test.filters.SmallTest;
 import com.android.internal.telephony.LocalLog;
 import com.android.internal.telephony.PhoneFactory;
 
-import com.android.internal.telephony.LocalLog;
-import com.android.internal.telephony.PhoneFactory;
-
 import junit.framework.TestCase;
 
 import org.junit.Test;
@@ -227,6 +224,7 @@ public class TelephonyProviderTest extends TestCase {
                 arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_IS_NTN, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_SERVICE_CAPABILITIES, arbitraryIntVal);
+        contentValues.put(SimInfo.COLUMN_TRANSFER_STATUS, arbitraryIntVal);
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
@@ -729,6 +727,7 @@ public class TelephonyProviderTest extends TestCase {
         final int insertSatelliteIsNtn = 1;
         final int insertCellularService =
                 SubscriptionManager.SERVICE_CAPABILITY_DATA_BITMASK;
+        final int insertTransferStatus = 1;
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
@@ -742,6 +741,7 @@ public class TelephonyProviderTest extends TestCase {
                 insertSatelliteAttachEnabledForCarrier);
         contentValues.put(SubscriptionManager.IS_NTN, insertSatelliteIsNtn);
         contentValues.put(SubscriptionManager.SERVICE_CAPABILITIES, insertCellularService);
+        contentValues.put(SubscriptionManager.TRANSFER_STATUS, insertTransferStatus);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
@@ -759,6 +759,7 @@ public class TelephonyProviderTest extends TestCase {
             SubscriptionManager.SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
             SubscriptionManager.IS_NTN,
             SubscriptionManager.SERVICE_CAPABILITIES,
+            SubscriptionManager.TRANSFER_STATUS,
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -781,6 +782,7 @@ public class TelephonyProviderTest extends TestCase {
         final int resultCarrierHandoverToSatelliteEnabledByUser = cursor.getInt(7);
         final int resultSatelliteIsNtn = cursor.getInt(8);
         final int resultCellularService = cursor.getInt(9);
+        final int resultTransferStatus = cursor.getInt(10);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
@@ -791,6 +793,7 @@ public class TelephonyProviderTest extends TestCase {
                 resultCarrierHandoverToSatelliteEnabledByUser);
         assertEquals(insertSatelliteIsNtn, resultSatelliteIsNtn);
         assertEquals(insertCellularService, resultCellularService);
+        assertEquals(insertTransferStatus, resultTransferStatus);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
@@ -859,6 +862,8 @@ public class TelephonyProviderTest extends TestCase {
                         Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, SimInfo.COLUMN_IS_NTN));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(cursor, SimInfo.COLUMN_TRANSFER_STATUS));
         assertRestoredSubIdIsRemembered();
     }
 
