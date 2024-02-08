@@ -5080,6 +5080,9 @@ carrier_id {
     mccmnc_tuple: "26806"
     mccmnc_tuple: "26880"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26808"
+  }
 }
 carrier_id {
   canonical_id: 1671
@@ -12332,7 +12335,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2575
-  carrier_name: "Reach"
+  carrier_name: "MVNO"
   carrier_attribute {
     mccmnc_tuple: "310280"
     gid1: "20FF"
@@ -12340,6 +12343,94 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310950"
     gid1: "20FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "20"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "21"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "22"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "23"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "24"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "25"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "26"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "27"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "28"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "29"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "30"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "20"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "21"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "22"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "23"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "24"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "25"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "26"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "27"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "28"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "29"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "30"
   }
 }
 carrier_id {
@@ -12879,6 +12970,27 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2623
+  carrier_name: "FLOW"
+  carrier_attribute {
+    mccmnc_tuple: "344921"
+  }
+}
+carrier_id {
+  canonical_id: 2624
+  carrier_name: "FLOW"
+  carrier_attribute {
+    mccmnc_tuple: "356110"
+  }
+}
+carrier_id {
+  canonical_id: 2625
+  carrier_name: "BTC"
+  carrier_attribute {
+    mccmnc_tuple: "364039"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -13139,4 +13251,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 33554499
+version: 33554500
