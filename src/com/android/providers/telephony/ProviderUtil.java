@@ -287,7 +287,18 @@ public class ProviderUtil {
         }
 
         ActivityManager am = context.getSystemService(ActivityManager.class);
+        if (am == null) {
+            Log.d(TAG, "logRunningTelephonyProviderProcesses: ActivityManager service is not"
+                    + " available");
+            return;
+        }
+
         List<ActivityManager.RunningAppProcessInfo> processInfos = am.getRunningAppProcesses();
+        if (processInfos == null) {
+            Log.d(TAG, "logRunningTelephonyProviderProcesses: processInfos is null");
+            return;
+        }
+
         StringBuilder sb = new StringBuilder();
         for (ActivityManager.RunningAppProcessInfo processInfo : processInfos) {
             if (Arrays.asList(processInfo.pkgList).contains(TELEPHONY_PROVIDER_PACKAGE)
