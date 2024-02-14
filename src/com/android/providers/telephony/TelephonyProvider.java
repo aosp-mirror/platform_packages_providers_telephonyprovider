@@ -164,7 +164,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 70 << 16;
+    private static final int DATABASE_VERSION = 71 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -466,6 +466,11 @@ public class TelephonyProvider extends ContentProvider
                 Telephony.SimInfo.COLUMN_IS_NTN, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_TRANSFER_STATUS, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
+                Cursor.FIELD_TYPE_STRING);
     }
 
     @VisibleForTesting
@@ -614,7 +619,9 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_IS_NTN + " INTEGER DEFAULT 0, "
                 + Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES + " INTEGER DEFAULT "
                 + SubscriptionManager.getAllServiceCapabilityBitmasks() + ","
-                + Telephony.SimInfo.COLUMN_TRANSFER_STATUS + " INTEGER DEFAULT 0"
+                + Telephony.SimInfo.COLUMN_TRANSFER_STATUS + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS + " TEXT"
                 + ");";
     }
 
@@ -2067,6 +2074,23 @@ public class TelephonyProvider extends ContentProvider
                 oldVersion = 70 << 16 | 6;
             }
 
+            if (oldVersion < (71 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS
+                            + "  INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS
+                            + " TEXT DEFAULT '';");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite entitlement status and plmns");
+                    }
+                }
+                oldVersion = 71 << 16 | 6;
+            }
 
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
@@ -3941,7 +3965,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 70 << 16) {
+            if (DATABASE_VERSION != 71 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3983,6 +4007,16 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 71 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS,
+                                DEFAULT_INT_COLUMN_VALUE));
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
+                        backedUpSimInfoEntry.getString(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
+                                DEFAULT_STRING_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 70 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
                         backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
