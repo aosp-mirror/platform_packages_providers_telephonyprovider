@@ -56,7 +56,6 @@ import android.util.EventLog;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
-import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.util.TelephonyUtils;
 
 import com.google.android.mms.pdu.PduHeaders;
@@ -127,6 +126,7 @@ public class MmsProvider extends ContentProvider {
             String selection, String[] selectionArgs, String sortOrder) {
         final int callerUid = Binder.getCallingUid();
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+        String callingPackage = getCallingPackage();
         // First check if a restricted view of the "pdu" table should be used based on the
         // caller's identity. Only system, phone or the default sms app can have full access
         // of mms data. For other apps, we present a restricted view which only contains sent
@@ -295,10 +295,17 @@ public class MmsProvider extends ContentProvider {
         Cursor ret;
         try {
             SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+            if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                        callingPackage + ";MmsProvider.query;" + uri, true);
+            }
             ret = qb.query(db, projection, selection,
                     selectionArgs, null, null, finalSortOrder);
         } catch (SQLiteException e) {
             Log.e(TAG, "returning NULL cursor, query: " + uri, e);
+            if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                ((MmsSmsDatabaseHelper) mOpenHelper).printDatabaseOpeningDebugLog();
+            }
             return null;
         }
 
@@ -427,6 +434,10 @@ public class MmsProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    callerPkg + ";MmsProvider.insert;" + uri, false);
+        }
         ContentValues finalValues;
         Uri res = Mms.CONTENT_URI;
         Uri caseSpecificUri = null;
@@ -445,7 +456,7 @@ public class MmsProvider extends ContentProvider {
         }
 
         if (table.equals(TABLE_PDU)) {
-            if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(), subId,
+            if (!ProviderUtil.allowInteractingWithEntryOfSubscription(getContext(), subId,
                     callerUserHandle)) {
                 TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
                         callerUid, callerPkg);
@@ -495,6 +506,9 @@ public class MmsProvider extends ContentProvider {
 
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
                 Log.e(TAG, "MmsProvider.insert: failed!");
+                if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                    ((MmsSmsDatabaseHelper) mOpenHelper).printDatabaseOpeningDebugLog();
+                }
                 return null;
             }
 
@@ -510,6 +524,9 @@ public class MmsProvider extends ContentProvider {
 
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
                 Log.e(TAG, "Failed to insert address");
+                if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                    ((MmsSmsDatabaseHelper) mOpenHelper).printDatabaseOpeningDebugLog();
+                }
                 return null;
             }
 
@@ -622,6 +639,9 @@ public class MmsProvider extends ContentProvider {
 
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
                 Log.e(TAG, "MmsProvider.insert: failed!");
+                if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                    ((MmsSmsDatabaseHelper) mOpenHelper).printDatabaseOpeningDebugLog();
+                }
                 return null;
             }
 
@@ -676,6 +696,9 @@ public class MmsProvider extends ContentProvider {
 
             if ((rowId = db.insert(table, null, finalValues)) <= 0) {
                 Log.e(TAG, "MmsProvider.insert: failed!");
+                if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                    ((MmsSmsDatabaseHelper) mOpenHelper).printDatabaseOpeningDebugLog();
+                }
                 return null;
             }
             res = Uri.parse(res + "/drm/" + rowId);
@@ -713,6 +736,7 @@ public class MmsProvider extends ContentProvider {
             String[] selectionArgs) {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
         int match = sURLMatcher.match(uri);
+        String callingPackage = getCallingPackage();
         if (LOCAL_LOGV) {
             Log.v(TAG, "Delete uri=" + uri + ", match=" + match);
         }
@@ -767,6 +791,10 @@ public class MmsProvider extends ContentProvider {
 
         String finalSelection = concatSelections(selection, extraSelection);
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    callingPackage + ";MmsProvider.insert;" + uri, false);
+        }
         int deletedRows = 0;
 
         final long token = Binder.clearCallingIdentity();
@@ -998,6 +1026,10 @@ public class MmsProvider extends ContentProvider {
 
         String finalSelection = concatSelections(selection, extraSelection);
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    callerPkg + ";MmsProvider.update;" + uri, false);
+        }
         int count = db.update(table, finalValues, finalSelection, selectionArgs);
         if (notify && (count > 0)) {
             notifyChange(uri, null);

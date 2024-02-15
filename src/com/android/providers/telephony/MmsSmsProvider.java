@@ -46,7 +46,6 @@ import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.TelephonyStatsLog;
 import com.android.internal.telephony.util.TelephonyUtils;
 
@@ -340,6 +339,7 @@ public class MmsSmsProvider extends ContentProvider {
             String selection, String[] selectionArgs, String sortOrder) {
         final int callerUid = Binder.getCallingUid();
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
+        String callingPackage = getCallingPackage();
 
         // First check if restricted views of the "sms" and "pdu" tables should be used based on the
         // caller's identity. Only system, phone or the default sms app can have full access
@@ -370,6 +370,10 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getReadableDatabase();
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    callingPackage + ";MmsSmsProvider.query;" + uri, true);
+        }
         Cursor cursor = null;
         Cursor emptyCursor = new MatrixCursor((projection == null) ?
                 (new String[] {}) : projection);
@@ -847,6 +851,9 @@ public class MmsSmsProvider extends ContentProvider {
             db.setTransactionSuccessful();
         } catch (Throwable ex) {
             Log.e(LOG_TAG, ex.getMessage(), ex);
+            if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+                ((MmsSmsDatabaseHelper) mOpenHelper).printDatabaseOpeningDebugLog();
+            }
             TelephonyStatsLog.write(
                 TelephonyStatsLog.MMS_SMS_PROVIDER_GET_THREAD_ID_FAILED,
                 FAILURE_FIND_OR_CREATE_THREAD_ID_SQL);
@@ -1371,6 +1378,10 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    getCallingPackage() + ";MmsSmsProvider.delete;" + uri, false);
+        }
         Context context = getContext();
         int affectedRows = 0;
 
@@ -1442,8 +1453,12 @@ public class MmsSmsProvider extends ContentProvider {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
         final int callerUid = Binder.getCallingUid();
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
-        int matchIndex = URI_MATCHER.match(uri);
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    getCallingPackage() + ";MmsSmsProvider.insert;" + uri, false);
+        }
 
+        int matchIndex = URI_MATCHER.match(uri);
         // TODO (b/256992531): Currently, one sim card is set as default sms subId in work
         //  profile. Default sms subId should be updated based on user pref.
         int defaultSmsSubId = SmsManager.getDefaultSmsSubscriptionId();
@@ -1458,8 +1473,9 @@ public class MmsSmsProvider extends ContentProvider {
                 }
             }
 
-            if (!TelephonyPermissions
-                    .checkSubscriptionAssociatedWithUser(getContext(), subId, callerUserHandle)) {
+            if (!ProviderUtil
+                    .allowInteractingWithEntryOfSubscription(getContext(), subId,
+                            callerUserHandle)) {
                 TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
                         callerUid, getCallingPackage());
                 return null;
@@ -1497,6 +1513,11 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
+            ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
+                    callerPkg + ";MmsSmsProvider.update;" + uri, false);
+        }
+
         int affectedRows = 0;
         switch(URI_MATCHER.match(uri)) {
             case URI_CONVERSATIONS_MESSAGES:
