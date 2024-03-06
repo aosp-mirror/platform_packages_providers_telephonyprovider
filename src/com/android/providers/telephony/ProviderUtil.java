@@ -18,12 +18,12 @@ package com.android.providers.telephony;
 
 import android.annotation.NonNull;
 import android.annotation.Nullable;
+import android.app.ActivityManager;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Binder;
 import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
@@ -36,8 +36,12 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.android.internal.telephony.SmsApplication;
+import com.android.internal.telephony.TelephonyPermissions;
+import com.android.internal.telephony.flags.FeatureFlags;
+import com.android.internal.telephony.flags.FeatureFlagsImpl;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,6 +51,10 @@ import java.util.stream.Collectors;
  */
 public class ProviderUtil {
     private final static String TAG = "SmsProvider";
+    private static final String TELEPHONY_PROVIDER_PACKAGE = "com.android.providers.telephony";
+    private static final int PHONE_UID = 1001;
+    /** Feature flags for Provider features. */
+    public static final FeatureFlags sFeatureFlag = new FeatureFlagsImpl();
 
     /**
      * Check if a caller of the provider has restricted access,
@@ -149,23 +157,52 @@ public class ProviderUtil {
      * or {@code null} if user is not associated with any subscription.
      */
     @Nullable
-    public static String getSelectionBySubIds(Context context, @NonNull UserHandle userHandle) {
+    public static String getSelectionBySubIds(Context context,
+            @NonNull final UserHandle userHandle) {
         List<SubscriptionInfo> associatedSubscriptionsList = new ArrayList<>();
         SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
-        if (subManager != null) {
-            // Get list of subscriptions associated with this user.
-            associatedSubscriptionsList = subManager
-                    .getSubscriptionInfoListAssociatedWithUser(userHandle);
-        }
-
         UserManager userManager = context.getSystemService(UserManager.class);
-        if ((userManager != null) && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
-            // SMS/MMS restored from another device have sub_id=-1.
-            // To query/update/delete those messages, sub_id=-1 should be in the selection string.
-            SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
-                    .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
-                    .build();
-            associatedSubscriptionsList.add(invalidSubInfo);
+
+        if (sFeatureFlag.workProfileApiSplit()) {
+            if (subManager != null) {
+                // Get list of subscriptions accessible to this user.
+                associatedSubscriptionsList = subManager
+                        .getSubscriptionInfoListAssociatedWithUser(userHandle);
+
+                if ((userManager != null)
+                        && userManager.isManagedProfile(userHandle.getIdentifier())) {
+                    // Work profile caller can only see subscriptions explicitly associated with it.
+                    associatedSubscriptionsList = associatedSubscriptionsList.stream()
+                            .filter(info -> userHandle.equals(subManager
+                                            .getSubscriptionUserHandle(info.getSubscriptionId())))
+                            .collect(Collectors.toList());
+                } else {
+                    // SMS/MMS restored from another device have sub_id=-1.
+                    // To query/update/delete those messages, sub_id=-1 should be in the selection
+                    // string.
+                    SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
+                            .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                            .build();
+                    associatedSubscriptionsList.add(invalidSubInfo);
+                }
+            }
+        } else {
+            if (subManager != null) {
+                // Get list of subscriptions associated with this user.
+                associatedSubscriptionsList = subManager
+                        .getSubscriptionInfoListAssociatedWithUser(userHandle);
+            }
+
+            if ((userManager != null)
+                    && (!userManager.isManagedProfile(userHandle.getIdentifier()))) {
+                // SMS/MMS restored from another device have sub_id=-1.
+                // To query/update/delete those messages, sub_id=-1 should be in the selection
+                // string.
+                SubscriptionInfo invalidSubInfo = new SubscriptionInfo.Builder()
+                        .setId(SubscriptionManager.INVALID_SUBSCRIPTION_ID)
+                        .build();
+                associatedSubscriptionsList.add(invalidSubInfo);
+            }
         }
 
         if (associatedSubscriptionsList.isEmpty()) {
@@ -219,5 +256,55 @@ public class ProviderUtil {
                     " IN (" + emergencyNumberListStr + ")";
         }
         return selectionByEmergencyNumber;
+    }
+
+    /**
+     * Check sub is either default value(for backup restore) or is accessible by the caller profile.
+     * @param ctx Context
+     * @param subId The sub Id associated with the entry
+     * @param callerUserHandle The user handle of the caller profile
+     * @return {@code true} if allow the caller to insert an entry that's associated with this sub.
+     */
+    public static boolean allowInteractingWithEntryOfSubscription(Context ctx,
+            int subId, UserHandle callerUserHandle) {
+        if (sFeatureFlag.rejectBadSubIdInteraction()) {
+            return TelephonyPermissions
+                    .checkSubscriptionAssociatedWithUser(ctx, subId, callerUserHandle)
+                    // INVALID_SUBSCRIPTION_ID represents backup restore.
+                    || subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+        } else {
+            return TelephonyPermissions.checkSubscriptionAssociatedWithUser(ctx, subId,
+                    callerUserHandle);
+        }
+    }
+
+    /**
+     * Log all running processes of the telephony provider package.
+     */
+    public static void logRunningTelephonyProviderProcesses(@NonNull Context context) {
+        if (!sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+            return;
+        }
+
+        ActivityManager am = context.getSystemService(ActivityManager.class);
+        List<ActivityManager.RunningAppProcessInfo> processInfos = am.getRunningAppProcesses();
+        StringBuilder sb = new StringBuilder();
+        for (ActivityManager.RunningAppProcessInfo processInfo : processInfos) {
+            if (Arrays.asList(processInfo.pkgList).contains(TELEPHONY_PROVIDER_PACKAGE)
+                    || processInfo.uid == PHONE_UID) {
+                sb.append("{ProcessName=");
+                sb.append(processInfo.processName);
+                sb.append(";PID=");
+                sb.append(processInfo.pid);
+                sb.append(";UID=");
+                sb.append(processInfo.uid);
+                sb.append(";pkgList=");
+                for (String pkg : processInfo.pkgList) {
+                    sb.append(pkg + ";");
+                }
+                sb.append("}");
+            }
+        }
+        Log.d(TAG, "RunningTelephonyProviderProcesses:" + sb.toString());
     }
 }
