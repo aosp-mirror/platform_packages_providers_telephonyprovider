@@ -8481,6 +8481,14 @@ carrier_id {
     mccmnc_tuple: "310240"
     gid1: "756D"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6903"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7601"
+  }
 }
 carrier_id {
   canonical_id: 2086
@@ -13013,6 +13021,53 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2627
+  carrier_name: "Boost"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6434"
+  }
+}
+carrier_id {
+  canonical_id: 2628
+  carrier_name: "AT&T Private"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "80FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "80FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "80FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "80FF"
+  }
+}
+carrier_id {
+  canonical_id: 2629
+  carrier_name: "Nova Labs, Inc."
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    spn: "Helium"
+    gid1: "6907"
+  }
+}
+carrier_id {
+  canonical_id: 2630
+  carrier_name: "Nexphone"
+  carrier_attribute {
+    mccmnc_tuple: "22865"
+    spn: "Nexphone"
+    gid1: "4E657870686F6E65"
+    gid2: "4E657870686F6E6532303234"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -13253,4 +13308,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 16777266
+version: 16777267
