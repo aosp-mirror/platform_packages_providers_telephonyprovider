@@ -275,6 +275,7 @@ public class TelephonyProvider extends ContentProvider
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
     private static final Set<String> CARRIERS_BOOLEAN_FIELDS = new HashSet<String>();
     private static final Map<String, String> CARRIERS_UNIQUE_FIELDS_DEFAULTS = new HashMap();
+    private static final String ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G = "enable_2g";
 
     @VisibleForTesting
     static Boolean s_apnSourceServiceExists;
@@ -479,6 +480,11 @@ public class TelephonyProvider extends ContentProvider
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
                 Cursor.FIELD_TYPE_STRING);
+        if (ProviderUtil.sFeatureFlag.backupAndRestoreFor2gSetting()) {
+            SIM_INFO_COLUMNS_TO_BACKUP.put(
+                    Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                    Cursor.FIELD_TYPE_STRING);
+        }
     }
 
     @VisibleForTesting
@@ -3709,12 +3715,14 @@ public class TelephonyProvider extends ContentProvider
         }
         try (Cursor cursor = query(
                 SubscriptionManager.CONTENT_URI,
-                new String[]{
+                new String[] {
                         Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
                         Telephony.SimInfo.COLUMN_ICC_ID,
                         Telephony.SimInfo.COLUMN_NUMBER,
                         Telephony.SimInfo.COLUMN_CARRIER_ID,
-                        Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE},
+                        Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE,
+                        Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                },
                 selection,
                 selectionArgs,
                 ORDER_BY_SUB_ID)) {
@@ -3768,10 +3776,14 @@ public class TelephonyProvider extends ContentProvider
             int carrierIdColumnIndex = cursor.getColumnIndex(Telephony.SimInfo.COLUMN_CARRIER_ID);
             int currCarrierIdFromDb = cursor.getInt(carrierIdColumnIndex);
 
-            int isoCountryCodeColumnIndex= cursor.getColumnIndex(
+            int isoCountryCodeColumnIndex = cursor.getColumnIndex(
                     Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE);
             String isoCountryCodeFromDb = cursor.getString(isoCountryCodeColumnIndex);
 
+            int allowedNetworkTypesForReasonsIndex = cursor.getColumnIndex(
+                    Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS);
+            String allowedNetworkTypesForReasonsFromDb =
+                    cursor.getString(allowedNetworkTypesForReasonsIndex);
 
             // Find the best match from backed up data.
             SimRestoreMatch bestRestoreMatch = null;
@@ -3784,7 +3796,8 @@ public class TelephonyProvider extends ContentProvider
 
                 SimRestoreMatch currSimRestoreMatch = new SimRestoreMatch(
                         currIccIdFromDb, currCarrierIdFromDb, currPhoneNumberFromDb,
-                        isoCountryCodeFromDb, wfcRestoreBlockedCountries, currRow,
+                        isoCountryCodeFromDb, allowedNetworkTypesForReasonsFromDb,
+                        wfcRestoreBlockedCountries, currRow,
                         backupDataFormatVersion);
 
                 if (currSimRestoreMatch == null) {
@@ -3888,6 +3901,7 @@ public class TelephonyProvider extends ContentProvider
 
         public SimRestoreMatch(String iccIdFromDb, int carrierIdFromDb,
                 String phoneNumberFromDb, String isoCountryCodeFromDb,
+                String allowedNetworkTypesForReasonsFromDb,
                 List<String> wfcRestoreBlockedCountries,
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
             subId = backedUpSimInfoEntry.getInt(
@@ -3918,7 +3932,7 @@ public class TelephonyProvider extends ContentProvider
 
             contentValues = convertBackedUpDataToContentValues(
                     backedUpSimInfoEntry, backupDataFormatVersion, isoCountryCodeFromDb,
-                    wfcRestoreBlockedCountries);
+                    allowedNetworkTypesForReasonsFromDb, wfcRestoreBlockedCountries);
             matchScore = calculateMatchScore();
             matchingCriteria = calculateMatchingCriteria();
         }
@@ -3973,7 +3987,7 @@ public class TelephonyProvider extends ContentProvider
 
         private ContentValues convertBackedUpDataToContentValues(
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
-                String isoCountryCodeFromDb,
+                String isoCountryCodeFromDb, String allowedNetworkTypesForReasonsFromDb,
                 List<String> wfcRestoreBlockedCountries) {
             if (DATABASE_VERSION != 71 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
@@ -4026,6 +4040,14 @@ public class TelephonyProvider extends ContentProvider
                         backedUpSimInfoEntry.getString(
                                 Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
                                 DEFAULT_STRING_COLUMN_VALUE));
+                if (ProviderUtil.sFeatureFlag.backupAndRestoreFor2gSetting()) {
+                    contentValues.put(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                            replaceEnable2g(
+                                    allowedNetworkTypesForReasonsFromDb,
+                                    backedUpSimInfoEntry.getString(Telephony.SimInfo
+                                                    .COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                                            DEFAULT_STRING_COLUMN_VALUE)));
+                }
             }
             if (backupDataFormatVersion >= 70 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
@@ -4113,6 +4135,41 @@ public class TelephonyProvider extends ContentProvider
             return polishContentValues(contentValues);
         }
 
+        /**
+         * Replaces the value of the "enable_2g" key-value pair in the given input string with the
+         * new "enable_2g key-value provided.
+         *
+         * @param input The input string to modify.
+         * @param newEnable2g The new value for the "enable_2g" key-value pair.
+         * @return The modified input string with the updated "enable_2g" value.
+         */
+        private static @Nullable String replaceEnable2g(
+                @Nullable String input, @Nullable String newEnable2g) {
+            if (newEnable2g == null
+                    || !newEnable2g.startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G)) {
+                return input;
+            } else if (input == null || input.isBlank()) {
+                return newEnable2g;
+            }
+
+            String delimiter = ",";
+            String[] parts = input.trim().split(delimiter);
+
+            // Finding and replacing the "enable_2g" value
+            for (int i = 0; i < parts.length; i++) {
+                if (parts[i].startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G)) {
+                    parts[i] = newEnable2g;
+                    return String.join(delimiter, parts);
+                }
+            }
+
+            // Adding the "enable_2g" value if not found
+            if (parts.length == 0) {
+                return newEnable2g;
+            }
+            return input + "," + newEnable2g;
+        }
+
         private ContentValues polishContentValues(ContentValues contentValues) {
             /* Remove any values that weren't found in the backup file. These were set to defaults
             in #convertBackedUpDataToContentValues(). */
@@ -4180,7 +4237,12 @@ public class TelephonyProvider extends ContentProvider
             String columnName = column.getKey();
             int columnType = column.getValue();
             int columnIndex = cursor.getColumnIndex(columnName);
-            if (columnType == Cursor.FIELD_TYPE_INTEGER) {
+            if (ProviderUtil.sFeatureFlag.backupAndRestoreFor2gSetting()
+                    && Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS
+                            .equals(columnName)) {
+                bundle.putString(columnName,
+                        filteredAllowedNetworkTypesForBackup(cursor.getString(columnIndex)));
+            } else if (columnType == Cursor.FIELD_TYPE_INTEGER) {
                 bundle.putInt(columnName, cursor.getInt(columnIndex));
             } else if (columnType == Cursor.FIELD_TYPE_STRING) {
                 bundle.putString(columnName, cursor.getString(columnIndex));
@@ -4192,6 +4254,23 @@ public class TelephonyProvider extends ContentProvider
         }
 
         return bundle;
+    }
+
+    /**
+     * Returns filtered allowed network types for backup.
+     *
+     * Filters and returns only {@link TelephonyManager#ALLOWED_NETWORK_TYPES_REASON_ENABLE_2G} for
+     * the TelephonyProvider column value for network types allowed with all reasons.
+     *
+     * @param networkTypeValues String Value for network types allowed with all reasons
+     * @return String of "enable_2g=VALUE" format. if no reasons to backup returns an empty string.
+     */
+    private static @NonNull String filteredAllowedNetworkTypesForBackup(String networkTypeValues) {
+        // Format: "REASON=VALUE,REASON2=VALUE2"
+        return Arrays.stream(networkTypeValues.trim().split(","))
+                .filter(r -> r.startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G))
+                .findFirst()
+                .orElse("");
     }
 
     @Override
