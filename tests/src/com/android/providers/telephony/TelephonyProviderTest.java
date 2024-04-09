@@ -53,7 +53,6 @@ import androidx.test.filters.SmallTest;
 
 import com.android.internal.telephony.LocalLog;
 import com.android.internal.telephony.PhoneFactory;
-import com.android.internal.telephony.flags.FeatureFlags;
 
 import junit.framework.TestCase;
 
@@ -90,9 +89,6 @@ public class TelephonyProviderTest extends TestCase {
     private TelephonyProviderTestable mTelephonyProviderTestable;
     @Mock
     private Resources mockContextResources;
-    @Mock
-    private FeatureFlags mMockFeatureFlag;
-    private FeatureFlags mRealFeatureFlagToBeRestored;
 
     private int notifyChangeCount;
     private int notifyChangeRestoreCount;
@@ -140,28 +136,23 @@ public class TelephonyProviderTest extends TestCase {
     private static final ContentValues TEST_SIM_INFO_VALUES_US;
     private static final ContentValues TEST_SIM_INFO_VALUES_FR;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE = 999999;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE =
-            "ARBITRARY_TEST_STRING_VALUE";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE
+            = "ARBITRARY_TEST_STRING_VALUE";
 
     private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1 = 111111;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1 =
-            "ARBITRARY_TEST_STRING_VALUE_1";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1
+            = "ARBITRARY_TEST_STRING_VALUE_1";
 
     private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2 = 222222;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2 =
-            "ARBITRARY_TEST_STRING_VALUE_2";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2
+            = "ARBITRARY_TEST_STRING_VALUE_2";
 
     private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3 = 333333;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3 =
-            "ARBITRARY_TEST_STRING_VALUE_3";
-
-    private static final String ARBITRARY_ALLOWED_NETWORK_TYPES_TEST_STRING_VALUE =
-            "user=850943,carrier=588799,enable_2g=555956";
-    private static final String ARBITRARY_ALLOWED_NETWORK_TYPES_RESTORED_STRING_VALUE =
-            "enable_2g=555956";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3
+            = "ARBITRARY_TEST_STRING_VALUE_3";
 
     static {
         TEST_SIM_INFO_VALUES_US = populateContentValues(
@@ -208,7 +199,7 @@ public class TelephonyProviderTest extends TestCase {
     private static ContentValues populateContentValues(
             String iccId, String phoneNumber, int carrierId, String isoCountryCode,
             int arbitraryIntVal, String arbitraryStringVal) {
-        ContentValues contentValues = new ContentValues();
+            ContentValues contentValues = new ContentValues();
 
         contentValues.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_ICC_ID, iccId);
@@ -372,8 +363,6 @@ public class TelephonyProviderTest extends TestCase {
     protected void setUp() throws Exception {
         super.setUp();
         MockitoAnnotations.initMocks(this);
-        replaceFeatureFlag(mMockFeatureFlag);
-        doReturn(true).when(mMockFeatureFlag).backupAndRestoreFor2gSetting();
         mTelephonyProviderTestable = new TelephonyProviderTestable();
         when(mockContextResources.getStringArray(anyInt())).thenReturn(new String[]{"ca", "us"});
         notifyChangeCount = 0;
@@ -396,7 +385,6 @@ public class TelephonyProviderTest extends TestCase {
     @Override
     protected void tearDown() throws Exception {
         super.tearDown();
-        replaceFeatureFlag(mRealFeatureFlagToBeRestored);
         mTelephonyProviderTestable.closeDatabase();
 
         // Remove the internal file created by SIM-specific settings restore
@@ -1029,48 +1017,6 @@ public class TelephonyProviderTest extends TestCase {
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(
                         cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
-        assertRestoredSubIdIsRemembered();
-    }
-
-    @Test
-    public void testBackupAndRestoreForAllowedNetworkTypesForReasons() {
-        doReturn(true).when(mMockFeatureFlag).backupAndRestoreFor2gSetting();
-
-        // Content value includes allowed_network_types for all reasons.
-        ContentValues contentValues = BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID;
-        contentValues.put(SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
-                ARBITRARY_ALLOWED_NETWORK_TYPES_TEST_STRING_VALUE);
-
-        // Insert, backup and delete for backup content values.
-        byte[] simSpecificSettingsData = getBackupData(new ContentValues[]{contentValues});
-        Log.d(TAG, "simSpecificSettingsData:" + new String(simSpecificSettingsData));
-        createInternalBackupFile(simSpecificSettingsData);
-
-        // Insert a test content values matched with previously backed up sim info.
-        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES_US);
-
-        // Restore. Expected that the backup content matches the test content.
-        mContext.getContentResolver().call(
-                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
-                SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
-                MATCHING_ICCID, null);
-
-        // Verify that the test content has been restored to backup content.
-        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
-                null, null, null, null);
-        assertEquals(1, cursor.getCount());
-        cursor.moveToFirst();
-
-        // Make sure SubId didn't get overridden.
-        assertEquals(
-                (int) TEST_SIM_INFO_VALUES_US.getAsInteger(
-                        Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID),
-                getIntValueFromCursor(cursor, Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID));
-
-        // Ensure network types reason values got updated. Only enable_2g needs to be updated.
-        assertEquals(ARBITRARY_ALLOWED_NETWORK_TYPES_RESTORED_STRING_VALUE,
-                getStringValueFromCursor(cursor,
-                        SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -2370,14 +2316,5 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(1, cursor.getCount());
         cursor.moveToFirst();
         assertEquals(TEST_CARRIERID, cursor.getInt(cursor.getColumnIndex(Carriers.CARRIER_ID)));
-    }
-
-    private synchronized void replaceFeatureFlag(final FeatureFlags newValue)
-            throws Exception {
-        Field field = ProviderUtil.class.getDeclaredField("sFeatureFlag");
-        field.setAccessible(true);
-
-        mRealFeatureFlagToBeRestored = ProviderUtil.sFeatureFlag;
-        field.set(null, newValue);
     }
 }
