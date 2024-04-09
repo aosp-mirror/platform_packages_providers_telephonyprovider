@@ -54,7 +54,6 @@ import com.android.internal.telephony.util.TelephonyUtils;
 
 import java.util.HashMap;
 import java.util.List;
-
 public class SmsProvider extends ContentProvider {
     /* No response constant from SmsResponse */
     static final int NO_ERROR_CODE = -1;
@@ -872,18 +871,11 @@ public class SmsProvider extends ContentProvider {
                 address = values.getAsString(Sms.ADDRESS);
             }
 
-            if (ProviderUtil.sFeatureFlag.rejectBadSubIdInteraction()) {
-                if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID
-                        && !TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
-                        subId, callerUserHandle, address)) {
-                    TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
-                            subId, callerUid, callerPkg);
-                    return null;
-                }
-            } else if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
+            if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID
+                    && !TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                     subId, callerUserHandle, address)) {
-                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
-                        callerUid, callerPkg);
+                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
+                        subId, callerUid, callerPkg);
                 return null;
             }
         }
