@@ -4044,8 +4044,8 @@ public class TelephonyProvider extends ContentProvider
                             replaceEnable2g(
                                     allowedNetworkTypesForReasonsFromDb,
                                     backedUpSimInfoEntry.getString(Telephony.SimInfo
-                                                    .COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
-                                            DEFAULT_STRING_COLUMN_VALUE)));
+                                                    .COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS),
+                                    DEFAULT_STRING_COLUMN_VALUE));
                 }
             }
             if (backupDataFormatVersion >= 70 << 16) {
@@ -4140,13 +4140,14 @@ public class TelephonyProvider extends ContentProvider
          *
          * @param input The input string to modify.
          * @param newEnable2g The new value for the "enable_2g" key-value pair.
+         * @param defaultValue default value to return if replacement is not possible.
          * @return The modified input string with the updated "enable_2g" value.
          */
         private static @Nullable String replaceEnable2g(
-                @Nullable String input, @Nullable String newEnable2g) {
+                @Nullable String input, @Nullable String newEnable2g, String defaultValue) {
             if (newEnable2g == null
                     || !newEnable2g.startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G)) {
-                return input;
+                return defaultValue;
             } else if (input == null || input.isBlank()) {
                 return newEnable2g;
             }
