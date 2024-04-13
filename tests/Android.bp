@@ -11,6 +11,7 @@ android_test {
         "androidx.test.rules",
         "truth",
         "androidx.test.core",
+        "androidx.test.ext.junit",
     ],
     libs: [
         "android.test.runner",
