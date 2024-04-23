@@ -54,6 +54,7 @@ import android.util.Log;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.TelephonyStatsLog;
+import com.android.internal.telephony.flags.Flags;
 
 import com.google.android.mms.pdu.EncodedStringValue;
 import com.google.android.mms.pdu.PduHeaders;
@@ -68,7 +69,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
-
 /**
  * A {@link SQLiteOpenHelper} that handles DB management of SMS and MMS tables.
  *
@@ -2566,7 +2566,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      * Add the MMS/SMS database opening info to the debug log.
      */
     public void addDatabaseOpeningDebugLog(@NonNull String databaseOpeningLog, boolean isQuery) {
-        if (!ProviderUtil.sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+        if (!Flags.logMmsSmsDatabaseAccessInfo()) {
             return;
         }
         addDatabaseOpeningDebugLog(isQuery ? mDatabaseReadOpeningInfos : mDatabaseWriteOpeningInfos,
@@ -2577,7 +2577,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
      * Print the MMS/SMS database opening debug log to file.
      */
     public void printDatabaseOpeningDebugLog() {
-        if (!ProviderUtil.sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+        if (!Flags.logMmsSmsDatabaseAccessInfo()) {
             return;
         }
         Log.e(TAG, "MMS/SMS database read opening info: "
@@ -2619,7 +2619,7 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
     }
 
     private void reportAnomalyForDatabaseOpeningException(@NonNull Exception ex) {
-        if (!ProviderUtil.sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+        if (!Flags.logMmsSmsDatabaseAccessInfo()) {
             return;
         }
         Log.e(TAG, "DatabaseOpeningException=" + ex);
