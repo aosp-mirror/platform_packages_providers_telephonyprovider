@@ -327,6 +327,30 @@ carrier_id {
     spn: "vodafone P"
     spn: "Vodafone"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26891"
+    spn: ""
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26891"
+    spn: "vodafone P"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26891"
+    spn: "Vodafone"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26892"
+    spn: ""
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26892"
+    spn: "vodafone P"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26892"
+    spn: "Vodafone"
+  }
 }
 carrier_id {
   canonical_id: 23
@@ -915,7 +939,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 548
-  carrier_name: "Telemat Cel"
+  carrier_name: "Unifique"
   carrier_attribute {
     mccmnc_tuple: "72429"
   }
@@ -1012,6 +1036,14 @@ carrier_id {
     mccmnc_tuple: "302610"
     mccmnc_tuple: "302630"
     mccmnc_tuple: "302640"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302690"
+    gid1: "41"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302690"
+    gid1: "43"
   }
 }
 carrier_id {
@@ -1389,7 +1421,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 760
-  carrier_name: "3HK/SUPREME"
+  carrier_name: "Hutchison HK"
   carrier_attribute {
     mccmnc_tuple: "45403"
   }
@@ -2852,6 +2884,9 @@ carrier_id {
     mccmnc_tuple: "50571"
     mccmnc_tuple: "50572"
   }
+  carrier_attribute {
+    mccmnc_tuple: "50539"
+  }
 }
 carrier_id {
   canonical_id: 1346
@@ -2968,7 +3003,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1362
-  carrier_name: "GramenPhone"
+  carrier_name: "Grameenphone"
   carrier_attribute {
     mccmnc_tuple: "47001"
   }
@@ -3921,7 +3956,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1495
-  carrier_name: "Colt Mobile Telecommunications Ltd"
+  carrier_name: "Spitfire Network Services Ltd"
   carrier_attribute {
     mccmnc_tuple: "23405"
   }
@@ -5006,7 +5041,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1644
-  carrier_name: "KPN/Telfort"
+  carrier_name: "KPN Mobiel"
   carrier_attribute {
     mccmnc_tuple: "20408"
     mccmnc_tuple: "20412"
@@ -5169,12 +5204,24 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "30801"
   }
+  carrier_attribute {
+    mccmnc_tuple: "30808"
+  }
 }
 carrier_id {
   canonical_id: 1668
   carrier_name: "NOS"
   carrier_attribute {
     mccmnc_tuple: "26803"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26897"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26898"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26899"
   }
 }
 carrier_id {
@@ -5195,6 +5242,9 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "26880"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26808"
   }
 }
 carrier_id {
@@ -6306,6 +6356,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310930"
   }
+  carrier_attribute {
+    mccmnc_tuple: "312380"
+  }
 }
 carrier_id {
   canonical_id: 1831
@@ -6737,7 +6790,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1882
-  carrier_name: "亞太電信 Asia Pacific Telecom"
+  carrier_name: "遠傳電信Far EasTone Telecom(原亞太電信)"
   carrier_attribute {
     mccmnc_tuple: "46602"
     mccmnc_tuple: "46605"
@@ -6772,7 +6825,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1886
-  carrier_name: "台灣之星 T Star"
+  carrier_name: "台灣大哥大(原台灣之星) Taiwan Mobile Telecom"
   carrier_attribute {
     mccmnc_tuple: "46689"
   }
@@ -6953,6 +7006,11 @@ carrier_id {
   carrier_name: "COX"
   carrier_attribute {
     mccmnc_tuple: "311600"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA01570000000000"
+    gid2: "B100000000000000"
   }
 }
 carrier_id {
@@ -7338,7 +7396,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1951
-  carrier_name: "Boost Mobile"
+  carrier_name: "Boost"
   carrier_attribute {
     mccmnc_tuple: "311870"
   }
@@ -8118,6 +8176,10 @@ carrier_id {
     mccmnc_tuple: "330110"
     gid1: "DEFF"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "DDFF"
+  }
 }
 carrier_id {
   canonical_id: 2023
@@ -8488,6 +8550,10 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "6C79"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6C79"
+  }
 }
 carrier_id {
   canonical_id: 2068
@@ -8520,6 +8586,18 @@ carrier_id {
     mccmnc_tuple: "310260"
     gid1: "7031"
   }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6902"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7031"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7032"
+  }
 }
 carrier_id {
   canonical_id: 2073
@@ -8527,6 +8605,22 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "4358"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4358"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6901"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6909"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7531"
   }
 }
 carrier_id {
@@ -8543,6 +8637,14 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310260"
     gid1: "6134"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6134"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6905"
   }
 }
 carrier_id {
@@ -8603,6 +8705,50 @@ carrier_id {
     gid1: "364D"
     gid1: "4153"
     gid1: "554D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "354D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "364D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4153"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4154"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4155"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "554D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6132"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6303"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "756D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6903"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "7601"
   }
 }
 carrier_id {
@@ -8687,6 +8833,16 @@ carrier_id {
     mccmnc_tuple: "26201"
     spn: "congstar"
     spn: "congstar.de"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "congstar"
+    gid1: "44"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "congstar.de"
+    gid1: "44"
   }
 }
 carrier_id {
@@ -10519,6 +10675,9 @@ carrier_id {
     mccmnc_tuple: "310960"
     spn: "strata"
   }
+  carrier_attribute {
+    mccmnc_tuple: "312290"
+  }
 }
 carrier_id {
   canonical_id: 2321
@@ -11740,6 +11899,10 @@ carrier_id {
     mccmnc_tuple: "50501"
     spn: "BOOST"
   }
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Boost"
+  }
 }
 carrier_id {
   canonical_id: 2504
@@ -11842,22 +12005,30 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2517
-  carrier_name: "Dish"
+  carrier_name: "Home"
   carrier_attribute {
     mccmnc_tuple: "313340"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "303220"
+    gid1: "6530"
   }
 }
 carrier_id {
   canonical_id: 2518
-  carrier_name: "Boost Mobile - MNO"
+  carrier_name: "Boost"
   carrier_attribute {
     mccmnc_tuple: "313340"
+    gid1: "6332"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "303220"
     gid1: "6332"
   }
 }
 carrier_id {
   canonical_id: 2519
-  carrier_name: "Boost Mobile - MVNO1"
+  carrier_name: "Boost"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6432"
@@ -11865,7 +12036,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2520
-  carrier_name: "Republic - MNO"
+  carrier_name: "Republic"
   carrier_attribute {
     mccmnc_tuple: "313340"
     gid1: "6630"
@@ -11873,7 +12044,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2521
-  carrier_name: "Ting - MNO"
+  carrier_name: "Ting"
   carrier_attribute {
     mccmnc_tuple: "313340"
     gid1: "7330"
@@ -11889,7 +12060,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2523
-  carrier_name: "Ting - MVNO1"
+  carrier_name: "Ting"
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6430"
@@ -11905,7 +12076,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2525
-  carrier_name: "Boost Mobile - MVNO2"
+  carrier_name: "Boost"
   carrier_attribute {
     mccmnc_tuple: "310410"
     gid1: "3432"
@@ -11917,7 +12088,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2526
-  carrier_name: "Ting - MVNO2"
+  carrier_name: "Gen Mobile"
   carrier_attribute {
     mccmnc_tuple: "310410"
     gid1: "3430"
@@ -11929,7 +12100,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2527
-  carrier_name: "Republic - MVNO2"
+  carrier_name: "Republic"
   carrier_attribute {
     mccmnc_tuple: "310410"
     gid1: "3436"
@@ -11965,7 +12136,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2534
-  carrier_name: "Boost Infinite - MVNO"
+  carrier_name: "Boost"
   carrier_attribute {
     mccmnc_tuple: "310410"
     gid1: "3434"
@@ -12000,10 +12171,13 @@ carrier_id {
     imsi_prefix_xpattern: "26207414x"
     gid1: "250109"
   }
+  carrier_attribute {
+    mccmnc_tuple: "26223"
+  }
 }
 carrier_id {
   canonical_id: 2538
-  carrier_name: "Universal DISH - MVNO2"
+  carrier_name: "Home"
   carrier_attribute {
     mccmnc_tuple: "310410"
     gid1: "3438"
@@ -12015,7 +12189,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2539
-  carrier_name: "Project Genesis - MVNO2"
+  carrier_name: "Project Genesis"
   carrier_attribute {
     mccmnc_tuple: "310410"
     gid1: "3440"
@@ -12205,10 +12379,778 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2557
+  carrier_name: "fraenk"
+  carrier_attribute {
+    mccmnc_tuple: "26206"
+    spn: "fraenk"
+    gid1: "44"
+  }
+}
+carrier_id {
   canonical_id: 2558
   carrier_name: "Wintel"
   carrier_attribute {
     mccmnc_tuple: "45209"
+  }
+}
+carrier_id {
+  canonical_id: 2559
+  carrier_name: "MONACO TELECOM"
+  carrier_attribute {
+    mccmnc_tuple: "212010"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "21210"
+  }
+}
+carrier_id {
+  canonical_id: 2560
+  carrier_name: "U+264A"
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040D"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23210"
+    gid1: "040E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302760"
+    gid1: "F1"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "4280"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302690"
+    gid1: "F1"
+  }
+}
+carrier_id {
+  canonical_id: 2561
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "20838"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2562
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "26214"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2563
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "20417"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2564
+  carrier_name: "Lebara"
+  carrier_attribute {
+    mccmnc_tuple: "23487"
+    spn: "Lebara"
+  }
+}
+carrier_id {
+  canonical_id: 2565
+  carrier_name: "Best Telecom"
+  carrier_attribute {
+    mccmnc_tuple: "45707"
+    imsi_prefix_xpattern: "457070001"
+    spn: "Best Mobile"
+  }
+}
+carrier_id {
+  canonical_id: 2566
+  carrier_name: "Zeop_RE"
+  carrier_attribute {
+    mccmnc_tuple: "64704"
+  }
+}
+carrier_id {
+  canonical_id: 2567
+  carrier_name: "SSi Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "302480"
+    imsi_prefix_xpattern: "302480017"
+  }
+}
+carrier_id {
+  canonical_id: 2568
+  carrier_name: "Eeyou Mobility"
+  carrier_attribute {
+    mccmnc_tuple: "302480"
+    imsi_prefix_xpattern: "3024800002"
+  }
+}
+carrier_id {
+  canonical_id: 2569
+  carrier_name: "Safaricom Telecommunications Ethiopia"
+  carrier_attribute {
+    mccmnc_tuple: "63602"
+  }
+}
+carrier_id {
+  canonical_id: 2571
+  carrier_name: "IZI"
+  carrier_attribute {
+    mccmnc_tuple: "43701"
+    imsi_prefix_xpattern: "437018"
+  }
+}
+carrier_id {
+  canonical_id: 2572
+  carrier_name: "Southern"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "SOUTHERN"
+  }
+}
+carrier_id {
+  canonical_id: 2573
+  carrier_name: "Everyday"
+  carrier_attribute {
+    mccmnc_tuple: "50501"
+    spn: "Everyday"
+  }
+}
+carrier_id {
+  canonical_id: 2575
+  carrier_name: "MVNO"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "20FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "20FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "20"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "21"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "22"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "23"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "24"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "25"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "26"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "27"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "28"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "29"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "30"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "20"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "21"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "22"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "23"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "24"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "25"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "26"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "27"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "28"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "29"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "30"
+  }
+}
+carrier_id {
+  canonical_id: 2576
+  carrier_name: "iWireless"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6957"
+  }
+}
+carrier_id {
+  canonical_id: 2577
+  carrier_name: "Qlink"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "514C"
+  }
+}
+carrier_id {
+  canonical_id: 2578
+  carrier_name: "Tello"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6941"
+  }
+}
+carrier_id {
+  canonical_id: 2579
+  carrier_name: "iSea"
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20670"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20671"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20672"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20673"
+    spn: "POA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "iSea"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "BELPOL"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "BPS-BPV"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "PZA"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20674"
+    spn: "POA"
+  }
+}
+carrier_id {
+  canonical_id: 2580
+  carrier_name: "Vodafone Oman"
+  carrier_attribute {
+    mccmnc_tuple: "42206"
+  }
+}
+carrier_id {
+  canonical_id: 2581
+  carrier_name: "DITO Telecommunity Corporation"
+  carrier_attribute {
+    mccmnc_tuple: "51566"
+    spn: "DITO"
+  }
+}
+carrier_id {
+  canonical_id: 2582
+  carrier_name: "Viti"
+  carrier_attribute {
+    mccmnc_tuple: "54705"
+  }
+}
+carrier_id {
+  canonical_id: 2583
+  carrier_name: "DENT"
+  carrier_attribute {
+    mccmnc_tuple: "26001"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26003"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26006"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "27877"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "42501"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "44011"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "3597bfd533"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311882"
+    gid1: "3597bfd533"
+  }
+}
+carrier_id {
+  canonical_id: 2584
+  carrier_name: "MVNO #A1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "21FF"
+  }
+}
+carrier_id {
+  canonical_id: 2585
+  carrier_name: "MVNO #B1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "22FF"
+  }
+}
+carrier_id {
+  canonical_id: 2586
+  carrier_name: "MVNO #C1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "23FF"
+  }
+}
+carrier_id {
+  canonical_id: 2587
+  carrier_name: "MVNO #D1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "24FF"
+  }
+}
+carrier_id {
+  canonical_id: 2588
+  carrier_name: "MVNO #E1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "25FF"
+  }
+}
+carrier_id {
+  canonical_id: 2589
+  carrier_name: "MVNO #F1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "26FF"
+  }
+}
+carrier_id {
+  canonical_id: 2590
+  carrier_name: "MVNO #G1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "27FF"
+  }
+}
+carrier_id {
+  canonical_id: 2591
+  carrier_name: "MVNO #H1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "28FF"
+  }
+}
+carrier_id {
+  canonical_id: 2592
+  carrier_name: "MVNO #I1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "29FF"
+  }
+}
+carrier_id {
+  canonical_id: 2593
+  carrier_name: "MVNO #J1"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "30FF"
+  }
+}
+carrier_id {
+  canonical_id: 2595
+  carrier_name: "SIMBA"
+  carrier_attribute {
+    mccmnc_tuple: "52510"
+    spn: "SIMBA"
+  }
+}
+carrier_id {
+  canonical_id: 2596
+  carrier_name: "Paradise Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "350007"
+  }
+}
+carrier_id {
+  canonical_id: 2597
+  carrier_name: "Skylo"
+  carrier_attribute {
+    mccmnc_tuple: "90198"
+  }
+}
+carrier_id {
+  canonical_id: 2598
+  carrier_name: "Telnyx"
+  carrier_attribute {
+    mccmnc_tuple: "20601"
+    spn: "Telnyx"
+    gid1: "5AA5"
+    gid2: "5254"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "22201"
+    spn: "Telnyx"
+    gid1: "5AA5"
+    gid2: "5254"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311210"
+    spn: "Telnyx"
+    gid1: "5AA5"
+    gid2: "5254"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311588"
+    spn: "Telnyx"
+    gid1: "5AA5"
+    gid2: "5254"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "313260"
+    spn: "Telnyx"
+    gid1: "5AA5"
+    gid2: "5254"
+  }
+}
+carrier_id {
+  canonical_id: 2599
+  carrier_name: "NetGenuity"
+  carrier_attribute {
+    mccmnc_tuple: "312630"
+    spn: "NetGenuity"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "312630"
+    spn: "Persistent Telecom"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "312630"
+    spn: "PTI"
+  }
+}
+carrier_id {
+  canonical_id: 2600
+  carrier_name: "Spusu AT"
+  carrier_attribute {
+    mccmnc_tuple: "23217"
+  }
+}
+carrier_id {
+  canonical_id: 2601
+  carrier_name: "HELP mobile AT"
+  carrier_attribute {
+    mccmnc_tuple: "23217"
+    gid1: "42"
+  }
+}
+carrier_id {
+  canonical_id: 2602
+  carrier_name: "Tchibo mobil AT"
+  carrier_attribute {
+    mccmnc_tuple: "23217"
+    gid1: "44"
+  }
+}
+carrier_id {
+  canonical_id: 2603
+  carrier_name: "Spusu IT"
+  carrier_attribute {
+    mccmnc_tuple: "22256"
+  }
+}
+carrier_id {
+  canonical_id: 2604
+  carrier_name: "Spusu GB"
+  carrier_attribute {
+    mccmnc_tuple: "23440"
+  }
+}
+carrier_id {
+  canonical_id: 2605
+  carrier_name: "Spusu CH"
+  carrier_attribute {
+    mccmnc_tuple: "22871"
+  }
+}
+carrier_id {
+  canonical_id: 2606
+  carrier_name: "Gen Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3442"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3442"
+  }
+}
+carrier_id {
+  canonical_id: 2607
+  carrier_name: "Boost"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3444"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3444"
+  }
+}
+carrier_id {
+  canonical_id: 2608
+  carrier_name: "Boost"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3446"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3446"
+  }
+}
+carrier_id {
+  canonical_id: 2609
+  carrier_name: "Republic"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3448"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3448"
+  }
+}
+carrier_id {
+  canonical_id: 2610
+  carrier_name: "Ting"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3450"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3450"
+  }
+}
+carrier_id {
+  canonical_id: 2611
+  carrier_name: "Ting"
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "3452"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "3452"
+  }
+}
+carrier_id {
+  canonical_id: 2612
+  carrier_name: "Gen Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6438"
+  }
+}
+carrier_id {
+  canonical_id: 2623
+  carrier_name: "FLOW"
+  carrier_attribute {
+    mccmnc_tuple: "344921"
+  }
+}
+carrier_id {
+  canonical_id: 2624
+  carrier_name: "FLOW"
+  carrier_attribute {
+    mccmnc_tuple: "356110"
+  }
+}
+carrier_id {
+  canonical_id: 2625
+  carrier_name: "BTC"
+  carrier_attribute {
+    mccmnc_tuple: "364039"
+  }
+}
+carrier_id {
+  canonical_id: 2627
+  carrier_name: "Boost"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    gid1: "6434"
+  }
+}
+carrier_id {
+  canonical_id: 2628
+  carrier_name: "AT&T Private"
+  carrier_attribute {
+    mccmnc_tuple: "310280"
+    gid1: "80FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310410"
+    gid1: "80FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310950"
+    gid1: "80FF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311180"
+    gid1: "80FF"
+  }
+}
+carrier_id {
+  canonical_id: 2629
+  carrier_name: "Nova Labs, Inc."
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    spn: "Helium"
+    gid1: "6907"
+  }
+}
+carrier_id {
+  canonical_id: 2630
+  carrier_name: "Nexphone"
+  carrier_attribute {
+    mccmnc_tuple: "22865"
+    spn: "Nexphone"
+    gid1: "4E657870686F6E65"
+    gid2: "4E657870686F6E6532303234"
   }
 }
 carrier_id {
@@ -12453,4 +13395,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 30
+version: 43
