@@ -19,14 +19,19 @@ package com.android.providers.telephony;
 import static android.provider.Telephony.Carriers;
 
 import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
+import android.content.ContentValues;
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
+import android.os.UserHandle;
 import android.provider.Telephony;
 import android.telephony.SubscriptionManager;
+import android.telephony.data.ApnSetting;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -400,6 +405,192 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_USER_HANDLE));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasUserHandleField_updateNullUserHandleValue() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasUserHandleField_updateNullUserHandleValue");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        // UserHandle column is added in version 59 .
+        mHelper.onUpgrade(db, (4 << 16), 59);
+
+        // The upgraded db must have Telephony.SimInfo.COLUMN_USER_HANDLE.
+        Cursor cursor = db.query("siminfo", null, null, null,
+                null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+        assertTrue(Arrays.asList(upgradedColumns).contains(Telephony.SimInfo.COLUMN_USER_HANDLE));
+
+        // Insert test contentValues into db.
+        final int insertSubId = 11;
+        ContentValues contentValues = new ContentValues();
+        // Set userHandle=-1
+        contentValues.put(Telephony.SimInfo.COLUMN_USER_HANDLE, -1);
+        contentValues.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
+        // Populate NON NULL columns.
+        contentValues.put(Telephony.SimInfo.COLUMN_ICC_ID, "123");
+        contentValues.put(Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT, 0);
+        contentValues.put(Telephony.SimInfo.COLUMN_CARD_ID, "123");
+        db.insert("siminfo", null, contentValues);
+
+        // Query UserHandle value from db which should be equal to -1.
+        final String[] testProjection = {Telephony.SimInfo.COLUMN_USER_HANDLE};
+        final String selection = Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?";
+        String[] selectionArgs = { Integer.toString(insertSubId) };
+        cursor = db.query("siminfo", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        int userHandleVal = cursor.getInt(0);
+        assertEquals(-1, userHandleVal);
+
+        // Upgrade db from version 59 to version 61.
+        mHelper.onUpgrade(db, (59 << 16), 61);
+
+        // Query userHandle value from db which should be equal to UserHandle.USER_NULL(-10000)
+        // after db upgrade.
+        cursor = db.query("siminfo", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        userHandleVal = cursor.getInt(0);
+        assertEquals(UserHandle.USER_NULL, userHandleVal);
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteEnabledField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteEnabledField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have
+        // Telephony.SimInfo.COLUMN_SATELLITE_ENABLED
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENABLED));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteAttachEnabledForCarrierField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteAttachEnabledForCarrierField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have
+        // Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteIsNtnField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteIsNtnField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have
+        // Telephony.SimInfo.IS_NTN
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_IS_NTN));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasInfrastructureFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasInfrastructureFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // The upgraded db must have the fields Telephony.Carrier.INFRASTRUCTURE_BITMASK
+        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "carriers columns: " + Arrays.toString(columns));
+
+        assertTrue(Arrays.asList(columns).contains(Carriers.INFRASTRUCTURE_BITMASK));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasEsimBootstrapProvisioningFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasEsimBootstrapProvisioningFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // The upgraded db must have the fields Telephony.Carrier.ESIM_BOOTSTRAP_PROVISIONING.
+        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "carriers columns: " + Arrays.toString(columns));
+
+        assertTrue(Arrays.asList(columns).contains(Carriers.ESIM_BOOTSTRAP_PROVISIONING));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasInfrastructureFields_updateInfrastructureValue() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasInfrastructureFields_updateInfrastructureValue");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        // UserHandle column is added in version 65.
+        mHelper.onUpgrade(db, (4 << 16), 65);
+
+        // The upgraded db must have the field Telephony.Carrier.INFRASTRUCTURE_BITMASK.
+        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "carriers columns: " + Arrays.toString(columns));
+        assertTrue(Arrays.asList(columns).contains(Carriers.INFRASTRUCTURE_BITMASK));
+
+        // Insert test contentValues into db.
+        final int insertId = 1;
+        final String IdKey = "_id";
+        ContentValues contentValues = new ContentValues();
+        // Set INFRASTRUCTURE_BITMASK to 1ApnSetting.INFRASTRUCTURE_CELLULAR.
+        contentValues.put(Carriers.INFRASTRUCTURE_BITMASK, ApnSetting.INFRASTRUCTURE_CELLULAR);
+        contentValues.put(IdKey, insertId);
+        db.insert("carriers", null, contentValues);
+
+        // Query INFRASTRUCTURE_BITMASK value from db which should be equal to ApnSetting
+        // .INFRASTRUCTURE_CELLULAR.
+        final String[] testProjection = {Carriers.INFRASTRUCTURE_BITMASK};
+        final String selection = IdKey + "=?";
+        String[] selectionArgs = {Integer.toString(insertId)};
+        cursor = db.query("carriers", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        int infrastructureBitmask = cursor.getInt(0);
+        assertEquals(ApnSetting.INFRASTRUCTURE_CELLULAR, infrastructureBitmask);
+
+        // Upgrade db from version 65 to version 67.
+        mHelper.onUpgrade(db, (65 << 16), 67);
+
+        // Query INFRASTRUCTURE_BITMASK value from db which should be equal to (ApnSetting
+        // .INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE) after db upgrade.
+        int expectedInfrastructureBitmask =
+                ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE;
+        cursor = db.query("carriers", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        infrastructureBitmask = cursor.getInt(0);
+        assertEquals(expectedInfrastructureBitmask, infrastructureBitmask);
     }
 
     /**
