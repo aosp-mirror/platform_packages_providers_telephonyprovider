@@ -3856,6 +3856,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "24491"
   }
+  carrier_attribute {
+    mccmnc_tuple: "24436"
+  }
 }
 carrier_id {
   canonical_id: 1481
@@ -5222,6 +5225,22 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "26899"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26893"
+    spn: "NOS"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26893"
+    spn: "WTF"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26893"
+    spn: "WOO"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26893"
+    spn: "GET"
   }
 }
 carrier_id {
@@ -11781,6 +11800,10 @@ carrier_id {
     mccmnc_tuple: "334140"
     spn: "izzi"
   }
+  carrier_attribute {
+    mccmnc_tuple: "334160"
+    spn: "izzi"
+  }
 }
 carrier_id {
   canonical_id: 2489
@@ -12525,7 +12548,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2575
-  carrier_name: "MVNO"
+  carrier_name: "MVNx #T"
   carrier_attribute {
     mccmnc_tuple: "310280"
     gid1: "20FF"
@@ -13154,6 +13177,61 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2631
+  carrier_name: "Webbing"
+  carrier_attribute {
+    mccmnc_tuple: "23410"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "42402"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "45435"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "90101"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "90131"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311588"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "732101"
+    gid1: "536E617065"
+  }
+}
+carrier_id {
+  canonical_id: 2632
+  carrier_name: "Airbus FR"
+  carrier_attribute {
+    mccmnc_tuple: "208506"
+  }
+}
+carrier_id {
+  canonical_id: 2633
+  carrier_name: "Airbus DE"
+  carrier_attribute {
+    mccmnc_tuple: "26298"
+    spn: "Airbus"
+  }
+}
+carrier_id {
+  canonical_id: 2634
+  carrier_name: "NU"
+  carrier_attribute {
+    mccmnc_tuple: "72405"
+    gid1: "4E55FFFFFF"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -13395,4 +13473,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 43
+version: 44
