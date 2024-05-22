@@ -1007,10 +1007,13 @@ public class SmsProvider extends ContentProvider {
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getWritableDatabase(match);
+        String debugMessage = getCallingPackage() + ";SmsProvider.delete;" + url;
+        // Always log delete for debug purpose, as delete is a critical but non-frequent operation.
+        Log.d(TAG, debugMessage);
         SQLiteOpenHelper sqLiteOpenHelper = getDBOpenHelper(match);
         if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
             ((MmsSmsDatabaseHelper) sqLiteOpenHelper).addDatabaseOpeningDebugLog(
-                    getCallingPackage() + ";SmsProvider.delete;" + url, false);
+                    debugMessage, false);
         }
         boolean notifyIfNotDefault = true;
         switch (match) {
