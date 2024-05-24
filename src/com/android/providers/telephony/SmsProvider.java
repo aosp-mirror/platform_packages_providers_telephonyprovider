@@ -26,6 +26,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.UriMatcher;
+import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.database.DatabaseUtils;
 import android.database.MatrixCursor;
@@ -117,6 +118,11 @@ public class SmsProvider extends ContentProvider {
                 Context.RECEIVER_NOT_EXPORTED);
 
         return true;
+    }
+
+    private boolean hasCalling() {
+        return getContext().getPackageManager().hasSystemFeature(
+                PackageManager.FEATURE_TELEPHONY_CALLING);
     }
 
     /**
@@ -350,7 +356,7 @@ public class SmsProvider extends ContentProvider {
             // Filter SMS based on subId and emergency numbers.
             selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                     callerUserHandle);
-            if (qb.getTables().equals(smsTable)) {
+            if (hasCalling() && qb.getTables().equals(smsTable)) {
                 selectionByEmergencyNumbers = ProviderUtil
                         .getSelectionByEmergencyNumbers(getContext());
             }
