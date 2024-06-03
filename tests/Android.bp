@@ -1,4 +1,5 @@
 package {
+    default_team: "trendy_team_fwk_telephony",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -11,6 +12,7 @@ android_test {
         "androidx.test.rules",
         "truth",
         "androidx.test.core",
+        "androidx.test.ext.junit",
     ],
     libs: [
         "android.test.runner",
