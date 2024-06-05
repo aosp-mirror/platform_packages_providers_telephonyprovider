@@ -1,4 +1,5 @@
 package {
+    default_team: "trendy_team_fwk_telephony",
     // See: http://go/android-license-faq
     default_applicable_licenses: ["Android-Apache-2.0"],
 }
@@ -9,8 +10,9 @@ android_test {
         "mockito-target",
         "compatibility-device-util-axt",
         "androidx.test.rules",
-        "truth-prebuilt",
+        "truth",
         "androidx.test.core",
+        "androidx.test.ext.junit",
     ],
     libs: [
         "android.test.runner",
@@ -18,7 +20,10 @@ android_test {
         "android.test.base",
         "android.test.mock",
     ],
-    srcs: ["src/**/*.java", ":telephonyprovider-shared-srcs"],
+    srcs: [
+        "src/**/*.java",
+        ":telephonyprovider-shared-srcs",
+    ],
     platform_apis: true,
     test_suites: ["device-tests"],
     certificate: "platform",

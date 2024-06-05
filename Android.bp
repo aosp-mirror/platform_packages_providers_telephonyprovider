@@ -12,6 +12,7 @@ android_app {
     certificate: "platform",
     libs: ["telephony-common"],
     static_libs: ["android-common", "telephonyprovider-protos"],
+    generate_product_characteristics_rro: true,
 }
 
 filegroup {

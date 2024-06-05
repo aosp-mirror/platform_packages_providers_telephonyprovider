@@ -17,10 +17,8 @@
 package com.android.providers.telephony;
 
 import static com.google.common.truth.Truth.assertThat;
-import static org.mockito.Mockito.any;
-import static org.mockito.ArgumentMatchers.eq;
+
 import static org.mockito.Mockito.doReturn;
-import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -65,6 +63,7 @@ public class ProviderUtilTest {
 
     @After
     public void tearDown() throws Exception {
+        mEmergencyNumberList = null;
     }
 
     @Test
@@ -145,5 +144,11 @@ public class ProviderUtilTest {
 
         assertThat(ProviderUtil.getSelectionByEmergencyNumbers(mContext))
                 .isEqualTo("address IN ('911','112')");
+    }
+
+    @Test
+    public void allowInteractWithEntryOfSubId() {
+        assertThat(ProviderUtil.allowInteractingWithEntryOfSubscription(mContext,
+                SubscriptionManager.INVALID_SUBSCRIPTION_ID, UserHandle.SYSTEM)).isTrue();
     }
 }
