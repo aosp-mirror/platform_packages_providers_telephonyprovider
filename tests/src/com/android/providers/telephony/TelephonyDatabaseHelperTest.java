@@ -593,6 +593,128 @@ public final class TelephonyDatabaseHelperTest {
         assertEquals(expectedInfrastructureBitmask, infrastructureBitmask);
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasServiceCapabilitiesFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasServiceCapabilitiesFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // The upgraded db must have the fields
+        //  Telephony.SimInfo.COLUMN_CELLULAR_SERVICE_CAPABILITIES
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(columns));
+
+        assertTrue(Arrays.asList(columns).contains(Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteAttachEnabledForCarrierField_updateValue() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteAttachEnabledForCarrierField_updateValue");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        // SATELLITE_ATTACH_ENABLED_FOR_CARRIER default value is set to 0 in version 64.
+        mHelper.onUpgrade(db, (4 << 16), 64);
+
+        // The upgraded db must have Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER));
+
+        // Insert test contentValues into db.
+        final int insertSubId = 1;
+        int expectSatelliteAttachEnabledForCarrier = 0;
+        ContentValues contentValues = new ContentValues();
+        // Set SATELLITE_ATTACH_ENABLED_FOR_CARRIER to 0 (disabled).
+        contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                expectSatelliteAttachEnabledForCarrier);
+        contentValues.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
+        // Populate NON NULL columns.
+        contentValues.put(Telephony.SimInfo.COLUMN_ICC_ID, "123");
+        contentValues.put(Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT, 0);
+        contentValues.put(Telephony.SimInfo.COLUMN_CARD_ID, "123");
+        db.insert("siminfo", null, contentValues);
+
+        // Query SATELLITE_ATTACH_ENABLED_FOR_CARRIER value from db which should be equal to 0.
+        final String[] testProjection =
+                {Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER};
+        final String selection = Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID + "=?";
+        String[] selectionArgs = {Integer.toString(insertSubId)};
+        cursor = db.query("siminfo", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        int satelliteAttachEnabledForCarrier = cursor.getInt(0);
+        assertEquals(expectSatelliteAttachEnabledForCarrier, satelliteAttachEnabledForCarrier);
+
+        // Upgrade db from version 64 to version 69.
+        mHelper.onUpgrade(db, (64 << 16), 69);
+
+        // Query SATELLITE_ATTACH_ENABLED_FOR_CARRIER value from db which should be equal to 1
+        // (enabled) after db upgrade.
+        expectSatelliteAttachEnabledForCarrier = 1;
+        cursor = db.query("siminfo", testProjection, selection, selectionArgs,
+                null, null, null);
+        assertNotNull(cursor);
+        assertEquals(1, cursor.getCount());
+        cursor.moveToFirst();
+        satelliteAttachEnabledForCarrier = cursor.getInt(0);
+        assertEquals(expectSatelliteAttachEnabledForCarrier, satelliteAttachEnabledForCarrier);
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasTransferStatusFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasTransferStatusFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // The upgraded db must have the fields
+        // Telephony.SimInfo.COLUMN_TRANSFER_STATUS
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] columns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(columns));
+
+        assertTrue(Arrays.asList(columns).contains(Telephony.SimInfo.COLUMN_TRANSFER_STATUS));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteEntitlementStatusFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteEntitlementStatusFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteEntitlementPlmnsFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteEntitlementPlmnsFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
