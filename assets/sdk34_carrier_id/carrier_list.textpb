@@ -79,7 +79,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 5
-  carrier_name: "T-Mobile"
+  carrier_name: "Odido"
   carrier_attribute {
     mccmnc_tuple: "20416"
     gid1: "FF"
@@ -10101,7 +10101,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2386
-  carrier_name: "T-Mobile"
+  carrier_name: "Odido"
   carrier_attribute {
     mccmnc_tuple: "20416"
   }
@@ -12074,6 +12074,10 @@ carrier_id {
     mccmnc_tuple: "732101"
     gid1: "536E617065"
   }
+  carrier_attribute {
+    mccmnc_tuple: "90161"
+    gid1: "536E617065"
+  }
 }
 carrier_id {
   canonical_id: 2632
@@ -12096,6 +12100,60 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "72405"
     gid1: "4E55FFFFFF"
+  }
+}
+carrier_id {
+  canonical_id: 2635
+  carrier_name: "ZERO2"
+  carrier_attribute {
+    mccmnc_tuple: "65002"
+  }
+}
+carrier_id {
+  canonical_id: 2636
+  carrier_name: "Transatel"
+  carrier_attribute {
+    mccmnc_tuple: "90137"
+  }
+}
+carrier_id {
+  canonical_id: 2637
+  carrier_name: "1Global"
+  carrier_attribute {
+    mccmnc_tuple: "20433"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20812"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "21427"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23425"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26033"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "26242"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "310300"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "45408"
+    gid1: "31474C424C2D573030"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "50538"
+    gid1: "31474C424C2D573030"
   }
 }
 carrier_id {
@@ -12505,4 +12563,4 @@ carrier_id {
   }
   parent_canonical_id: 1779
 }
-version: 117440548
+version: 117440549
