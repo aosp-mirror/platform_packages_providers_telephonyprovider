@@ -63,8 +63,7 @@ public class ProviderUtil {
      * @return true if the caller is not system, or phone or default sms app, false otherwise
      */
     public static boolean isAccessRestricted(Context context, String packageName, int uid) {
-        return (uid != Process.SYSTEM_UID
-                && uid != Process.PHONE_UID
+        return (!TelephonyPermissions.isSystemOrPhone(uid)
                 && !SmsApplication.isDefaultSmsApplication(context, packageName));
     }
 
