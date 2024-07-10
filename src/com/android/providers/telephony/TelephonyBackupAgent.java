@@ -392,6 +392,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (subscriptionManager != null) {
             final List<SubscriptionInfo> subInfo =
                     subscriptionManager.getCompleteActiveSubscriptionInfoList();
+            Log.d(TAG, "onCreate: completeActiveSubInfo count=" + subInfo.size());
             if (subInfo != null) {
                 for (SubscriptionInfo sub : subInfo) {
                     final String phoneNumber = getNormalizedNumber(sub);
@@ -441,6 +442,7 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     @Override
     public void onFullBackup(FullBackupDataOutput data) throws IOException {
+        Log.d(TAG, "onFullBackup()");
         SharedPreferences sharedPreferences = getSharedPreferences(BACKUP_PREFS, MODE_PRIVATE);
         if (sharedPreferences.getLong(QUOTA_RESET_TIME, Long.MAX_VALUE) <
                 System.currentTimeMillis()) {
@@ -539,7 +541,9 @@ public class TelephonyBackupAgent extends BackupAgent {
 
     private void backupAll(FullBackupDataOutput data, Cursor cursor, String fileName)
             throws IOException {
+        Log.d(TAG, "backupAll()");
         if (cursor == null || cursor.isAfterLast()) {
+            Log.d(TAG, "backupAll(): cursor is null return");
             return;
         }
 
@@ -550,10 +554,13 @@ public class TelephonyBackupAgent extends BackupAgent {
             if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
                 chunk = putSmsMessagesToJson(cursor, jsonWriter);
                 mSmsCount = chunk.count;
+                Log.d(TAG, "backupAll: Wrote SMS messages to Json. mSmsCount=" + mSmsCount);
             } else {
                 chunk = putMmsMessagesToJson(cursor, jsonWriter);
                 mMmsCount = chunk.count;
+                Log.d(TAG, "backupAll: Wrote MMS messages to Json. mMmsCount=" + mMmsCount);
             }
+
         }
         backupFile(chunk, fileName, data);
     }
@@ -774,6 +781,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         int msgCount = 0;
         int numExceptions = 0;
         final int bulkInsertSize = mMaxMsgPerFile;
+        Log.d(TAG, "putSmsMessagesToProvider: bulkInsertSize=" + bulkInsertSize);
         ContentValues[] values = new ContentValues[bulkInsertSize];
         while (jsonReader.hasNext()) {
             ContentValues cv = readSmsValuesFromReader(jsonReader);
@@ -784,6 +792,7 @@ public class TelephonyBackupAgent extends BackupAgent {
                 values[(msgCount++) % bulkInsertSize] = cv;
                 if (msgCount % bulkInsertSize == 0) {
                     mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI, values);
+                    Log.d(TAG, "putSmsMessagesToProvider: msgCount:" + msgCount);
                 }
             } catch (RuntimeException e) {
                 Log.e(TAG, "putSmsMessagesToProvider", e);
@@ -794,6 +803,7 @@ public class TelephonyBackupAgent extends BackupAgent {
         if (msgCount % bulkInsertSize > 0) {
             mContentResolver.bulkInsert(Telephony.Sms.CONTENT_URI,
                     Arrays.copyOf(values, msgCount % bulkInsertSize));
+            Log.d(TAG, "putSmsMessagesToProvider: msgCount:" + msgCount);
         }
         jsonReader.endArray();
         incremenentSharedPref(true, msgCount, numExceptions);
