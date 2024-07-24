@@ -32,6 +32,8 @@ import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED_STATUS;
+import static android.provider.Telephony.Carriers.INFRASTRUCTURE_BITMASK;
+import static android.provider.Telephony.Carriers.ESIM_BOOTSTRAP_PROVISIONING;
 import static android.provider.Telephony.Carriers.LINGERING_NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
@@ -162,7 +164,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 62 << 16;
+    private static final int DATABASE_VERSION = 71 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -284,6 +286,14 @@ public class TelephonyProvider extends ContentProvider
 
     private boolean mManagedApnEnforced;
 
+    /**
+     * Lazy tracking SubscriptionManager#getDefaultSubscriptionId for db operation to prevent race
+     * condition.
+     * Make sure the call is outside of instance synchronization to prevent dead lock between
+     * SubscriptionManager lock and telephony provider lock.
+     */
+    private int mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
+
     private final LocalLog mLocalLog = new LocalLog(128);
 
     /**
@@ -375,7 +385,7 @@ public class TelephonyProvider extends ContentProvider
         // Columns not included in UNIQUE constraint: name, current, edited, user, server, password,
         // authtype, type, protocol, roaming_protocol, sub_id, modem_cognitive, max_conns,
         // wait_time, max_conns_time, mtu, mtu_v4, mtu_v6, bearer_bitmask, user_visible,
-        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on
+        // network_type_bitmask, skip_464xlat, lingering_network_type_bitmask, always_on.
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(NUMERIC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MCC, "");
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(MNC, "");
@@ -397,6 +407,10 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(APN_SET_ID, String.valueOf(NO_APN_SET_ID));
         CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(CARRIER_ID,
                 String.valueOf(TelephonyManager.UNKNOWN_CARRIER_ID));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(INFRASTRUCTURE_BITMASK,
+                String.valueOf(
+                        ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE));
+        CARRIERS_UNIQUE_FIELDS_DEFAULTS.put(ESIM_BOOTSTRAP_PROVISIONING, "0");
 
         CARRIERS_UNIQUE_FIELDS.addAll(CARRIERS_UNIQUE_FIELDS_DEFAULTS.keySet());
 
@@ -407,8 +421,9 @@ public class TelephonyProvider extends ContentProvider
         CARRIERS_BOOLEAN_FIELDS.add(MODEM_PERSIST);
         CARRIERS_BOOLEAN_FIELDS.add(USER_VISIBLE);
         CARRIERS_BOOLEAN_FIELDS.add(USER_EDITABLE);
+        CARRIERS_BOOLEAN_FIELDS.add(ESIM_BOOTSTRAP_PROVISIONING);
 
-        MVNO_TYPE_STRING_MAP = new ArrayMap<String, Integer>();
+        MVNO_TYPE_STRING_MAP = new ArrayMap<>();
         MVNO_TYPE_STRING_MAP.put("spn", ApnSetting.MVNO_TYPE_SPN);
         MVNO_TYPE_STRING_MAP.put("imsi", ApnSetting.MVNO_TYPE_IMSI);
         MVNO_TYPE_STRING_MAP.put("gid", ApnSetting.MVNO_TYPE_GID);
@@ -450,6 +465,20 @@ public class TelephonyProvider extends ContentProvider
                 Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES, Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENABLED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_IS_NTN, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_TRANSFER_STATUS, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
+                Cursor.FIELD_TYPE_STRING);
     }
 
     @VisibleForTesting
@@ -499,6 +528,8 @@ public class TelephonyProvider extends ContentProvider
                 APN_SET_ID + " INTEGER DEFAULT " + NO_APN_SET_ID + "," +
                 SKIP_464XLAT + " INTEGER DEFAULT " + SKIP_464XLAT_DEFAULT + "," +
                 ALWAYS_ON + " INTEGER DEFAULT 0," +
+                INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 3," +
+                ESIM_BOOTSTRAP_PROVISIONING + " BOOLEAN DEFAULT 0," +
                 // Uniqueness collisions are used to trigger merge code so if a field is listed
                 // here it means we will accept both (user edited + new apn_conf definition)
                 // Columns not included in UNIQUE constraint: name, current, edited,
@@ -590,7 +621,15 @@ public class TelephonyProvider extends ContentProvider
                 "  INTEGER DEFAULT -1,"
                 + Telephony.SimInfo.COLUMN_USER_HANDLE + " INTEGER DEFAULT "
                 + UserHandle.USER_NULL + ","
-                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT -1"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                + " INTEGER DEFAULT 1, "
+                + Telephony.SimInfo.COLUMN_IS_NTN + " INTEGER DEFAULT 0, "
+                + Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES + " INTEGER DEFAULT "
+                + SubscriptionManager.getAllServiceCapabilityBitmasks() + ","
+                + Telephony.SimInfo.COLUMN_TRANSFER_STATUS + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS + " TEXT"
                 + ");";
     }
 
@@ -696,10 +735,15 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
-    static public ContentValues setDefaultValue(ContentValues values) {
+
+    /**
+     * Put the default subscription Id into the provided convent values.
+     * @param values The content values to populate.
+     * @return The populated content values.
+     */
+    public ContentValues setDefaultValue(ContentValues values) {
         if (!values.containsKey(SUBSCRIPTION_ID)) {
-            int subId = SubscriptionManager.getDefaultSubscriptionId();
-            values.put(SUBSCRIPTION_ID, subId);
+            values.put(SUBSCRIPTION_ID, mDefaultSubId);
         }
 
         return values;
@@ -859,11 +903,7 @@ public class TelephonyProvider extends ContentProvider
             long oldChecksum = getApnConfChecksum();
             if (DBG) log("newChecksum: " + newChecksum);
             if (DBG) log("oldChecksum: " + oldChecksum);
-            if (newChecksum == oldChecksum) {
-                return false;
-            } else {
-                return true;
-            }
+            return newChecksum != oldChecksum;
         }
 
         /**
@@ -1900,7 +1940,7 @@ public class TelephonyProvider extends ContentProvider
                     // Try to update the siminfo table with new columns.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
                             + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED
-                            + "  INTEGER DEFAULT -1;");
+                            + "  INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
                         log("onUpgrade failed to update " + SIMINFO_TABLE
@@ -1909,6 +1949,158 @@ public class TelephonyProvider extends ContentProvider
                 }
                 oldVersion = 62 << 16 | 6;
             }
+
+            if (oldVersion < (63 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite attach for carrier enabled by user. ");
+                    }
+                }
+                oldVersion = 63 << 16 | 6;
+            }
+
+            if (oldVersion < (64 << 16 | 6)) {
+                try {
+                    /* If default value of COLUMN_SATELLITE_ENABLED column is set to -1, then update
+                     it to 0 */
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + "=0"
+                            + "  WHERE " + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + "=-1;");
+                    /* If default value of COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER column is set
+                     to -1, then update it to 0 */
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER + "=0"
+                            + "  WHERE "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                            + "=-1;");
+
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_IS_NTN
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite is ntn. ");
+                    }
+                }
+                oldVersion = 64 << 16 | 6;
+            }
+
+            if (oldVersion < (65 << 16 | 6)) {
+                try {
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + INFRASTRUCTURE_BITMASK + " INTEGER DEFAULT 1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add infrastructure bitmask value.");
+                    }
+                }
+                oldVersion = 65 << 16 | 6;
+            }
+
+            if (oldVersion < (66 << 16 | 6)) {
+                try {
+                    // Try to add new field ESIM_BOOTSTRAP_PROVISIONING
+                    db.execSQL("ALTER TABLE " + CARRIERS_TABLE + " ADD COLUMN "
+                            + ESIM_BOOTSTRAP_PROVISIONING + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                    + " to add esim bootstrap provisioning flag");
+                    }
+
+                }
+                oldVersion = 66 << 16 | 6;
+            }
+
+            if (oldVersion < (67 << 16 | 6)) {
+                try {
+                    // If default value of infrastructure_bitmask column is set to 1, then update
+                    // it to 3
+                    db.execSQL("UPDATE " + CARRIERS_TABLE + " SET " + INFRASTRUCTURE_BITMASK + "=3"
+                            + "  WHERE " + INFRASTRUCTURE_BITMASK + "=1;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + CARRIERS_TABLE
+                                + " to add infrastructure bitmask value.");
+                    }
+                }
+                oldVersion = 67 << 16 | 6;
+            }
+
+            if (oldVersion < (68 << 16 | 6)) {
+                try {
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES
+                            + " INTEGER DEFAULT 7;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add cellular service capabilities");
+                    }
+
+                }
+                oldVersion = 68 << 16 | 6;
+            }
+
+            if (oldVersion < (69 << 16 | 6)) {
+                try {
+                    // If default value of COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER column is
+                    // set to 0, then update it to 1
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER + "=1"
+                            + "  WHERE "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
+                            + "=0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add cellular service capabilities");
+                    }
+                }
+                oldVersion = 69 << 16 | 6;
+            }
+            if (oldVersion < (70 << 16 | 6)) {
+                try {
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_TRANSFER_STATUS
+                            + " INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add transfer status");
+                    }
+
+                }
+                oldVersion = 70 << 16 | 6;
+            }
+
+            if (oldVersion < (71 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS
+                            + "  INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS
+                            + " TEXT DEFAULT '';");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite entitlement status and plmns");
+                    }
+                }
+                oldVersion = 71 << 16 | 6;
+            }
+
             if (DBG) {
                 log("dbh.onUpgrade:- db=" + db + " oldV=" + oldVersion + " newV=" + newVersion);
             }
@@ -2357,6 +2549,8 @@ public class TelephonyProvider extends ContentProvider
             getIntValueFromCursor(cv, c, APN_SET_ID);
             getIntValueFromCursor(cv, c, SKIP_464XLAT);
             getIntValueFromCursor(cv, c, ALWAYS_ON);
+            getIntValueFromCursor(cv, c, INFRASTRUCTURE_BITMASK);
+            getIntValueFromCursor(cv, c, ESIM_BOOTSTRAP_PROVISIONING);
         }
 
         private void copyPreservedApnsToNewTable(SQLiteDatabase db, Cursor c) {
@@ -2581,6 +2775,16 @@ public class TelephonyProvider extends ContentProvider
             addBoolAttribute(parser, "user_visible", map, USER_VISIBLE);
             addBoolAttribute(parser, "user_editable", map, USER_EDITABLE);
             addBoolAttribute(parser, "always_on", map, ALWAYS_ON);
+            addBoolAttribute(parser, "esim_bootstrap_provisioning", map,
+                    ESIM_BOOTSTRAP_PROVISIONING);
+
+            int infrastructureBitmask =
+                    ApnSetting.INFRASTRUCTURE_CELLULAR | ApnSetting.INFRASTRUCTURE_SATELLITE;
+            String infrastructureList = parser.getAttributeValue(null, "infrastructure_bitmask");
+            if (infrastructureList != null) {
+                infrastructureBitmask = getInfrastructureListFromString(infrastructureList);
+            }
+            map.put(INFRASTRUCTURE_BITMASK, infrastructureBitmask);
 
             int networkTypeBitmask = 0;
             String networkTypeList = parser.getAttributeValue(null, "network_type_bitmask");
@@ -3129,6 +3333,7 @@ public class TelephonyProvider extends ContentProvider
     @Override
     public boolean onCreate() {
         mOpenHelper = new DatabaseHelper(getContext());
+        mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
         boolean isNewBuild = false;
         String newBuildId = SystemProperties.get("ro.build.id", null);
         SharedPreferences sp = getContext().getSharedPreferences(BUILD_ID_FILE,
@@ -3166,8 +3371,8 @@ public class TelephonyProvider extends ContentProvider
                 Context.MODE_PRIVATE);
         mManagedApnEnforced = spEnforcedFile.getBoolean(ENFORCED_KEY, false);
 
+        ProviderUtil.logRunningTelephonyProviderProcesses(getContext());
         if (VDBG) log("onCreate:- ret true");
-
         return true;
     }
 
@@ -3770,7 +3975,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 62 << 16) {
+            if (DATABASE_VERSION != 71 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -3812,6 +4017,38 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 71 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS,
+                                DEFAULT_INT_COLUMN_VALUE));
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
+                        backedUpSimInfoEntry.getString(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
+                                DEFAULT_STRING_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 70 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
+                        backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 64 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_IS_NTN,
+                        backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_IS_NTN,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 63 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 62 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENABLED,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ENABLED,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 60 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES,
                         backedUpSimInfoEntry.getString(
@@ -3822,7 +4059,7 @@ public class TelephonyProvider extends ContentProvider
                 contentValues.put(Telephony.SimInfo.COLUMN_USAGE_SETTING,
                         backedUpSimInfoEntry.getInt(
                                 Telephony.SimInfo.COLUMN_USAGE_SETTING,
-                                SubscriptionManager.USAGE_SETTING_UNKNOWN));
+                                DEFAULT_INT_COLUMN_VALUE));
             }
             if (backupDataFormatVersion >= 52 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED,
@@ -3966,12 +4203,20 @@ public class TelephonyProvider extends ContentProvider
         int match = s_urlMatcher.match(url);
         checkPermissionCompat(match, projectionIn);
 
+        mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
         return queryInternal(url, projectionIn, selection, selectionArgs, sort);
     }
 
-    private synchronized Cursor queryInternal(Uri url, String[] projectionIn, String selection,
+    /**
+     * Internally queries the database.
+     *
+     * Things to keep in mind when writing code for this function:
+     *   - Must be wrapped in synchronized before quering database.
+     *   - Please call external APIs, that use locks, outside of synchronized.
+     */
+    private Cursor queryInternal(Uri url, String[] projectionIn, String selection,
             String[] selectionArgs, String sort) {
-        int subId = SubscriptionManager.getDefaultSubscriptionId();
+        int subId = mDefaultSubId;
         String subIdString;
         SQLiteQueryBuilder qb = new SQLiteQueryBuilder();
         qb.setStrict(true); // a little protection from injection attacks
@@ -3990,7 +4235,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 qb.appendWhereStandalone(IS_NOT_OWNED_BY_DPC);
                 return getSubscriptionMatchingAPNList(qb, projectionIn, selection, selectionArgs,
                         sort, subId);
@@ -4011,7 +4255,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -4039,7 +4282,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -4058,7 +4300,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return null;
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 // TODO b/74213956 turn this back on once insertion includes correct sub id
                 // constraints.add(SUBSCRIPTION_ID + "=" + subIdString);
             }
@@ -4177,29 +4418,32 @@ public class TelephonyProvider extends ContentProvider
             qb.appendWhere(TextUtils.join(" AND ", constraints));
         }
 
-        SQLiteDatabase db = getReadableDatabase();
-        Cursor ret = null;
-        try {
-            // Exclude entries marked deleted
-            if (CARRIERS_TABLE.equals(qb.getTables())) {
-                if (TextUtils.isEmpty(selection)) {
-                    selection = "";
-                } else {
-                    selection += " and ";
+        synchronized (this) {
+            SQLiteDatabase db = getReadableDatabase();
+            Cursor ret = null;
+            try {
+                // Exclude entries marked deleted
+                if (CARRIERS_TABLE.equals(qb.getTables())) {
+                    if (TextUtils.isEmpty(selection)) {
+                        selection = "";
+                    } else {
+                        selection += " and ";
+                    }
+                    selection += IS_NOT_USER_DELETED + " and "
+                            + IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and "
+                            + IS_NOT_CARRIER_DELETED + " and "
+                            + IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML;
+                    if (VDBG) log("query: selection modified to " + selection);
                 }
-                selection += IS_NOT_USER_DELETED + " and " +
-                        IS_NOT_USER_DELETED_BUT_PRESENT_IN_XML + " and " +
-                        IS_NOT_CARRIER_DELETED + " and " +
-                        IS_NOT_CARRIER_DELETED_BUT_PRESENT_IN_XML;
-                if (VDBG) log("query: selection modified to " + selection);
+                ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
+            } catch (SQLException e) {
+                loge("got exception when querying: " + e);
             }
-            ret = qb.query(db, projectionIn, selection, selectionArgs, null, null, sort);
-        } catch (SQLException e) {
-            loge("got exception when querying: " + e);
+            if (ret != null) {
+                ret.setNotificationUri(getContext().getContentResolver(), url);
+            }
+            return ret;
         }
-        if (ret != null)
-            ret.setNotificationUri(getContext().getContentResolver(), url);
-        return ret;
     }
 
     /**
@@ -4238,14 +4482,25 @@ public class TelephonyProvider extends ContentProvider
      */
     private Cursor getSubscriptionMatchingAPNList(SQLiteQueryBuilder qb, String[] projectionIn,
             String selection, String[] selectionArgs, String sort, int subId) {
-        Cursor ret;
         Context context = getContext();
-        SubscriptionManager subscriptionManager = (SubscriptionManager) context
+
+        // The SubscriptionManager can use the lock to query tables such as sim_info again, so
+        // calling subscriptionManager should be performed outside of synchronized.
+        final SubscriptionManager subscriptionManager = (SubscriptionManager) context
                 .getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
         if (!subscriptionManager.isActiveSubscriptionId(subId)) {
             return null;
         }
 
+        return getSubscriptionMatchingAPNListSynchronized(qb, projectionIn, selection,
+                selectionArgs, sort, subId);
+    }
+
+    private synchronized Cursor getSubscriptionMatchingAPNListSynchronized(
+            SQLiteQueryBuilder qb, String[] projectionIn, String selection, String[] selectionArgs,
+            String sort, int subId) {
+        Cursor ret;
+        Context context = getContext();
         final TelephonyManager tm = ((TelephonyManager) context
                 .getSystemService(Context.TELEPHONY_SERVICE))
                 .createForSubscriptionId(subId);
@@ -4405,8 +4660,11 @@ public class TelephonyProvider extends ContentProvider
      * Insert an array of ContentValues and call notifyChange at the end.
      */
     @Override
-    public synchronized int bulkInsert(Uri url, ContentValues[] values) {
-        return unsynchronizedBulkInsert(url, values);
+    public int bulkInsert(Uri url, ContentValues[] values) {
+        mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
+        synchronized (this) {
+            return unsynchronizedBulkInsert(url, values);
+        }
     }
 
     /**
@@ -4433,7 +4691,12 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public synchronized Uri insert(Uri url, ContentValues initialValues) {
+    public Uri insert(Uri url, ContentValues initialValues) {
+        mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
+        return insertSynchronized(url, initialValues);
+    }
+
+    private synchronized Uri insertSynchronized(Uri url, ContentValues initialValues) {
         Pair<Uri, Boolean> rowAndNotify = insertSingleRow(url, initialValues);
         if (rowAndNotify.second) {
             getContext().getContentResolver().notifyChange(CONTENT_URI, null,
@@ -4447,7 +4710,7 @@ public class TelephonyProvider extends ContentProvider
      *
      * @param values the value that caller wants to insert
      * @return a pair in which the first element refers to the Uri for the row inserted, the second
-     *         element refers to whether sends out nofitication.
+     *         element refers to whether sends out notification.
      */
     private Pair<Uri, Boolean> insertRowWithValue(ContentValues values) {
         Uri result = null;
@@ -4462,7 +4725,7 @@ public class TelephonyProvider extends ContentProvider
                 result = ContentUris.withAppendedId(CONTENT_URI, rowID);
                 notify = true;
             }
-            if (VDBG) log("insert: inserted " + values.toString() + " rowID = " + rowID);
+            if (DBG) log("insert: inserted " + values + ", rowID = " + rowID);
         } catch (SQLException e) {
             log("insert: exception " + e);
             // Insertion failed which could be due to a conflict. Check if that is the case
@@ -4481,7 +4744,7 @@ public class TelephonyProvider extends ContentProvider
 
     private Pair<Uri, Boolean> insertSingleRow(Uri url, ContentValues initialValues) {
         Uri result = null;
-        int subId = SubscriptionManager.getDefaultSubscriptionId();
+        int subId = mDefaultSubId;
 
         int match = s_urlMatcher.match(url);
         checkPermission(match);
@@ -4493,14 +4756,7 @@ public class TelephonyProvider extends ContentProvider
         {
             case URL_TELEPHONY_USING_SUBID:
             {
-                String subIdString = url.getLastPathSegment();
-                try {
-                    subId = Integer.parseInt(subIdString);
-                } catch (NumberFormatException e) {
-                    loge("NumberFormatException" + e);
-                    return Pair.create(result, notify);
-                }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
+                loge("insert carriers/subId/* is not supported, treat as carriers");
             }
             //intentional fall through from above case
 
@@ -4528,15 +4784,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT_USING_SUBID:
             {
-                String subIdString = url.getLastPathSegment();
-                try {
-                    subId = Integer.parseInt(subIdString);
-                } catch (NumberFormatException e) {
-                    loge("NumberFormatException" + e);
-                    return Pair.create(result, notify);
-                }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                // FIXME use subId in the query
+                loge("insert carriers/current/subId/* is not supported, treat as carriers/current");
             }
             //intentional fall through from above case
 
@@ -4570,7 +4818,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     return Pair.create(result, notify);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             //intentional fall through from above case
 
@@ -4623,9 +4870,14 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public synchronized int delete(Uri url, String where, String[] whereArgs) {
+    public int delete(Uri url, String where, String[] whereArgs) {
+        mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
+        return deleteSynchronized(url, where, whereArgs);
+    }
+
+    private synchronized int deleteSynchronized(Uri url, String where, String[] whereArgs) {
         int count = 0;
-        int subId = SubscriptionManager.getDefaultSubscriptionId();
+        int subId = mDefaultSubId;
         String userOrCarrierEdited = ") and (" +
                 IS_USER_EDITED +  " or " +
                 IS_CARRIER_EDITED + ")";
@@ -4654,15 +4906,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_TELEPHONY_USING_SUBID:
             {
-                 String subIdString = url.getLastPathSegment();
-                 try {
-                     subId = Integer.parseInt(subIdString);
-                 } catch (NumberFormatException e) {
-                     loge("NumberFormatException" + e);
-                     throw new IllegalArgumentException("Invalid subId " + url);
-                 }
-                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                // FIXME use subId in query
+                loge("delete carriers/subId/* is not supported, treat as carriers");
             }
             //intentional fall through from above case
 
@@ -4678,15 +4922,7 @@ public class TelephonyProvider extends ContentProvider
             }
 
             case URL_CURRENT_USING_SUBID: {
-                String subIdString = url.getLastPathSegment();
-                try {
-                    subId = Integer.parseInt(subIdString);
-                } catch (NumberFormatException e) {
-                    loge("NumberFormatException" + e);
-                    throw new IllegalArgumentException("Invalid subId " + url);
-                }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                // FIXME use subId in query
+                loge("delete carriers/current/subId/* is not supported, treat as carriers/current");
             }
             //intentional fall through from above case
 
@@ -4724,7 +4960,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             // intentional fall through from above case
 
@@ -4746,7 +4981,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
             //intentional fall through from above case
 
@@ -4792,11 +5026,17 @@ public class TelephonyProvider extends ContentProvider
     }
 
     @Override
-    public synchronized int update(Uri url, ContentValues values, String where, String[] whereArgs)
+    public int update(Uri url, ContentValues values, String where, String[] whereArgs)
     {
+        mDefaultSubId = SubscriptionManager.getDefaultSubscriptionId();
+        return updateSynchronized(url, values, where, whereArgs);
+    }
+
+    private synchronized int updateSynchronized(Uri url, ContentValues values, String where,
+            String[] whereArgs) {
         int count = 0;
         int uriType = URL_UNKNOWN;
-        int subId = SubscriptionManager.getDefaultSubscriptionId();
+        int subId = mDefaultSubId;
 
         int match = s_urlMatcher.match(url);
         checkPermission(match);
@@ -4807,15 +5047,7 @@ public class TelephonyProvider extends ContentProvider
         {
             case URL_TELEPHONY_USING_SUBID:
             {
-                 String subIdString = url.getLastPathSegment();
-                 try {
-                     subId = Integer.parseInt(subIdString);
-                 } catch (NumberFormatException e) {
-                     loge("NumberFormatException" + e);
-                     throw new IllegalArgumentException("Invalid subId " + url);
-                 }
-                 if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                //FIXME use subId in the query
+                loge("insert carriers/subId/* is not supported, treat as carriers");
             }
             //intentional fall through from above case
 
@@ -4836,15 +5068,7 @@ public class TelephonyProvider extends ContentProvider
 
             case URL_CURRENT_USING_SUBID:
             {
-                String subIdString = url.getLastPathSegment();
-                try {
-                    subId = Integer.parseInt(subIdString);
-                } catch (NumberFormatException e) {
-                    loge("NumberFormatException" + e);
-                    throw new IllegalArgumentException("Invalid subId " + url);
-                }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
-                //FIXME use subId in the query
+                loge("insert carriers/current/subId/* is not supported, treat as carriers/current");
             }
             //intentional fall through from above case
 
@@ -4875,7 +5099,7 @@ public class TelephonyProvider extends ContentProvider
 
                 try {
                     count = db.updateWithOnConflict(CARRIERS_TABLE, values, _ID + "=?" + " and " +
-                            IS_NOT_OWNED_BY_DPC, new String[] { rowID },
+                                    IS_NOT_OWNED_BY_DPC, new String[] { rowID },
                             SQLiteDatabase.CONFLICT_ABORT);
                 } catch (SQLException e) {
                     // Update failed which could be due to a conflict. Check if that is
@@ -4904,7 +5128,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
             }
 
             case URL_PREFERAPN:
@@ -4956,7 +5179,6 @@ public class TelephonyProvider extends ContentProvider
                     loge("NumberFormatException" + e);
                     throw new IllegalArgumentException("Invalid subId " + url);
                 }
-                if (DBG) log("subIdString = " + subIdString + " subId = " + subId);
                 if (where != null || whereArgs != null) {
                     throw new UnsupportedOperationException(
                             "Cannot update URL " + url + " with a where clause");
@@ -5054,9 +5276,9 @@ public class TelephonyProvider extends ContentProvider
                     }
                     if (values.containsKey(Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
-                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
-                                        Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED), usingSubId, subId),
-                                null, true, UserHandle.USER_ALL);
+                                        Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                                Telephony.SimInfo.COLUMN_IMS_RCS_UCE_ENABLED),
+                                        usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
                     if (values.containsKey(Telephony.SimInfo.COLUMN_CROSS_SIM_CALLING_ENABLED)) {
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
@@ -5086,6 +5308,20 @@ public class TelephonyProvider extends ContentProvider
                         getContext().getContentResolver().notifyChange(getNotifyContentUri(
                                 Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
                                         Telephony.SimInfo.COLUMN_ENABLED_MOBILE_DATA_POLICIES),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(
+                            Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES),
+                                usingSubId, subId), null, true, UserHandle.USER_ALL);
+                    }
+                    if (values.containsKey(
+                            Telephony.SimInfo.COLUMN_TRANSFER_STATUS)) {
+                        getContext().getContentResolver().notifyChange(getNotifyContentUri(
+                                Uri.withAppendedPath(Telephony.SimInfo.CONTENT_URI,
+                                        Telephony.SimInfo.COLUMN_TRANSFER_STATUS),
                                 usingSubId, subId), null, true, UserHandle.USER_ALL);
                     }
                     break;
@@ -5426,7 +5662,7 @@ public class TelephonyProvider extends ContentProvider
     private static int getMvnoTypeIntFromString(String mvnoType) {
         String mvnoTypeString = TextUtils.isEmpty(mvnoType) ? mvnoType : mvnoType.toLowerCase(Locale.ROOT);
         Integer mvnoTypeInt = MVNO_TYPE_STRING_MAP.get(mvnoTypeString);
-        return  mvnoTypeInt == null ? 0 : mvnoTypeInt;
+        return  mvnoTypeInt == null ? ApnSetting.MVNO_TYPE_UNKNOWN : mvnoTypeInt;
     }
 
     private static int getBitmaskFromString(String bearerList) {
@@ -5446,6 +5682,30 @@ public class TelephonyProvider extends ContentProvider
             bearerBitmask |= getBitmaskForTech(bearerInt);
         }
         return bearerBitmask;
+    }
+
+    /**
+     * Get the infrastructure bitmask from string
+     *
+     * @param infrastructureString The infrastructure list in string format. For example
+     * {@code "cellular|satellite"}.
+     *
+     * @return The infrastructure bitmask.
+     */
+    private static int getInfrastructureListFromString(@NonNull String infrastructureString) {
+        String[] infras = infrastructureString.split("\\|");
+        int infrastructureBitmask = 0;
+        for (String infrastructure : infras) {
+            switch (infrastructure.toLowerCase(Locale.ROOT)) {
+                case "cellular":
+                    infrastructureBitmask |= ApnSetting.INFRASTRUCTURE_CELLULAR;
+                    break;
+                case "satellite":
+                    infrastructureBitmask |= ApnSetting.INFRASTRUCTURE_SATELLITE;
+                    break;
+            }
+        }
+        return infrastructureBitmask;
     }
 
     /**

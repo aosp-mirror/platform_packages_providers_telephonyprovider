@@ -20,11 +20,10 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.when;
 
 import android.app.AppOpsManager;
-import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
@@ -33,8 +32,6 @@ import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build;
-import android.os.Process;
 import android.os.UserHandle;
 import android.provider.Telephony;
 import android.telephony.SmsManager;
@@ -42,19 +39,15 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.test.mock.MockContentResolver;
-import android.test.mock.MockContext;
-import android.test.suitebuilder.annotation.SmallTest;
 import android.util.Log;
 
-
 import androidx.test.core.app.ApplicationProvider;
-import androidx.test.InstrumentationRegistry;
+import androidx.test.filters.SmallTest;
 
 import junit.framework.TestCase;
 
 import org.junit.Test;
 import org.mockito.Mock;
-import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
