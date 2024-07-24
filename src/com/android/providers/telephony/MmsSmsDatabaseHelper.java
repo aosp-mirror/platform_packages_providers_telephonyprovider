@@ -18,6 +18,7 @@ package com.android.providers.telephony;
 
 import static com.android.providers.telephony.SmsProvider.NO_ERROR_CODE;
 
+import android.annotation.NonNull;
 import android.content.BroadcastReceiver;
 import android.content.ContentValues;
 import android.content.Context;
@@ -47,6 +48,7 @@ import android.provider.Telephony.Sms.Intents;
 import android.provider.Telephony.Threads;
 import android.telephony.AnomalyReporter;
 import android.telephony.SubscriptionManager;
+import android.text.format.DateFormat;
 import android.util.Log;
 
 import com.android.internal.annotations.VisibleForTesting;
@@ -63,6 +65,7 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -269,6 +272,10 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private final Context mContext;
     private LowStorageMonitor mLowStorageMonitor;
+    private final List<String> mDatabaseReadOpeningInfos = new ArrayList<>();
+    private final List<String> mDatabaseWriteOpeningInfos = new ArrayList<>();
+    private final Object mDatabaseOpeningInfoLock = new Object();
+    private static final int MAX_DATABASE_OPENING_INFO_STORED = 10;
 
     // SharedPref key used to check if initial create has been done (if onCreate has already been
     // called once)
@@ -278,6 +285,8 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     private static final UUID CREATE_CALLED_MULTIPLE_TIMES_UUID = UUID.fromString(
         "6ead002e-c001-4c05-9bca-67d7c4e29782");
+    private static final UUID DATABASE_OPENING_EXCEPTION_UUID = UUID.fromString(
+            "de3f61e1-ecd8-41ee-b059-9282b294b235");
 
     /**
      * The primary purpose of this DatabaseErrorHandler is to broadcast an intent on corruption and
@@ -2182,7 +2191,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public synchronized  SQLiteDatabase getReadableDatabase() {
-        SQLiteDatabase db = super.getWritableDatabase();
+        SQLiteDatabase db;
+        try {
+            db = super.getWritableDatabase();
+        } catch (SQLiteException ex) {
+            reportAnomalyForDatabaseOpeningException(ex);
+            throw ex;
+        }
 
         // getReadableDatabase gets or creates a database. So we know for sure that a database has
         // already been created at this point.
@@ -2195,7 +2210,13 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
 
     @Override
     public synchronized SQLiteDatabase getWritableDatabase() {
-        SQLiteDatabase db = super.getWritableDatabase();
+        SQLiteDatabase db;
+        try {
+            db = super.getWritableDatabase();
+        } catch (SQLiteException ex) {
+            reportAnomalyForDatabaseOpeningException(ex);
+            throw ex;
+        }
 
         // getWritableDatabase gets or creates a database. So we know for sure that a database has
         // already been created at this point.
@@ -2539,5 +2560,71 @@ public class MmsSmsDatabaseHelper extends SQLiteOpenHelper {
         }
         Log.d(TAG, "tableName: " + table + " columnName: " + column + " isExists: " + isExists);
         return isExists;
+    }
+
+    /**
+     * Add the MMS/SMS database opening info to the debug log.
+     */
+    public void addDatabaseOpeningDebugLog(@NonNull String databaseOpeningLog, boolean isQuery) {
+        if (!ProviderUtil.sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+            return;
+        }
+        addDatabaseOpeningDebugLog(isQuery ? mDatabaseReadOpeningInfos : mDatabaseWriteOpeningInfos,
+                databaseOpeningLog);
+    }
+
+    /**
+     * Print the MMS/SMS database opening debug log to file.
+     */
+    public void printDatabaseOpeningDebugLog() {
+        if (!ProviderUtil.sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+            return;
+        }
+        Log.e(TAG, "MMS/SMS database read opening info: "
+                + getDatabaseOpeningInfo(mDatabaseReadOpeningInfos));
+        Log.e(TAG, "MMS/SMS database write opening info: "
+                + getDatabaseOpeningInfo(mDatabaseWriteOpeningInfos));
+        ProviderUtil.logRunningTelephonyProviderProcesses(mContext);
+    }
+
+    private void addDatabaseOpeningDebugLog(List<String> databaseOpeningInfos,
+            @NonNull String callingPackage) {
+        synchronized (mDatabaseOpeningInfoLock) {
+            if (databaseOpeningInfos.size() >= MAX_DATABASE_OPENING_INFO_STORED) {
+                databaseOpeningInfos.remove(0);
+            }
+            databaseOpeningInfos.add(buildDatabaseOpeningInfoStr(callingPackage));
+        }
+    }
+
+    private String buildDatabaseOpeningInfoStr(@NonNull String databaseOpeningLog) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(DateFormat.format(
+                "MM-dd HH:mm:ss.mmm", System.currentTimeMillis()).toString());
+        sb.append(" ");
+        sb.append(databaseOpeningLog);
+        return sb.toString();
+    }
+
+    private String getDatabaseOpeningInfo(List<String> databaseOpeningInfos) {
+        synchronized (mDatabaseOpeningInfoLock) {
+            StringBuilder sb = new StringBuilder();
+            for (String databaseOpeningInfo : databaseOpeningInfos) {
+                sb.append("{");
+                sb.append(databaseOpeningInfo);
+                sb.append("}");
+            }
+            return sb.toString();
+        }
+    }
+
+    private void reportAnomalyForDatabaseOpeningException(@NonNull Exception ex) {
+        if (!ProviderUtil.sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+            return;
+        }
+        Log.e(TAG, "DatabaseOpeningException=" + ex);
+        printDatabaseOpeningDebugLog();
+        AnomalyReporter.reportAnomaly(DATABASE_OPENING_EXCEPTION_UUID,
+                "MmsSmsDatabaseHelper: Got exception in opening SQLite database");
     }
 }
