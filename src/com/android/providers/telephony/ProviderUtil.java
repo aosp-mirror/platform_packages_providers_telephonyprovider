@@ -24,7 +24,6 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
-import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Telephony;
@@ -63,8 +62,7 @@ public class ProviderUtil {
      * @return true if the caller is not system, or phone or default sms app, false otherwise
      */
     public static boolean isAccessRestricted(Context context, String packageName, int uid) {
-        return (uid != Process.SYSTEM_UID
-                && uid != Process.PHONE_UID
+        return (!TelephonyPermissions.isSystemOrPhone(uid)
                 && !SmsApplication.isDefaultSmsApplication(context, packageName));
     }
 
@@ -76,9 +74,9 @@ public class ProviderUtil {
      * @return true if we should set CREATOR, false otherwise
      */
     public static boolean shouldSetCreator(ContentValues values, int uid) {
-        return (uid != Process.SYSTEM_UID && uid != Process.PHONE_UID) ||
-                (!values.containsKey(Telephony.Sms.CREATOR) &&
-                        !values.containsKey(Telephony.Mms.CREATOR));
+        return (!TelephonyPermissions.isSystemOrPhone(uid))
+                || (!values.containsKey(Telephony.Sms.CREATOR)
+                        && !values.containsKey(Telephony.Mms.CREATOR));
     }
 
     /**
@@ -89,9 +87,9 @@ public class ProviderUtil {
      * @return true if we should remove CREATOR, false otherwise
      */
     public static boolean shouldRemoveCreator(ContentValues values, int uid) {
-        return (uid != Process.SYSTEM_UID && uid != Process.PHONE_UID) &&
-                (values.containsKey(Telephony.Sms.CREATOR) ||
-                        values.containsKey(Telephony.Mms.CREATOR));
+        return (!TelephonyPermissions.isSystemOrPhone(uid))
+                && (values.containsKey(Telephony.Sms.CREATOR)
+                        || values.containsKey(Telephony.Mms.CREATOR));
     }
 
     /**
