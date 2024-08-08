@@ -166,7 +166,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 72 << 16;
+    private static final int DATABASE_VERSION = 73 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -487,6 +487,9 @@ public class TelephonyProvider extends ContentProvider
                 Cursor.FIELD_TYPE_STRING);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -638,7 +641,9 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_TRANSFER_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS + " TEXT,"
-                + Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED + " INTEGER DEFAULT 0"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+                + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -2135,6 +2140,21 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 72 << 16 | 6;
+            }
+
+            if (oldVersion < (73 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite is provisioned");
+                    }
+                }
+                oldVersion = 73 << 16 | 6;
             }
 
             if (DBG) {
@@ -4025,7 +4045,7 @@ public class TelephonyProvider extends ContentProvider
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
                 String isoCountryCodeFromDb, String allowedNetworkTypesForReasonsFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 72 << 16) {
+            if (DATABASE_VERSION != 73 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -4067,6 +4087,14 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 73 << 16) {
+                contentValues.put(
+                        Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo
+                                        .COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 72 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED,
                         backedUpSimInfoEntry.getInt(
