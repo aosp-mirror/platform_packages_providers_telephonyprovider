@@ -987,8 +987,10 @@ public class SmsProvider extends ContentProvider {
             // Filter SMS based on subId and emergency numbers.
             selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                     callerUserHandle);
-            selectionByEmergencyNumbers = ProviderUtil
-                    .getSelectionByEmergencyNumbers(getContext());
+            if (hasCalling()) {
+                selectionByEmergencyNumbers = ProviderUtil
+                        .getSelectionByEmergencyNumbers(getContext());
+            }
         } finally {
             Binder.restoreCallingIdentity(token);
         }
