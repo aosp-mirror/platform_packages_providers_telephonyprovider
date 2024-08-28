@@ -764,6 +764,12 @@ carrier_id {
     mccmnc_tuple: "20404"
     gid1: "5a"
   }
+  carrier_attribute {
+    mccmnc_tuple: "302681"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302781"
+  }
 }
 carrier_id {
   canonical_id: 581
@@ -11152,10 +11158,21 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2524
-  carrier_name: "Erate"
+  carrier_name: "Telavox"
   carrier_attribute {
     mccmnc_tuple: "24215"
     gid1: "0e"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "24050"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "24006"
+    gid1: "0E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "24006"
+    spn: "Telavox"
   }
 }
 carrier_id {
@@ -12157,6 +12174,28 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2638
+  carrier_name: "Lum"
+  carrier_attribute {
+    mccmnc_tuple: "302780"
+    gid1: "5b"
+  }
+}
+carrier_id {
+  canonical_id: 2639
+  carrier_name: "Transatel"
+  carrier_attribute {
+    mccmnc_tuple: "20822"
+  }
+}
+carrier_id {
+  canonical_id: 2640
+  carrier_name: "Sky IE"
+  carrier_attribute {
+    mccmnc_tuple: "27225"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12563,4 +12602,4 @@ carrier_id {
   }
   parent_canonical_id: 1779
 }
-version: 117440549
+version: 117440550
