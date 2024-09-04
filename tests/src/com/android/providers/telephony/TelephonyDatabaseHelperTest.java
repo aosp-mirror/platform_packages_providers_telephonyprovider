@@ -795,6 +795,23 @@ public final class TelephonyDatabaseHelperTest {
                 Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED));
     }
 
+    @Test
+    public void databaseHelperOnUpgrade_hasIsSatelliteProvisionedField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasIsSatelliteProvisionedField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have
+        // Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM));
+    }
+
     /**
      * Helper for an in memory DB used to test the TelephonyProvider#DatabaseHelper.
      *
