@@ -3623,15 +3623,9 @@ public class TelephonyProvider extends ContentProvider
 
     boolean isCallingFromSystemOrPhoneUid() {
         int callingUid = mInjector.binderGetCallingUid();
-        if (Flags.supportPhoneUidCheckForMultiuser()) {
-            return TelephonyPermissions.isSystemOrPhone(callingUid)
-                    // Allow ROOT for testing. ROOT can access underlying DB files anyways.
-                    || UserHandle.isSameApp(callingUid, Process.ROOT_UID);
-        } else {
-            return callingUid == Process.SYSTEM_UID || callingUid == Process.PHONE_UID
-                    // Allow ROOT for testing. ROOT can access underlying DB files anyways.
-                    || callingUid == Process.ROOT_UID;
-        }
+        return TelephonyPermissions.isSystemOrPhone(callingUid)
+                // Allow ROOT for testing. ROOT can access underlying DB files anyways.
+                || UserHandle.isSameApp(callingUid, Process.ROOT_UID);
     }
 
     void ensureCallingFromSystemOrPhoneUid(String message) {
