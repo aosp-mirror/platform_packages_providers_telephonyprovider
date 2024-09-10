@@ -1365,8 +1365,7 @@ public class MmsSmsProvider extends ContentProvider {
     }
 
     @Override
-    public int delete(Uri uri, String selection,
-            String[] selectionArgs) {
+    public int delete(Uri uri, String selection, String[] selectionArgs) {
         final UserHandle callerUserHandle = Binder.getCallingUserHandle();
         String selectionBySubIds;
         final long token = Binder.clearCallingIdentity();
@@ -1378,9 +1377,12 @@ public class MmsSmsProvider extends ContentProvider {
         }
 
         SQLiteDatabase db = mOpenHelper.getWritableDatabase();
+        String debugMessage = getCallingPackage() + ";MmsSmsProvider.delete;" + uri;
+        // Always log delete for debug purpose, as delete is a critical but non-frequent operation.
+        Log.d(LOG_TAG, debugMessage);
         if (mOpenHelper instanceof MmsSmsDatabaseHelper) {
             ((MmsSmsDatabaseHelper) mOpenHelper).addDatabaseOpeningDebugLog(
-                    getCallingPackage() + ";MmsSmsProvider.delete;" + uri, false);
+                    debugMessage, false);
         }
         Context context = getContext();
         int affectedRows = 0;
