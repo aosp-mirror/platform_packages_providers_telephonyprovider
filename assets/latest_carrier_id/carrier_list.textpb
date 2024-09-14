@@ -425,6 +425,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "21405"
     mccmnc_tuple: "21407"
+    mccmnc_tuple: "21438"
   }
 }
 carrier_id {
@@ -499,7 +500,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 493
-  carrier_name: "Setar GSM"
+  carrier_name: "SETAR"
   carrier_attribute {
     mccmnc_tuple: "36301"
   }
@@ -5034,7 +5035,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1712
-  carrier_name: "Tusmobil d.o.o."
+  carrier_name: "Telemach"
   carrier_attribute {
     mccmnc_tuple: "29370"
   }
@@ -6771,6 +6772,7 @@ carrier_id {
     mccmnc_tuple: "310240"
     gid1: "0000b0"
     gid1: "6230"
+    gid2: "6231"
   }
 }
 carrier_id {
@@ -7319,9 +7321,10 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2007
-  carrier_name: "Telenor Myanmar"
+  carrier_name: "ATOM"
   carrier_attribute {
     mccmnc_tuple: "41406"
+    spn: "ATOM"
   }
 }
 carrier_id {
@@ -9766,14 +9769,6 @@ carrier_id {
   }
 }
 carrier_id {
-  canonical_id: 2327
-  carrier_name: "Telemach"
-  carrier_attribute {
-    mccmnc_tuple: "29370"
-    imsi_prefix_xpattern: "29370029"
-  }
-}
-carrier_id {
   canonical_id: 2328
   carrier_name: "Fonic Prepaid"
   carrier_attribute {
@@ -11079,6 +11074,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6530"
+    gid2: "6531"
   }
 }
 carrier_id {
@@ -11089,6 +11085,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6332"
+    gid2: "6333"
   }
 }
 carrier_id {
@@ -11097,6 +11094,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6432"
+    gid2: "6433"
   }
 }
 carrier_id {
@@ -11107,6 +11105,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6630"
+    gid2: "6631"
   }
 }
 carrier_id {
@@ -11117,6 +11116,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "7330"
+    gid2: "7331"
   }
 }
 carrier_id {
@@ -11133,6 +11133,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6430"
+    gid2: "6431"
   }
 }
 carrier_id {
@@ -11161,6 +11162,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3432"
+    gid2: "3433"
   }
 }
 carrier_id {
@@ -11170,6 +11172,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3430"
+    gid2: "3431"
   }
 }
 carrier_id {
@@ -11179,6 +11182,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3436"
+    gid2: "3437"
   }
 }
 carrier_id {
@@ -11189,6 +11193,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6538"
+    gid2: "6539"
   }
 }
 carrier_id {
@@ -11239,6 +11244,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3434"
+    gid2: "3435"
   }
 }
 carrier_id {
@@ -11284,6 +11290,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3438"
+    gid2: "3439"
   }
 }
 carrier_id {
@@ -11293,6 +11300,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3440"
+    gid2: "3441"
   }
 }
 carrier_id {
@@ -11565,7 +11573,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2570
-  carrier_name: "Netcom Group"
+  carrier_name: "Netcom O"
   carrier_attribute {
     mccmnc_tuple: "20801"
     spn: "Netcom Mobile"
@@ -11831,6 +11839,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3442"
+    gid2: "3443"
   }
 }
 carrier_id {
@@ -11840,6 +11849,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3444"
+    gid2: "3445"
   }
 }
 carrier_id {
@@ -11849,6 +11859,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3446"
+    gid2: "3447"
   }
 }
 carrier_id {
@@ -11858,6 +11869,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3448"
+    gid2: "3449"
   }
 }
 carrier_id {
@@ -11867,6 +11879,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3450"
+    gid2: "3451"
   }
 }
 carrier_id {
@@ -11876,6 +11889,7 @@ carrier_id {
     mccmnc_tuple: "310410"
     mccmnc_tuple: "311180"
     gid1: "3452"
+    gid2: "3453"
   }
 }
 carrier_id {
@@ -11884,6 +11898,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6438"
+    gid2: "6439"
   }
 }
 carrier_id {
@@ -11894,6 +11909,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6732"
+    gid2: "6733"
   }
 }
 carrier_id {
@@ -11904,6 +11920,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6336"
+    gid2: "6337"
   }
 }
 carrier_id {
@@ -11914,6 +11931,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6736"
+    gid2: "6737"
   }
 }
 carrier_id {
@@ -11924,6 +11942,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6738"
+    gid2: "6739"
   }
 }
 carrier_id {
@@ -11934,6 +11953,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6830"
+    gid2: "6831"
   }
 }
 carrier_id {
@@ -11944,6 +11964,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "7530"
+    gid2: "7531"
   }
 }
 carrier_id {
@@ -11954,6 +11975,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6636"
+    gid2: "6637"
   }
 }
 carrier_id {
@@ -11964,6 +11986,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6836"
+    gid2: "6837"
   }
 }
 carrier_id {
@@ -11974,6 +11997,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6638"
+    gid2: "6639"
   }
 }
 carrier_id {
@@ -11984,6 +12008,7 @@ carrier_id {
     mccmnc_tuple: "302220"
     mccmnc_tuple: "313340"
     gid1: "6838"
+    gid2: "6839"
   }
 }
 carrier_id {
@@ -12020,6 +12045,7 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "310240"
     gid1: "6434"
+    gid2: "6435"
   }
 }
 carrier_id {
@@ -12163,6 +12189,20 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "311480"
     gid1: "BA01500000000000"
+  }
+}
+carrier_id {
+  canonical_id: 2642
+  carrier_name: "Netcom Group"
+  carrier_attribute {
+    mccmnc_tuple: "20804"
+  }
+}
+carrier_id {
+  canonical_id: 2643
+  carrier_name: "Cablenet"
+  carrier_attribute {
+    mccmnc_tuple: "28022"
   }
 }
 carrier_id {
@@ -12572,4 +12612,4 @@ carrier_id {
   }
   parent_canonical_id: 1779
 }
-version: 134217766
+version: 134217767
