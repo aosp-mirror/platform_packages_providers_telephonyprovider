@@ -445,6 +445,9 @@ carrier_id {
     mccmnc_tuple: "21405"
     mccmnc_tuple: "21407"
   }
+  carrier_attribute {
+    mccmnc_tuple: "21438"
+  }
 }
 carrier_id {
   canonical_id: 450
@@ -518,7 +521,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 493
-  carrier_name: "Setar GSM"
+  carrier_name: "SETAR"
   carrier_attribute {
     mccmnc_tuple: "36301"
   }
@@ -5087,7 +5090,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1712
-  carrier_name: "Tusmobil d.o.o."
+  carrier_name: "Telemach"
   carrier_attribute {
     mccmnc_tuple: "29370"
   }
@@ -7372,7 +7375,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2007
-  carrier_name: "Telenor Myanmar"
+  carrier_name: "ATOM"
   carrier_attribute {
     mccmnc_tuple: "41406"
   }
@@ -12672,6 +12675,20 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2642
+  carrier_name: "Netcom Group"
+  carrier_attribute {
+    mccmnc_tuple: "20804"
+  }
+}
+carrier_id {
+  canonical_id: 2643
+  carrier_name: "Cablenet"
+  carrier_attribute {
+    mccmnc_tuple: "28022"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -13047,4 +13064,4 @@ carrier_id {
   }
   parent_canonical_id: 2560
 }
-version: 100663334
+version: 100663335
