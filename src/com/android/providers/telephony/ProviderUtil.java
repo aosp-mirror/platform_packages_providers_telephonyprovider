@@ -37,8 +37,7 @@ import android.util.Log;
 
 import com.android.internal.telephony.SmsApplication;
 import com.android.internal.telephony.TelephonyPermissions;
-import com.android.internal.telephony.flags.FeatureFlags;
-import com.android.internal.telephony.flags.FeatureFlagsImpl;
+import com.android.internal.telephony.flags.Flags;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -53,8 +52,6 @@ public class ProviderUtil {
     private final static String TAG = "SmsProvider";
     private static final String TELEPHONY_PROVIDER_PACKAGE = "com.android.providers.telephony";
     private static final int PHONE_UID = 1001;
-    /** Feature flags for Provider features. */
-    public static final FeatureFlags sFeatureFlag = new FeatureFlagsImpl();
 
     /**
      * Check if a caller of the provider has restricted access,
@@ -163,7 +160,7 @@ public class ProviderUtil {
         SubscriptionManager subManager = context.getSystemService(SubscriptionManager.class);
         UserManager userManager = context.getSystemService(UserManager.class);
 
-        if (sFeatureFlag.workProfileApiSplit()) {
+        if (Flags.workProfileApiSplit()) {
             if (subManager != null) {
                 // Get list of subscriptions accessible to this user.
                 associatedSubscriptionsList = subManager
@@ -267,22 +264,17 @@ public class ProviderUtil {
      */
     public static boolean allowInteractingWithEntryOfSubscription(Context ctx,
             int subId, UserHandle callerUserHandle) {
-        if (sFeatureFlag.rejectBadSubIdInteraction()) {
-            return TelephonyPermissions
-                    .checkSubscriptionAssociatedWithUser(ctx, subId, callerUserHandle)
-                    // INVALID_SUBSCRIPTION_ID represents backup restore.
-                    || subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID;
-        } else {
-            return TelephonyPermissions.checkSubscriptionAssociatedWithUser(ctx, subId,
-                    callerUserHandle);
-        }
+        return TelephonyPermissions
+                .checkSubscriptionAssociatedWithUser(ctx, subId, callerUserHandle)
+                // INVALID_SUBSCRIPTION_ID represents backup restore.
+                || subId == SubscriptionManager.INVALID_SUBSCRIPTION_ID;
     }
 
     /**
      * Log all running processes of the telephony provider package.
      */
     public static void logRunningTelephonyProviderProcesses(@NonNull Context context) {
-        if (!sFeatureFlag.logMmsSmsDatabaseAccessInfo()) {
+        if (!Flags.logMmsSmsDatabaseAccessInfo()) {
             return;
         }
 
