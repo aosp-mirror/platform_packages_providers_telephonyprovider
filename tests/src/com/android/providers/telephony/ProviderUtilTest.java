@@ -31,15 +31,12 @@ import android.telephony.emergency.EmergencyNumber;
 
 import androidx.test.core.app.ApplicationProvider;
 
-import com.android.internal.telephony.flags.FeatureFlags;
-
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -52,11 +49,8 @@ public class ProviderUtilTest {
     private SubscriptionManager mSubscriptionManager;
     @Mock
     private TelephonyManager mTelephonyManager;
-    @Mock
-    private FeatureFlags mMockFeatureFlag;
 
     private Map<Integer, List<EmergencyNumber>> mEmergencyNumberList;
-    private FeatureFlags mRealFeatureFlagToBeRestored;
 
     @Before
     public void setUp() throws Exception {
@@ -65,16 +59,11 @@ public class ProviderUtilTest {
 
         when(mContext.getSystemService(SubscriptionManager.class)).thenReturn(mSubscriptionManager);
         when(mContext.getSystemService(TelephonyManager.class)).thenReturn(mTelephonyManager);
-        replaceFeatureFlag(mMockFeatureFlag);
-
-        doReturn(true).when(mMockFeatureFlag).workProfileApiSplit();
     }
 
     @After
     public void tearDown() throws Exception {
-        replaceFeatureFlag(mRealFeatureFlagToBeRestored);
         mEmergencyNumberList = null;
-        mRealFeatureFlagToBeRestored = null;
     }
 
     @Test
@@ -158,19 +147,8 @@ public class ProviderUtilTest {
     }
 
     @Test
-    public void allowInteractWithEntryOfSubId_flag_enabled() {
-        doReturn(true).when(mMockFeatureFlag).rejectBadSubIdInteraction();
-
+    public void allowInteractWithEntryOfSubId() {
         assertThat(ProviderUtil.allowInteractingWithEntryOfSubscription(mContext,
                 SubscriptionManager.INVALID_SUBSCRIPTION_ID, UserHandle.SYSTEM)).isTrue();
-    }
-
-    private synchronized void replaceFeatureFlag(final FeatureFlags newValue)
-            throws Exception {
-        Field field = ProviderUtil.class.getDeclaredField("sFeatureFlag");
-        field.setAccessible(true);
-
-        mRealFeatureFlagToBeRestored = ProviderUtil.sFeatureFlag;
-        field.set(null, newValue);
     }
 }
