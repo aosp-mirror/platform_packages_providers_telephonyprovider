@@ -24,6 +24,7 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Process;
 import android.os.UserHandle;
 import android.os.UserManager;
 import android.provider.Telephony;
@@ -50,7 +51,6 @@ import java.util.stream.Collectors;
 public class ProviderUtil {
     private final static String TAG = "SmsProvider";
     private static final String TELEPHONY_PROVIDER_PACKAGE = "com.android.providers.telephony";
-    private static final int PHONE_UID = 1001;
 
     /**
      * Check if a caller of the provider has restricted access,
@@ -292,7 +292,7 @@ public class ProviderUtil {
         StringBuilder sb = new StringBuilder();
         for (ActivityManager.RunningAppProcessInfo processInfo : processInfos) {
             if (Arrays.asList(processInfo.pkgList).contains(TELEPHONY_PROVIDER_PACKAGE)
-                    || processInfo.uid == PHONE_UID) {
+                    || UserHandle.isSameApp(processInfo.uid, Process.PHONE_UID)) {
                 sb.append("{ProcessName=");
                 sb.append(processInfo.processName);
                 sb.append(";PID=");
