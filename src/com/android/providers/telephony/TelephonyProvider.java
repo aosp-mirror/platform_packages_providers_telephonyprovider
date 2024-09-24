@@ -5523,6 +5523,10 @@ public class TelephonyProvider extends ContentProvider
         }
 
         PackageManager packageManager = getContext().getPackageManager();
+        if (Flags.hsumPackageManager()) {
+            packageManager = getContext().createContextAsUser(Binder.getCallingUserHandle(), 0)
+                    .getPackageManager();
+        }
         String[] packages = packageManager.getPackagesForUid(Binder.getCallingUid());
 
         TelephonyManager telephonyManager =
