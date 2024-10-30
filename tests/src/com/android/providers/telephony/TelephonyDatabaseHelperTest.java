@@ -54,7 +54,7 @@ import java.util.List;
  *    runtest --path tests/src/com/android/providers/telephony/TelephonyDatabaseHelperTest.java
  */
 @RunWith(JUnit4.class)
-public final class TelephonyDatabaseHelperTest {
+public final class TelephonyDatabaseHelperTest extends TelephonyTestBase {
 
     private final static String TAG = TelephonyDatabaseHelperTest.class.getSimpleName();
 
@@ -810,6 +810,30 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM));
+    }
+
+    @Test
+    public void databaseHelperOnDowngrade_dropTable() throws Exception {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasIsSatelliteProvisionedField");
+        replaceInstance(TelephonyProvider.class, "s_apnSourceServiceExists", null, false);
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        final int insertId = 1;
+        final String IdKey = "_id";
+        ContentValues contentValues = new ContentValues();
+        contentValues.put(Carriers.INFRASTRUCTURE_BITMASK, ApnSetting.INFRASTRUCTURE_CELLULAR);
+        contentValues.put(IdKey, insertId);
+        db.insert("carriers", null, contentValues);
+        Cursor cursor = db.query("carriers", null, null, null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        cursor.close();
+
+        int downgradeVersion = TelephonyProvider.getVersion(mContext) - (1 << 16);
+        mHelper.onDowngrade(db, TelephonyProvider.getVersion(mContext), downgradeVersion);
+        cursor = db.query("carriers", null, null, null, null, null, null);
+        assertEquals(0, cursor.getCount());
     }
 
     /**
