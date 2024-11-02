@@ -44,10 +44,13 @@ import android.util.Log;
 import androidx.test.core.app.ApplicationProvider;
 import androidx.test.filters.SmallTest;
 
+import com.android.internal.telephony.ISms;
+
 import junit.framework.TestCase;
 
 import org.junit.Test;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.MockitoAnnotations;
 
 import java.util.ArrayList;
@@ -77,6 +80,8 @@ public class SmsProviderTest extends TestCase {
 
     private int notifyChangeCount;
 
+    private final UserHandle mMyUserHandle = UserHandle.of(UserHandle.myUserId());
+
     private final String mFakePdu = "123abc";
     private final String mFakeAddress = "FakeAddress";
     private final String mFakeOriginatingAddr = "FakeDisplayAddress";
@@ -98,6 +103,7 @@ public class SmsProviderTest extends TestCase {
         MockitoAnnotations.initMocks(this);
         mSmsProviderTestable = new SmsProviderTestable();
         mContext = spy(ApplicationProvider.getApplicationContext());
+        TelephonyManager.setupISmsForTest(Mockito.mock(ISms.class));
 
         when(mContext.getSystemService(eq(Context.APP_OPS_SERVICE)))
                 .thenReturn(mock(AppOpsManager.class));
@@ -144,19 +150,20 @@ public class SmsProviderTest extends TestCase {
         Log.d(TAG, "MockContextWithProvider: Add SmsProvider to mResolver");
         notifyChangeCount = 0;
 
+        int subid = SmsManager.getDefaultSmsSubscriptionId();
+
         when(mContext.getSystemService(SubscriptionManager.class)).thenReturn(mSubscriptionManager);
         List<SubscriptionInfo> subscriptionInfoList = new ArrayList<>();
         SubscriptionInfo subscriptionInfo1 = new SubscriptionInfo.Builder()
-                .setId(SmsManager.getDefaultSmsSubscriptionId())
+                .setId(subid)
                 .setSimSlotIndex(0)
                 .build();
         subscriptionInfoList.add(subscriptionInfo1);
         // Return subscriptions associated with SYSTEM user.
         doReturn(subscriptionInfoList).when(mSubscriptionManager)
-                .getSubscriptionInfoListAssociatedWithUser(UserHandle.SYSTEM);
-        doReturn(true).when(mSubscriptionManager).isSubscriptionAssociatedWithUser(
-                SubscriptionManager.getDefaultSmsSubscriptionId(),
-                UserHandle.of(UserHandle.USER_SYSTEM));
+                .getSubscriptionInfoListAssociatedWithUser(mMyUserHandle);
+        doReturn(true).when(mSubscriptionManager).isSubscriptionAssociatedWithUser(subid,
+                mMyUserHandle);
     }
 
     @Override
