@@ -734,6 +734,12 @@ public class TelephonyProvider extends ContentProvider
             return DATABASE_VERSION;
         }
         XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
+
+        if (parser == null) {
+            loge("Null parser");
+            return DATABASE_VERSION;
+        }
+
         try {
             XmlUtils.beginDocument(parser, "apns");
             int publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
@@ -1016,6 +1022,24 @@ public class TelephonyProvider extends ContentProvider
                 if (DBG) log("Load APNs from " + sysApnFile.getPath() +
                         " instead of " + altApnFile.getPath());
                 return sysApnFile;
+            }
+        }
+
+        @Override
+        public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            String msg = "dbh.onDowngrade: TelephonyProvider database downgraded from version "
+                    + oldVersion + " to " + newVersion + ". Some user settings might be lost!";
+            loge(msg);
+            mLocalLog.log(msg);
+
+            try {
+                // Delete the database entirely so it can be rebuilt from scratch.
+                db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
+                db.execSQL("DROP TABLE IF EXISTS " + SIMINFO_TABLE);
+                onCreate(db);
+            } catch (SQLiteException e) {
+                loge("Failed to recreate the table " + CARRIERS_TABLE + " and " + SIMINFO_TABLE
+                        + ". e=" + e);
             }
         }
 
@@ -5523,6 +5547,10 @@ public class TelephonyProvider extends ContentProvider
         }
 
         PackageManager packageManager = getContext().getPackageManager();
+        if (Flags.hsumPackageManager()) {
+            packageManager = getContext().createContextAsUser(Binder.getCallingUserHandle(), 0)
+                    .getPackageManager();
+        }
         String[] packages = packageManager.getPackagesForUid(Binder.getCallingUid());
 
         TelephonyManager telephonyManager =
