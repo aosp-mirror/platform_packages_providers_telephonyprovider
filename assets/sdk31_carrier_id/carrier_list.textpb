@@ -514,7 +514,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 451
-  carrier_name: "Etisalat"
+  carrier_name: "e& UAE"
   carrier_attribute {
     mccmnc_tuple: "42402"
   }
@@ -570,7 +570,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 492
-  carrier_name: "Localstar Holding Pty. Ltd."
+  carrier_name: "Pivotel"
   carrier_attribute {
     mccmnc_tuple: "50588"
   }
@@ -11426,7 +11426,6 @@ carrier_id {
   carrier_name: "OptimERA Wireless"
   carrier_attribute {
     mccmnc_tuple: "313380"
-    spn: "OptimERA"
   }
 }
 carrier_id {
@@ -12995,6 +12994,13 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2648
+  carrier_name: "Phoenix"
+  carrier_attribute {
+    mccmnc_tuple: "25097"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -13295,4 +13301,4 @@ carrier_id {
   }
   parent_canonical_id: 1894
 }
-version: 50331698
+version: 50331699
