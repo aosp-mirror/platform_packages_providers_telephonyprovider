@@ -378,14 +378,9 @@ public class TelephonyProvider extends ContentProvider
     private static final int  RIL_RADIO_TECHNOLOGY_NR = 20;
 
     /**
-     * 3GPP NB-IOT (Narrowband Internet of Things) over Non-Terrestrial-Networks technology.
-     */
-    private static final int RIL_RADIO_TECHNOLOGY_NB_IOT_NTN = 21;
-
-    /**
      * The number of the radio technologies.
      */
-    private static final int NEXT_RIL_RADIO_TECHNOLOGY = 22;
+    private static final int NEXT_RIL_RADIO_TECHNOLOGY = 21;
 
     private static final Map<String, Integer> MVNO_TYPE_STRING_MAP;
 
@@ -5946,8 +5941,6 @@ public class TelephonyProvider extends ContentProvider
                 return (int) TelephonyManager.NETWORK_TYPE_BITMASK_LTE_CA;
             case RIL_RADIO_TECHNOLOGY_NR:
                 return (int) TelephonyManager.NETWORK_TYPE_BITMASK_NR;
-            case RIL_RADIO_TECHNOLOGY_NB_IOT_NTN:
-                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_NB_IOT_NTN;
             default:
                 return (int) TelephonyManager.NETWORK_TYPE_BITMASK_UNKNOWN;
         }
