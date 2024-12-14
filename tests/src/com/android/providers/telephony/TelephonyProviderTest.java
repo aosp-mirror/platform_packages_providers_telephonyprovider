@@ -256,7 +256,7 @@ public class TelephonyProviderTest {
         contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENABLED, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                 arbitraryIntVal);
-        contentValues.put(SimInfo.COLUMN_IS_NTN, arbitraryIntVal);
+        contentValues.put(SimInfo.COLUMN_IS_ONLY_NTN, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_SERVICE_CAPABILITIES, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_TRANSFER_STATUS, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS, arbitraryIntVal);
@@ -264,7 +264,10 @@ public class TelephonyProviderTest {
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED, arbitraryIntVal);
 
+        contentValues.put(SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                arbitraryIntVal);
         return contentValues;
     }
 
@@ -764,6 +767,8 @@ public class TelephonyProviderTest {
         final int insertTransferStatus = 1;
         final int insertSatelliteEntitlementStatus = 1;
         final String insertSatelliteEntitlementPlmns = "examplePlmns";
+        final int insertCarrierRoamingNtn = 1;
+        final int insertIsSatelliteProvisioned = 1;
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
@@ -775,13 +780,16 @@ public class TelephonyProviderTest {
         contentValues.put(SubscriptionManager.SATELLITE_ENABLED, insertSatelliteEnabled);
         contentValues.put(SubscriptionManager.SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                 insertSatelliteAttachEnabledForCarrier);
-        contentValues.put(SubscriptionManager.IS_NTN, insertSatelliteIsNtn);
+        contentValues.put(SubscriptionManager.IS_ONLY_NTN, insertSatelliteIsNtn);
         contentValues.put(SubscriptionManager.SERVICE_CAPABILITIES, insertCellularService);
         contentValues.put(SubscriptionManager.TRANSFER_STATUS, insertTransferStatus);
         contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_STATUS,
                 insertSatelliteEntitlementStatus);
         contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_PLMNS,
                 insertSatelliteEntitlementPlmns);
+        contentValues.put(SubscriptionManager.SATELLITE_ESOS_SUPPORTED, insertCarrierRoamingNtn);
+        contentValues.put(SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                insertIsSatelliteProvisioned);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
@@ -797,11 +805,13 @@ public class TelephonyProviderTest {
             SubscriptionManager.USER_HANDLE,
             SubscriptionManager.SATELLITE_ENABLED,
             SubscriptionManager.SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
-            SubscriptionManager.IS_NTN,
+            SubscriptionManager.IS_ONLY_NTN,
             SubscriptionManager.SERVICE_CAPABILITIES,
             SubscriptionManager.TRANSFER_STATUS,
             SubscriptionManager.SATELLITE_ENTITLEMENT_STATUS,
             SubscriptionManager.SATELLITE_ENTITLEMENT_PLMNS,
+            SubscriptionManager.SATELLITE_ESOS_SUPPORTED,
+            SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -827,6 +837,8 @@ public class TelephonyProviderTest {
         final int resultTransferStatus = cursor.getInt(10);
         final int resultSatelliteEntitlementStatus = cursor.getInt(11);
         final String resultSatelliteEntitlementPlmns = cursor.getString(12);
+        final int resultCarrierRoamingNtn = cursor.getInt(13);
+        final int resultIsSatelliteProvisioned = cursor.getInt(14);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
@@ -840,6 +852,8 @@ public class TelephonyProviderTest {
         assertEquals(insertTransferStatus, resultTransferStatus);
         assertEquals(insertSatelliteEntitlementStatus, resultSatelliteEntitlementStatus);
         assertEquals(insertSatelliteEntitlementPlmns, resultSatelliteEntitlementPlmns);
+        assertEquals(insertCarrierRoamingNtn, resultCarrierRoamingNtn);
+        assertEquals(insertIsSatelliteProvisioned, resultIsSatelliteProvisioned);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
@@ -907,7 +921,7 @@ public class TelephonyProviderTest {
                 getIntValueFromCursor(cursor,
                         Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, SimInfo.COLUMN_IS_NTN));
+                getIntValueFromCursor(cursor, SimInfo.COLUMN_IS_ONLY_NTN));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, SimInfo.COLUMN_TRANSFER_STATUS));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
@@ -916,6 +930,10 @@ public class TelephonyProviderTest {
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
                 getStringValueFromCursor(cursor,
                         SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(cursor, SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1, getIntValueFromCursor(cursor,
+                SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM));
         assertRestoredSubIdIsRemembered();
     }
 
