@@ -128,7 +128,9 @@ import android.util.Xml;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
+import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.TelephonyStatsLog;
+import com.android.internal.telephony.flags.Flags;
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -164,7 +166,7 @@ public class TelephonyProvider extends ContentProvider
     private static final boolean DBG = true;
     private static final boolean VDBG = false; // STOPSHIP if true
 
-    private static final int DATABASE_VERSION = 71 << 16;
+    private static final int DATABASE_VERSION = 73 << 16;
     private static final int URL_UNKNOWN = 0;
     private static final int URL_TELEPHONY = 1;
     private static final int URL_CURRENT = 2;
@@ -275,6 +277,7 @@ public class TelephonyProvider extends ContentProvider
     private static final List<String> CARRIERS_UNIQUE_FIELDS = new ArrayList<String>();
     private static final Set<String> CARRIERS_BOOLEAN_FIELDS = new HashSet<String>();
     private static final Map<String, String> CARRIERS_UNIQUE_FIELDS_DEFAULTS = new HashMap();
+    private static final String ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G = "enable_2g";
 
     @VisibleForTesting
     static Boolean s_apnSourceServiceExists;
@@ -471,7 +474,7 @@ public class TelephonyProvider extends ContentProvider
                 Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                 Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
-                Telephony.SimInfo.COLUMN_IS_NTN, Cursor.FIELD_TYPE_INTEGER);
+                Telephony.SimInfo.COLUMN_IS_ONLY_NTN, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_TRANSFER_STATUS, Cursor.FIELD_TYPE_INTEGER);
         SIM_INFO_COLUMNS_TO_BACKUP.put(
@@ -479,6 +482,14 @@ public class TelephonyProvider extends ContentProvider
         SIM_INFO_COLUMNS_TO_BACKUP.put(
                 Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
                 Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                Cursor.FIELD_TYPE_STRING);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED, Cursor.FIELD_TYPE_INTEGER);
+        SIM_INFO_COLUMNS_TO_BACKUP.put(
+                Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                Cursor.FIELD_TYPE_INTEGER);
     }
 
     @VisibleForTesting
@@ -624,12 +635,15 @@ public class TelephonyProvider extends ContentProvider
                 + Telephony.SimInfo.COLUMN_SATELLITE_ENABLED + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER
                 + " INTEGER DEFAULT 1, "
-                + Telephony.SimInfo.COLUMN_IS_NTN + " INTEGER DEFAULT 0, "
+                + Telephony.SimInfo.COLUMN_IS_ONLY_NTN + " INTEGER DEFAULT 0, "
                 + Telephony.SimInfo.COLUMN_SERVICE_CAPABILITIES + " INTEGER DEFAULT "
                 + SubscriptionManager.getAllServiceCapabilityBitmasks() + ","
                 + Telephony.SimInfo.COLUMN_TRANSFER_STATUS + " INTEGER DEFAULT 0,"
                 + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS + " INTEGER DEFAULT 0,"
-                + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS + " TEXT"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS + " TEXT,"
+                + Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED + " INTEGER DEFAULT 0,"
+                + Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+                + " INTEGER DEFAULT 0"
                 + ");";
     }
 
@@ -1982,7 +1996,7 @@ public class TelephonyProvider extends ContentProvider
 
                     // Try to update the siminfo table with new columns.
                     db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
-                            + Telephony.SimInfo.COLUMN_IS_NTN
+                            + Telephony.SimInfo.COLUMN_IS_ONLY_NTN
                             + "  INTEGER DEFAULT 0;");
                 } catch (SQLiteException e) {
                     if (DBG) {
@@ -2099,6 +2113,48 @@ public class TelephonyProvider extends ContentProvider
                     }
                 }
                 oldVersion = 71 << 16 | 6;
+            }
+
+            if (oldVersion < (72 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED
+                            + " INTEGER DEFAULT 0;");
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_IS_ONLY_NTN + " INTEGER DEFAULT 0;");
+
+                    // Copy the value of the previous column (COLUMN_IS_NTN) to the new column
+                    // (COLUMN_IS_ONLY_NTN) for all rows in the sim_info table.
+                    final String columnIsNtn = "is_ntn";
+                    db.execSQL("UPDATE " + SIMINFO_TABLE + " SET "
+                            + Telephony.SimInfo.COLUMN_IS_ONLY_NTN + " = " + columnIsNtn + ";");
+
+                    // ALTER TABLE siminfo DROP is_ntn;
+                    db.execSQL(
+                            "ALTER TABLE " + SIMINFO_TABLE + " DROP COLUMN " + columnIsNtn + ";");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add is satellite esos supported");
+                    }
+                }
+                oldVersion = 72 << 16 | 6;
+            }
+
+            if (oldVersion < (73 << 16 | 6)) {
+                try {
+                    // Try to update the siminfo table with new columns.
+                    db.execSQL("ALTER TABLE " + SIMINFO_TABLE + " ADD COLUMN "
+                            + Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+                            + "  INTEGER DEFAULT 0;");
+                } catch (SQLiteException e) {
+                    if (DBG) {
+                        log("onUpgrade failed to update " + SIMINFO_TABLE
+                                + " to add satellite is provisioned");
+                    }
+                }
+                oldVersion = 73 << 16 | 6;
             }
 
             if (DBG) {
@@ -3567,9 +3623,9 @@ public class TelephonyProvider extends ContentProvider
 
     boolean isCallingFromSystemOrPhoneUid() {
         int callingUid = mInjector.binderGetCallingUid();
-        return callingUid == Process.SYSTEM_UID || callingUid == Process.PHONE_UID
+        return TelephonyPermissions.isSystemOrPhone(callingUid)
                 // Allow ROOT for testing. ROOT can access underlying DB files anyways.
-                || callingUid == Process.ROOT_UID;
+                || UserHandle.isSameApp(callingUid, Process.ROOT_UID);
     }
 
     void ensureCallingFromSystemOrPhoneUid(String message) {
@@ -3709,12 +3765,14 @@ public class TelephonyProvider extends ContentProvider
         }
         try (Cursor cursor = query(
                 SubscriptionManager.CONTENT_URI,
-                new String[]{
+                new String[] {
                         Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID,
                         Telephony.SimInfo.COLUMN_ICC_ID,
                         Telephony.SimInfo.COLUMN_NUMBER,
                         Telephony.SimInfo.COLUMN_CARRIER_ID,
-                        Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE},
+                        Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE,
+                        Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                },
                 selection,
                 selectionArgs,
                 ORDER_BY_SUB_ID)) {
@@ -3768,10 +3826,14 @@ public class TelephonyProvider extends ContentProvider
             int carrierIdColumnIndex = cursor.getColumnIndex(Telephony.SimInfo.COLUMN_CARRIER_ID);
             int currCarrierIdFromDb = cursor.getInt(carrierIdColumnIndex);
 
-            int isoCountryCodeColumnIndex= cursor.getColumnIndex(
+            int isoCountryCodeColumnIndex = cursor.getColumnIndex(
                     Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE);
             String isoCountryCodeFromDb = cursor.getString(isoCountryCodeColumnIndex);
 
+            int allowedNetworkTypesForReasonsIndex = cursor.getColumnIndex(
+                    Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS);
+            String allowedNetworkTypesForReasonsFromDb =
+                    cursor.getString(allowedNetworkTypesForReasonsIndex);
 
             // Find the best match from backed up data.
             SimRestoreMatch bestRestoreMatch = null;
@@ -3784,7 +3846,8 @@ public class TelephonyProvider extends ContentProvider
 
                 SimRestoreMatch currSimRestoreMatch = new SimRestoreMatch(
                         currIccIdFromDb, currCarrierIdFromDb, currPhoneNumberFromDb,
-                        isoCountryCodeFromDb, wfcRestoreBlockedCountries, currRow,
+                        isoCountryCodeFromDb, allowedNetworkTypesForReasonsFromDb,
+                        wfcRestoreBlockedCountries, currRow,
                         backupDataFormatVersion);
 
                 if (currSimRestoreMatch == null) {
@@ -3888,6 +3951,7 @@ public class TelephonyProvider extends ContentProvider
 
         public SimRestoreMatch(String iccIdFromDb, int carrierIdFromDb,
                 String phoneNumberFromDb, String isoCountryCodeFromDb,
+                String allowedNetworkTypesForReasonsFromDb,
                 List<String> wfcRestoreBlockedCountries,
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion) {
             subId = backedUpSimInfoEntry.getInt(
@@ -3918,7 +3982,7 @@ public class TelephonyProvider extends ContentProvider
 
             contentValues = convertBackedUpDataToContentValues(
                     backedUpSimInfoEntry, backupDataFormatVersion, isoCountryCodeFromDb,
-                    wfcRestoreBlockedCountries);
+                    allowedNetworkTypesForReasonsFromDb, wfcRestoreBlockedCountries);
             matchScore = calculateMatchScore();
             matchingCriteria = calculateMatchingCriteria();
         }
@@ -3973,9 +4037,9 @@ public class TelephonyProvider extends ContentProvider
 
         private ContentValues convertBackedUpDataToContentValues(
                 PersistableBundle backedUpSimInfoEntry, int backupDataFormatVersion,
-                String isoCountryCodeFromDb,
+                String isoCountryCodeFromDb, String allowedNetworkTypesForReasonsFromDb,
                 List<String> wfcRestoreBlockedCountries) {
-            if (DATABASE_VERSION != 71 << 16) {
+            if (DATABASE_VERSION != 73 << 16) {
                 throw new AssertionError("The database schema has been updated which might make "
                     + "the format of #BACKED_UP_SIM_SPECIFIC_SETTINGS_FILE outdated. Make sure to "
                     + "1) review whether any of the columns in #SIM_INFO_COLUMNS_TO_BACKUP have "
@@ -4017,6 +4081,20 @@ public class TelephonyProvider extends ContentProvider
              * Also make sure to add necessary removal of sensitive settings in
              * polishContentValues(ContentValues contentValues).
              */
+            if (backupDataFormatVersion >= 73 << 16) {
+                contentValues.put(
+                        Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo
+                                        .COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
+            if (backupDataFormatVersion >= 72 << 16) {
+                contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED,
+                        backedUpSimInfoEntry.getInt(
+                                Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED,
+                                DEFAULT_INT_COLUMN_VALUE));
+            }
             if (backupDataFormatVersion >= 71 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS,
                         backedUpSimInfoEntry.getInt(
@@ -4026,6 +4104,14 @@ public class TelephonyProvider extends ContentProvider
                         backedUpSimInfoEntry.getString(
                                 Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
                                 DEFAULT_STRING_COLUMN_VALUE));
+                if (Flags.backupAndRestoreForEnable2g()) {
+                    contentValues.put(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                            replaceEnable2g(
+                                    allowedNetworkTypesForReasonsFromDb,
+                                    backedUpSimInfoEntry.getString(Telephony.SimInfo
+                                                    .COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS),
+                                    DEFAULT_STRING_COLUMN_VALUE));
+                }
             }
             if (backupDataFormatVersion >= 70 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
@@ -4033,8 +4119,8 @@ public class TelephonyProvider extends ContentProvider
                                 DEFAULT_INT_COLUMN_VALUE));
             }
             if (backupDataFormatVersion >= 64 << 16) {
-                contentValues.put(Telephony.SimInfo.COLUMN_IS_NTN,
-                        backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_IS_NTN,
+                contentValues.put(Telephony.SimInfo.COLUMN_IS_ONLY_NTN,
+                        backedUpSimInfoEntry.getInt(Telephony.SimInfo.COLUMN_IS_ONLY_NTN,
                                 DEFAULT_INT_COLUMN_VALUE));
             }
             if (backupDataFormatVersion >= 63 << 16) {
@@ -4113,10 +4199,46 @@ public class TelephonyProvider extends ContentProvider
             return polishContentValues(contentValues);
         }
 
+        /**
+         * Replaces the value of the "enable_2g" key-value pair in the given input string with the
+         * new "enable_2g key-value provided.
+         *
+         * @param input The input string to modify.
+         * @param newEnable2g The new value for the "enable_2g" key-value pair.
+         * @param defaultValue default value to return if replacement is not possible.
+         * @return The modified input string with the updated "enable_2g" value.
+         */
+        private static @Nullable String replaceEnable2g(
+                @Nullable String input, @Nullable String newEnable2g, String defaultValue) {
+            if (newEnable2g == null
+                    || !newEnable2g.startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G)) {
+                return defaultValue;
+            } else if (input == null || input.isBlank()) {
+                return newEnable2g;
+            }
+
+            String delimiter = ",";
+            String[] parts = input.trim().split(delimiter);
+
+            // Finding and replacing the "enable_2g" value
+            for (int i = 0; i < parts.length; i++) {
+                if (parts[i].startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G)) {
+                    parts[i] = newEnable2g;
+                    return String.join(delimiter, parts);
+                }
+            }
+
+            // Adding the "enable_2g" value if not found
+            if (parts.length == 0) {
+                return newEnable2g;
+            }
+            return input + "," + newEnable2g;
+        }
+
         private ContentValues polishContentValues(ContentValues contentValues) {
             /* Remove any values that weren't found in the backup file. These were set to defaults
             in #convertBackedUpDataToContentValues(). */
-            for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
+            for (Map.Entry<String, Integer> column : getSimInfoColumnsToBackup().entrySet()) {
                 String columnName = column.getKey();
 
                 if (!contentValues.containsKey(columnName)) {
@@ -4155,8 +4277,9 @@ public class TelephonyProvider extends ContentProvider
      * @return data of interest from SimInfoDB as a byte array.
      */
     private byte[] getSimSpecificDataToBackUp() {
-        String[] projection = SIM_INFO_COLUMNS_TO_BACKUP.keySet()
-                .toArray(new String[SIM_INFO_COLUMNS_TO_BACKUP.size()]);
+        Map<String, Integer> simInfoColumnsToBackup = getSimInfoColumnsToBackup();
+        String[] projection = simInfoColumnsToBackup.keySet()
+                .toArray(new String[simInfoColumnsToBackup.size()]);
 
         try (Cursor cursor = query(SubscriptionManager.CONTENT_URI, projection, null, null, null);
                 ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
@@ -4174,13 +4297,29 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
+    private static @NonNull Map<String, Integer> getSimInfoColumnsToBackup() {
+        if (Flags.backupAndRestoreForEnable2g()) {
+            return SIM_INFO_COLUMNS_TO_BACKUP;
+        }
+        Map<String, Integer> simInfoColumnsToBackup =
+                new HashMap<String, Integer>(SIM_INFO_COLUMNS_TO_BACKUP);
+        simInfoColumnsToBackup.remove(
+                Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS);
+        return simInfoColumnsToBackup;
+    }
+
     private static PersistableBundle convertSimInfoDbEntryToPersistableBundle(Cursor cursor) {
         PersistableBundle bundle = new PersistableBundle();
-        for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
+        for (Map.Entry<String, Integer> column : getSimInfoColumnsToBackup().entrySet()) {
             String columnName = column.getKey();
             int columnType = column.getValue();
             int columnIndex = cursor.getColumnIndex(columnName);
-            if (columnType == Cursor.FIELD_TYPE_INTEGER) {
+            if (Flags.backupAndRestoreForEnable2g()
+                    && Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS
+                            .equals(columnName)) {
+                bundle.putString(columnName,
+                        filteredAllowedNetworkTypesForBackup(cursor.getString(columnIndex)));
+            } else if (columnType == Cursor.FIELD_TYPE_INTEGER) {
                 bundle.putInt(columnName, cursor.getInt(columnIndex));
             } else if (columnType == Cursor.FIELD_TYPE_STRING) {
                 bundle.putString(columnName, cursor.getString(columnIndex));
@@ -4192,6 +4331,23 @@ public class TelephonyProvider extends ContentProvider
         }
 
         return bundle;
+    }
+
+    /**
+     * Returns filtered allowed network types for backup.
+     *
+     * Filters and returns only {@link TelephonyManager#ALLOWED_NETWORK_TYPES_REASON_ENABLE_2G} for
+     * the TelephonyProvider column value for network types allowed with all reasons.
+     *
+     * @param networkTypeValues String Value for network types allowed with all reasons
+     * @return String of "enable_2g=VALUE" format. if no reasons to backup returns null.
+     */
+    private static String filteredAllowedNetworkTypesForBackup(String networkTypeValues) {
+        return networkTypeValues == null ? null :
+                Arrays.stream(networkTypeValues.trim().split(","))
+                        .filter(r -> r.startsWith(ALLOWED_NETWORK_TYPES_TEXT_ENABLE_2G))
+                        .findFirst()
+                        .orElse(null);
     }
 
     @Override
@@ -5367,6 +5523,10 @@ public class TelephonyProvider extends ContentProvider
         }
 
         PackageManager packageManager = getContext().getPackageManager();
+        if (Flags.hsumPackageManager()) {
+            packageManager = getContext().createContextAsUser(Binder.getCallingUserHandle(), 0)
+                    .getPackageManager();
+        }
         String[] packages = packageManager.getPackagesForUid(Binder.getCallingUid());
 
         TelephonyManager telephonyManager =
