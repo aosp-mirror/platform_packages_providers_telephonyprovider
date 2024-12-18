@@ -16,6 +16,13 @@
 
 package com.android.providers.telephony;
 
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
+import static junit.framework.Assert.fail;
+
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doReturn;
@@ -38,6 +45,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.PersistableBundle;
 import android.os.Process;
+import android.platform.test.flag.junit.SetFlagsRule;
 import android.provider.Telephony;
 import android.provider.Telephony.Carriers;
 import android.provider.Telephony.SimInfo;
@@ -49,14 +57,18 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import androidx.test.InstrumentationRegistry;
+import androidx.test.ext.junit.runners.AndroidJUnit4;
 import androidx.test.filters.SmallTest;
 
 import com.android.internal.telephony.LocalLog;
 import com.android.internal.telephony.PhoneFactory;
+import com.android.internal.telephony.flags.Flags;
 
-import junit.framework.TestCase;
-
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -81,8 +93,13 @@ import java.util.stream.IntStream;
  *         runtest --path tests/src/com/android/providers/telephony/TelephonyProviderTest.java \
  *                 --test-method testInsertCarriers
  */
-public class TelephonyProviderTest extends TestCase {
+@RunWith(AndroidJUnit4.class)
+public class TelephonyProviderTest {
     private static final String TAG = "TelephonyProviderTest";
+
+    // Rules for controlling feature flags in testing
+    @Rule
+    public final SetFlagsRule mSetFlagsRule = new SetFlagsRule();
 
     private MockContextWithProvider mContext;
     private MockContentResolver mContentResolver;
@@ -136,23 +153,29 @@ public class TelephonyProviderTest extends TestCase {
     private static final ContentValues TEST_SIM_INFO_VALUES_US;
     private static final ContentValues TEST_SIM_INFO_VALUES_FR;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE = 999999;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE
-            = "ARBITRARY_TEST_STRING_VALUE";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE =
+            "ARBITRARY_TEST_STRING_VALUE";
 
     private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_ICCID;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1 = 111111;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1
-            = "ARBITRARY_TEST_STRING_VALUE_1";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1 =
+            "ARBITRARY_TEST_STRING_VALUE_1";
 
     private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_NUMBER_AND_CID;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2 = 222222;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2
-            = "ARBITRARY_TEST_STRING_VALUE_2";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2 =
+            "ARBITRARY_TEST_STRING_VALUE_2";
 
     private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_MATCHING_CID;
     private static final int ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3 = 333333;
-    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3
-            = "ARBITRARY_TEST_STRING_VALUE_3";
+    private static final String ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3 =
+            "ARBITRARY_TEST_STRING_VALUE_3";
+
+    private static final ContentValues BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS;
+    private static final String ARBITRARY_ALLOWED_NETWORK_TYPES_TEST_STRING_VALUE =
+            "user=850943,carrier=588799,enable_2g=555956";
+    private static final String ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE =
+            "enable_2g=555956";
 
     static {
         TEST_SIM_INFO_VALUES_US = populateContentValues(
@@ -194,12 +217,23 @@ public class TelephonyProviderTest extends TestCase {
                 null,
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_3,
                 ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_3);
+
+        BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS = populateContentValues(
+                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2,
+                MATCHING_PHONE_NUMBER,
+                MATCHING_CARRIER_ID,
+                null,
+                ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_2,
+                ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_2);
+        BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS.put(
+                SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                ARBITRARY_ALLOWED_NETWORK_TYPES_TEST_STRING_VALUE);
     }
 
     private static ContentValues populateContentValues(
             String iccId, String phoneNumber, int carrierId, String isoCountryCode,
             int arbitraryIntVal, String arbitraryStringVal) {
-            ContentValues contentValues = new ContentValues();
+        ContentValues contentValues = new ContentValues();
 
         contentValues.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_ICC_ID, iccId);
@@ -222,7 +256,7 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ENABLED, arbitraryIntVal);
         contentValues.put(Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                 arbitraryIntVal);
-        contentValues.put(SimInfo.COLUMN_IS_NTN, arbitraryIntVal);
+        contentValues.put(SimInfo.COLUMN_IS_ONLY_NTN, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_SERVICE_CAPABILITIES, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_TRANSFER_STATUS, arbitraryIntVal);
         contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_STATUS, arbitraryIntVal);
@@ -230,7 +264,10 @@ public class TelephonyProviderTest extends TestCase {
         if (isoCountryCode != null) {
             contentValues.put(Telephony.SimInfo.COLUMN_ISO_COUNTRY_CODE, isoCountryCode);
         }
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED, arbitraryIntVal);
 
+        contentValues.put(SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                arbitraryIntVal);
         return contentValues;
     }
 
@@ -359,9 +396,8 @@ public class TelephonyProviderTest extends TestCase {
         }
     }
 
-    @Override
-    protected void setUp() throws Exception {
-        super.setUp();
+    @Before
+    public void setUp() throws Exception {
         MockitoAnnotations.initMocks(this);
         mTelephonyProviderTestable = new TelephonyProviderTestable();
         when(mockContextResources.getStringArray(anyInt())).thenReturn(new String[]{"ca", "us"});
@@ -382,9 +418,8 @@ public class TelephonyProviderTest extends TestCase {
         mContentResolver = mContext.getContentResolver();
     }
 
-    @Override
-    protected void tearDown() throws Exception {
-        super.tearDown();
+    @After
+    public void tearDown() throws Exception {
         mTelephonyProviderTestable.closeDatabase();
 
         // Remove the internal file created by SIM-specific settings restore
@@ -732,6 +767,8 @@ public class TelephonyProviderTest extends TestCase {
         final int insertTransferStatus = 1;
         final int insertSatelliteEntitlementStatus = 1;
         final String insertSatelliteEntitlementPlmns = "examplePlmns";
+        final int insertCarrierRoamingNtn = 1;
+        final int insertIsSatelliteProvisioned = 1;
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
@@ -743,13 +780,16 @@ public class TelephonyProviderTest extends TestCase {
         contentValues.put(SubscriptionManager.SATELLITE_ENABLED, insertSatelliteEnabled);
         contentValues.put(SubscriptionManager.SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
                 insertSatelliteAttachEnabledForCarrier);
-        contentValues.put(SubscriptionManager.IS_NTN, insertSatelliteIsNtn);
+        contentValues.put(SubscriptionManager.IS_ONLY_NTN, insertSatelliteIsNtn);
         contentValues.put(SubscriptionManager.SERVICE_CAPABILITIES, insertCellularService);
         contentValues.put(SubscriptionManager.TRANSFER_STATUS, insertTransferStatus);
         contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_STATUS,
                 insertSatelliteEntitlementStatus);
         contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_PLMNS,
                 insertSatelliteEntitlementPlmns);
+        contentValues.put(SubscriptionManager.SATELLITE_ESOS_SUPPORTED, insertCarrierRoamingNtn);
+        contentValues.put(SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+                insertIsSatelliteProvisioned);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
@@ -765,11 +805,13 @@ public class TelephonyProviderTest extends TestCase {
             SubscriptionManager.USER_HANDLE,
             SubscriptionManager.SATELLITE_ENABLED,
             SubscriptionManager.SATELLITE_ATTACH_ENABLED_FOR_CARRIER,
-            SubscriptionManager.IS_NTN,
+            SubscriptionManager.IS_ONLY_NTN,
             SubscriptionManager.SERVICE_CAPABILITIES,
             SubscriptionManager.TRANSFER_STATUS,
             SubscriptionManager.SATELLITE_ENTITLEMENT_STATUS,
             SubscriptionManager.SATELLITE_ENTITLEMENT_PLMNS,
+            SubscriptionManager.SATELLITE_ESOS_SUPPORTED,
+            SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -795,6 +837,8 @@ public class TelephonyProviderTest extends TestCase {
         final int resultTransferStatus = cursor.getInt(10);
         final int resultSatelliteEntitlementStatus = cursor.getInt(11);
         final String resultSatelliteEntitlementPlmns = cursor.getString(12);
+        final int resultCarrierRoamingNtn = cursor.getInt(13);
+        final int resultIsSatelliteProvisioned = cursor.getInt(14);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
@@ -808,6 +852,8 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(insertTransferStatus, resultTransferStatus);
         assertEquals(insertSatelliteEntitlementStatus, resultSatelliteEntitlementStatus);
         assertEquals(insertSatelliteEntitlementPlmns, resultSatelliteEntitlementPlmns);
+        assertEquals(insertCarrierRoamingNtn, resultCarrierRoamingNtn);
+        assertEquals(insertIsSatelliteProvisioned, resultIsSatelliteProvisioned);
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
@@ -875,7 +921,7 @@ public class TelephonyProviderTest extends TestCase {
                 getIntValueFromCursor(cursor,
                         Telephony.SimInfo.COLUMN_SATELLITE_ATTACH_ENABLED_FOR_CARRIER));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
-                getIntValueFromCursor(cursor, SimInfo.COLUMN_IS_NTN));
+                getIntValueFromCursor(cursor, SimInfo.COLUMN_IS_ONLY_NTN));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(cursor, SimInfo.COLUMN_TRANSFER_STATUS));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
@@ -884,6 +930,10 @@ public class TelephonyProviderTest extends TestCase {
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
                 getStringValueFromCursor(cursor,
                         SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
+                getIntValueFromCursor(cursor, SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1, getIntValueFromCursor(cursor,
+                SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM));
         assertRestoredSubIdIsRemembered();
     }
 
@@ -1017,6 +1067,88 @@ public class TelephonyProviderTest extends TestCase {
                 ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1,
                 getIntValueFromCursor(
                         cursor, Telephony.SimInfo.COLUMN_NR_ADVANCED_CALLING_ENABLED));
+        assertRestoredSubIdIsRemembered();
+    }
+
+    @Test
+    public void testBackupForAllowedNetworkTypesForReasons() {
+        // If the Backup&Restore for 2g setting feature flag is enabled, backup data must contain
+        // allowed network type reasons data.
+        mSetFlagsRule.enableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
+        String backupDataFeatureTrue = new String(getBackupData(new ContentValues[] {
+                BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS}));
+        Log.d(TAG, "backupData with feature flag as true:" + new String(backupDataFeatureTrue));
+        // Verify that backupdata have expected allowed network types.
+        assertTrue(backupDataFeatureTrue.contains(
+                ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE));
+    }
+
+    @Test
+    public void testBackupForAllowedNetworkTypesForReasonsWithFeatureDisabled() {
+        // If the Backup&Restore for 2g setting feature flag is disabled, backup data must not
+        // contain any of allowed network type reasons data.
+        mSetFlagsRule.disableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
+        String backupDataFeatureFalse = new String(getBackupData(new ContentValues[]{
+                BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS}));
+        Log.d(TAG, "backupData with feature flag as false:" + new String(backupDataFeatureFalse));
+        // Verify that backupdata does not have allowed network types.
+        assertFalse(backupDataFeatureFalse.contains(
+                ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE));
+    }
+
+    private void backupForAllowedNetworkTypesForReasons() {
+        // Content value includes allowed_network_types for all reasons.
+        ContentValues contentValues = BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS;
+
+        // Insert, backup and delete for backup content values.
+        byte[] simSpecificSettingsData = getBackupData(new ContentValues[]{contentValues});
+        Log.d(TAG, "simSpecificSettingsData:" + new String(simSpecificSettingsData));
+        createInternalBackupFile(simSpecificSettingsData);
+
+        // Insert a test content values matched with previously backed up sim info.
+        mContentResolver.insert(SubscriptionManager.CONTENT_URI, TEST_SIM_INFO_VALUES_US);
+    }
+
+    private Cursor restoreForAllowedNetworkTypesForReasons() {
+        // Restore. Expected that the backup content matches the test content.
+        mContext.getContentResolver().call(
+                SubscriptionManager.SIM_INFO_BACKUP_AND_RESTORE_CONTENT_URI,
+                SubscriptionManager.RESTORE_SIM_SPECIFIC_SETTINGS_METHOD_NAME,
+                MATCHING_ICCID, null);
+
+        // Verify that the test content has been restored to backup content.
+        Cursor cursor = mContentResolver.query(SubscriptionManager.CONTENT_URI,
+                null, null, null, null);
+        assertEquals(1, cursor.getCount());
+        return cursor;
+    }
+
+    @Test
+    public void testBackupAndRestoreForAllowedNetworkTypesForReasons() {
+        mSetFlagsRule.enableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
+
+        backupForAllowedNetworkTypesForReasons();
+        Cursor cursor = restoreForAllowedNetworkTypesForReasons();
+        cursor.moveToFirst();
+
+        // Ensure network types reason values got updated. Only enable_2g needs to be updated.
+        assertEquals(ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE,
+                getStringValueFromCursor(cursor,
+                        SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS));
+        assertRestoredSubIdIsRemembered();
+    }
+
+    @Test
+    public void testBackupAndRestoreForAllowedNetworkTypesForReasonsWithFeatureDisabled() {
+        mSetFlagsRule.disableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
+
+        backupForAllowedNetworkTypesForReasons();
+        Cursor cursor = restoreForAllowedNetworkTypesForReasons();
+        cursor.moveToFirst();
+
+        // Ensure network types reason values got updated. Only enable_2g needs to be updated.
+        assertNull(getStringValueFromCursor(cursor,
+                SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS));
         assertRestoredSubIdIsRemembered();
     }
 

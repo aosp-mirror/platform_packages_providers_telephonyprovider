@@ -731,6 +731,9 @@ carrier_id {
     mccmnc_tuple: "21405"
     mccmnc_tuple: "21407"
   }
+  carrier_attribute {
+    mccmnc_tuple: "21438"
+  }
 }
 carrier_id {
   canonical_id: 450
@@ -741,7 +744,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 451
-  carrier_name: "Etisalat"
+  carrier_name: "e& UAE"
   carrier_attribute {
     mccmnc_tuple: "42402"
   }
@@ -797,14 +800,14 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 492
-  carrier_name: "Localstar Holding Pty. Ltd."
+  carrier_name: "Pivotel"
   carrier_attribute {
     mccmnc_tuple: "50588"
   }
 }
 carrier_id {
   canonical_id: 493
-  carrier_name: "Setar GSM"
+  carrier_name: "SETAR"
   carrier_attribute {
     mccmnc_tuple: "36301"
   }
@@ -4719,7 +4722,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1619
-  carrier_name: "Vodafone"
+  carrier_name: "Epic"
   carrier_attribute {
     mccmnc_tuple: "27801"
     spn: "vodafone MT"
@@ -5410,7 +5413,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1712
-  carrier_name: "Tusmobil d.o.o."
+  carrier_name: "Telemach"
   carrier_attribute {
     mccmnc_tuple: "29370"
   }
@@ -7749,7 +7752,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2007
-  carrier_name: "Telenor Myanmar"
+  carrier_name: "ATOM"
   carrier_attribute {
     mccmnc_tuple: "41406"
   }
@@ -11761,7 +11764,6 @@ carrier_id {
   carrier_name: "OptimERA Wireless"
   carrier_attribute {
     mccmnc_tuple: "313380"
-    spn: "OptimERA"
   }
 }
 carrier_id {
@@ -11936,6 +11938,14 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "24050"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20614"
+    gid1: "0E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20614"
+    spn: "Telavox"
   }
 }
 carrier_id {
@@ -13130,6 +13140,14 @@ carrier_id {
     mccmnc_tuple: "90161"
     gid1: "536E617065"
   }
+  carrier_attribute {
+    mccmnc_tuple: "45412"
+    gid1: "536E617065"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "72432"
+    gid1: "536E617065"
+  }
 }
 carrier_id {
   canonical_id: 2632
@@ -13212,6 +13230,65 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "311480"
     gid1: "BA01500000000000"
+  }
+}
+carrier_id {
+  canonical_id: 2642
+  carrier_name: "Netcom Group"
+  carrier_attribute {
+    mccmnc_tuple: "20804"
+  }
+}
+carrier_id {
+  canonical_id: 2643
+  carrier_name: "Cablenet"
+  carrier_attribute {
+    mccmnc_tuple: "28022"
+  }
+}
+carrier_id {
+  canonical_id: 2644
+  carrier_name: "IMOWI"
+  carrier_attribute {
+    mccmnc_tuple: "722210"
+    spn: "imowi"
+    gid1: "722210"
+  }
+}
+carrier_id {
+  canonical_id: 2645
+  carrier_name: "ASDA GB"
+  carrier_attribute {
+    mccmnc_tuple: "23415"
+    spn: "ASDA Mobile"
+    gid1: "A0"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23415"
+    spn: "ASDA Mobile"
+    gid1: "A1"
+  }
+}
+carrier_id {
+  canonical_id: 2646
+  carrier_name: "Rcell"
+  carrier_attribute {
+    mccmnc_tuple: "41750"
+  }
+}
+carrier_id {
+  canonical_id: 2647
+  carrier_name: "Field Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "50549"
+    spn: "Field Mobile"
+  }
+}
+carrier_id {
+  canonical_id: 2648
+  carrier_name: "Phoenix"
+  carrier_attribute {
+    mccmnc_tuple: "25097"
   }
 }
 carrier_id {
@@ -13455,4 +13532,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 16777270
+version: 16777273

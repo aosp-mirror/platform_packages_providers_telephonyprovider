@@ -54,7 +54,6 @@ import com.android.internal.telephony.util.TelephonyUtils;
 
 import java.util.HashMap;
 import java.util.List;
-
 public class SmsProvider extends ContentProvider {
     /* No response constant from SmsResponse */
     static final int NO_ERROR_CODE = -1;
@@ -872,18 +871,11 @@ public class SmsProvider extends ContentProvider {
                 address = values.getAsString(Sms.ADDRESS);
             }
 
-            if (ProviderUtil.sFeatureFlag.rejectBadSubIdInteraction()) {
-                if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID
-                        && !TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
-                        subId, callerUserHandle, address)) {
-                    TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
-                            subId, callerUid, callerPkg);
-                    return null;
-                }
-            } else if (!TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
+            if (subId != SubscriptionManager.INVALID_SUBSCRIPTION_ID
+                    && !TelephonyPermissions.checkSubscriptionAssociatedWithUser(getContext(),
                     subId, callerUserHandle, address)) {
-                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(), subId,
-                        callerUid, callerPkg);
+                TelephonyUtils.showSwitchToManagedProfileDialogIfAppropriate(getContext(),
+                        subId, callerUid, callerPkg);
                 return null;
             }
         }
@@ -995,8 +987,10 @@ public class SmsProvider extends ContentProvider {
             // Filter SMS based on subId and emergency numbers.
             selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
                     callerUserHandle);
-            selectionByEmergencyNumbers = ProviderUtil
-                    .getSelectionByEmergencyNumbers(getContext());
+            if (hasCalling()) {
+                selectionByEmergencyNumbers = ProviderUtil
+                        .getSelectionByEmergencyNumbers(getContext());
+            }
         } finally {
             Binder.restoreCallingIdentity(token);
         }
@@ -1015,10 +1009,13 @@ public class SmsProvider extends ContentProvider {
         int count;
         int match = sURLMatcher.match(url);
         SQLiteDatabase db = getWritableDatabase(match);
+        String debugMessage = getCallingPackage() + ";SmsProvider.delete;" + url;
+        // Always log delete for debug purpose, as delete is a critical but non-frequent operation.
+        Log.d(TAG, debugMessage);
         SQLiteOpenHelper sqLiteOpenHelper = getDBOpenHelper(match);
         if (sqLiteOpenHelper instanceof MmsSmsDatabaseHelper) {
             ((MmsSmsDatabaseHelper) sqLiteOpenHelper).addDatabaseOpeningDebugLog(
-                    getCallingPackage() + ";SmsProvider.delete;" + url, false);
+                    debugMessage, false);
         }
         boolean notifyIfNotDefault = true;
         switch (match) {
