@@ -20,6 +20,7 @@ import static android.provider.Telephony.Carriers;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
@@ -495,20 +496,83 @@ public final class TelephonyDatabaseHelperTest {
     }
 
     @Test
-    public void databaseHelperOnUpgrade_hasSatelliteIsNtnField() {
-        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteIsNtnField");
-        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+    public void databaseHelperOnUpgrade_hasIsNtn_updateToIsOnlyNtnField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasIsNtn_updateToIsOnlyNtnField");
+
+        final String columnIsNtn = "is_ntn";
         SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
-        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
 
-        // the upgraded db must have
-        // Telephony.SimInfo.IS_NTN
-        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
-        String[] upgradedColumns = cursor.getColumnNames();
-        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+        mHelper.onUpgrade(db, (4 << 16), 65);
+        // Add is_ntn column and drop the latest columns.
+        db.execSQL("ALTER TABLE siminfo ADD COLUMN " + columnIsNtn + " INTEGER DEFAULT 0;");
+        db.execSQL("ALTER TABLE siminfo DROP COLUMN "
+                + Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED + ";");
+        db.execSQL("ALTER TABLE siminfo DROP COLUMN " + Telephony.SimInfo.COLUMN_IS_ONLY_NTN + ";");
 
-        assertTrue(Arrays.asList(upgradedColumns).contains(
-                Telephony.SimInfo.COLUMN_IS_NTN));
+        // Insert is_ntn column values
+        ContentValues cv1 = new ContentValues();
+        cv1.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, 1);
+        cv1.put(Telephony.SimInfo.COLUMN_ICC_ID, "123");
+        cv1.put(Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT, 0);
+        cv1.put(Telephony.SimInfo.COLUMN_CARD_ID, "123");
+        cv1.put(columnIsNtn, "1");
+        db.insert("siminfo", null, cv1);
+        ContentValues cv2 = new ContentValues();
+        cv2.put(Telephony.SimInfo.COLUMN_UNIQUE_KEY_SUBSCRIPTION_ID, 2);
+        cv2.put(Telephony.SimInfo.COLUMN_ICC_ID, "456");
+        cv2.put(Telephony.SimInfo.COLUMN_DISPLAY_NUMBER_FORMAT, 0);
+        cv2.put(Telephony.SimInfo.COLUMN_CARD_ID, "456");
+        cv2.put(columnIsNtn, "0");
+        db.insert("simInfo", null, cv2);
+
+        // Verify is_ntn column is exists
+        Cursor cursor = db.query("siminfo", null, null, null,
+                null, null, null);
+        String[] columnNames = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(columnNames));
+        assertTrue(Arrays.asList(columnNames).contains(columnIsNtn));
+
+        final String[] testProjection = {columnIsNtn};
+        final int[] expectedValues = {1, 0};
+        cursor = db.query("simInfo", testProjection, null, null,
+                null, null, null);
+
+        // Verify is_ntn column's value
+        cursor.moveToFirst();
+        assertNotNull(cursor);
+        assertEquals(expectedValues.length, cursor.getCount());
+        for (int i = 0; i < expectedValues.length; i++) {
+            assertEquals(expectedValues[i], cursor.getInt(0));
+            if (!cursor.moveToNext()) {
+                break;
+            }
+        }
+
+        // Upgrade db from version 65 to version 72.
+        mHelper.onUpgrade(db, (65 << 16), 72);
+
+        // Verify after upgraded db must have Telephony.SimInfo.COLUMN_IS_ONLY_NTN column and not
+        // have is_ntn column.
+        cursor = db.query("simInfo", null, null, null,
+                null, null, null);
+        columnNames = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(columnNames));
+        assertTrue(Arrays.asList(columnNames).contains(Telephony.SimInfo.COLUMN_IS_ONLY_NTN));
+        assertFalse(Arrays.asList(columnNames).contains(columnIsNtn));
+
+        // Verify values copy from is_ntn columns to Telephony.SimInfo.COLUMN_IS_ONLY_NTN columns.
+        final String[] testProjection2 = {Telephony.SimInfo.COLUMN_IS_ONLY_NTN};
+        cursor = db.query("simInfo", testProjection2, null, null,
+                null, null, null);
+        cursor.moveToFirst();
+        assertNotNull(cursor);
+        assertEquals(expectedValues.length, cursor.getCount());
+        for (int i = 0; i < expectedValues.length; i++) {
+            assertEquals(expectedValues[i], cursor.getInt(0));
+            if (!cursor.moveToNext()) {
+                break;
+            }
+        }
     }
 
     @Test
@@ -713,6 +777,39 @@ public final class TelephonyDatabaseHelperTest {
 
         assertTrue(Arrays.asList(upgradedColumns).contains(
                 Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasSatelliteESOSSupportedFields() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasSatelliteESOSSupportedFields");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED));
+    }
+
+    @Test
+    public void databaseHelperOnUpgrade_hasIsSatelliteProvisionedField() {
+        Log.d(TAG, "databaseHelperOnUpgrade_hasIsSatelliteProvisionedField");
+        // (5 << 16 | 6) is the first upgrade trigger in onUpgrade
+        SQLiteDatabase db = mInMemoryDbHelper.getWritableDatabase();
+        mHelper.onUpgrade(db, (4 << 16), TelephonyProvider.getVersion(mContext));
+
+        // the upgraded db must have
+        // Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+        Cursor cursor = db.query("siminfo", null, null, null, null, null, null);
+        String[] upgradedColumns = cursor.getColumnNames();
+        Log.d(TAG, "siminfo columns: " + Arrays.toString(upgradedColumns));
+
+        assertTrue(Arrays.asList(upgradedColumns).contains(
+                Telephony.SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM));
     }
 
     /**

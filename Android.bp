@@ -13,6 +13,23 @@ android_app {
     libs: ["telephony-common"],
     static_libs: ["android-common", "telephonyprovider-protos"],
     generate_product_characteristics_rro: true,
+    manifest: "AndroidManifest.xml",
+}
+
+android_app {
+    name: "TelephonyProviderHsum",
+    privileged: true,
+    srcs: ["src/**/*.java", "proto/**/*.proto"],
+    asset_dirs: ["assets/latest_carrier_id"],
+    platform_apis: true,
+    certificate: "platform",
+    libs: ["telephony-common"],
+    static_libs: ["android-common", "telephonyprovider-protos"],
+    generate_product_characteristics_rro: true,
+    overrides: ["TelephonyProvider"],
+
+    manifest: "AndroidManifestHsum.xml",
+    additional_manifests: [ "AndroidManifest.xml" ],
 }
 
 filegroup {
