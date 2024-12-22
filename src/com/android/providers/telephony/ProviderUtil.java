@@ -51,7 +51,6 @@ import java.util.stream.Collectors;
 public class ProviderUtil {
     private final static String TAG = "SmsProvider";
     private static final String TELEPHONY_PROVIDER_PACKAGE = "com.android.providers.telephony";
-    private static final int PHONE_UID = 1001;
 
     /**
      * Check if a caller of the provider has restricted access,
@@ -63,8 +62,7 @@ public class ProviderUtil {
      * @return true if the caller is not system, or phone or default sms app, false otherwise
      */
     public static boolean isAccessRestricted(Context context, String packageName, int uid) {
-        return (uid != Process.SYSTEM_UID
-                && uid != Process.PHONE_UID
+        return (!TelephonyPermissions.isSystemOrPhone(uid)
                 && !SmsApplication.isDefaultSmsApplication(context, packageName));
     }
 
@@ -76,9 +74,9 @@ public class ProviderUtil {
      * @return true if we should set CREATOR, false otherwise
      */
     public static boolean shouldSetCreator(ContentValues values, int uid) {
-        return (uid != Process.SYSTEM_UID && uid != Process.PHONE_UID) ||
-                (!values.containsKey(Telephony.Sms.CREATOR) &&
-                        !values.containsKey(Telephony.Mms.CREATOR));
+        return (!TelephonyPermissions.isSystemOrPhone(uid))
+                || (!values.containsKey(Telephony.Sms.CREATOR)
+                        && !values.containsKey(Telephony.Mms.CREATOR));
     }
 
     /**
@@ -89,9 +87,9 @@ public class ProviderUtil {
      * @return true if we should remove CREATOR, false otherwise
      */
     public static boolean shouldRemoveCreator(ContentValues values, int uid) {
-        return (uid != Process.SYSTEM_UID && uid != Process.PHONE_UID) &&
-                (values.containsKey(Telephony.Sms.CREATOR) ||
-                        values.containsKey(Telephony.Mms.CREATOR));
+        return (!TelephonyPermissions.isSystemOrPhone(uid))
+                && (values.containsKey(Telephony.Sms.CREATOR)
+                        || values.containsKey(Telephony.Mms.CREATOR));
     }
 
     /**
@@ -294,7 +292,7 @@ public class ProviderUtil {
         StringBuilder sb = new StringBuilder();
         for (ActivityManager.RunningAppProcessInfo processInfo : processInfos) {
             if (Arrays.asList(processInfo.pkgList).contains(TELEPHONY_PROVIDER_PACKAGE)
-                    || processInfo.uid == PHONE_UID) {
+                    || UserHandle.isSameApp(processInfo.uid, Process.PHONE_UID)) {
                 sb.append("{ProcessName=");
                 sb.append(processInfo.processName);
                 sb.append(";PID=");
