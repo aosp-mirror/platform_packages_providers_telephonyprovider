@@ -11756,7 +11756,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    gid1: "41"
+    gid1: "0041"
   }
 }
 carrier_id {
@@ -11764,11 +11764,11 @@ carrier_id {
   carrier_name: "HELP mobile AT"
   carrier_attribute {
     mccmnc_tuple: "23217"
-    gid1: "42"
+    gid1: "0042"
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    gid1: "42"
+    gid1: "0042"
   }
 }
 carrier_id {
@@ -11776,11 +11776,11 @@ carrier_id {
   carrier_name: "Tchibo mobil AT"
   carrier_attribute {
     mccmnc_tuple: "23217"
-    gid1: "44"
+    gid1: "0044"
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    gid1: "44"
+    gid1: "0044"
   }
 }
 carrier_id {
@@ -11791,7 +11791,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    gid1: "40"
+    gid1: "0040"
   }
 }
 carrier_id {
@@ -11802,7 +11802,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    gid1: "48"
+    gid1: "0048"
   }
 }
 carrier_id {
@@ -11813,7 +11813,7 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "24007"
-    gid1: "52"
+    gid1: "0052"
   }
 }
 carrier_id {
