@@ -3661,7 +3661,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1453
-  carrier_name: "Telefonica"
+  carrier_name: "O2"
   carrier_attribute {
     mccmnc_tuple: "26203"
     mccmnc_tuple: "26205"
@@ -3670,7 +3670,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1454
-  carrier_name: "o2"
+  carrier_name: "O2"
   carrier_attribute {
     mccmnc_tuple: "26207"
     mccmnc_tuple: "26208"
@@ -4394,6 +4394,12 @@ carrier_id {
   }
   carrier_attribute {
     mccmnc_tuple: "40479"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "40439"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "40465"
   }
 }
 carrier_id {
@@ -5679,7 +5685,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1727
-  carrier_name: "Josa Babilon-T"
+  carrier_name: "Babilon-Mobile"
   carrier_attribute {
     mccmnc_tuple: "43604"
   }
@@ -11006,7 +11012,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2360
-  carrier_name: "Telefonica"
+  carrier_name: "O2"
   carrier_attribute {
     mccmnc_tuple: "26203"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
@@ -11038,7 +11044,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2361
-  carrier_name: "o2"
+  carrier_name: "O2"
   carrier_attribute {
     mccmnc_tuple: "26207"
     gid1: "010301FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF"
@@ -11639,6 +11645,14 @@ carrier_id {
   carrier_name: "Mobi"
   carrier_attribute {
     mccmnc_tuple: "313460"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "313460"
+    gid1: "6624"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311588"
+    gid1: "6624"
   }
 }
 carrier_id {
@@ -13386,6 +13400,78 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2649
+  carrier_name: "Private FR"
+  carrier_attribute {
+    mccmnc_tuple: "208180"
+  }
+}
+carrier_id {
+  canonical_id: 2651
+  carrier_name: "KPN Lab"
+  carrier_attribute {
+    mccmnc_tuple: "20469"
+  }
+}
+carrier_id {
+  canonical_id: 2652
+  carrier_name: "OXIO"
+  carrier_attribute {
+    mccmnc_tuple: "314720"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "334170"
+  }
+}
+carrier_id {
+  canonical_id: 2653
+  carrier_name: "Cox MSO"
+  carrier_attribute {
+    mccmnc_tuple: "314420"
+  }
+}
+carrier_id {
+  canonical_id: 2654
+  carrier_name: "Mediacom Mobile"
+  carrier_attribute {
+    mccmnc_tuple: "311480"
+    gid1: "BA01700000000000"
+    gid2: "C400000000000000"
+  }
+}
+carrier_id {
+  canonical_id: 2655
+  carrier_name: "Optimum"
+  carrier_attribute {
+    mccmnc_tuple: "310240"
+    spn: "Optimum"
+    gid1: "6784"
+  }
+}
+carrier_id {
+  canonical_id: 2656
+  carrier_name: "Mettel"
+  carrier_attribute {
+    mccmnc_tuple: "314610"
+    gid1: "880A3E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "90101"
+    gid1: "880A3E"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "20601"
+    gid1: "880A3E"
+  }
+}
+carrier_id {
+  canonical_id: 2657
+  carrier_name: "CiFi"
+  carrier_attribute {
+    mccmnc_tuple: "50557"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -13627,4 +13713,4 @@ carrier_id {
   }
   parent_canonical_id: 2023
 }
-version: 49
+version: 50
