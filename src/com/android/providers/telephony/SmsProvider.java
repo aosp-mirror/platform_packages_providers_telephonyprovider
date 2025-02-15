@@ -52,6 +52,7 @@ import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.util.TelephonyUtils;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 public class SmsProvider extends ContentProvider {
@@ -101,6 +102,8 @@ public class SmsProvider extends ContentProvider {
         "_id"
     };
 
+    private final List<UserHandle> mUsersRemovedBeforeUnlockList = new ArrayList<>();
+
     @Override
     public boolean onCreate() {
         setAppOps(AppOpsManager.OP_READ_SMS, AppOpsManager.OP_WRITE_SMS);
@@ -112,7 +115,9 @@ public class SmsProvider extends ContentProvider {
 
         // Creating intent broadcast receiver for user actions like Intent.ACTION_USER_REMOVED,
         // where we would need to remove SMS related to removed user.
-        IntentFilter userIntentFilter = new IntentFilter(Intent.ACTION_USER_REMOVED);
+        IntentFilter userIntentFilter = new IntentFilter();
+        userIntentFilter.addAction(Intent.ACTION_USER_REMOVED);
+        userIntentFilter.addAction(Intent.ACTION_USER_UNLOCKED);
         getContext().registerReceiver(mUserIntentReceiver, userIntentFilter,
                 Context.RECEIVER_NOT_EXPORTED);
 
@@ -1471,35 +1476,57 @@ public class SmsProvider extends ContentProvider {
                         // Do not delete SMS if removed profile is not managed profile.
                         return;
                     }
-                    Log.d(TAG, "Received ACTION_USER_REMOVED for managed profile - Deleting SMS.");
 
-                    // Deleting SMS related to managed profile.
-                    Uri uri = Sms.CONTENT_URI;
-                    int match = sURLMatcher.match(uri);
-                    SQLiteDatabase db = getWritableDatabase(match);
-
-                    final long token = Binder.clearCallingIdentity();
-                    String selectionBySubIds;
-                    try {
-                        // Filter SMS based on subId.
-                        selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
-                                userToBeRemoved);
-                    } finally {
-                        Binder.restoreCallingIdentity(token);
-                    }
-                    if (selectionBySubIds == null) {
-                        // No subscriptions associated with user, return.
+                    if (!userManager.isUserUnlocked()) {
+                        Log.d(TAG, "Received ACTION_USER_REMOVED for managed profile: "
+                                + "Cannot delete SMS now as user is locked.");
+                        mUsersRemovedBeforeUnlockList.add(userToBeRemoved);
                         return;
                     }
 
-                    int count = db.delete(TABLE_SMS, selectionBySubIds, null);
-                    if (count != 0) {
-                        // Don't update threads unless something changed.
-                        MmsSmsDatabaseHelper.updateThreads(db, selectionBySubIds, null);
-                        notifyChange(true, uri, getCallingPackage());
-                    }
+                    Log.d(TAG, "Received ACTION_USER_REMOVED for managed profile: Deleting SMS.");
+                    deleteManagedProfileMessages(userToBeRemoved);
                     break;
+                case Intent.ACTION_USER_UNLOCKED: {
+                    for (UserHandle user : mUsersRemovedBeforeUnlockList) {
+                        deleteManagedProfileMessages(user);
+                    }
+                    mUsersRemovedBeforeUnlockList.clear();
+                    break;
+                }
             }
         }
     };
+
+    private void deleteManagedProfileMessages(UserHandle userToBeRemoved) {
+        Log.d(TAG, "deleteManagedProfileMessages: userToBeRemoved="
+                + userToBeRemoved.getIdentifier());
+        // Deleting SMS related to managed profile.
+        Uri uri = Sms.CONTENT_URI;
+        int match = sURLMatcher.match(uri);
+        SQLiteDatabase db = getWritableDatabase(match);
+
+        final long token = Binder.clearCallingIdentity();
+        String selectionBySubIds;
+        try {
+            // Filter SMS based on subId.
+            selectionBySubIds = ProviderUtil.getSelectionBySubIds(getContext(),
+                    userToBeRemoved);
+        } finally {
+            Binder.restoreCallingIdentity(token);
+        }
+        if (selectionBySubIds == null) {
+            // No subscriptions associated with user, return.
+            Log.d(TAG, "deleteManagedProfileMessages: "
+                    + "no subscriptions associated with user.");
+            return;
+        }
+
+        int count = db.delete(TABLE_SMS, selectionBySubIds, null);
+        if (count != 0) {
+            // Don't update threads unless something changed.
+            MmsSmsDatabaseHelper.updateThreads(db, selectionBySubIds, null);
+            notifyChange(true, uri, getCallingPackage());
+        }
+    }
 }
