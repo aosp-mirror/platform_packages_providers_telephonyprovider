@@ -4128,14 +4128,12 @@ public class TelephonyProvider extends ContentProvider
                         backedUpSimInfoEntry.getString(
                                 Telephony.SimInfo.COLUMN_SATELLITE_ENTITLEMENT_PLMNS,
                                 DEFAULT_STRING_COLUMN_VALUE));
-                if (Flags.backupAndRestoreForEnable2g()) {
-                    contentValues.put(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
-                            replaceEnable2g(
-                                    allowedNetworkTypesForReasonsFromDb,
-                                    backedUpSimInfoEntry.getString(Telephony.SimInfo
-                                                    .COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS),
-                                    DEFAULT_STRING_COLUMN_VALUE));
-                }
+                contentValues.put(Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS,
+                        replaceEnable2g(
+                                allowedNetworkTypesForReasonsFromDb,
+                                backedUpSimInfoEntry.getString(Telephony.SimInfo
+                                                .COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS),
+                                DEFAULT_STRING_COLUMN_VALUE));
             }
             if (backupDataFormatVersion >= 70 << 16) {
                 contentValues.put(Telephony.SimInfo.COLUMN_TRANSFER_STATUS,
@@ -4262,7 +4260,7 @@ public class TelephonyProvider extends ContentProvider
         private ContentValues polishContentValues(ContentValues contentValues) {
             /* Remove any values that weren't found in the backup file. These were set to defaults
             in #convertBackedUpDataToContentValues(). */
-            for (Map.Entry<String, Integer> column : getSimInfoColumnsToBackup().entrySet()) {
+            for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
                 String columnName = column.getKey();
 
                 if (!contentValues.containsKey(columnName)) {
@@ -4301,7 +4299,7 @@ public class TelephonyProvider extends ContentProvider
      * @return data of interest from SimInfoDB as a byte array.
      */
     private byte[] getSimSpecificDataToBackUp() {
-        Map<String, Integer> simInfoColumnsToBackup = getSimInfoColumnsToBackup();
+        Map<String, Integer> simInfoColumnsToBackup = SIM_INFO_COLUMNS_TO_BACKUP;
         String[] projection = simInfoColumnsToBackup.keySet()
                 .toArray(new String[simInfoColumnsToBackup.size()]);
 
@@ -4321,25 +4319,13 @@ public class TelephonyProvider extends ContentProvider
         }
     }
 
-    private static @NonNull Map<String, Integer> getSimInfoColumnsToBackup() {
-        if (Flags.backupAndRestoreForEnable2g()) {
-            return SIM_INFO_COLUMNS_TO_BACKUP;
-        }
-        Map<String, Integer> simInfoColumnsToBackup =
-                new HashMap<String, Integer>(SIM_INFO_COLUMNS_TO_BACKUP);
-        simInfoColumnsToBackup.remove(
-                Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS);
-        return simInfoColumnsToBackup;
-    }
-
     private static PersistableBundle convertSimInfoDbEntryToPersistableBundle(Cursor cursor) {
         PersistableBundle bundle = new PersistableBundle();
-        for (Map.Entry<String, Integer> column : getSimInfoColumnsToBackup().entrySet()) {
+        for (Map.Entry<String, Integer> column : SIM_INFO_COLUMNS_TO_BACKUP.entrySet()) {
             String columnName = column.getKey();
             int columnType = column.getValue();
             int columnIndex = cursor.getColumnIndex(columnName);
-            if (Flags.backupAndRestoreForEnable2g()
-                    && Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS
+            if (Telephony.SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS
                             .equals(columnName)) {
                 bundle.putString(columnName,
                         filteredAllowedNetworkTypesForBackup(cursor.getString(columnIndex)));

@@ -62,7 +62,6 @@ import androidx.test.filters.SmallTest;
 
 import com.android.internal.telephony.LocalLog;
 import com.android.internal.telephony.PhoneFactory;
-import com.android.internal.telephony.flags.Flags;
 
 import org.junit.After;
 import org.junit.Before;
@@ -1074,25 +1073,11 @@ public class TelephonyProviderTest {
     public void testBackupForAllowedNetworkTypesForReasons() {
         // If the Backup&Restore for 2g setting feature flag is enabled, backup data must contain
         // allowed network type reasons data.
-        mSetFlagsRule.enableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
         String backupDataFeatureTrue = new String(getBackupData(new ContentValues[] {
                 BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS}));
         Log.d(TAG, "backupData with feature flag as true:" + new String(backupDataFeatureTrue));
         // Verify that backupdata have expected allowed network types.
         assertTrue(backupDataFeatureTrue.contains(
-                ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE));
-    }
-
-    @Test
-    public void testBackupForAllowedNetworkTypesForReasonsWithFeatureDisabled() {
-        // If the Backup&Restore for 2g setting feature flag is disabled, backup data must not
-        // contain any of allowed network type reasons data.
-        mSetFlagsRule.disableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
-        String backupDataFeatureFalse = new String(getBackupData(new ContentValues[]{
-                BACKED_UP_SIM_INFO_VALUES_WITH_ALLOWED_NETWORK_REASONS}));
-        Log.d(TAG, "backupData with feature flag as false:" + new String(backupDataFeatureFalse));
-        // Verify that backupdata does not have allowed network types.
-        assertFalse(backupDataFeatureFalse.contains(
                 ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE));
     }
 
@@ -1125,8 +1110,6 @@ public class TelephonyProviderTest {
 
     @Test
     public void testBackupAndRestoreForAllowedNetworkTypesForReasons() {
-        mSetFlagsRule.enableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
-
         backupForAllowedNetworkTypesForReasons();
         Cursor cursor = restoreForAllowedNetworkTypesForReasons();
         cursor.moveToFirst();
@@ -1135,20 +1118,6 @@ public class TelephonyProviderTest {
         assertEquals(ARBITRARY_ALLOWED_NETWORK_TYPES_BACKUP_STRING_VALUE,
                 getStringValueFromCursor(cursor,
                         SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS));
-        assertRestoredSubIdIsRemembered();
-    }
-
-    @Test
-    public void testBackupAndRestoreForAllowedNetworkTypesForReasonsWithFeatureDisabled() {
-        mSetFlagsRule.disableFlags(Flags.FLAG_BACKUP_AND_RESTORE_FOR_ENABLE_2G);
-
-        backupForAllowedNetworkTypesForReasons();
-        Cursor cursor = restoreForAllowedNetworkTypesForReasons();
-        cursor.moveToFirst();
-
-        // Ensure network types reason values got updated. Only enable_2g needs to be updated.
-        assertNull(getStringValueFromCursor(cursor,
-                SimInfo.COLUMN_ALLOWED_NETWORK_TYPES_FOR_REASONS));
         assertRestoredSubIdIsRemembered();
     }
 
