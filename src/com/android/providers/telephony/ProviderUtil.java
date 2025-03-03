@@ -272,10 +272,6 @@ public class ProviderUtil {
      * Log all running processes of the telephony provider package.
      */
     public static void logRunningTelephonyProviderProcesses(@NonNull Context context) {
-        if (!Flags.logMmsSmsDatabaseAccessInfo()) {
-            return;
-        }
-
         ActivityManager am = context.getSystemService(ActivityManager.class);
         if (am == null) {
             Log.d(TAG, "logRunningTelephonyProviderProcesses: ActivityManager service is not"
