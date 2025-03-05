@@ -267,6 +267,14 @@ public class TelephonyProviderTest {
 
         contentValues.put(SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
                 arbitraryIntVal);
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_BARRED_PLMNS, arbitraryStringVal);
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_DATA_PLAN_PLMNS, arbitraryStringVal);
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_SERVICE_TYPE_MAP,
+                arbitraryStringVal);
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_DATA_SERVICE_POLICY,
+                arbitraryStringVal);
+        contentValues.put(SimInfo.COLUMN_SATELLITE_ENTITLEMENT_VOICE_SERVICE_POLICY,
+                arbitraryStringVal);
         return contentValues;
     }
 
@@ -768,6 +776,11 @@ public class TelephonyProviderTest {
         final String insertSatelliteEntitlementPlmns = "examplePlmns";
         final int insertCarrierRoamingNtn = 1;
         final int insertIsSatelliteProvisioned = 1;
+        final String insertSatelliteEntitlementBarredPlmns = "exampleBarredPlmns";
+        final String insertSatelliteEntitlementDataPlanPlmns = "exampleDataPlanPlmns";
+        final String insertSatelliteEntitlementServiceTypeMap = "exampleServiceTypeMap";
+        final String insertSatelliteEntitlementDataServicePolicy = "exampleDataServicePolicy";
+        final String insertSatelliteEntitlementVoiceServicePolicy = "exampleVoiceServicePolicy";
         contentValues.put(SubscriptionManager.UNIQUE_KEY_SUBSCRIPTION_ID, insertSubId);
         contentValues.put(SubscriptionManager.DISPLAY_NAME, insertDisplayName);
         contentValues.put(SubscriptionManager.CARRIER_NAME, insertCarrierName);
@@ -789,6 +802,16 @@ public class TelephonyProviderTest {
         contentValues.put(SubscriptionManager.SATELLITE_ESOS_SUPPORTED, insertCarrierRoamingNtn);
         contentValues.put(SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
                 insertIsSatelliteProvisioned);
+        contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_BARRED_PLMNS,
+                insertSatelliteEntitlementBarredPlmns);
+        contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_DATA_PLAN_PLMNS,
+                insertSatelliteEntitlementDataPlanPlmns);
+        contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_SERVICE_TYPE_MAP,
+                insertSatelliteEntitlementServiceTypeMap);
+        contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_DATA_SERVICE_POLICY,
+                insertSatelliteEntitlementDataServicePolicy);
+        contentValues.put(SubscriptionManager.SATELLITE_ENTITLEMENT_VOICE_SERVICE_POLICY,
+                insertSatelliteEntitlementVoiceServicePolicy);
 
         Log.d(TAG, "testSimTable Inserting contentValues: " + contentValues);
         mContentResolver.insert(SimInfo.CONTENT_URI, contentValues);
@@ -810,7 +833,12 @@ public class TelephonyProviderTest {
             SubscriptionManager.SATELLITE_ENTITLEMENT_STATUS,
             SubscriptionManager.SATELLITE_ENTITLEMENT_PLMNS,
             SubscriptionManager.SATELLITE_ESOS_SUPPORTED,
-            SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM
+            SubscriptionManager.IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM,
+            SubscriptionManager.SATELLITE_ENTITLEMENT_BARRED_PLMNS,
+            SubscriptionManager.SATELLITE_ENTITLEMENT_DATA_PLAN_PLMNS,
+            SubscriptionManager.SATELLITE_ENTITLEMENT_SERVICE_TYPE_MAP,
+            SubscriptionManager.SATELLITE_ENTITLEMENT_DATA_SERVICE_POLICY,
+            SubscriptionManager.SATELLITE_ENTITLEMENT_VOICE_SERVICE_POLICY
         };
         final String selection = SubscriptionManager.DISPLAY_NAME + "=?";
         String[] selectionArgs = { insertDisplayName };
@@ -838,6 +866,11 @@ public class TelephonyProviderTest {
         final String resultSatelliteEntitlementPlmns = cursor.getString(12);
         final int resultCarrierRoamingNtn = cursor.getInt(13);
         final int resultIsSatelliteProvisioned = cursor.getInt(14);
+        final String resultSatelliteEntitlementBarredPlmns = cursor.getString(15);
+        final String resultSatelliteEntitlementDataPlanPlmns = cursor.getString(16);
+        final String resultSatelliteEntitlementServiceTypeMap = cursor.getString(17);
+        final String resultSatelliteEntitlementDataServicePolicy = cursor.getString(18);
+        final String resultSatelliteEntitlementVoiceServicePolicy = cursor.getString(19);
         assertEquals(insertSubId, resultSubId);
         assertEquals(insertCarrierName, resultCarrierName);
         assertEquals(insertCardId, resultCardId);
@@ -853,6 +886,16 @@ public class TelephonyProviderTest {
         assertEquals(insertSatelliteEntitlementPlmns, resultSatelliteEntitlementPlmns);
         assertEquals(insertCarrierRoamingNtn, resultCarrierRoamingNtn);
         assertEquals(insertIsSatelliteProvisioned, resultIsSatelliteProvisioned);
+        assertEquals(insertSatelliteEntitlementBarredPlmns, resultSatelliteEntitlementBarredPlmns);
+        assertEquals(insertSatelliteEntitlementDataPlanPlmns,
+                resultSatelliteEntitlementDataPlanPlmns);
+        assertEquals(insertSatelliteEntitlementServiceTypeMap,
+                resultSatelliteEntitlementServiceTypeMap);
+        assertEquals(insertSatelliteEntitlementDataServicePolicy,
+                resultSatelliteEntitlementDataServicePolicy);
+        assertEquals(insertSatelliteEntitlementVoiceServicePolicy,
+                resultSatelliteEntitlementVoiceServicePolicy);
+
 
         // delete test content
         final String selectionToDelete = SubscriptionManager.DISPLAY_NAME + "=?";
@@ -933,6 +976,21 @@ public class TelephonyProviderTest {
                 getIntValueFromCursor(cursor, SimInfo.COLUMN_SATELLITE_ESOS_SUPPORTED));
         assertEquals(ARBITRARY_SIMINFO_DB_TEST_INT_VALUE_1, getIntValueFromCursor(cursor,
                 SimInfo.COLUMN_IS_SATELLITE_PROVISIONED_FOR_NON_IP_DATAGRAM));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
+                getStringValueFromCursor(cursor,
+                        SimInfo.COLUMN_SATELLITE_ENTITLEMENT_BARRED_PLMNS));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
+                getStringValueFromCursor(cursor,
+                        SimInfo.COLUMN_SATELLITE_ENTITLEMENT_DATA_PLAN_PLMNS));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
+                getStringValueFromCursor(cursor,
+                        SimInfo.COLUMN_SATELLITE_ENTITLEMENT_SERVICE_TYPE_MAP));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
+                getStringValueFromCursor(cursor,
+                        SimInfo.COLUMN_SATELLITE_ENTITLEMENT_DATA_SERVICE_POLICY));
+        assertEquals(ARBITRARY_SIMINFO_DB_TEST_STRING_VALUE_1,
+                getStringValueFromCursor(cursor,
+                        SimInfo.COLUMN_SATELLITE_ENTITLEMENT_VOICE_SERVICE_POLICY));
         assertRestoredSubIdIsRemembered();
     }
 
