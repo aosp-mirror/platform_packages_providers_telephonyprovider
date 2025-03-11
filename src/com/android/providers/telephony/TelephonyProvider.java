@@ -378,9 +378,14 @@ public class TelephonyProvider extends ContentProvider
     private static final int  RIL_RADIO_TECHNOLOGY_NR = 20;
 
     /**
+     * 3GPP NB-IOT (Narrowband Internet of Things) over Non-Terrestrial-Networks technology.
+     */
+    private static final int RIL_RADIO_TECHNOLOGY_NB_IOT_NTN = 21;
+
+    /**
      * The number of the radio technologies.
      */
-    private static final int NEXT_RIL_RADIO_TECHNOLOGY = 21;
+    private static final int NEXT_RIL_RADIO_TECHNOLOGY = 22;
 
     private static final Map<String, Integer> MVNO_TYPE_STRING_MAP;
 
@@ -734,6 +739,12 @@ public class TelephonyProvider extends ContentProvider
             return DATABASE_VERSION;
         }
         XmlResourceParser parser = r.getXml(com.android.internal.R.xml.apns);
+
+        if (parser == null) {
+            loge("Null parser");
+            return DATABASE_VERSION;
+        }
+
         try {
             XmlUtils.beginDocument(parser, "apns");
             int publicversion = Integer.parseInt(parser.getAttributeValue(null, "version"));
@@ -1016,6 +1027,24 @@ public class TelephonyProvider extends ContentProvider
                 if (DBG) log("Load APNs from " + sysApnFile.getPath() +
                         " instead of " + altApnFile.getPath());
                 return sysApnFile;
+            }
+        }
+
+        @Override
+        public void onDowngrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+            String msg = "dbh.onDowngrade: TelephonyProvider database downgraded from version "
+                    + oldVersion + " to " + newVersion + ". Some user settings might be lost!";
+            loge(msg);
+            mLocalLog.log(msg);
+
+            try {
+                // Delete the database entirely so it can be rebuilt from scratch.
+                db.execSQL("DROP TABLE IF EXISTS " + CARRIERS_TABLE);
+                db.execSQL("DROP TABLE IF EXISTS " + SIMINFO_TABLE);
+                onCreate(db);
+            } catch (SQLiteException e) {
+                loge("Failed to recreate the table " + CARRIERS_TABLE + " and " + SIMINFO_TABLE
+                        + ". e=" + e);
             }
         }
 
@@ -5917,6 +5946,8 @@ public class TelephonyProvider extends ContentProvider
                 return (int) TelephonyManager.NETWORK_TYPE_BITMASK_LTE_CA;
             case RIL_RADIO_TECHNOLOGY_NR:
                 return (int) TelephonyManager.NETWORK_TYPE_BITMASK_NR;
+            case RIL_RADIO_TECHNOLOGY_NB_IOT_NTN:
+                return (int) TelephonyManager.NETWORK_TYPE_BITMASK_NB_IOT_NTN;
             default:
                 return (int) TelephonyManager.NETWORK_TYPE_BITMASK_UNKNOWN;
         }
