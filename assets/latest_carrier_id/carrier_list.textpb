@@ -480,7 +480,7 @@ carrier_id {
   canonical_id: 457
   carrier_name: "APUA PCS"
   carrier_attribute {
-    mccmnc_tuple: "344030"
+    mccmnc_tuple: "34403"
   }
 }
 carrier_id {
@@ -927,18 +927,19 @@ carrier_id {
     spn: "LLAMAYA"
     spn: "Guuk"
     spn: "Cablemovil"
+    spn: "Tu Operador"
     spn: "Sweno"
     spn: "Lebara"
     spn: "Lycamobile"
-  }
-  carrier_attribute {
-    mccmnc_tuple: "21404"
-    imsi_prefix_xpattern: "2140423"
+    spn: "Euskaltel"
     spn: "EUSKALTEL"
+    spn: "RACCtel+"
     spn: "RACC"
+    spn: "R"
     spn: "mobilR"
     spn: "Virgin telco"
     spn: "telecable"
+    spn: "Populoos"
   }
 }
 carrier_id {
@@ -1507,7 +1508,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 905
-  carrier_name: "Moldcell GSM"
+  carrier_name: "Moldcell"
   carrier_attribute {
     mccmnc_tuple: "25902"
   }
@@ -1692,7 +1693,7 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 1014
-  carrier_name: "Vip mobile d.o.o."
+  carrier_name: "A1 SRB"
   carrier_attribute {
     mccmnc_tuple: "22005"
   }
@@ -6987,12 +6988,8 @@ carrier_id {
   canonical_id: 1974
   carrier_name: "Jazztel"
   carrier_attribute {
-    mccmnc_tuple: "21421"
-  }
-  carrier_attribute {
     mccmnc_tuple: "21403"
     spn: "JAZZTEL"
-    spn: "Jazztel"
   }
 }
 carrier_id {
@@ -8519,6 +8516,10 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "23426"
     spn: "Lycamobile"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23430"
+    spn: "LycaMobile"
   }
 }
 carrier_id {
@@ -11252,6 +11253,10 @@ carrier_id {
     imsi_prefix_xpattern: "26203293x"
     imsi_prefix_xpattern: "26203330x"
   }
+  carrier_attribute {
+    mccmnc_tuple: "20801"
+    spn: "1&1"
+  }
 }
 carrier_id {
   canonical_id: 2537
@@ -11548,12 +11553,15 @@ carrier_id {
 }
 carrier_id {
   canonical_id: 2570
-  carrier_name: "Netcom O"
+  carrier_name: "Orange MVNOs"
   carrier_attribute {
     mccmnc_tuple: "20801"
     spn: "Netcom Mobile"
     spn: "Mobile O"
     spn: "YouPrice O"
+    spn: "SEWAN"
+    spn: "NORDNET"
+    spn: "NETWORTH"
   }
 }
 carrier_id {
@@ -12041,6 +12049,7 @@ carrier_id {
   canonical_id: 2631
   carrier_name: "Webbing"
   carrier_attribute {
+    mccmnc_tuple: "20404"
     mccmnc_tuple: "20801"
     mccmnc_tuple: "22201"
     mccmnc_tuple: "23410"
@@ -12048,7 +12057,7 @@ carrier_id {
     mccmnc_tuple: "45400"
     mccmnc_tuple: "45412"
     mccmnc_tuple: "45435"
-    mccmnc_tuple: "72432"
+    mccmnc_tuple: "72418"
     mccmnc_tuple: "72454"
     mccmnc_tuple: "90101"
     mccmnc_tuple: "90131"
@@ -12170,8 +12179,6 @@ carrier_id {
   carrier_name: "IMOWI"
   carrier_attribute {
     mccmnc_tuple: "722210"
-    spn: "imowi"
-    gid1: "722210"
   }
 }
 carrier_id {
@@ -12271,9 +12278,9 @@ carrier_id {
     mccmnc_tuple: "314610"
     mccmnc_tuple: "20801"
     mccmnc_tuple: "90101"
-    mccmnc_tuple: "20601"
+    mccmnc_tuple: "206018"
     mccmnc_tuple: "21407"
-    gid1: "880A3E"
+    gid1: "8915518F"
   }
 }
 carrier_id {
@@ -12281,6 +12288,72 @@ carrier_id {
   carrier_name: "CiFi"
   carrier_attribute {
     mccmnc_tuple: "50557"
+  }
+}
+carrier_id {
+  canonical_id: 2658
+  carrier_name: "Lycamobile"
+  carrier_attribute {
+    mccmnc_tuple: "23812"
+  }
+}
+carrier_id {
+  canonical_id: 2659
+  carrier_name: "Brisanet"
+  carrier_attribute {
+    mccmnc_tuple: "72477"
+  }
+}
+carrier_id {
+  canonical_id: 2660
+  carrier_name: "eSIM Go"
+  carrier_attribute {
+    mccmnc_tuple: "23415"
+    spn: "eSIM Go"
+    gid1: "0033"
+  }
+}
+carrier_id {
+  canonical_id: 2661
+  carrier_name: "Finetwork"
+  carrier_attribute {
+    mccmnc_tuple: "21406"
+    spn: "Finetwork"
+  }
+}
+carrier_id {
+  canonical_id: 2662
+  carrier_name: "Oceus"
+  carrier_attribute {
+    mccmnc_tuple: "314360"
+    spn: "OceusNet"
+    gid1: "FFFF"
+  }
+}
+carrier_id {
+  canonical_id: 2663
+  carrier_name: "TextNow Wireless"
+  carrier_attribute {
+    mccmnc_tuple: "314730"
+  }
+}
+carrier_id {
+  canonical_id: 2664
+  carrier_name: "Popcorn"
+  carrier_attribute {
+    mccmnc_tuple: "313460"
+    mccmnc_tuple: "311588"
+    mccmnc_tuple: "302220"
+    gid1: "7911"
+  }
+}
+carrier_id {
+  canonical_id: 2665
+  carrier_name: "iWay"
+  carrier_attribute {
+    mccmnc_tuple: "22873"
+    spn: "ispmobile"
+    spn: "iWay"
   }
 }
 carrier_id {
@@ -12690,4 +12763,4 @@ carrier_id {
   }
   parent_canonical_id: 1779
 }
-version: 134217770
+version: 134217771
