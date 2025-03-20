@@ -117,12 +117,14 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
     private boolean mItemBackedUpFailed = false;
     private boolean mItemRestored = false;
     private boolean mItemsRestoreFailed = false;
+    private int mSuccessItemBackupTotalCount = 0;
 
     private TelephonyBackupAgent.BackupRestoreEventLoggerProxy mBackupRestoreEventLoggerProxy =
             new TelephonyBackupAgent.BackupRestoreEventLoggerProxy() {
         @Override
         public void logItemsBackedUp(String dataType, int count) {
             mItemBackedUp = true;
+            mSuccessItemBackupTotalCount += count;
         }
 
         @Override
@@ -352,6 +354,7 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
         mItemBackedUpFailed = false;
         mItemRestored = false;
         mItemsRestoreFailed = false;
+        mSuccessItemBackupTotalCount = 0;
         BackupManager mockBackupManager = Mockito.mock(BackupManager.class);
         mTelephonyBackupAgent.setBackupRestoreEventLoggerProxy(mBackupRestoreEventLoggerProxy);
         mTelephonyBackupAgent.setBackupManager(mockBackupManager);
@@ -835,6 +838,17 @@ public class TelephonyBackupAgentTest extends AndroidTestCase {
 
         // Make sure the two backups are the same.
         assertArrayEquals(firstBackup, secondBackup);
+    }
+
+    /**
+     * Back up all 4 messages, but limit to 1 per file to verify all messages are correctly logged.
+     */
+    public void testBackupSms_multipleFiles_logsCorrectly() throws Exception {
+        mTelephonyBackupAgent.mMaxMsgPerFile = 1;
+        mSmsTable.addAll(Arrays.asList(mSmsRows));
+        mTelephonyBackupAgent.onFullBackup(new FullBackupDataOutput(Integer.MAX_VALUE));
+
+        assertEquals(mSmsRows.length , mSuccessItemBackupTotalCount);
     }
 
     private byte[] getBackup(String runId) throws IOException {

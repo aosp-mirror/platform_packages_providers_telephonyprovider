@@ -25,6 +25,7 @@ import android.app.backup.BackupDataInput;
 import android.app.backup.BackupDataOutput;
 import android.app.backup.BackupManager;
 import android.app.backup.BackupRestoreEventLogger;
+import android.app.backup.BackupRestoreEventLogger.BackupRestoreDataType;
 import android.app.backup.FullBackupDataOutput;
 import android.content.ContentResolver;
 import android.content.ContentUris;
@@ -324,8 +325,12 @@ public class TelephonyBackupAgent extends BackupAgent {
     private long mBytesOverQuota;
     private BackupRestoreEventLogger mLogger;
     private BackupManager mBackupManager;
-    private int mSmsCount = 0;
-    private int mMmsCount = 0;
+
+    @BackupRestoreDataType
+    private static final String SMS_LOGGING_DATA_TYPE = "SMS";
+    @BackupRestoreDataType
+    private static final String MMS_LOGGING_DATA_TYPE = "MMS";
+
 
     // Cache list of recipients by threadId. It reduces db requests heavily. Used during backup.
     @VisibleForTesting
@@ -473,8 +478,6 @@ public class TelephonyBackupAgent extends BackupAgent {
             // messages, otherwise 1000 MMS messages. Repeat until out of SMS's or MMS's.
             // It ensures backups are incremental.
             int fileNum = 0;
-            mSmsCount = 0;
-            mMmsCount = 0;
             while (smsCursor != null && !smsCursor.isAfterLast() &&
                     mmsCursor != null && !mmsCursor.isAfterLast()) {
                 final long smsDate = TimeUnit.MILLISECONDS.toSeconds(getMessageDate(smsCursor));
@@ -496,14 +499,6 @@ public class TelephonyBackupAgent extends BackupAgent {
             while (mmsCursor != null && !mmsCursor.isAfterLast()) {
                 backupAll(data, mmsCursor,
                         String.format(Locale.US, MMS_BACKUP_FILE_FORMAT, fileNum++));
-            }
-
-            if (mSmsCount > 0) {
-                mBackupRestoreEventLoggerProxy.logItemsBackedUp("SMS", mSmsCount);
-            }
-
-            if (mMmsCount > 0) {
-                mBackupRestoreEventLoggerProxy.logItemsBackedUp("MMS", mMmsCount);
             }
         }
 
@@ -553,12 +548,12 @@ public class TelephonyBackupAgent extends BackupAgent {
         try (JsonWriter jsonWriter = getJsonWriter(fileName)) {
             if (fileName.endsWith(SMS_BACKUP_FILE_SUFFIX)) {
                 chunk = putSmsMessagesToJson(cursor, jsonWriter);
-                mSmsCount = chunk.count;
-                Log.d(TAG, "backupAll: Wrote SMS messages to Json. mSmsCount=" + mSmsCount);
+                mBackupRestoreEventLoggerProxy.logItemsBackedUp(SMS_LOGGING_DATA_TYPE, chunk.count);
+                Log.d(TAG, "backupAll: Wrote SMS messages to Json. count=" + chunk.count);
             } else {
                 chunk = putMmsMessagesToJson(cursor, jsonWriter);
-                mMmsCount = chunk.count;
-                Log.d(TAG, "backupAll: Wrote MMS messages to Json. mMmsCount=" + mMmsCount);
+                mBackupRestoreEventLoggerProxy.logItemsBackedUp(MMS_LOGGING_DATA_TYPE, chunk.count);
+                Log.d(TAG, "backupAll: Wrote MMS messages to Json. count=" + chunk.count);
             }
 
         }
