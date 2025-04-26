@@ -706,6 +706,9 @@ carrier_id {
   carrier_attribute {
     mccmnc_tuple: "30262"
   }
+  carrier_attribute {
+    mccmnc_tuple: "302620"
+  }
 }
 carrier_id {
   canonical_id: 575
@@ -5714,6 +5717,9 @@ carrier_id {
   carrier_name: "East Kentucky Network LLC dba Appalachian Wireless"
   carrier_attribute {
     mccmnc_tuple: "310750"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "312130"
   }
 }
 carrier_id {
@@ -12439,6 +12445,82 @@ carrier_id {
   }
 }
 carrier_id {
+  canonical_id: 2666
+  carrier_name: "Telecom26"
+  carrier_attribute {
+    mccmnc_tuple: "22862"
+    gid1: "54656c65636f6d3236"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "23455"
+    gid1: "54656c65636f6d3236"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "42402"
+    gid1: "54656c65636f6d3236"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "73001"
+    gid1: "54656c65636f6d3236"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "90146"
+    gid1: "54656c65636f6d3236"
+  }
+}
+carrier_id {
+  canonical_id: 2667
+  carrier_name: "Gigs"
+  carrier_attribute {
+    mccmnc_tuple: "23415"
+    spn: "Gigs"
+    gid1: "22"
+  }
+}
+carrier_id {
+  canonical_id: 2668
+  carrier_name: "TELUS Cloud Core"
+  carrier_attribute {
+    mccmnc_tuple: "302220"
+    gid1: "4C4F"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302221"
+    gid1: "4C4F"
+  }
+}
+carrier_id {
+  canonical_id: 2669
+  carrier_name: "Execulink Telecom"
+  carrier_attribute {
+    mccmnc_tuple: "302340"
+  }
+}
+carrier_id {
+  canonical_id: 2670
+  carrier_name: "Cape"
+  carrier_attribute {
+    mccmnc_tuple: "314560"
+    gid1: "2273"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "302220"
+    gid1: "2273"
+  }
+  carrier_attribute {
+    mccmnc_tuple: "311588"
+    gid1: "2273"
+  }
+}
+carrier_id {
+  canonical_id: 2671
+  carrier_name: "Yobi Telecom"
+  carrier_attribute {
+    mccmnc_tuple: "334110"
+    spn: "YOBI"
+  }
+}
+carrier_id {
   canonical_id: 10000
   carrier_name: "Tracfone-ATT"
   carrier_attribute {
@@ -12845,4 +12927,4 @@ carrier_id {
   }
   parent_canonical_id: 1779
 }
-version: 117440555
+version: 117440556
