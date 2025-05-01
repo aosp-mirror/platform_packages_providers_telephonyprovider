@@ -32,8 +32,8 @@ import static android.provider.Telephony.Carriers.CONTENT_URI;
 import static android.provider.Telephony.Carriers.CURRENT;
 import static android.provider.Telephony.Carriers.DEFAULT_SORT_ORDER;
 import static android.provider.Telephony.Carriers.EDITED_STATUS;
-import static android.provider.Telephony.Carriers.INFRASTRUCTURE_BITMASK;
 import static android.provider.Telephony.Carriers.ESIM_BOOTSTRAP_PROVISIONING;
+import static android.provider.Telephony.Carriers.INFRASTRUCTURE_BITMASK;
 import static android.provider.Telephony.Carriers.LINGERING_NETWORK_TYPE_BITMASK;
 import static android.provider.Telephony.Carriers.MAX_CONNECTIONS;
 import static android.provider.Telephony.Carriers.MCC;
@@ -130,7 +130,6 @@ import com.android.internal.annotations.GuardedBy;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.TelephonyPermissions;
 import com.android.internal.telephony.TelephonyStatsLog;
-import com.android.internal.telephony.flags.Flags;
 import com.android.internal.util.XmlUtils;
 
 import org.xmlpull.v1.XmlPullParser;
@@ -5604,10 +5603,8 @@ public class TelephonyProvider extends ContentProvider
         }
 
         PackageManager packageManager = getContext().getPackageManager();
-        if (Flags.hsumPackageManager()) {
-            packageManager = getContext().createContextAsUser(Binder.getCallingUserHandle(), 0)
-                    .getPackageManager();
-        }
+        packageManager = getContext().createContextAsUser(Binder.getCallingUserHandle(), 0)
+                .getPackageManager();
         String[] packages = packageManager.getPackagesForUid(Binder.getCallingUid());
 
         TelephonyManager telephonyManager =
